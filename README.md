@@ -1,5 +1,5 @@
 <div align="center">
-<img alt="LOGO" src="./icon.png" width="256" height="256" />
+<img alt="LOGO" src="./logo.png" width="256" height="256" />
 
 # 明日方舟帧操小助手 ArknightsFrameAssistant
 
