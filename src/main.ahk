@@ -40,7 +40,7 @@ DefaultAppSettings["PauseB"] := "Space"
 DefaultAppSettings["GameSpeed"] := "d"
 DefaultAppSettings["33ms"] := "r"
 DefaultAppSettings["166ms"] := "t"
-DefaultAppSettings["Pauseselect"] := "w"
+DefaultAppSettings["PauseSelect"] := "w"
 DefaultAppSettings["Skill"] := "s"
 DefaultAppSettings["Retreat"] := "a"
 DefaultAppSettings["OneClickSkill"] := "e"
@@ -459,7 +459,7 @@ HotkeyIniWrite() {
     IniWrite(SavedObj.PauseRetreat,INI_FILE, "Hotkeys", "PauseRetreat")
     IniWrite(SavedObj.33ms,    INI_FILE, "Hotkeys", "33ms")
     IniWrite(SavedObj.166ms,   INI_FILE, "Hotkeys", "166ms")
-    IniWrite(SavedObj.Pauseselect, INI_FILE, "Hotkeys", "Pauseselect")
+    IniWrite(SavedObj.PauseSelect, INI_FILE, "Hotkeys", "PauseSelect")
     IniWrite(SavedObj.OneClickSkill,  INI_FILE, "Hotkeys", "OneClickSkill")
     IniWrite(SavedObj.OneClickRetreat, INI_FILE, "Hotkeys", "OneClickRetreat")
     IniWrite(SavedObj.AutoClose, INI_FILE, "Main", "AutoClose")
@@ -531,8 +531,13 @@ HotkeyOn() {
         try Hotkey(AppSettings["33ms"], Action33ms, "On")
     if (AppSettings["166ms"] != "")
         try Hotkey(AppSettings["166ms"], Action166ms, "On")
+<<<<<<< HEAD
     if (AppSettings["Pauseselect"] != "")
         try Hotkey(AppSettings["Pauseselect"], ActionPauseselect, "On")
+=======
+    if (AppSettings["PauseSelect"] != "")
+        try Hotkey(AppSettings["PauseSelect"], ActionPauseSelect, "On")
+>>>>>>> b73bc4d6ff707f79961e06b78d8aa7975ee57ed1
     if (AppSettings["OneClickSkill"] != "")
         try Hotkey(AppSettings["OneClickSkill"], ActionOneClickSkill, "On")
     if (AppSettings["OneClickRetreat"] != "")
@@ -562,8 +567,13 @@ HotkeyOff() {
         try Hotkey(AppSettings["33ms"], Action33ms, "Off")
     if (AppSettings["166ms"] != "")
         try Hotkey(AppSettings["166ms"], Action166ms, "Off")
+<<<<<<< HEAD
     if (AppSettings["Pauseselect"] != "")
         try Hotkey(AppSettings["Pauseselect"], ActionPauseselect, "Off")
+=======
+    if (AppSettings["PauseSelect"] != "")
+        try Hotkey(AppSettings["PauseSelect"], ActionPauseSelect, "Off")
+>>>>>>> b73bc4d6ff707f79961e06b78d8aa7975ee57ed1
     if (AppSettings["OneClickSkill"] != "")
         try Hotkey(AppSettings["OneClickSkill"], ActionOneClickSkill, "Off")
     if (AppSettings["OneClickRetreat"] != "")
