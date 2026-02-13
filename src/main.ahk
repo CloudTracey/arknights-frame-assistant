@@ -35,8 +35,8 @@ INI_FILE := ConfigDir "\Settings.ini"
 global WindowName := "明日方舟帧操小助手 ArknightsFrameAssistant - v1.0.7"
 ; 按键默认设置
 global DefaultAppSettings := Map()
-DefaultAppSettings["PauseA"] := "f"
-DefaultAppSettings["PauseB"] := "Space"
+DefaultAppSettings["PressPause"] := "f"
+DefaultAppSettings["ReleasePause"] := "Space"
 DefaultAppSettings["GameSpeed"] := "d"
 DefaultAppSettings["33ms"] := "r"
 DefaultAppSettings["166ms"] := "t"
@@ -74,7 +74,7 @@ HotkeyOn()
 
 ; == 功能实现 ==
 ; 按下暂停
-ActionPause(ThisHotkey) {
+ActionPressPause(ThisHotkey) {
     Send "{ESC Down}"
     USleep(Delay)
     Send "{ESC Up}"
@@ -83,7 +83,7 @@ ActionPause(ThisHotkey) {
     PureKeyWait(ThisHotkey)
 }
 ; 松开暂停
-ReleasePause(ThisHotkey) {
+ActionReleasePause(ThisHotkey) {
     if InStr(ThisHotkey, "Wheel") == 0 {
         PureKeyWait(ThisHotkey)
     }
@@ -286,8 +286,8 @@ AddBindRow(LabelText, KeyVar, Notes := "") {
 ; 按键设置
 MyGui.Add("GroupBox", "x15 y10 w0 h0 Section", "")
 MyGui.Add("Text", "xs+10 ys+10 w0 h0") ; 定位锚点
-AddBindRow("额外暂停键A", "PauseA")
-AddBindRow("额外暂停键B", "PauseB", "(松开触发)")
+AddBindRow("额外暂停键A", "PressPause")
+AddBindRow("额外暂停键B", "ReleasePause", "(松开触发)")
 MyGui.Add("Text", "xs+10 y+17 w90 Right +0x200", "切换倍速") 
 MyGui.Add("Edit", "x+10 yp w120 Center ReadOnly Uppercase v" "GameSpeed", AppSettings["GameSpeed"])
 AddBindRow("暂停选中",    "PauseSelect")
@@ -380,8 +380,8 @@ if(AppSettings["AutoOpen"] == 1) {
 ; == 保存相关 ==
 ; 加载设置
 LoadSettings() {
-    AppSettings["PauseA"] := IniRead(INI_FILE, "Hotkeys", "PauseA", DefaultAppSettings["PauseA"])
-    AppSettings["PauseB"] := IniRead(INI_FILE, "Hotkeys", "PauseB", DefaultAppSettings["PauseB"])
+    AppSettings["PressPause"] := IniRead(INI_FILE, "Hotkeys", "PressPause", DefaultAppSettings["PressPause"])
+    AppSettings["ReleasePause"] := IniRead(INI_FILE, "Hotkeys", "ReleasePause", DefaultAppSettings["ReleasePause"])
     
     AppSettings["GameSpeed"] := IniRead(INI_FILE, "Hotkeys", "GameSpeed", DefaultAppSettings["GameSpeed"])
     AppSettings["Skill"] := IniRead(INI_FILE, "Hotkeys", "Skill", DefaultAppSettings["Skill"])
@@ -422,8 +422,8 @@ HotkeyIniWrite() {
     }
     SavedObj := MyGui.Submit(0) 
     KeyNames := Map(
-        "PauseA", "额外暂停键A",
-        "PauseB", "额外暂停键B",
+        "PressPause", "额外暂停键A",
+        "ReleasePause", "额外暂停键B",
         "GameSpeed",   "切换倍速",
         "Skill",       "干员技能",
         "Retreat",     "干员撤退",
@@ -450,8 +450,8 @@ HotkeyIniWrite() {
             UsedKeys[currentKey] := keyName
         }
     }
-    IniWrite(SavedObj.PauseA,  INI_FILE, "Hotkeys", "PauseA")
-    IniWrite(SavedObj.PauseB,  INI_FILE, "Hotkeys", "PauseB")
+    IniWrite(SavedObj.PressPause,  INI_FILE, "Hotkeys", "PressPause")
+    IniWrite(SavedObj.ReleasePause,  INI_FILE, "Hotkeys", "ReleasePause")
     IniWrite(SavedObj.GameSpeed,   INI_FILE, "Hotkeys", "GameSpeed")
     IniWrite(SavedObj.Skill,       INI_FILE, "Hotkeys", "Skill")
     IniWrite(SavedObj.Retreat,     INI_FILE, "Hotkeys", "Retreat")
@@ -511,10 +511,10 @@ CancleSetting() {
 ; 启用热键
 HotkeyOn() {
     HotIfWinActive("ahk_exe Arknights.exe") 
-    if (AppSettings["PauseA"] != "")
-        try Hotkey(AppSettings["PauseA"], ActionPause, "On")
-    if (AppSettings["PauseB"] != "")
-        try Hotkey(AppSettings["PauseB"], ReleasePause, "On")
+    if (AppSettings["PressPause"] != "")
+        try Hotkey(AppSettings["PressPause"], ActionPressPause, "On")
+    if (AppSettings["ReleasePause"] != "")
+        try Hotkey(AppSettings["ReleasePause"], ActionReleasePause, "On")
         
     if (AppSettings["GameSpeed"] != "")
         try Hotkey(AppSettings["GameSpeed"], ActionGameSpeed, "On")
@@ -542,10 +542,10 @@ HotkeyOn() {
 ; 禁用热键
 HotkeyOff() {
     HotIfWinActive("ahk_exe Arknights.exe") 
-    if (AppSettings["PauseA"] != "")
-        try Hotkey(AppSettings["PauseA"], ActionPause, "Off")
-    if (AppSettings["PauseB"] != "")
-        try Hotkey(AppSettings["PauseB"], ReleasePause, "Off")
+    if (AppSettings["PressPause"] != "")
+        try Hotkey(AppSettings["PressPause"], ActionPressPause, "Off")
+    if (AppSettings["ReleasePause"] != "")
+        try Hotkey(AppSettings["ReleasePause"], ActionReleasePause, "Off")
         
     if (AppSettings["GameSpeed"] != "")
         try Hotkey(AppSettings["GameSpeed"], ActionGameSpeed, "Off")
