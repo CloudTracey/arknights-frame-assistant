@@ -1,6 +1,6 @@
 ﻿; == 全局变量 ==
-; 窗口名
-global WindowName := "明日方舟帧操小助手 ArknightsFrameAssistant - v1.0.7"
+; 版本号
+global Version := "v1.1.0-beta.2"
 ; 按键默认设置
 global DefaultHotKeySettings := Map()
 DefaultHotKeySettings["PressPause"] := "f"
@@ -55,3 +55,9 @@ global WaitingModify := false
 global DelayA := 35.3 ; 30帧
 global DelayB := 19.6 ; 60帧
 global DelayC := 11.3 ; 120帧
+
+; ==配置文件路径==
+ConfigDir := A_AppData "\ArknightsFrameAssistant\PC"
+if !DirExist(ConfigDir)
+    DirCreate(ConfigDir)
+INI_FILE := ConfigDir "\Settings.ini"

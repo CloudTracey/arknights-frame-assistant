@@ -1,10 +1,4 @@
 ﻿; == 设置相关 ==
-; 配置文件路径
-ConfigDir := A_AppData "\ArknightsFrameAssistant\PC"
-if !DirExist(ConfigDir)
-    DirCreate(ConfigDir)
-INI_FILE := ConfigDir "\Settings.ini"
-
 ; 从配置文件加载设置
 LoadSettings() {
     HotKeySettings["PressPause"] := IniRead(INI_FILE, "Hotkeys", "PressPause", DefaultHotKeySettings["PressPause"])

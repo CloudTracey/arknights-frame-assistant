@@ -1,5 +1,6 @@
 ﻿; ==GUI==
 ; 窗口设置
+WindowName := "明日方舟帧操小助手 ArknightsFrameAssistant - " Version
 MyGui := Gui(, WindowName)
 MyGui.Opt("+MinimizeBox")
 MyGui.BackColor := "FFFFFF"
