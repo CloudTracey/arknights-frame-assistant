@@ -10,6 +10,8 @@ SetMouseDelay -1
 SetWinDelay -1
 SetDefaultMouseSpeed 0
 SetTitleMatchMode 3
+DllCall("winmm\timeBeginPeriod", "UInt", 1)
+OnExit (*) => DllCall("winmm\timeEndPeriod", "UInt", 1)
 
 ; 获取权限
 if not A_IsAdmin
@@ -210,10 +212,6 @@ USleep(delay_ms) {
         remaining := (target - current) * 1000 / freq
         if (remaining > 2)
             DllCall("Sleep", "UInt", 1) 
-    }
-    if (isHighRes) {
-        DllCall("winmm\timeEndPeriod", "UInt", 1)
-        isHighRes := false
     }
 }
 
