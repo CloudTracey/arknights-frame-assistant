@@ -2,6 +2,7 @@
 
 Bigbug() {
     MsgBox "I'm a big buuuuuug“”“”、
+    "Hey!"
 }
 
 Bigbug()
