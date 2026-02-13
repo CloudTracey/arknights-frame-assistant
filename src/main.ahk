@@ -34,37 +34,59 @@ INI_FILE := ConfigDir "\Settings.ini"
 ; 窗口名
 global WindowName := "明日方舟帧操小助手 ArknightsFrameAssistant - v1.0.7"
 ; 按键默认设置
-global DefaultAppSettings := Map()
-DefaultAppSettings["PressPause"] := "f"
-DefaultAppSettings["ReleasePause"] := "Space"
-DefaultAppSettings["GameSpeed"] := "d"
-DefaultAppSettings["33ms"] := "r"
-DefaultAppSettings["166ms"] := "t"
-DefaultAppSettings["PauseSelect"] := "w"
-DefaultAppSettings["Skill"] := "s"
-DefaultAppSettings["Retreat"] := "a"
-DefaultAppSettings["OneClickSkill"] := "e"
-DefaultAppSettings["OneClickRetreat"] := "q"
-DefaultAppSettings["PauseSkill"] := "XButton2"
-DefaultAppSettings["PauseRetreat"] := "XButton1"
-DefaultAppSettings["AutoClose"] := "1"
-DefaultAppSettings["AutoOpen"] := "1"
-DefaultAppSettings["Frame"] := "3"
-
+global DefaultHotKeySettings := Map()
+DefaultHotKeySettings["PressPause"] := "f"
+DefaultHotKeySettings["ReleasePause"] := "Space"
+DefaultHotKeySettings["GameSpeed"] := "d"
+DefaultHotKeySettings["PauseSelect"] := "w"
+DefaultHotKeySettings["Skill"] := "s"
+DefaultHotKeySettings["Retreat"] := "a"
+DefaultHotKeySettings["33ms"] := "r"
+DefaultHotKeySettings["166ms"] := "t"
+DefaultHotKeySettings["OneClickSkill"] := "e"
+DefaultHotKeySettings["OneClickRetreat"] := "q"
+DefaultHotKeySettings["PauseSkill"] := "XButton2"
+DefaultHotKeySettings["PauseRetreat"] := "XButton1"
 ; 按键设置
-global AppSettings := DefaultAppSettings.Clone()
+global HotkeySettings := DefaultHotKeySettings.Clone()
+; 按键设置映射
+global KeyNames := Map(
+    "PressPause", "额外暂停键A",
+    "ReleasePause", "额外暂停键B",
+    "GameSpeed",   "切换倍速",
+    "PauseSelect", "暂停选中",
+    "Skill",       "干员技能",
+    "Retreat",     "干员撤退",
+    "33ms",   "前进 33ms",
+    "166ms",  "前进 166ms",
+    "OneClickSkill",  "一键技能",
+    "OneClickRetreat", "一键撤退",
+    "PauseSkill",  "暂停技能",
+    "PauseRetreat","暂停撤退"
+)
+
+; 其他默认设置
+global DefaultMainSettings := Map()
+DefaultMainSettings["AutoClose"] := "1"
+DefaultMainSettings["AutoOpen"] := "1"
+DefaultMainSettings["Frame"] := "3"
+; 其他设置
+global MainSettings := DefaultMainSettings.Clone()
+
 ; 游戏状态
 global GameHasStarted := false 
+
 ; 按键绑定相关全局变量
 global LastEditObject := ""
 global OriginalValue := ""
 global ModifyHook := InputHook("L0")
 global ControlObj := ""
 global WaitingModify := false
+
 ; 默认延迟
-global DelayA := 35.3
-global DelayB := 19.6
-global DelayC := 11.3
+global DelayA := 35.3 ; 30帧
+global DelayB := 19.6 ; 60帧
+global DelayC := 11.3 ; 120帧
 
 ; 自动退出计时器
 SetTimer CheckGameStatus, 1000
@@ -276,7 +298,7 @@ ColWidth := 280
 
 AddBindRow(LabelText, KeyVar, Notes := "") {
     MyGui.Add("Text", "xs+10 y+12 w90 Right +0x200", LabelText) 
-    MyGui.Add("Edit", "x+10 yp w120 Center ReadOnly Uppercase v" KeyVar, AppSettings[KeyVar])
+    MyGui.Add("Edit", "x+10 yp w120 Center ReadOnly Uppercase v" KeyVar, HotkeySettings[KeyVar])
     if (Notes != "") {
         MyGui.SetFont("s8 cGray")
         MyGui.Add("Text", "x+5 yp+3", Notes)
@@ -289,7 +311,7 @@ MyGui.Add("Text", "xs+10 ys+10 w0 h0") ; 定位锚点
 AddBindRow("额外暂停键A", "PressPause")
 AddBindRow("额外暂停键B", "ReleasePause", "(松开触发)")
 MyGui.Add("Text", "xs+10 y+17 w90 Right +0x200", "切换倍速") 
-MyGui.Add("Edit", "x+10 yp w120 Center ReadOnly Uppercase v" "GameSpeed", AppSettings["GameSpeed"])
+MyGui.Add("Edit", "x+10 yp w120 Center ReadOnly Uppercase v" "GameSpeed", HotkeySettings["GameSpeed"])
 AddBindRow("暂停选中",    "PauseSelect")
 AddBindRow("干员技能",    "Skill")
 AddBindRow("干员撤退",    "Retreat")
@@ -305,11 +327,11 @@ AddBindRow("暂停撤退",    "PauseRetreat")
 MyGui.Add("Text", "x15 y+30 w" (GuiWidth - 30) " h1 0x10") ; 水平分割线
 MyGui.Add("Checkbox", "x30 y+20 h24 vAutoClose", " 随游戏进程关闭自动退出（强烈建议开启）")
 MyGui.Add("Checkbox", "x+20 yp h24 vAutoOpen", " 小助手启动时自动打开设置窗口")
-MyGui["AutoClose"].Value := AppSettings["AutoClose"]
-MyGui["AutoOpen"].Value := AppSettings["AutoOpen"]
+MyGui["AutoClose"].Value := MainSettings["AutoClose"]
+MyGui["AutoOpen"].Value := MainSettings["AutoOpen"]
 MyGui.Add("Text", "x30 y+12", "游戏内帧数:")
 GuiFrame := MyGui.Add("DropDownList", "x+12 y+-18 vFrame AltSubmit", ["30", "60", "120"])
-MyGui["Frame"].Value := AppSettings["Frame"]
+MyGui["Frame"].Value := MainSettings["Frame"]
 GuiFrame.OnEvent("Change", (*) => ShowWarning())
 ; 提示语
 MyGui.SetFont("s9 c1b98d7")
@@ -373,44 +395,41 @@ ShowSettings() {
 }
 
 ; 随脚本启动打开GUI界面
-if(AppSettings["AutoOpen"] == 1) {
+if(MainSettings["AutoOpen"] == 1) {
     ShowSettings()
 }
 
 ; == 保存相关 ==
 ; 加载设置
 LoadSettings() {
-    AppSettings["PressPause"] := IniRead(INI_FILE, "Hotkeys", "PressPause", DefaultAppSettings["PressPause"])
-    AppSettings["ReleasePause"] := IniRead(INI_FILE, "Hotkeys", "ReleasePause", DefaultAppSettings["ReleasePause"])
-    
-    AppSettings["GameSpeed"] := IniRead(INI_FILE, "Hotkeys", "GameSpeed", DefaultAppSettings["GameSpeed"])
-    AppSettings["Skill"] := IniRead(INI_FILE, "Hotkeys", "Skill", DefaultAppSettings["Skill"])
-    AppSettings["Retreat"] := IniRead(INI_FILE, "Hotkeys", "Retreat", DefaultAppSettings["Retreat"])
-    AppSettings["PauseSkill"] := IniRead(INI_FILE, "Hotkeys", "PauseSkill", DefaultAppSettings["PauseSkill"])
-    AppSettings["PauseRetreat"] := IniRead(INI_FILE, "Hotkeys", "PauseRetreat", DefaultAppSettings["PauseRetreat"])
-    
-    AppSettings["33ms"] := IniRead(INI_FILE, "Hotkeys", "33ms", DefaultAppSettings["33ms"])
-    AppSettings["166ms"] := IniRead(INI_FILE, "Hotkeys", "166ms", DefaultAppSettings["166ms"])
-    AppSettings["PauseSelect"] := IniRead(INI_FILE, "Hotkeys", "PauseSelect", DefaultAppSettings["PauseSelect"])
-    AppSettings["OneClickSkill"] := IniRead(INI_FILE, "Hotkeys", "OneClickSkill", DefaultAppSettings["OneClickSkill"])
-    AppSettings["OneClickRetreat"] := IniRead(INI_FILE, "Hotkeys", "OneClickRetreat", DefaultAppSettings["OneClickRetreat"])
-    
-    AppSettings["AutoClose"] := IniRead(INI_FILE, "Main", "AutoClose", DefaultAppSettings["AutoClose"])
-    AppSettings["AutoOpen"] := IniRead(INI_FILE, "Main", "AutoOpen", DefaultAppSettings["AutoOpen"])
-    AppSettings["Frame"] := IniRead(INI_FILE, "Main", "Frame", DefaultAppSettings["Frame"])
+    HotKeySettings["PressPause"] := IniRead(INI_FILE, "Hotkeys", "PressPause", DefaultHotKeySettings["PressPause"])
+    HotKeySettings["ReleasePause"] := IniRead(INI_FILE, "Hotkeys", "ReleasePause", DefaultHotKeySettings["ReleasePause"])
+    HotKeySettings["GameSpeed"] := IniRead(INI_FILE, "Hotkeys", "GameSpeed", DefaultHotKeySettings["GameSpeed"])
+    HotKeySettings["Skill"] := IniRead(INI_FILE, "Hotkeys", "Skill", DefaultHotKeySettings["Skill"])
+    HotKeySettings["Retreat"] := IniRead(INI_FILE, "Hotkeys", "Retreat", DefaultHotKeySettings["Retreat"])
+    HotKeySettings["PauseSkill"] := IniRead(INI_FILE, "Hotkeys", "PauseSkill", DefaultHotKeySettings["PauseSkill"])
+    HotKeySettings["PauseRetreat"] := IniRead(INI_FILE, "Hotkeys", "PauseRetreat", DefaultHotKeySettings["PauseRetreat"])
+    HotKeySettings["33ms"] := IniRead(INI_FILE, "Hotkeys", "33ms", DefaultHotKeySettings["33ms"])
+    HotKeySettings["166ms"] := IniRead(INI_FILE, "Hotkeys", "166ms", DefaultHotKeySettings["166ms"])
+    HotKeySettings["PauseSelect"] := IniRead(INI_FILE, "Hotkeys", "PauseSelect", DefaultHotKeySettings["PauseSelect"])
+    HotKeySettings["OneClickSkill"] := IniRead(INI_FILE, "Hotkeys", "OneClickSkill", DefaultHotKeySettings["OneClickSkill"])
+    HotKeySettings["OneClickRetreat"] := IniRead(INI_FILE, "Hotkeys", "OneClickRetreat", DefaultHotKeySettings["OneClickRetreat"])
+    MainSettings["AutoClose"] := IniRead(INI_FILE, "Main", "AutoClose", DefaultMainSettings["AutoClose"])
+    MainSettings["AutoOpen"] := IniRead(INI_FILE, "Main", "AutoOpen", DefaultMainSettings["AutoOpen"])
+    MainSettings["Frame"] := IniRead(INI_FILE, "Main", "Frame", DefaultMainSettings["Frame"])
     DelaySetting()
 }
 
 ; 延迟设置
 DelaySetting() {
     global Delay
-    if (AppSettings["Frame"] == 1) {
+    if (MainSettings["Frame"] == 1) {
         Delay := DelayA
     }
-    else if (AppSettings["Frame"] == 2) {
+    else if (MainSettings["Frame"] == 2) {
         Delay := DelayB
     }
-    else if (AppSettings["Frame"] == 3) {
+    else if (MainSettings["Frame"] == 3) {
         Delay := DelayC
     }
 }
@@ -421,20 +440,6 @@ HotkeyIniWrite() {
         ModifyHook.Stop()
     }
     SavedObj := MyGui.Submit(0) 
-    KeyNames := Map(
-        "PressPause", "额外暂停键A",
-        "ReleasePause", "额外暂停键B",
-        "GameSpeed",   "切换倍速",
-        "Skill",       "干员技能",
-        "Retreat",     "干员撤退",
-        "PauseSkill",  "暂停技能",
-        "PauseRetreat","暂停撤退",
-        "33ms",   "前进 33ms",
-        "166ms",  "前进 166ms",
-        "PauseSelect", "暂停选中",
-        "OneClickSkill",  "一键技能",
-        "OneClickRetreat", "一键撤退"
-    )
     UsedKeys := Map()
     for keyVar, keyName in KeyNames {
         if (!SavedObj.HasProp(keyVar))
@@ -471,8 +476,8 @@ HotkeyIniWrite() {
 SetDefaultSetting() {
     Result := MsgBox("  确定重置按键为默认设置吗 ？","重置按键设置", "YesNo")
     if (Result == "Yes") {
-        for key, _ in DefaultAppSettings {
-                MyGui[key].Value := DefaultAppSettings[key]
+        for key, _ in DefaultHotKeySettings {
+                MyGui[key].Value := DefaultHotKeySettings[key]
         }
     }
     HotkeyOff()
@@ -502,8 +507,11 @@ ApplySettings() {
 
 ; 取消设置
 CancleSetting() {
-    for key, _ in AppSettings {
-        MyGui[key].Value := AppSettings[key]
+    for key, _ in HotkeySettings {
+        MyGui[key].Value := HotkeySettings[key]
+    }
+    for key, _ in MainSettings {
+        MyGui[key].Value := MainSettings[key]
     }
     HideGui()
 }
@@ -511,70 +519,41 @@ CancleSetting() {
 ; 启用热键
 HotkeyOn() {
     HotIfWinActive("ahk_exe Arknights.exe") 
-    if (AppSettings["PressPause"] != "")
-        try Hotkey(AppSettings["PressPause"], ActionPressPause, "On")
-    if (AppSettings["ReleasePause"] != "")
-        try Hotkey(AppSettings["ReleasePause"], ActionReleasePause, "On")
-        
-    if (AppSettings["GameSpeed"] != "")
-        try Hotkey(AppSettings["GameSpeed"], ActionGameSpeed, "On")
-    if (AppSettings["Skill"] != "")
-        try Hotkey(AppSettings["Skill"], ActionSkill, "On")
-    if (AppSettings["Retreat"] != "")
-        try Hotkey(AppSettings["Retreat"], ActionRetreat, "On")
-    if (AppSettings["PauseSkill"] != "")
-        try Hotkey(AppSettings["PauseSkill"], ActionPauseSkill, "On")
-    if (AppSettings["PauseRetreat"] != "")
-        try Hotkey(AppSettings["PauseRetreat"], ActionPauseRetreat, "On")
-        
-    if (AppSettings["33ms"] != "")
-        try Hotkey(AppSettings["33ms"], Action33ms, "On")
-    if (AppSettings["166ms"] != "")
-        try Hotkey(AppSettings["166ms"], Action166ms, "On")
-    if (AppSettings["PauseSelect"] != "")
-        try Hotkey(AppSettings["PauseSelect"], ActionPauseSelect, "On")
-    if (AppSettings["OneClickSkill"] != "")
-        try Hotkey(AppSettings["OneClickSkill"], ActionOneClickSkill, "On")
-    if (AppSettings["OneClickRetreat"] != "")
-        try Hotkey(AppSettings["OneClickRetreat"], ActionOneClickRetreat, "On")
+    for keyVar, _ in KeyNames {
+        if (HotkeySettings[keyVar] != "") {
+            Action := "Action" . keyVar
+            if (HotkeySettings[keyVar] ~= "^(E|Q|F|G)$") {
+                Hotkey(HotkeySettings[keyVar], %Action%, "On")
+            }
+            else {
+                Hotkey("~" HotkeySettings[keyVar], %Action%, "On")
+            }
+        }
+    }
     HotIf
 }
+
 ; 禁用热键
 HotkeyOff() {
     HotIfWinActive("ahk_exe Arknights.exe") 
-    if (AppSettings["PressPause"] != "")
-        try Hotkey(AppSettings["PressPause"], ActionPressPause, "Off")
-    if (AppSettings["ReleasePause"] != "")
-        try Hotkey(AppSettings["ReleasePause"], ActionReleasePause, "Off")
-        
-    if (AppSettings["GameSpeed"] != "")
-        try Hotkey(AppSettings["GameSpeed"], ActionGameSpeed, "Off")
-    if (AppSettings["Skill"] != "")
-        try Hotkey(AppSettings["Skill"], ActionSkill, "Off")
-    if (AppSettings["Retreat"] != "")
-        try Hotkey(AppSettings["Retreat"], ActionRetreat, "Off")
-    if (AppSettings["PauseSkill"] != "")
-        try Hotkey(AppSettings["PauseSkill"], ActionPauseSkill, "Off")
-    if (AppSettings["PauseRetreat"] != "")
-        try Hotkey(AppSettings["PauseRetreat"], ActionPauseRetreat, "Off")
-        
-    if (AppSettings["33ms"] != "")
-        try Hotkey(AppSettings["33ms"], Action33ms, "Off")
-    if (AppSettings["166ms"] != "")
-        try Hotkey(AppSettings["166ms"], Action166ms, "Off")
-    if (AppSettings["PauseSelect"] != "")
-        try Hotkey(AppSettings["PauseSelect"], ActionPauseSelect, "Off")
-    if (AppSettings["OneClickSkill"] != "")
-        try Hotkey(AppSettings["OneClickSkill"], ActionOneClickSkill, "Off")
-    if (AppSettings["OneClickRetreat"] != "")
-        try Hotkey(AppSettings["OneClickRetreat"], ActionOneClickRetreat, "Off")
+    for keyVar, _ in KeyNames {
+        if (HotkeySettings[keyVar] != "") {
+            Action := "Action" . keyVar
+            if (HotkeySettings[keyVar] ~= "^(E|Q|F|G)$") {
+                Hotkey(HotkeySettings[keyVar], %Action%, "Off")
+            }
+            else {
+                Hotkey("~" HotkeySettings[keyVar], %Action%, "Off")
+            }
+        }
+    }
     HotIf
 }
 
 ; 检查游戏状态
 CheckGameStatus() {
     global GameHasStarted
-    if (AppSettings["AutoClose"] != "1")
+    if (MainSettings["AutoClose"] != "1")
         return
     if WinExist("ahk_exe Arknights.exe") {
         GameHasStarted := true
