@@ -130,7 +130,7 @@ Action166ms(ThisHotkey) {
     PureKeyWait(ThisHotkey)
 }
 ; 暂停选中
-ActionPauseselect(ThisHotkey) {
+ActionPauseSelect(ThisHotkey) {
     Send "{ESC Down}"
     USleep(Delay)
     Send "{Click Left}"
@@ -290,7 +290,7 @@ AddBindRow("额外暂停键A", "PauseA")
 AddBindRow("额外暂停键B", "PauseB", "(松开触发)")
 MyGui.Add("Text", "xs+10 y+17 w90 Right +0x200", "切换倍速") 
 MyGui.Add("Edit", "x+10 yp w120 Center ReadOnly Uppercase v" "GameSpeed", AppSettings["GameSpeed"])
-AddBindRow("暂停选中",    "Pauseselect")
+AddBindRow("暂停选中",    "PauseSelect")
 AddBindRow("干员技能",    "Skill")
 AddBindRow("干员撤退",    "Retreat")
 MyGui.Add("GroupBox", "x" (ColWidth + 30) " y10 w0 h0 Section", "")
@@ -391,7 +391,7 @@ LoadSettings() {
     
     AppSettings["33ms"] := IniRead(INI_FILE, "Hotkeys", "33ms", DefaultAppSettings["33ms"])
     AppSettings["166ms"] := IniRead(INI_FILE, "Hotkeys", "166ms", DefaultAppSettings["166ms"])
-    AppSettings["Pauseselect"] := IniRead(INI_FILE, "Hotkeys", "Pauseselect", DefaultAppSettings["Pauseselect"])
+    AppSettings["PauseSelect"] := IniRead(INI_FILE, "Hotkeys", "PauseSelect", DefaultAppSettings["PauseSelect"])
     AppSettings["OneClickSkill"] := IniRead(INI_FILE, "Hotkeys", "OneClickSkill", DefaultAppSettings["OneClickSkill"])
     AppSettings["OneClickRetreat"] := IniRead(INI_FILE, "Hotkeys", "OneClickRetreat", DefaultAppSettings["OneClickRetreat"])
     
@@ -431,7 +431,7 @@ HotkeyIniWrite() {
         "PauseRetreat","暂停撤退",
         "33ms",   "前进 33ms",
         "166ms",  "前进 166ms",
-        "Pauseselect", "暂停选中",
+        "PauseSelect", "暂停选中",
         "OneClickSkill",  "一键技能",
         "OneClickRetreat", "一键撤退"
     )
