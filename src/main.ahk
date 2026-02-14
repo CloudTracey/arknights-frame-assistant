@@ -3,7 +3,7 @@
 #Warn All, Off
 ListLines False
 KeyHistory 0
-ProcessSetPriority "High"
+ProcessSetPriority "High" ; 
 SendMode "Input"
 SetKeyDelay -1, -1
 SetMouseDelay -1
@@ -64,7 +64,7 @@ ActionGameSpeed(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-; 前进33ms，由于波动，过帧间隔设置为29ms，避免一次过两帧
+; 前进33ms
 Action33ms(ThisHotkey) {
     Send "{ESC Down}"
     USleep(Delay)
@@ -125,7 +125,7 @@ ActionRetreat(ThisHotkey) {
 ; 一键技能
 ActionOneClickSkill(ThisHotkey) {
     Send "{Click Left}"
-    USleep(Delay * 1.5)
+    USleep(Delay * 1.5) 
     Send "{e Down}"
     USleep(Delay * 1.3)
     Send "{e Up}"
@@ -214,18 +214,35 @@ USleep(delay_ms) {
             DllCall("Sleep", "UInt", 1) 
     }
 }
-
-; 去除修饰符前缀
+; 去除前缀修饰符
 PureKeyWait(ThisHotkey) {
     pureKey := RegExReplace(ThisHotkey, "^[~*$#!^+&]+")
     KeyWait(pureKey)
 }
 
-; 包含GUI
+; --- 包含剩余模块 ---
 #Include ./lib/gui.ahk
-
-; 包含设置
 #Include ./lib/setting.ahk
-
-; 按键绑定
 #Include ./lib/key_bind.ahk
+
+; ==============================================================================
+; === 新增：托盘图标配置 (必须放在脚本末尾以确保GUI已加载) ===
+; ==============================================================================
+A_TrayMenu.Delete()
+A_TrayMenu.Add("设置中心", TrayShowGui)
+A_TrayMenu.Default := "设置中心" ; 双击托盘图标将执行此项
+A_TrayMenu.Add("重启助手", (*) => Reload())
+A_TrayMenu.Add() ; 分割线
+A_TrayMenu.Add("退出程序", (*) => ExitApp())
+
+TrayShowGui(*) {
+    try {
+        if IsSet(MyGui) {
+            MyGui.Show()
+            ; 如果 global.ahk 里定义了 WindowName 则置顶，否则置顶游戏进程
+            target := IsSet(WindowName) ? WindowName : "ahk_exe Arknights.exe"
+            WinActivate(target)
+            WinRestore(target)
+        }
+    }
+}
