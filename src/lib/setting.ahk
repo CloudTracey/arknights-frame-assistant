@@ -22,6 +22,7 @@ DelaySetting() {
     else if (ImportantSettings["Frame"] == 3) {
         Delay := DelayC
     }
+    SkillAndRetreatDelay := Delay
 }
 
 ; 记录热键并写入配置文件

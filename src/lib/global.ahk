@@ -59,6 +59,8 @@ global WaitingModify := false
 global DelayA := 35.3 ; 30帧
 global DelayB := 19.6 ; 60帧
 global DelayC := 11.3 ; 120帧
+; 默认技能/撤退点击延迟
+global SkillAndRetreatDelay := 1
 
 ; ==配置文件路径==
 ConfigDir := A_AppData "\ArknightsFrameAssistant\PC"

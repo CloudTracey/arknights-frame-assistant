@@ -75,6 +75,7 @@ MyGui.Add("Text", "xm y+15 w1 h1")
 A_TrayMenu.Delete
 A_TrayMenu.Add("打开按键设置", (*) => ShowSettings())
 A_TrayMenu.Add("退出", (*) => ExitApp())
+A_TrayMenu.Default := "打开按键设置"
 ; 焦点修正，不豪堪
 ; OnMessage(0x0111, (*) => (MyGui.FocusedCtrl ? "" : btnSave.Focus()))
 
