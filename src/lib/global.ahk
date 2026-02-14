@@ -1,6 +1,8 @@
 ﻿; == 全局变量 ==
 ; 版本号
 global Version := "v1.0.8"
+global Repo := "CloudTracey/arknights-frame-assistant"
+global UpdateAPI := "https://api.github.com/repos/" . Repo . "/releases/latest"
 ; 按键默认设置
 global DefaultHotKeySettings := Map()
 DefaultHotKeySettings["PressPause"] := "f"
@@ -37,13 +39,15 @@ global DefaultImportantSettings := Map()
 DefaultImportantSettings["AutoClose"] := "1"
 DefaultImportantSettings["AutoOpen"] := "1"
 DefaultImportantSettings["Frame"] := "3"
+DefaultImportantSettings["AutoCheckUpdate"] := "1" 
 ; 重要设置
 global ImportantSettings := DefaultImportantSettings.Clone()
 ; 重要设置映射
 global ImportantNames := Map(
     "AutoClose", "自动退出",
     "AutoOpen",  "自动打开设置界面",
-    "Frame","游戏内帧数设置"
+    "Frame","游戏内帧数设置",
+    "AutoCheckUpdate", "自动检查更新" 
 )
 ; 游戏状态
 global GameHasStarted := false 

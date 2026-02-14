@@ -229,3 +229,8 @@ PureKeyWait(ThisHotkey) {
 
 ; 按键绑定
 #Include ./lib/key_bind.ahk
+
+; -- 启动 3 秒后，如果用户开了自动检查，就静默运行一次 --
+if (ImportantSettings["AutoCheckUpdate"] == "1") {
+    SetTimer(() => CheckUpdate(true), -3000) ; true 代表静默，最新版时不弹窗
+}

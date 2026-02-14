@@ -60,6 +60,7 @@ HotkeyIniWrite() {
     IniWrite(SavedObj.AutoClose, INI_FILE, "Main", "AutoClose")
     IniWrite(SavedObj.AutoOpen,  INI_FILE, "Main", "AutoOpen")
     IniWrite(SavedObj.Frame,  INI_FILE, "Main", "Frame")
+    IniWrite(SavedObj.AutoCheckUpdate, INI_FILE, "Main", "AutoCheckUpdate")
 }
 
 ; 重置默认设置
@@ -156,4 +157,91 @@ CheckGameStatus() {
             ExitApp
         }
     }
+}
+; 检查更新主函数
+CheckUpdate(Silent := false) 
+{
+    global Version, UpdateAPI, Repo
+    try 
+    {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        
+        ; --- 新增：设置显式超时时间 (单位: 毫秒) ---
+        ; 参数顺序：解析(Resolve)、连接(Connect)、发送(Send)、接收(Receive)
+        ; 全部设为 5000ms (5秒)
+        whr.SetTimeouts(5000, 5000, 5000, 5000)
+
+        ; --- 修改：改为同步请求 (第三个参数设为 false) ---
+        ; 配合 SetTimeouts，这会让脚本在等待时预测性地失败，而不是无限期阻塞
+        whr.Open("GET", UpdateAPI, false)
+        
+        whr.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AHK-Updater")
+        
+        ; 发送请求 (在同步模式下，会停留在这里直到成功或超时)
+        whr.Send()
+        
+        ; 检查返回状态
+        if (whr.Status != 200) 
+        {
+            if (!Silent)
+                MsgBox("连接更新服务器失败 (状态码: " whr.Status ")。`n可能是网络波动，请稍后再试。", "更新失败", "Icon!")
+            return
+        }
+
+        ; 解析版本号
+        if (RegExMatch(whr.ResponseText, '"tag_name":\s*"(.*?)"', &match)) 
+        {
+            LatestVersion := match[1]
+            
+            if (LatestVersion != Version) 
+            {
+                Result := MsgBox("发现新版本: " LatestVersion "`n当前版本: " Version "`n`n是否立即下载并替换？", "自动更新", "YesNo Iconi")
+                if (Result == "Yes") 
+                {
+                    if (RegExMatch(whr.ResponseText, '"browser_download_url":\s*"(.*?\.exe)"', &dlMatch)) 
+                        DownloadAndReplace(dlMatch[1])
+                    else 
+                        Run("https://github.com/" . Repo . "/releases/latest")
+                }
+            } 
+            else if (!Silent) 
+            {
+                MsgBox("当前已是最新版本 (" Version ")", "自动更新", "Iconi")
+            }
+        }
+    } 
+    catch 
+    {
+        ; 如果超时或断网，会进入这里
+        if (!Silent)
+            MsgBox("检查更新超时或网络不可用，请检查您的网络连接。", "更新失败", "Icon!")
+    }
+}
+DownloadAndReplace(url) 
+{
+    ToolTip("正在下载更新，请勿关闭程序...")
+    TempFile := A_ScriptDir "\update_temp.exe"
+    try 
+    {
+        Download(url, TempFile)
+    } 
+    catch 
+    {
+        MsgBox("下载更新失败，请检查网络权限。", "失败")
+        ToolTip()
+        return
+    }
+
+    ; 创建批处理脚本
+    BatContent := "@echo off`ntimeout /t 1 /nobreak > nul`nmove /y `"" TempFile "`" `"" A_ScriptFullPath "`"`nstart `"`" `"" A_ScriptFullPath "`"`ndel %0"
+    BatFile := A_ScriptDir "\updater.bat"
+    
+    if FileExist(BatFile)
+        FileDelete(BatFile)
+        
+    FileAppend(BatContent, BatFile, "CP0")
+    
+    ; 隐藏运行并立刻退出
+    Run(BatFile, , "Hide")
+    ExitApp()
 }
