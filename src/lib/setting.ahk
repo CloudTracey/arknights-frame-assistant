@@ -1,4 +1,4 @@
-﻿; == 设置相关 ==
+; == 设置相关 ==
 ; 从配置文件加载设置
 LoadSettings() {
     for keyVar, _ in KeyNames {
@@ -13,13 +13,13 @@ LoadSettings() {
 ; 操作延迟设置
 DelaySetting() {
     global Delay
-    if (ImportantSettings["Frame"] == 1) {
+    if (ImportantSettings["Frame"] == "1") {
         Delay := DelayA
     }
-    else if (ImportantSettings["Frame"] == 2) {
+    else if (ImportantSettings["Frame"] == "2") {
         Delay := DelayB
     }
-    else if (ImportantSettings["Frame"] == 3) {
+    else if (ImportantSettings["Frame"] == "3") {
         Delay := DelayC
     }
     SkillAndRetreatDelay := Delay
@@ -39,7 +39,7 @@ HotkeyIniWrite() {
             ; 按键冲突提示
             if (UsedKeys.Has(currentKey)) {
                 prevKeyName := UsedKeys[currentKey]
-                MsgBox("按键冲突！`n[" currentKey "] 已经被设置为: 【" prevKeyName "】`n请先修改重复的按键。", "保存失败", "Icon!")
+                MsgBox("按键冲突！`n【" currentKey "】 已经被设置为: 【" prevKeyName "】`n请先修改重复的按键。", "保存失败", "Icon!")
                 Exit
             }
             UsedKeys[currentKey] := keyName
@@ -62,6 +62,14 @@ HotkeyIniWrite() {
     IniWrite(SavedObj.Frame,  INI_FILE, "Main", "Frame")
 }
 
+; 重置游戏状态
+ResetGameStateIfNeeded() {
+    if (ImportantSettings["AutoClose"] == "1" && !WinExist("ahk_exe Arknights.exe")) {
+        global GameHasStarted
+        GameHasStarted := false
+    }
+}
+
 ; 重置默认设置
 SetDefaultSetting() {
     Result := MsgBox("  确定重置按键为默认设置吗 ？","重置按键设置", "YesNo")
@@ -73,6 +81,7 @@ SetDefaultSetting() {
     HotkeyOff()
     HotkeyIniWrite()
     LoadSettings()
+    ResetGameStateIfNeeded()
     HotkeyOn()
 }
 
@@ -81,6 +90,7 @@ SaveAndClose() {
     HotkeyOff()
     HotkeyIniWrite()
     LoadSettings()
+    ResetGameStateIfNeeded()
     HotkeyOn()
     HideGui()
     MsgBox("设置已保存！后续可从右下角托盘区图标右键菜单打开设置", "保存成功", "Iconi")
@@ -91,6 +101,7 @@ ApplySettings() {
     HotkeyOff()
     HotkeyIniWrite()
     LoadSettings()
+    ResetGameStateIfNeeded()
     HotkeyOn()
     MsgBox("设置已应用！", "应用成功")
 }
@@ -104,56 +115,4 @@ CancleSetting() {
         MyGui[key].Value := ImportantSettings[key]
     }
     HideGui()
-}
-
-; 启用热键
-HotkeyOn() {
-    HotIfWinActive("ahk_exe Arknights.exe") 
-    for keyVar, _ in KeyNames {
-        if (HotkeySettings[keyVar] != "") {
-            Action := "Action" . keyVar
-            if (HotkeySettings[keyVar] ~= "^(E|Q|F|G)$") {
-                Hotkey(HotkeySettings[keyVar], %Action%, "On")
-            }
-            else {
-                Hotkey("~" HotkeySettings[keyVar], %Action%, "On")
-            }
-        }
-    }
-    HotIf
-}
-
-; 禁用热键
-HotkeyOff() {
-    HotIfWinActive("ahk_exe Arknights.exe") 
-    for keyVar, _ in KeyNames {
-        if (HotkeySettings[keyVar] != "") {
-            Action := "Action" . keyVar
-            if (HotkeySettings[keyVar] ~= "^(E|Q|F|G)$") {
-                Hotkey(HotkeySettings[keyVar], %Action%, "Off")
-            }
-            else {
-                Hotkey("~" HotkeySettings[keyVar], %Action%, "Off")
-            }
-        }
-    }
-    HotIf
-}
-
-; 自动退出计时器
-SetTimer CheckGameStatus, 1000
-
-; 检查游戏状态
-CheckGameStatus() {
-    global GameHasStarted
-    if (ImportantSettings["AutoClose"] != "1")
-        return
-    if WinExist("ahk_exe Arknights.exe") {
-        GameHasStarted := true
-    }
-    else {
-        if (GameHasStarted == true) {
-            ExitApp
-        }
-    }
 }
