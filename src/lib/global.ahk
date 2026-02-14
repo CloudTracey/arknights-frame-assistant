@@ -1,6 +1,6 @@
 ﻿; == 全局变量 ==
 ; 版本号
-global Version := "v1.1.0-beta.2"
+global Version := "v1.0.8"
 global Repo := "CloudTracey/arknights-frame-assistant"
 global UpdateAPI := "https://api.github.com/repos/" . Repo . "/releases/latest"
 ; 按键默认设置
@@ -39,7 +39,6 @@ global DefaultImportantSettings := Map()
 DefaultImportantSettings["AutoClose"] := "1"
 DefaultImportantSettings["AutoOpen"] := "1"
 DefaultImportantSettings["Frame"] := "3"
-; [新增] 默认开启启动自检更新
 DefaultImportantSettings["AutoCheckUpdate"] := "1" 
 ; 重要设置
 global ImportantSettings := DefaultImportantSettings.Clone()
@@ -47,8 +46,8 @@ global ImportantSettings := DefaultImportantSettings.Clone()
 global ImportantNames := Map(
     "AutoClose", "自动退出",
     "AutoOpen",  "自动打开设置界面",
-    "Frame",     "游戏内帧数设置",
-    "AutoCheckUpdate", "启动时自动检查更新"
+    "Frame","游戏内帧数设置",
+    "AutoCheckUpdate", "自动检查更新" 
 )
 ; 游戏状态
 global GameHasStarted := false 
@@ -64,6 +63,8 @@ global WaitingModify := false
 global DelayA := 35.3 ; 30帧
 global DelayB := 19.6 ; 60帧
 global DelayC := 11.3 ; 120帧
+; 默认技能/撤退点击延迟
+global SkillAndRetreatDelay := 1
 
 ; ==配置文件路径==
 ConfigDir := A_AppData "\ArknightsFrameAssistant\PC"

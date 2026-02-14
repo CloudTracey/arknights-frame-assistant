@@ -5,12 +5,20 @@ OnMessage(0x0201, WM_LBUTTONDOWN)
 
 ; 创建Hook
 CreateHook() {
+    global ModifyHook
     ModifyHook := InputHook("L0")
     ModifyHook.VisibleNonText := false
     ModifyHook.KeyOpt("{All}", "E")
     ModifyHook.KeyOpt("{LCtrl}{RCtrl}{LAlt}{RAlt}{LShift}{RShift}", "E")
     ModifyHook.OnEnd := (*) => EndChange(ModifyHook.EndKey)
     ModifyHook.Start()
+}
+; 释放Hook
+StopHook() {
+    global ModifyHook
+    if(ModifyHook.InProgress) {
+        ModifyHook.Stop()
+    }
 }
 
 ; 左键点击判定
@@ -31,9 +39,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             LastEditObject := ControlObj
             WaitingModify := true
             ; 释放可能存在的Hook
-            if(ModifyHook.InProgress) {
-                ModifyHook.Stop()
-            }
+            StopHook()
             ; 配置 Hook
             CreateHook()
         }
@@ -51,9 +57,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
                 ControlObj.Value := "请按键"
                 LastEditObject := ControlObj
                 ; 释放可能存在的Hook
-                if(ModifyHook.InProgress) {
-                    ModifyHook.Stop()
-                }
+                StopHook()
                 ; 配置Hook
                 CreateHook()
             }
@@ -69,9 +73,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             LastEditObject := ""
             WaitingModify := false
             ; 释放可能存在的Hook
-            if(ModifyHook.InProgress) {
-                ModifyHook.Stop()
-            }
+            StopHook()
         }
         return
     }
@@ -91,9 +93,7 @@ WatchActiveWindow(){
             LastEditObject := ""
             WaitingModify := false
             ; 释放可能存在的Hook
-            if(ModifyHook.InProgress) {
-                ModifyHook.Stop()
-            }
+            StopHook()
             btnSave.Focus()
         }
     }
@@ -116,20 +116,18 @@ EndChange(Newkey) {
     ; 若有输入按键且不是鼠标左键
     if(Newkey != "") {
         if(Newkey == "Escape" OR Newkey == "Backspace") {
-            try ControlObj.Value := ""
+            ControlObj.Value := ""
         }
         else if(Newkey == "LWin" OR Newkey == "LWin") {
             LastEditObject.Value := OriginalValue
         }
         else {
-            try ControlObj.Value := Newkey
+            ControlObj.Value := Newkey
         }
     }
     LastEditObject := ""
     WaitingModify := false
-    if(ModifyHook.InProgress) {
-        ModifyHook.Stop()
-    }
+    StopHook()
     btnSave.Focus()
 }
 

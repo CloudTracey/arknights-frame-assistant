@@ -42,6 +42,7 @@ MyGui.Add("Checkbox", "x30 y+20 h24 vAutoClose", " 随游戏进程关闭自动�
 MyGui.Add("Checkbox", "x+20 yp h24 vAutoOpen", " 小助手启动时自动打开设置窗口")
 MyGui.Add("Checkbox", "x30 y+10 h24 vAutoCheckUpdate", " 启动时自动检查更新")
 MyGui["AutoCheckUpdate"].Value := ImportantSettings["AutoCheckUpdate"]
+
 MyGui["AutoClose"].Value := ImportantSettings["AutoClose"]
 MyGui["AutoOpen"].Value := ImportantSettings["AutoOpen"]
 MyGui.Add("Text", "x30 y+12", "游戏内帧数:")
@@ -69,16 +70,17 @@ btnSave := MyGui.Add("Button", "x" BtnX_Save " yp w" BtnW " h32 Default", "保�
 btnSave.OnEvent("Click", (*) => SaveAndClose())
 btnApply := MyGui.Add("Button", "x" BtnX_Apply " yp w" BtnW " h32 Default", "应用设置")
 btnApply.OnEvent("Click", (*) => ApplySettings())
-btnCheck := MyGui.Add("Button", "x+10 yp w100 h32", "检查更新")
-btnCheck.OnEvent("Click", (*) => CheckUpdate(false)) ; false 代表手动点，会提示“已是最新”
 btnCancel := MyGui.Add("Button", "x" BtnX_Cancel " yp w" BtnW " h32", "取消")
 btnCancel.OnEvent("Click", (*) => CancleSetting())
+btnCheckUpdate := MyGui.Add("Button", "x" BtnX_Default + 110 " yp w100 h32", "检查更新")
+btnCheckUpdate.OnEvent("Click", (*) => CheckUpdate(false)) ; false 表示手动检查，显示“最新版”提示
 ; 空白占位
 MyGui.Add("Text", "xm y+15 w1 h1")
 ; 托盘区右键菜单
 A_TrayMenu.Delete
 A_TrayMenu.Add("打开按键设置", (*) => ShowSettings())
 A_TrayMenu.Add("退出", (*) => ExitApp())
+A_TrayMenu.Default := "打开按键设置"
 ; 焦点修正，不豪堪
 ; OnMessage(0x0111, (*) => (MyGui.FocusedCtrl ? "" : btnSave.Focus()))
 
@@ -95,9 +97,7 @@ ShowWarning() {
 ; 隐藏GUI
 HideGui(){
     ; 释放可能存在的Hook
-    if(ModifyHook.InProgress) {
-        ModifyHook.Stop()
-    }
+    StopHook()
     MyGui.Hide()
     ; 关闭GUI窗口监控
     SetTimer WatchActiveWindow, 0

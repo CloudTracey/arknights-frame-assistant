@@ -10,6 +10,8 @@ SetMouseDelay -1
 SetWinDelay -1
 SetDefaultMouseSpeed 0
 SetTitleMatchMode 3
+DllCall("winmm\timeBeginPeriod", "UInt", 1)
+OnExit (*) => DllCall("winmm\timeEndPeriod", "UInt", 1)
 
 ; 获取权限
 if not A_IsAdmin
@@ -123,7 +125,7 @@ ActionRetreat(ThisHotkey) {
 ; 一键技能
 ActionOneClickSkill(ThisHotkey) {
     Send "{Click Left}"
-    USleep(Delay * 1.5)
+    USleep(SkillAndRetreatDelay * 1.5)
     Send "{e Down}"
     USleep(Delay * 1.3)
     Send "{e Up}"
@@ -134,7 +136,7 @@ ActionOneClickSkill(ThisHotkey) {
 ; 一键撤退
 ActionOneClickRetreat(ThisHotkey) {
     Send "{Click Left}"
-    USleep(Delay * 1.5)
+    USleep(SkillAndRetreatDelay * 1.5)
     Send "{q Down}"
     USleep(Delay * 1.3)
     Send "{q Up}"
@@ -148,7 +150,7 @@ ActionPauseSkill(ThisHotkey) {
     USleep(Delay)
     Send "{Click Left}"
     Send "{ESC Up}"
-    USleep(Delay * 1.4)
+    USleep(SkillAndRetreatDelay * 1.4)
     Send "{ESC Down}"
     USleep(Delay)
     Send "{ESC Up}"
@@ -165,7 +167,7 @@ ActionPauseRetreat(ThisHotkey) {
     USleep(Delay)
     Send "{Click Left}"
     Send "{ESC Up}"
-    USleep(Delay * 1.4)
+    USleep(SkillAndRetreatDelay * 1.4)
     Send "{ESC Down}"
     USleep(Delay)
     Send "{ESC Up}"
@@ -210,10 +212,6 @@ USleep(delay_ms) {
         remaining := (target - current) * 1000 / freq
         if (remaining > 2)
             DllCall("Sleep", "UInt", 1) 
-    }
-    if (isHighRes) {
-        DllCall("winmm\timeEndPeriod", "UInt", 1)
-        isHighRes := false
     }
 }
 
