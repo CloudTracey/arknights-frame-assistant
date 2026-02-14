@@ -40,6 +40,8 @@ AddBindRow("暂停撤退",    "PauseRetreat")
 MyGui.Add("Text", "x15 y+30 w" (GuiWidth - 30) " h1 0x10") ; 水平分割线
 MyGui.Add("Checkbox", "x30 y+20 h24 vAutoClose", " 随游戏进程关闭自动退出（强烈建议开启）")
 MyGui.Add("Checkbox", "x+20 yp h24 vAutoOpen", " 小助手启动时自动打开设置窗口")
+MyGui.Add("Checkbox", "x30 y+10 h24 vAutoCheckUpdate", " 启动时自动检查更新")
+MyGui["AutoCheckUpdate"].Value := ImportantSettings["AutoCheckUpdate"]
 MyGui["AutoClose"].Value := ImportantSettings["AutoClose"]
 MyGui["AutoOpen"].Value := ImportantSettings["AutoOpen"]
 MyGui.Add("Text", "x30 y+12", "游戏内帧数:")
@@ -67,6 +69,8 @@ btnSave := MyGui.Add("Button", "x" BtnX_Save " yp w" BtnW " h32 Default", "保�
 btnSave.OnEvent("Click", (*) => SaveAndClose())
 btnApply := MyGui.Add("Button", "x" BtnX_Apply " yp w" BtnW " h32 Default", "应用设置")
 btnApply.OnEvent("Click", (*) => ApplySettings())
+btnCheck := MyGui.Add("Button", "x+10 yp w100 h32", "检查更新")
+btnCheck.OnEvent("Click", (*) => CheckUpdate(false)) ; false 代表手动点，会提示“已是最新”
 btnCancel := MyGui.Add("Button", "x" BtnX_Cancel " yp w" BtnW " h32", "取消")
 btnCancel.OnEvent("Click", (*) => CancleSetting())
 ; 空白占位

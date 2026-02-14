@@ -1,7 +1,6 @@
 ﻿#Requires AutoHotkey v2.0
 #SingleInstance Force
 #Warn All, Off
-
 ListLines False
 KeyHistory 0
 ProcessSetPriority "High"
@@ -12,11 +11,7 @@ SetWinDelay -1
 SetDefaultMouseSpeed 0
 SetTitleMatchMode 3
 
-; 开启高精度计时器
-DllCall("winmm\timeBeginPeriod", "UInt", 1)
-OnExit (*) => DllCall("winmm\timeEndPeriod", "UInt", 1)
-
-; 获取管理员权限
+; 获取权限
 if not A_IsAdmin
 {
     try
@@ -29,15 +24,14 @@ if not A_IsAdmin
     ExitApp
 }
 
+; 包含全局变量
 #Include ./lib/global.ahk
-#Include ./lib/gui.ahk
-#Include ./lib/setting.ahk
-#Include ./lib/key_bind.ahk
 
-; 初始化加载
+; 初始化
 LoadSettings()
 HotkeyOn()
 
+; == 功能实现 ==
 ; 按下暂停
 ActionPressPause(ThisHotkey) {
     Send "{ESC Down}"
@@ -47,7 +41,6 @@ ActionPressPause(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
 ; 松开暂停
 ActionReleasePause(ThisHotkey) {
     if InStr(ThisHotkey, "Wheel") == 0 {
@@ -57,7 +50,6 @@ ActionReleasePause(ThisHotkey) {
     USleep(Delay)
     Send "{ESC Up}"
 }
-
 ; 切换倍速
 ActionGameSpeed(ThisHotkey) {
     Send "{f Down}"
@@ -70,8 +62,7 @@ ActionGameSpeed(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
-; 前进33ms
+; 前进33ms，由于波动，过帧间隔设置为29ms，避免一次过两帧
 Action33ms(ThisHotkey) {
     Send "{ESC Down}"
     USleep(Delay)
@@ -84,7 +75,6 @@ Action33ms(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
 ; 前进166ms
 Action166ms(ThisHotkey) {
     Send "{ESC Down}"
@@ -98,7 +88,6 @@ Action166ms(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
 ; 暂停选中
 ActionPauseSelect(ThisHotkey) {
     Send "{ESC Down}"
@@ -113,7 +102,6 @@ ActionPauseSelect(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
 ; 干员技能
 ActionSkill(ThisHotkey) {
     Send "{e Down}"
@@ -123,7 +111,6 @@ ActionSkill(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
 ; 干员撤退
 ActionRetreat(ThisHotkey) {
     Send "{q Down}"
@@ -133,7 +120,6 @@ ActionRetreat(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
 ; 一键技能
 ActionOneClickSkill(ThisHotkey) {
     Send "{Click Left}"
@@ -145,7 +131,6 @@ ActionOneClickSkill(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
 ; 一键撤退
 ActionOneClickRetreat(ThisHotkey) {
     Send "{Click Left}"
@@ -157,7 +142,6 @@ ActionOneClickRetreat(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
 ; 暂停技能
 ActionPauseSkill(ThisHotkey) {
     Send "{ESC Down}"
@@ -175,7 +159,6 @@ ActionPauseSkill(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-
 ; 暂停撤退
 ActionPauseRetreat(ThisHotkey) {
     Send "{ESC Down}"
@@ -202,8 +185,7 @@ RbuttonClick(ThisHotkey) {
     PureKeyWait(ThisHotkey)
 }
 
-
-; 高精度延迟 
+; 高精度延迟
 USleep(delay_ms) {
     static freq := 0
     static isHighRes := false
@@ -229,34 +211,28 @@ USleep(delay_ms) {
         if (remaining > 2)
             DllCall("Sleep", "UInt", 1) 
     }
+    if (isHighRes) {
+        DllCall("winmm\timeEndPeriod", "UInt", 1)
+        isHighRes := false
+    }
 }
 
-; 去除修饰符前缀并执行KeyWait
+; 去除修饰符前缀
 PureKeyWait(ThisHotkey) {
     pureKey := RegExReplace(ThisHotkey, "^[~*$#!^+&]+")
     KeyWait(pureKey)
 }
 
-A_TrayMenu.Delete() 
-A_TrayMenu.Add("设置中心", TrayShowGui)
-A_TrayMenu.Default := "设置中心" 
-A_TrayMenu.Add("重启助手", (*) => Reload())
-A_TrayMenu.Add() 
-A_TrayMenu.Add("退出程序", (*) => ExitApp())
+; 包含GUI
+#Include ./lib/gui.ahk
 
-TrayShowGui(*) {
-    ; 显式声明全局变量，确保在双击托盘时能正确识别 GUI 对象
-    global MyGui, WindowName 
+; 包含设置
+#Include ./lib/setting.ahk
 
-    try {
-        if IsSet(MyGui) {
-            ; 显示助手设置窗口
-            MyGui.Show()
-            
-            ; 焦点行为修正：
-            ; 激活设置窗口本身，并确保它位于屏幕最前端
-            WinActivate(MyGui.Hwnd)
-            WinRestore(MyGui.Hwnd)
-        }
-    }
+; 按键绑定
+#Include ./lib/key_bind.ahk
+
+; -- 启动 3 秒后，如果用户开了自动检查，就静默运行一次 --
+if (ImportantSettings["AutoCheckUpdate"] == "1") {
+    SetTimer(() => CheckUpdate(true), -3000) ; true 代表静默，最新版时不弹窗
 }
