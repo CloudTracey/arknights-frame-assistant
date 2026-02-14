@@ -137,7 +137,6 @@ ActionRetreat(ThisHotkey) {
 ; 一键技能
 ActionOneClickSkill(ThisHotkey) {
     Send "{Click Left}"
-    ; 若已实现自定义延迟，此处建议改为 AppSettings["SkillDelay"]
     USleep(Delay * 1.5)
     Send "{e Down}"
     USleep(Delay * 1.3)
@@ -204,7 +203,7 @@ RbuttonClick(ThisHotkey) {
 }
 
 
-; 高精度延迟 (QPC实现)
+; 高精度延迟 
 USleep(delay_ms) {
     static freq := 0
     static isHighRes := false
