@@ -122,7 +122,7 @@ EndChange(Newkey) {
         if(Newkey == "Escape" OR Newkey == "Backspace") {
             State.ControlObj.Value := ""
         }
-        else if(Newkey == "LWin" OR Newkey == "LWin") {
+        else if(Newkey == "LWin" OR Newkey == "RWin") {
             State.LastEditObject.Value := State.OriginalValue
         }
         else {

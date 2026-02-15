@@ -1,16 +1,32 @@
 ; == 热键控制 ==
+; 热键回调函数映射表
+ActionCallbacks := Map(
+    "PressPause", ActionPressPause,
+    "ReleasePause", ActionReleasePause,
+    "GameSpeed", ActionGameSpeed,
+    "33ms", Action33ms,
+    "166ms", Action166ms,
+    "PauseSelect", ActionPauseSelect,
+    "Skill", ActionSkill,
+    "Retreat", ActionRetreat,
+    "OneClickSkill", ActionOneClickSkill,
+    "OneClickRetreat", ActionOneClickRetreat,
+    "PauseSkill", ActionPauseSkill,
+    "PauseRetreat", ActionPauseRetreat
+)
+
 ; 启用热键
 HotkeyOn() {
-    HotIfWinActive("ahk_exe Arknights.exe") 
+    HotIfWinActive("ahk_exe Arknights.exe")
     for keyVar, _ in Constants.KeyNames {
         hotkeyValue := Config.GetHotkey(keyVar)
-        if (hotkeyValue != "") {
-            Action := "Action" . keyVar
+        if (hotkeyValue != "" && ActionCallbacks.Has(keyVar)) {
+            callback := ActionCallbacks[keyVar]
             if (hotkeyValue ~= "^(E|Q|F|G)$") {
-                Hotkey(hotkeyValue, %Action%, "On")
+                Hotkey(hotkeyValue, callback, "On")
             }
             else {
-                Hotkey("~" hotkeyValue, %Action%, "On")
+                Hotkey("~" hotkeyValue, callback, "On")
             }
         }
     }
@@ -19,16 +35,16 @@ HotkeyOn() {
 
 ; 禁用热键
 HotkeyOff() {
-    HotIfWinActive("ahk_exe Arknights.exe") 
+    HotIfWinActive("ahk_exe Arknights.exe")
     for keyVar, _ in Constants.KeyNames {
         hotkeyValue := Config.GetHotkey(keyVar)
-        if (hotkeyValue != "") {
-            Action := "Action" . keyVar
+        if (hotkeyValue != "" && ActionCallbacks.Has(keyVar)) {
+            callback := ActionCallbacks[keyVar]
             if (hotkeyValue ~= "^(E|Q|F|G)$") {
-                Hotkey(hotkeyValue, %Action%, "Off")
+                Hotkey(hotkeyValue, callback, "Off")
             }
             else {
-                Hotkey("~" hotkeyValue, %Action%, "Off")
+                Hotkey("~" hotkeyValue, callback, "Off")
             }
         }
     }

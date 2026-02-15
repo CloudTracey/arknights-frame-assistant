@@ -158,14 +158,18 @@ class GuiManager {
     static Show() {
         this.MainGui.Show()
         this.btnSave.Focus()
-        SetTimer WatchActiveWindow, 50
+        if (IsSet(WatchActiveWindow)) {
+            SetTimer WatchActiveWindow, 50
+        }
     }
     
 ; 隐藏GUI窗口
     static Hide() {
         EventBus.Publish("GuiHideStopHook")
         this.MainGui.Hide()
-        SetTimer WatchActiveWindow, 0
+        if (IsSet(WatchActiveWindow)) {
+            SetTimer WatchActiveWindow, 0
+        }
     }
     
     ; 提交表单（返回包含所有控件值的对象）

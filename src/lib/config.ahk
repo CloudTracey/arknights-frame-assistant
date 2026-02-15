@@ -4,7 +4,7 @@
 ; === 常量定义 ===
 class Constants {
     ; 版本号
-    static Version := "v1.0.9-alpha.2"
+    static Version := "v1.0.9-alpha.3"
     
     ; 延迟常量 (毫秒)
     static DelayA := 35.3      ; 30帧
@@ -57,7 +57,7 @@ class Config {
     ; 获取按键设置（带默认值）
     static GetHotkey(key) {
         if !this._isLoaded
-            this.LoadDefaults()
+            this.LoadFromIni()
         return this._hotkeySettings.Has(key) ? this._hotkeySettings[key] : ""
     }
     
@@ -69,7 +69,7 @@ class Config {
     ; 获取重要设置
     static GetImportant(key) {
         if !this._isLoaded
-            this.LoadDefaults()
+            this.LoadFromIni()
         return this._importantSettings.Has(key) ? this._importantSettings[key] : ""
     }
     
