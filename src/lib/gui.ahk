@@ -42,6 +42,8 @@ MyGui.Add("Checkbox", "x30 y+20 h24 vAutoClose", " 随游戏进程关闭自动�
 MyGui.Add("Checkbox", "x+20 yp h24 vAutoOpen", " 小助手启动时自动打开设置窗口")
 MyGui["AutoClose"].Value := ImportantSettings["AutoClose"]
 MyGui["AutoOpen"].Value := ImportantSettings["AutoOpen"]
+MyGui.Add("Checkbox", "x30 y+12 h24 vAutoHideToTray", " 启动时自动隐藏到托盘（首次启动生效）")
+MyGui["AutoHideToTray"].Value := ImportantSettings["AutoHideToTray"]
 MyGui.Add("Text", "x30 y+12", "游戏内帧数:")
 GuiFrame := MyGui.Add("DropDownList", "x+12 y+-18 vFrame AltSubmit", ["30", "60", "120"])
 MyGui["Frame"].Value := ImportantSettings["Frame"]
@@ -109,4 +111,9 @@ ShowSettings() {
 ; 随脚本启动打开GUI界面
 if(ImportantSettings["AutoOpen"] == 1) {
     ShowSettings()
+}
+
+; 启动时自动隐藏到托盘
+if(ImportantSettings["AutoHideToTray"] == 1) {
+    HideGui()
 }

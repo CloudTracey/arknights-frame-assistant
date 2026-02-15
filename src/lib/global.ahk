@@ -37,12 +37,14 @@ global DefaultImportantSettings := Map()
 DefaultImportantSettings["AutoClose"] := "1"
 DefaultImportantSettings["AutoOpen"] := "1"
 DefaultImportantSettings["Frame"] := "3"
+DefaultImportantSettings["AutoHideToTray"] := "0"  ; 新增：启动时自动隐藏到托盘，默认关闭
 ; 重要设置
 global ImportantSettings := DefaultImportantSettings.Clone()
 ; 重要设置映射
 global ImportantNames := Map(
     "AutoClose", "自动退出",
     "AutoOpen",  "自动打开设置界面",
+    "AutoHideToTray", "启动时自动隐藏到托盘",  ; 新增映射
     "Frame","游戏内帧数设置"
 )
 ; 游戏状态
