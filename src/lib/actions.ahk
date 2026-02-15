@@ -2,7 +2,7 @@
 ; 按下暂停
 ActionPressPause(ThisHotkey) {
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -14,16 +14,16 @@ ActionReleasePause(ThisHotkey) {
         PureKeyWait(ThisHotkey)
     }
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{ESC Up}"
 }
 ; 切换倍速
 ActionGameSpeed(ThisHotkey) {
     Send "{f Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{f Up}"
     Send "{g Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{g Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -32,11 +32,11 @@ ActionGameSpeed(ThisHotkey) {
 ; 前进33ms，由于波动，过帧间隔设置为29ms，避免一次过两帧
 Action33ms(ThisHotkey) {
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{ESC Up}"
-    USleep(29 - Delay)
+    USleep(29 - State.CurrentDelay)
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -45,11 +45,11 @@ Action33ms(ThisHotkey) {
 ; 前进166ms
 Action166ms(ThisHotkey) {
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{ESC Up}"
-    USleep(166 - Delay)
+    USleep(166 - State.CurrentDelay)
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -58,12 +58,12 @@ Action166ms(ThisHotkey) {
 ; 暂停选中
 ActionPauseSelect(ThisHotkey) {
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{Click Left}"
     Send "{ESC Up}"
-    USleep(Delay * 1.2)
+    USleep(State.CurrentDelay * 1.2)
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -72,7 +72,7 @@ ActionPauseSelect(ThisHotkey) {
 ; 干员技能
 ActionSkill(ThisHotkey) {
     Send "{e Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{e Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -81,7 +81,7 @@ ActionSkill(ThisHotkey) {
 ; 干员撤退
 ActionRetreat(ThisHotkey) {
     Send "{q Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{q Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -90,9 +90,9 @@ ActionRetreat(ThisHotkey) {
 ; 一键技能
 ActionOneClickSkill(ThisHotkey) {
     Send "{Click Left}"
-    USleep(SkillAndRetreatDelay * 1.5)
+    USleep(Constants.SkillAndRetreatDelay * 1.5)
     Send "{e Down}"
-    USleep(Delay * 1.3)
+    USleep(State.CurrentDelay * 1.3)
     Send "{e Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -101,9 +101,9 @@ ActionOneClickSkill(ThisHotkey) {
 ; 一键撤退
 ActionOneClickRetreat(ThisHotkey) {
     Send "{Click Left}"
-    USleep(SkillAndRetreatDelay * 1.5)
+    USleep(Constants.SkillAndRetreatDelay * 1.5)
     Send "{q Down}"
-    USleep(Delay * 1.3)
+    USleep(State.CurrentDelay * 1.3)
     Send "{q Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -112,15 +112,15 @@ ActionOneClickRetreat(ThisHotkey) {
 ; 暂停技能
 ActionPauseSkill(ThisHotkey) {
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{Click Left}"
     Send "{ESC Up}"
-    USleep(SkillAndRetreatDelay * 1.4)
+    USleep(Constants.SkillAndRetreatDelay * 1.4)
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{ESC Up}"
     Send "{e Down}"
-    USleep(Delay * 1.2)
+    USleep(State.CurrentDelay * 1.2)
     Send "{e Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -129,15 +129,15 @@ ActionPauseSkill(ThisHotkey) {
 ; 暂停撤退
 ActionPauseRetreat(ThisHotkey) {
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{Click Left}"
     Send "{ESC Up}"
-    USleep(SkillAndRetreatDelay * 1.4)
+    USleep(Constants.SkillAndRetreatDelay * 1.4)
     Send "{ESC Down}"
-    USleep(Delay)
+    USleep(State.CurrentDelay)
     Send "{ESC Up}"
     Send "{q Down}"
-    USleep(Delay * 1.2)
+    USleep(State.CurrentDelay * 1.2)
     Send "{q Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -156,8 +156,8 @@ RbuttonClick(ThisHotkey) {
 USleep(delay_ms) {
     static freq := 0
     static isHighRes := false
-    if (delay_ms <= Delay) {
-        delay_ms := Delay
+    if (delay_ms <= State.CurrentDelay) {
+        delay_ms := State.CurrentDelay
     }
     if (freq = 0) {
         DllCall("QueryPerformanceFrequency", "Int64*", &freq)
