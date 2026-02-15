@@ -59,6 +59,7 @@ HotkeyIniWrite() {
     IniWrite(SavedObj.OneClickRetreat, INI_FILE, "Hotkeys", "OneClickRetreat")
     IniWrite(SavedObj.AutoClose, INI_FILE, "Main", "AutoClose")
     IniWrite(SavedObj.AutoOpen,  INI_FILE, "Main", "AutoOpen")
+    IniWrite(SavedObj.AutoHideToTray, INI_FILE, "Main", "AutoHideToTray")
     IniWrite(SavedObj.Frame,  INI_FILE, "Main", "Frame")
 }
 
