@@ -38,6 +38,7 @@ if not A_IsAdmin
 #Include ./lib/updater/version_checker.ahk
 #Include ./lib/updater/ui.ahk
 #Include ./lib/updater/downloader.ahk
+#Include ./lib/updater/self_replacer.ahk
 
 ; 包含功能实现
 #Include ./lib/hotkey_actions.ahk
