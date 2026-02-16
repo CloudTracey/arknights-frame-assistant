@@ -35,7 +35,7 @@ if not A_IsAdmin
 #Include ./lib/eventbus.ahk
 
 ; 包含功能实现
-#Include ./lib/actions.ahk
+#Include ./lib/hotkey_actions.ahk
 
 ; 包含按键绑定（StopHook）
 #Include ./lib/key_bind.ahk

@@ -27,8 +27,8 @@ class Constants {
     
     ; 重要设置名称映射（只读）
     static ImportantNames := Map(
-        "AutoClose", "自动退出",
-        "AutoOpen", "自动打开设置界面",
+        "AutoExit", "自动退出",
+        "AutoOpenSettings", "自动打开设置界面",
         "Frame", "游戏内帧数设置"
     )
 }
@@ -147,8 +147,8 @@ class Config {
     
     ; 内部：默认重要设置
     static _defaultImportant := Map(
-        "AutoClose", "1",
-        "AutoOpen", "1",
+        "AutoExit", "1",
+        "AutoOpenSettings", "1",
         "Frame", "3"
     )
     
