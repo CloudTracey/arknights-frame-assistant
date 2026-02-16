@@ -43,7 +43,7 @@ class GuiManager {
         A_TrayMenu.Default := "打开按键设置"
         
         ; 根据设置决定是否自动显示
-        if (Config.GetImportant("AutoOpen") == "1") {
+        if (Config.GetImportant("AutoOpenSettings") == "1") {
             this.Show()
         }
     }
@@ -82,12 +82,12 @@ class GuiManager {
         AddBindRow("暂停技能", "PauseSkill")
         AddBindRow("暂停撤退", "PauseRetreat")
         
-        ; 常规设置
+        ; 重要设置
         this.MainGui.Add("Text", "x15 y+30 w" (this.GuiWidth - 30) " h1 0x10")
-        this.MainGui.Add("Checkbox", "x30 y+20 h24 vAutoClose", " 随游戏进程关闭自动退出（强烈建议开启）")
-        this.MainGui.Add("Checkbox", "x+20 yp h24 vAutoOpen", " 小助手启动时自动打开设置窗口")
-        this.MainGui["AutoClose"].Value := Config.GetImportant("AutoClose")
-        this.MainGui["AutoOpen"].Value := Config.GetImportant("AutoOpen")
+        this.MainGui.Add("Checkbox", "x30 y+20 h24 vAutoExit", " 随游戏进程关闭自动退出（强烈建议开启）")
+        this.MainGui.Add("Checkbox", "x+20 yp h24 vAutoOpenSettings", " 小助手启动时自动打开设置窗口")
+        this.MainGui["AutoExit"].Value := Config.GetImportant("AutoExit")
+        this.MainGui["AutoOpenSettings"].Value := Config.GetImportant("AutoOpenSettings")
         this.MainGui.Add("Text", "x30 y+12", "游戏内帧数:")
         this.GuiFrame := this.MainGui.Add("DropDownList", "x+12 y+-18 vFrame AltSubmit", ["30", "60", "120"])
         this.MainGui["Frame"].Value := Config.GetImportant("Frame")

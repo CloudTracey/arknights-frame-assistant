@@ -4,7 +4,7 @@ SetTimer CheckGameStatus, 1000
 
 ; 检查游戏状态
 CheckGameStatus() {
-    if (Config.GetImportant("AutoClose") != "1")
+    if (Config.GetImportant("AutoExit") != "1")
         return
     if WinExist("ahk_exe Arknights.exe") {
         State.GameHasStarted := true

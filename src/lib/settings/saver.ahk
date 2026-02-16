@@ -27,7 +27,7 @@ HotkeyIniWrite() {
 
 ; 重置游戏状态
 ResetGameStateIfNeeded() {
-    if (Config.GetImportant("AutoClose") == "1" && !WinExist("ahk_exe Arknights.exe")) {
+    if (Config.GetImportant("AutoExit") == "1" && !WinExist("ahk_exe Arknights.exe")) {
         State.GameHasStarted := false
     }
 }
