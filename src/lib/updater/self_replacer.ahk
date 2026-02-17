@@ -4,9 +4,9 @@
 class SelfReplacer {
     ; 创建替换脚本并执行
     ; params: 包含以下字段的对象
-    ;   - newFilePath: 新exe文件的完整路径
-    ;   - currentExePath: 当前运行的exe路径（可选，默认A_ScriptFullPath）
-    ;   - backupOldVersion: 是否备份旧版本（可选，默认true）
+    ; - newFilePath: 新exe文件的完整路径
+    ; - currentExePath: 当前运行的exe路径（可选，默认A_ScriptFullPath）
+    ; - backupOldVersion: 是否备份旧版本（可选，默认true）
     static ExecuteReplacement(params) {
         newFilePath := params.newFilePath
         currentExePath := params.HasProp("currentExePath") ? params.currentExePath : A_ScriptFullPath
@@ -19,7 +19,7 @@ class SelfReplacer {
                 error: "新文件不存在: " newFilePath
             }
         }
-        
+
         ; 生成批处理脚本路径
         tempDir := A_Temp "\ArknightsFrameAssistant"
         if !DirExist(tempDir)
@@ -44,12 +44,18 @@ class SelfReplacer {
         
         ; 写入批处理文件（使用UTF-8编码）
         try {
-            FileDelete(batchFile)
-            FileAppend(batchContent, batchFile, "UTF-8")
+            ; 确保目录存在
+            batchDir := tempDir
+            if !DirExist(batchDir)
+                DirCreate(batchDir)
+            ; 如果存在旧文件先删除
+            if FileExist(batchFile)
+                FileDelete(batchFile)
+            FileAppend(batchContent, batchFile, "`n UTF-8-RAW")
         } catch Error as e {
             return {
                 success: false,
-                error: "创建批处理脚本失败: " e.Message
+                error: "创建批处理脚本失败: " e.Message " (路径: " batchFile ")"
             }
         }
         
@@ -87,68 +93,135 @@ class SelfReplacer {
         backupPath := params.backupPath
         batchFile := params.batchFile
         
-        ; 使用Format避免引号转义问题
-        script := "@echo off" "`n"
-        script .= "chcp 65001 >nul" "`n"
-        script .= "title 方舟帧操助手更新中..." "`n"
-        script .= "echo 正在等待程序关闭..." "`n"
+        ; 使用文本块方式构建批处理脚本
+        lines := []
+        lines.Push("@echo off")
+        lines.Push("setlocal enabledelayedexpansion")
+        lines.Push("chcp 65001 >nul")
+        lines.Push("title AFA更新中...")
+        ; 设置日志文件路径
+        lines.Push("set `"LOG_FILE=%Temp%\ArknightsFrameAssistant\log\update.log`"")
+        ; 创建日志目录（如果不存在）
+        lines.Push("if not exist `"%Temp%\ArknightsFrameAssistant\log`" mkdir `"%Temp%\ArknightsFrameAssistant\log`"")
         
-        ; 等待原程序退出
-        script .= ":wait_loop" "`n"
-        script .= "timeout /t 1 /nobreak >nul" "`n"
-        script .= "(call ) 2>nul || goto wait_loop" "`n"
+        ; 获取当前exe文件名
+        SplitPath(currentExePath, &currentExeName)
         
-        ; 尝试替换文件
-        script .= "echo 正在替换文件..." "`n"
-        script .= "set retry_count=0" "`n"
-        script .= ":retry_loop" "`n"
+        ; 初始化日志，记录开始时间
+        lines.Push("echo [%date% %time%] 开始更新流程 >> `"%LOG_FILE%`"")
+        lines.Push("echo 正在等待程序关闭... >> `"%LOG_FILE%`"")
+        lines.Push("echo 正在等待程序关闭...")
         
-        ; 如果开启了备份，先备份旧版本
+        ; 等待循环：检测进程是否退出
+        lines.Push("set wait_count=0")
+        lines.Push(":wait_loop")
+        lines.Push("timeout /t 1 /nobreak >nul")
+        lines.Push("tasklist /fi `"imagename eq " currentExeName "`" 2>nul | find /i `"" currentExeName "`" >nul")
+        lines.Push("if not errorlevel 1 (")
+        lines.Push("    set /a wait_count+=1")
+        lines.Push("    if !wait_count! geq 30 (")
+        lines.Push("        echo [%date% %time%] 等待超时（30秒），继续尝试替换 >> `"%LOG_FILE%`"")
+        lines.Push("        echo 等待超时，尝试继续...")
+        lines.Push("        goto continue_update")
+        lines.Push("    )")
+        lines.Push("    goto wait_loop")
+        lines.Push(")")
+        lines.Push("echo [%date% %time%] 程序已关闭 >> `"%LOG_FILE%`"")
+        lines.Push("echo 程序已关闭")
+        
+        ; 继续更新
+        lines.Push(":continue_update")
+        lines.Push("echo 正在替换文件... >> `"%LOG_FILE%`"")
+        lines.Push("echo 正在替换文件...")
+        lines.Push("set retry_count=0")
+        lines.Push(":retry_loop")
+        
+        ; 备份原文件（如果启用了备份）
         if (backupPath != "") {
-            script .= Format('if not exist "{1}" (', backupPath) "`n"
-            script .= Format('  copy /Y "{1}" "{2}" >nul 2>&1', currentExePath, backupPath) "`n"
-            script .= ")" "`n"
+            SplitPath(backupPath, &backupName)
+            lines.Push("if not exist `"" backupPath "`" (")
+            lines.Push("    copy /Y `"" currentExePath "`" `"" backupPath "`" >nul 2>&1")
+            lines.Push("    if errorlevel 1 (")
+            lines.Push("        echo [%date% %time%] 备份原文件失败 >> `"%LOG_FILE%`"")
+            lines.Push("    ) else (")
+            lines.Push("        echo [%date% %time%] 原文件已备份为 " backupName " >> `"%LOG_FILE%`"")
+            lines.Push("    )")
+            lines.Push(")")
         }
         
-        ; 删除旧文件并复制新文件
-        script .= Format('del /F /Q "{1}" >nul 2>&1', currentExePath) "`n"
-        script .= Format('copy /Y "{1}" "{2}" >nul 2>&1', newFilePath, currentExePath) "`n"
+        ; 删除原文件
+        lines.Push("del /F /Q `"" currentExePath "`" >nul 2>&1")
+        lines.Push("if errorlevel 1 (")
+        lines.Push("    echo [%date% %time%] 删除原文件失败 >> `"%LOG_FILE%`"")
+        lines.Push(") else (")
+        lines.Push("    echo [%date% %time%] 原文件已删除 >> `"%LOG_FILE%`"")
+        lines.Push(")")
         
-        ; 检查是否成功
-        script .= Format('if exist "{1}" (', currentExePath) "`n"
-        script .= "  echo 替换成功！" "`n"
-        script .= "  goto launch" "`n"
-        script .= ")" "`n"
+        ; 复制新文件
+        lines.Push("copy /Y `"" newFilePath "`" `"" currentExePath "`" >nul 2>&1")
+        lines.Push("if errorlevel 1 (")
+        lines.Push("    echo [%date% %time%] 复制新文件失败 >> `"%LOG_FILE%`"")
+        lines.Push(") else (")
+        lines.Push("    echo [%date% %time%] 新文件复制成功 >> `"%LOG_FILE%`"")
+        lines.Push(")")
         
-        ; 重试逻辑
-        script .= "set /a retry_count+=1" "`n"
-        script .= "if %retry_count% lss 5 (" "`n"
-        script .= "  timeout /t 2 /nobreak >nul" "`n"
-        script .= "  goto retry_loop" "`n"
-        script .= ")" "`n"
+        ; 检查替换是否成功
+        lines.Push("if exist `"" currentExePath "`" (")
+        lines.Push("    echo [%date% %time%] 替换成功！ >> `"%LOG_FILE%`"")
+        lines.Push("    echo 替换成功！")
+        lines.Push("    goto launch")
+        lines.Push(")")
         
-        ; 重试失败
-        script .= "echo 替换失败，请手动替换文件" "`n"
-        script .= "echo 新文件位置: " newFilePath "`n"
-        script .= "pause" "`n"
-        script .= "goto cleanup" "`n"
+        ; 重试机制
+        lines.Push("set /a retry_count+=1")
+        lines.Push("if %retry_count% lss 5 (")
+        lines.Push("    echo [%date% %time%] 替换失败，第%retry_count%次重试... >> `"%LOG_FILE%`"")
+        lines.Push("    timeout /t 2 /nobreak >nul")
+        lines.Push("    goto retry_loop")
+        lines.Push(")")
         
-        ; 启动新程序
-        script .= ":launch" "`n"
-        script .= "echo 正在启动新版本..." "`n"
-        script .= Format('start "" "{1}"', currentExePath) "`n"
-        script .= "timeout /t 2 /nobreak >nul" "`n"
+        ; 最终失败处理
+        lines.Push("echo [%date% %time%] 替换失败，请手动替换文件 >> `"%LOG_FILE%`"")
+        lines.Push("echo 替换失败，请手动替换文件")
+        lines.Push("echo 新文件位置: " newFilePath)
+        lines.Push("pause")
+        lines.Push("goto cleanup")
+        
+        ; 启动新版本
+        lines.Push(":launch")
+        lines.Push("echo 正在启动新版本... >> `"%LOG_FILE%`"")
+        lines.Push("echo 正在启动新版本...")
+        lines.Push("start `"`" `"" currentExePath "`"")
+        lines.Push("timeout /t 2 /nobreak >nul")
+        lines.Push("echo [%date% %time%] 新版本已启动 >> `"%LOG_FILE%`"")
         
         ; 清理
-        script .= ":cleanup" "`n"
-        script .= Format('del /F /Q "{1}" >nul 2>&1', batchFile) "`n"
-        script .= Format('del /F /Q "{1}" >nul 2>&1', newFilePath) "`n"
-        script .= "exit" "`n"
+        lines.Push(":cleanup")
+        lines.Push("del /F /Q `"" batchFile "`" >nul 2>&1")
+        lines.Push("if errorlevel 1 (")
+        lines.Push("    echo [%date% %time%] 清理临时脚本失败 >> `"%LOG_FILE%`"")
+        lines.Push(") else (")
+        lines.Push("    echo [%date% %time%] 临时脚本已删除 >> `"%LOG_FILE%`"")
+        lines.Push(")")
+        lines.Push("del /F /Q `"" newFilePath "`" >nul 2>&1")
+        lines.Push("if errorlevel 1 (")
+        lines.Push("    echo [%date% %time%] 清理更新文件失败 >> `"%LOG_FILE%`"")
+        lines.Push(") else (")
+        lines.Push("    echo [%date% %time%] 更新文件已删除 >> `"%LOG_FILE%`"")
+        lines.Push(")")
+        lines.Push("echo [%date% %time%] 更新流程结束 >> `"%LOG_FILE%`"")
+        lines.Push("exit")
+        
+        ; 用换行符连接所有行
+        script := ""
+        for line in lines {
+            script .= line "`n"
+        }
         
         return script
     }
     
-    ; 检查是否存在待处理的更新（上次下载但未替换）
+    ; 检查是否存在待处理的更新
     static CheckPendingUpdate(version) {
         tempFile := UpdateDownloader.GetTempFilePath(version)
         if FileExist(tempFile) {
@@ -165,7 +238,7 @@ class SelfReplacer {
         }
     }
     
-    ; 清理所有更新相关的临时文件（包括备份）
+    ; 清理所有更新相关的临时文件
     static CleanupAll() {
         tempDir := A_Temp "\ArknightsFrameAssistant"
         if DirExist(tempDir) {
