@@ -96,19 +96,6 @@ class UpdateDownloader {
         return tempDir "\AFA_" version "_update.exe"
     }
     
-    ; 清理临时文件
-    static CleanupTempFiles() {
-        tempDir := A_Temp "\ArknightsFrameAssistant"
-        if DirExist(tempDir) {
-            try {
-                ; 删除目录下的所有exe文件
-                loop files tempDir "\*.exe" {
-                    FileDelete(A_LoopFileFullPath)
-                }
-            }
-        }
-    }
-    
     ; 验证下载的文件是否完整（简单的存在性检查）
     static VerifyDownload(filePath) {
         if !FileExist(filePath) {

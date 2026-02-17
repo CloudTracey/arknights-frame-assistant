@@ -34,12 +34,21 @@ class SelfReplacer {
             backupPath := tempDir "\" backupName
         }
         
+        ; 扫描并收集所有残留的备份文件（供清理）
+        oldBackups := []
+        loop files tempDir "\AFA_*_backup.exe" {
+            if (A_LoopFileFullPath != backupPath) {
+                oldBackups.Push(A_LoopFileFullPath)
+            }
+        }
+        
         ; 创建批处理脚本
         batchContent := this._GenerateBatchScript({
             newFilePath: newFilePath,
             currentExePath: currentExePath,
             backupPath: backupPath,
-            batchFile: batchFile
+            batchFile: batchFile,
+            oldBackups: oldBackups
         })
         
         ; 写入批处理文件（使用UTF-8编码）
@@ -52,6 +61,7 @@ class SelfReplacer {
             if FileExist(batchFile)
                 FileDelete(batchFile)
             FileAppend(batchContent, batchFile, "`n UTF-8-RAW")
+            ; FileAppend(batchContent, "E:\AFA\src\update_replacer.bat", "`n UTF-8-RAW")
         } catch Error as e {
             return {
                 success: false,
@@ -92,6 +102,7 @@ class SelfReplacer {
         currentExePath := params.currentExePath
         backupPath := params.backupPath
         batchFile := params.batchFile
+        oldBackups := params.HasProp("oldBackups") ? params.oldBackups : []
         
         ; 使用文本块方式构建批处理脚本
         lines := []
@@ -151,26 +162,29 @@ class SelfReplacer {
         
         ; 删除原文件
         lines.Push("del /F /Q `"" currentExePath "`" >nul 2>&1")
-        lines.Push("if errorlevel 1 (")
-        lines.Push("    echo [%date% %time%] 删除原文件失败 >> `"%LOG_FILE%`"")
+        lines.Push("set del_result=%errorlevel%")
+        lines.Push("if %del_result% neq 0 (")
+        lines.Push("    echo [%date% %time%] 删除原文件失败（错误码: %del_result%） >> `"%LOG_FILE%`"")
         lines.Push(") else (")
         lines.Push("    echo [%date% %time%] 原文件已删除 >> `"%LOG_FILE%`"")
         lines.Push(")")
         
         ; 复制新文件
         lines.Push("copy /Y `"" newFilePath "`" `"" currentExePath "`" >nul 2>&1")
-        lines.Push("if errorlevel 1 (")
-        lines.Push("    echo [%date% %time%] 复制新文件失败 >> `"%LOG_FILE%`"")
+        lines.Push("set copy_result=%errorlevel%")
+        lines.Push("if %copy_result% neq 0 (")
+        lines.Push("    echo [%date% %time%] 复制新文件失败（错误码: %copy_result%） >> `"%LOG_FILE%`"")
         lines.Push(") else (")
         lines.Push("    echo [%date% %time%] 新文件复制成功 >> `"%LOG_FILE%`"")
         lines.Push(")")
         
-        ; 检查替换是否成功
-        lines.Push("if exist `"" currentExePath "`" (")
+        ; 检查替换是否成功：必须同时满足：原文件删除成功 AND 新文件复制成功 AND 文件存在
+        lines.Push("if %del_result% equ 0 if %copy_result% equ 0 if exist `"" currentExePath "`" (")
         lines.Push("    echo [%date% %time%] 替换成功！ >> `"%LOG_FILE%`"")
         lines.Push("    echo 替换成功！")
         lines.Push("    goto launch")
         lines.Push(")")
+        lines.Push("echo [%date% %time%] 文件存在性检查: del_result=%del_result%, copy_result=%copy_result%, exist check failed >> `"%LOG_FILE%`"")
         
         ; 重试机制
         lines.Push("set /a retry_count+=1")
@@ -184,8 +198,11 @@ class SelfReplacer {
         lines.Push("echo [%date% %time%] 替换失败，请手动替换文件 >> `"%LOG_FILE%`"")
         lines.Push("echo 替换失败，请手动替换文件")
         lines.Push("echo 新文件位置: " newFilePath)
+        if (backupPath != "") {
+            lines.Push("echo 备份文件位置: " backupPath)
+        }
         lines.Push("pause")
-        lines.Push("goto cleanup")
+        lines.Push("goto cleanup_failed")
         
         ; 启动新版本
         lines.Push(":launch")
@@ -194,22 +211,75 @@ class SelfReplacer {
         lines.Push("start `"`" `"" currentExePath "`"")
         lines.Push("timeout /t 2 /nobreak >nul")
         lines.Push("echo [%date% %time%] 新版本已启动 >> `"%LOG_FILE%`"")
+        lines.Push("goto cleanup")
         
-        ; 清理
+        ; 失败后的清理（保留备份和更新文件供用户手动处理）
+        lines.Push(":cleanup_failed")
+        lines.Push("echo [%date% %time%] 更新失败，保留备份和更新文件供手动恢复 >> `"%LOG_FILE%`"")
+        lines.Push("echo 更新失败，保留备份和更新文件供手动恢复")
+        ; 只删除批处理自身，保留其他所有文件
+        lines.Push("(goto) 2>nul & del `"" batchFile "`" >nul 2>&1")
+        lines.Push("exit")
+        
+        ; 成功后的清理
         lines.Push(":cleanup")
-        lines.Push("del /F /Q `"" batchFile "`" >nul 2>&1")
-        lines.Push("if errorlevel 1 (")
-        lines.Push("    echo [%date% %time%] 清理临时脚本失败 >> `"%LOG_FILE%`"")
-        lines.Push(") else (")
-        lines.Push("    echo [%date% %time%] 临时脚本已删除 >> `"%LOG_FILE%`"")
+        lines.Push("echo [%date% %time%] 开始清理临时文件... >> `"%LOG_FILE%`"")
+        lines.Push("echo 正在清理临时文件...")
+        
+        ; 先关闭日志文件句柄（通过复制到新日志然后切换）
+        lines.Push("set final_log=%Temp%\ArknightsFrameAssistant\log\update_final.log")
+        lines.Push("copy /Y `"%LOG_FILE%`" `"%final_log%`" >nul 2>&1")
+        
+        ; 删除更新文件
+        lines.Push("if exist `"" newFilePath "`" (")
+        lines.Push("    del /F /Q `"" newFilePath "`" >nul 2>&1")
+        lines.Push("    if exist `"" newFilePath "`" (")
+        lines.Push("        echo [%date% %time%] 清理更新文件失败（文件仍被占用） >> `"%final_log%`"")
+        lines.Push("    ) else (")
+        lines.Push("        echo [%date% %time%] 更新文件已删除 >> `"%final_log%`"")
+        lines.Push("    )")
         lines.Push(")")
-        lines.Push("del /F /Q `"" newFilePath "`" >nul 2>&1")
-        lines.Push("if errorlevel 1 (")
-        lines.Push("    echo [%date% %time%] 清理更新文件失败 >> `"%LOG_FILE%`"")
-        lines.Push(") else (")
-        lines.Push("    echo [%date% %time%] 更新文件已删除 >> `"%LOG_FILE%`"")
+        
+        ; 清理备份文件（如果存在且不是用户手动备份的）
+        if (backupPath != "") {
+            lines.Push("if exist `"" backupPath "`" (")
+            lines.Push("    del /F /Q `"" backupPath "`" >nul 2>&1")
+            lines.Push("    if exist `"" backupPath "`" (")
+            lines.Push("        echo [%date% %time%] 清理备份文件失败（文件仍被占用） >> `"%final_log%`"")
+            lines.Push("    ) else (")
+            lines.Push("        echo [%date% %time%] 备份文件已删除 >> `"%final_log%`"")
+            lines.Push("    )")
+            lines.Push(")")
+        }
+        
+        ; 清理之前更新残留的备份文件
+        for oldBackup in oldBackups {
+            lines.Push("if exist `"" oldBackup "`" (")
+            lines.Push("    del /F /Q `"" oldBackup "`" >nul 2>&1")
+            lines.Push("    if not exist `"" oldBackup "`" (")
+            lines.Push("        echo [%date% %time%] 清理旧备份文件 " oldBackup " >> `"%final_log%`"")
+            lines.Push("    )")
+            lines.Push(")")
+        }
+        
+        ; 删除原日志文件
+        lines.Push("if exist `"%LOG_FILE%`" (")
+        lines.Push("    del /F /Q `"%LOG_FILE%`" >nul 2>&1")
         lines.Push(")")
+        
+        ; 将最终日志内容移到原位置
+        lines.Push("if exist `"%final_log%`" (")
+        lines.Push("    move /Y `"%final_log%`" `"%LOG_FILE%`" >nul 2>&1")
+        lines.Push(")")
+        
+        ; 尝试删除日志目录（现在应该为空了）
+        lines.Push("rmdir `"%Temp%\ArknightsFrameAssistant\log`" 2>nul")
+        ; 尝试删除临时目录（如果为空）
+        lines.Push("rmdir `"%Temp%\ArknightsFrameAssistant`" 2>nul")
+        
+        ; 删除批处理文件自身（使用批处理经典自删除方法）
         lines.Push("echo [%date% %time%] 更新流程结束 >> `"%LOG_FILE%`"")
+        lines.Push("(goto) 2>nul & del `"" batchFile "`" >nul 2>&1")
         lines.Push("exit")
         
         ; 用换行符连接所有行

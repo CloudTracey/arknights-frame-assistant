@@ -39,6 +39,7 @@ class GuiManager {
         ; 设置托盘菜单
         A_TrayMenu.Delete
         A_TrayMenu.Add("打开按键设置", (*) => this.Show())
+        A_TrayMenu.Add("重启小助手", (*) => Reload())
         A_TrayMenu.Add("退出", (*) => ExitApp())
         A_TrayMenu.Default := "打开按键设置"
         
@@ -86,8 +87,10 @@ class GuiManager {
         this.MainGui.Add("Text", "x15 y+30 w" (this.GuiWidth - 30) " h1 0x10")
         this.MainGui.Add("Checkbox", "x30 y+20 h24 vAutoExit", " 随游戏进程关闭自动退出（强烈建议开启）")
         this.MainGui.Add("Checkbox", "x+20 yp h24 vAutoOpenSettings", " 小助手启动时自动打开设置窗口")
+        this.MainGui.Add("Checkbox", "x+20 yp h24 vAutoUpdate", " 自动检查更新")
         this.MainGui["AutoExit"].Value := Config.GetImportant("AutoExit")
         this.MainGui["AutoOpenSettings"].Value := Config.GetImportant("AutoOpenSettings")
+        this.MainGui["AutoUpdate"].Value := Config.GetImportant("AutoUpdate")
         this.MainGui.Add("Text", "x30 y+12", "游戏内帧数:")
         this.GuiFrame := this.MainGui.Add("DropDownList", "x+12 y+-18 vFrame AltSubmit", ["30", "60", "120"])
         this.MainGui["Frame"].Value := Config.GetImportant("Frame")

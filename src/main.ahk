@@ -34,12 +34,6 @@ if not A_IsAdmin
 ; 包含事件总线
 #Include ./lib/eventbus.ahk
 
-; 包含更新模块
-#Include ./lib/updater/version_checker.ahk
-#Include ./lib/updater/ui.ahk
-#Include ./lib/updater/downloader.ahk
-#Include ./lib/updater/self_replacer.ahk
-
 ; 包含功能实现
 #Include ./lib/hotkey_actions.ahk
 
@@ -52,6 +46,12 @@ if not A_IsAdmin
 ; 包含设置管理
 #Include ./lib/setting.ahk
 
+; 包含更新模块
+#Include ./lib/updater/version_checker.ahk
+#Include ./lib/updater/downloader.ahk
+#Include ./lib/updater/self_replacer.ahk
+#Include ./lib/updater/updater.ahk
+
 ; 订阅设置相关事件
 SubscribeSettingEvents()
 SubscribeHotkeyEvents()
@@ -63,6 +63,10 @@ HotkeyOn()
 
 ; 包含GUI
 #Include ./lib/gui.ahk
+#Include ./lib/updater/updater_ui.ahk
+
+; 触发应用启动事件（触发自动更新检查）
+EventBus.Publish("AppStarted")
 
 ; 包含游戏监控
 #Include ./lib/game_monitor.ahk

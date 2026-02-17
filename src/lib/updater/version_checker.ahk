@@ -7,9 +7,6 @@ class VersionChecker {
     ; 缓存文件路径
     static CacheFile := ""
     
-    ; 缓存过期时间
-    static CacheExpireHours := 24
-    
     ; 初始化
     static Init() {
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
@@ -117,18 +114,8 @@ class VersionChecker {
             ; 解析缓存JSON
             version := this._ExtractJsonValue(content, "latestVersion")
             url := this._ExtractJsonValue(content, "downloadUrl")
-            lastCheck := this._ExtractJsonValue(content, "lastCheck")
             
-            if (version = "" || url = "" || lastCheck = "")
-                return false
-            
-            ; 检查是否过期
-            lastCheckTime := Integer(lastCheck)
-            currentTime := A_Now
-            currentTimeStamp := this._DateTimeToTimestamp(currentTime)
-            hoursPassed := (currentTimeStamp - lastCheckTime) / 3600
-            
-            if (hoursPassed > this.CacheExpireHours)
+            if (version = "" || url = "")
                 return false
             
             return {version: version, url: url}
@@ -146,8 +133,7 @@ class VersionChecker {
             if (!DirExist(cacheDir))
                 DirCreate(cacheDir)
             
-            currentTimeStamp := this._DateTimeToTimestamp(A_Now)
-            json := '{"latestVersion":"' version '","downloadUrl":"' url '","lastCheck":' currentTimeStamp ',"expireTime":' (currentTimeStamp + this.CacheExpireHours * 3600) '}'
+            json := '{"latestVersion":"' version '","downloadUrl":"' url '"}'
             
             if (FileExist(this.CacheFile))
                 FileDelete(this.CacheFile)
@@ -211,30 +197,6 @@ class VersionChecker {
         }
         
         return ""
-    }
-    
-    ; 内部：将日期时间字符串转换为时间戳（秒）
-    static _DateTimeToTimestamp(dateTime) {
-        ; dateTime格式: YYYYMMDDHH24MISS
-        year := SubStr(dateTime, 1, 4)
-        month := SubStr(dateTime, 5, 2)
-        day := SubStr(dateTime, 7, 2)
-        hour := SubStr(dateTime, 9, 2)
-        minute := SubStr(dateTime, 11, 2)
-        second := SubStr(dateTime, 13, 2)
-        
-        ; 使用AHK的DateDiff计算从1970年1月1日开始的秒数
-        ; 先计算天数，再转换为秒
-        ; 这里简化处理，直接使用当前时间的Unix时间戳
-        ; 使用WMI获取精确时间戳
-        
-        ; 简化的方法：直接使用A_Now的数值比较（小时差）
-        ; 将YYYYMMDDHH24MISS转换为秒数（从某个基准点开始）
-        ; 年*365*24*3600 + 月*30*24*3600 + 日*24*3600 + 时*3600 + 分*60 + 秒
-
-        days := Integer(year) * 365 + Integer(month) * 30 + Integer(day)
-        seconds := days * 86400 + Integer(hour) * 3600 + Integer(minute) * 60 + Integer(second)
-        return seconds
     }
 }
 
