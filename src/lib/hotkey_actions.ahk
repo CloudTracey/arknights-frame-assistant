@@ -57,6 +57,8 @@ Action166ms(ThisHotkey) {
 }
 ; 暂停选中
 ActionPauseSelect(ThisHotkey) {
+    if !IsMouseInClient()
+        return
     Send "{ESC Down}"
     USleep(State.CurrentDelay)
     Send "{Click Left}"
@@ -89,6 +91,8 @@ ActionRetreat(ThisHotkey) {
 }
 ; 一键技能
 ActionOneClickSkill(ThisHotkey) {
+    if !IsMouseInClient()
+        return
     Send "{Click Left}"
     USleep(Constants.SkillAndRetreatDelay * 1.5)
     Send "{e Down}"
@@ -100,6 +104,8 @@ ActionOneClickSkill(ThisHotkey) {
 }
 ; 一键撤退
 ActionOneClickRetreat(ThisHotkey) {
+    if !IsMouseInClient()
+        return
     Send "{Click Left}"
     USleep(Constants.SkillAndRetreatDelay * 1.5)
     Send "{q Down}"
@@ -111,6 +117,8 @@ ActionOneClickRetreat(ThisHotkey) {
 }
 ; 暂停技能
 ActionPauseSkill(ThisHotkey) {
+    if !IsMouseInClient()
+        return
     Send "{ESC Down}"
     USleep(State.CurrentDelay)
     Send "{Click Left}"
@@ -128,6 +136,8 @@ ActionPauseSkill(ThisHotkey) {
 }
 ; 暂停撤退
 ActionPauseRetreat(ThisHotkey) {
+    if !IsMouseInClient()
+        return
     Send "{ESC Down}"
     USleep(State.CurrentDelay)
     Send "{Click Left}"
@@ -145,6 +155,8 @@ ActionPauseRetreat(ThisHotkey) {
 }
 ; 模拟鼠标左键点击
 RbuttonClick(ThisHotkey) {
+    if !IsMouseInClient()
+        return
     Send "{Click Left}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -183,4 +195,15 @@ USleep(delay_ms) {
 PureKeyWait(ThisHotkey) {
     pureKey := RegExReplace(ThisHotkey, "^[~*$#!^+&]+")
     KeyWait(pureKey)
+}
+; 判断鼠标是否在Client区域内
+IsMouseInClient() {
+    MouseGetPos , &ypos, &hwnd
+    gameHwnd := WinExist("ahk_exe Arknights.exe")
+    if !(hwnd == gameHwnd)
+        return false
+    ; 简单判断会不会点到最小化或者关闭窗口
+    if ypos < 0
+        return false
+    return true
 }
