@@ -2,7 +2,7 @@
 
 class VersionChecker {
     ; GitHub API地址
-    static ApiUrl := "https://api.github.com/repos/CloudTracey/arknights-frame-assistant/releases/latest"
+    static ApiUrl := "https://api.github.com/repos/CloudTracey/arknights-frame-assistant/releases"
     
     ; 缓存文件路径
     static CacheFile := ""
@@ -90,8 +90,8 @@ class VersionChecker {
                     downloadUrl: ""
                 }
             }
-            
-        } catch as err {
+        } 
+        catch as err {
             return {
                 status: "check_failed",
                 localVersion: localVersion,
@@ -144,15 +144,16 @@ class VersionChecker {
         }
     }
     
-    ; 内部：比较版本号
+    ; 内部：比较版本号（支持语义化版本规范 SemVer 2.0.0）
     ; 返回: -1(本地<远程), 0(相等), 1(本地>远程)
     static _CompareVersions(localVersion, remoteVersion) {
-        localParts := this._ParseVersion(localVersion)
-        remoteParts := this._ParseVersion(remoteVersion)
+        localParsed := this._ParseVersion(localVersion)
+        remoteParsed := this._ParseVersion(remoteVersion)
         
+        ; 比较主版本、次版本、修订号
         Loop 3 {
-            localNum := localParts[A_Index]
-            remoteNum := remoteParts[A_Index]
+            localNum := localParsed.numbers[A_Index]
+            remoteNum := remoteParsed.numbers[A_Index]
             
             if (localNum < remoteNum)
                 return -1
@@ -160,26 +161,133 @@ class VersionChecker {
                 return 1
         }
         
-        return 0
+        ; 主版本号相同时，比较预发布标识符
+        ; 规则：正式版本 > 预发布版本（如 v1.0.0 > v1.0.0-alpha）
+        localHasPre := localParsed.prerelease.Length > 0
+        remoteHasPre := remoteParsed.prerelease.Length > 0
+        
+        if (!localHasPre && !remoteHasPre) {
+            return 0  ; 都是正式版本且主版本号相同
+        }
+        if (!localHasPre && remoteHasPre) {
+            return 1  ; 本地是正式版本，远程是预发布版本
+        }
+        if (localHasPre && !remoteHasPre) {
+            return -1  ; 本地是预发布版本，远程是正式版本
+        }
+        
+        ; 都是预发布版本，逐个比较标识符
+        return this._ComparePrerelease(localParsed.prerelease, remoteParsed.prerelease)
     }
     
-    ; 内部：解析版本号 vX.Y.Z -> [X, Y, Z]
+    ; 内部：解析版本号 vX.Y.Z[-prerelease][+metadata]
+    ; 返回: {numbers: [X, Y, Z], prerelease: [ident1, ident2, ...], metadata: ""}
     static _ParseVersion(versionStr) {
         ; 移除前缀 'v' 或 'V'
         cleanVersion := RegExReplace(versionStr, "^[vV]", "")
         
-        parts := StrSplit(cleanVersion, ".")
-        result := []
+        ; 分离构建元数据（+号后的内容，不参与版本比较）
+        metadata := ""
+        plusPos := InStr(cleanVersion, "+")
+        if (plusPos > 0) {
+            metadata := SubStr(cleanVersion, plusPos + 1)
+            cleanVersion := SubStr(cleanVersion, 1, plusPos - 1)
+        }
         
+        ; 分离预发布标识符（-号后的内容）
+        prerelease := []
+        hyphenPos := InStr(cleanVersion, "-")
+        versionCore := cleanVersion
+        if (hyphenPos > 0) {
+            versionCore := SubStr(cleanVersion, 1, hyphenPos - 1)
+            prereleaseStr := SubStr(cleanVersion, hyphenPos + 1)
+            prerelease := StrSplit(prereleaseStr, ".")
+        }
+        
+        ; 解析主版本号、次版本号、修订号
+        parts := StrSplit(versionCore, ".")
+        numbers := []
         Loop 3 {
             if (A_Index <= parts.Length) {
-                result.Push(Integer(parts[A_Index]))
+                ; 尝试转换为整数，如果失败则使用 0
+                try {
+                    numbers.Push(Integer(parts[A_Index]))
+                } catch {
+                    numbers.Push(0)
+                }
             } else {
-                result.Push(0)
+                numbers.Push(0)
             }
         }
         
-        return result
+        return {numbers: numbers, prerelease: prerelease, metadata: metadata}
+    }
+    
+    ; 内部：比较预发布标识符
+    ; 按照 SemVer 规范：数字标识符按数值比较，字母标识符按 ASCII 比较
+    ; 数字标识符优先级低于字母标识符
+    static _ComparePrerelease(localPre, remotePre) {
+        maxLen := Max(localPre.Length, remotePre.Length)
+
+        Loop maxLen {
+            ; 获取当前位置的标识符（避免使用三元表达式，确保类型正确）
+            localIdent := ""
+            remoteIdent := ""
+
+            if (A_Index <= localPre.Length)
+                localIdent := localPre[A_Index]
+            if (A_Index <= remotePre.Length)
+                remoteIdent := remotePre[A_Index]
+
+            ; 如果一个版本有更多标识符，则另一个版本缺少标识符意味着优先级更低
+            if (localIdent == "")
+                return -1
+            if (remoteIdent == "")
+                return 1
+
+            ; 判断标识符类型
+            localIsNum := this._IsNumeric(localIdent)
+            remoteIsNum := this._IsNumeric(remoteIdent)
+
+            ; 数字标识符优先级低于字母标识符
+            if (localIsNum && !remoteIsNum)
+                return -1
+            if (!localIsNum && remoteIsNum)
+                return 1
+
+            ; 同类型比较
+            if (localIsNum && remoteIsNum) {
+                ; 都是数字，按数值比较
+                localVal := Integer(localIdent)
+                remoteVal := Integer(remoteIdent)
+                if (localVal < remoteVal)
+                    return -1
+                if (localVal > remoteVal)
+                    return 1
+            } else {
+                ; 都是字母（或混合），按 ASCII 顺序比较
+                cmpResult := StrCompare(localIdent, remoteIdent)
+                if (cmpResult < 0)
+                    return -1
+                if (cmpResult > 0)
+                    return 1
+            }
+        }
+
+        return 0  ; 所有标识符相同
+    }
+    
+    ; 内部：检查字符串是否为纯数字
+    static _IsNumeric(str) {
+        if (str == "")
+            return false
+
+        Loop Parse str {
+            charCode := Ord(A_LoopField)
+            if (charCode < 48 || charCode > 57)  ; ASCII '0'=48, '9'=57
+                return false
+        }
+        return true
     }
     
     ; 内部：从JSON字符串中提取字段值
