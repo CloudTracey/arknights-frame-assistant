@@ -90,8 +90,8 @@ class VersionChecker {
                     downloadUrl: ""
                 }
             }
-            
-        } catch as err {
+        } 
+        catch as err {
             return {
                 status: "check_failed",
                 localVersion: localVersion,
@@ -228,28 +228,33 @@ class VersionChecker {
     ; 数字标识符优先级低于字母标识符
     static _ComparePrerelease(localPre, remotePre) {
         maxLen := Max(localPre.Length, remotePre.Length)
-        
+
         Loop maxLen {
-            ; 获取当前位置的标识符
-            localIdent := A_Index <= localPre.Length ? localPre[A_Index] : ""
-            remoteIdent := A_Index <= remotePre.Length ? remotePre[A_Index] : ""
-            
+            ; 获取当前位置的标识符（避免使用三元表达式，确保类型正确）
+            localIdent := ""
+            remoteIdent := ""
+
+            if (A_Index <= localPre.Length)
+                localIdent := localPre[A_Index]
+            if (A_Index <= remotePre.Length)
+                remoteIdent := remotePre[A_Index]
+
             ; 如果一个版本有更多标识符，则另一个版本缺少标识符意味着优先级更低
             if (localIdent == "")
                 return -1
             if (remoteIdent == "")
                 return 1
-            
+
             ; 判断标识符类型
             localIsNum := this._IsNumeric(localIdent)
             remoteIsNum := this._IsNumeric(remoteIdent)
-            
+
             ; 数字标识符优先级低于字母标识符
             if (localIsNum && !remoteIsNum)
                 return -1
             if (!localIsNum && remoteIsNum)
                 return 1
-            
+
             ; 同类型比较
             if (localIsNum && remoteIsNum) {
                 ; 都是数字，按数值比较
@@ -261,13 +266,14 @@ class VersionChecker {
                     return 1
             } else {
                 ; 都是字母（或混合），按 ASCII 顺序比较
-                if (localIdent < remoteIdent)
+                cmpResult := StrCompare(localIdent, remoteIdent)
+                if (cmpResult < 0)
                     return -1
-                if (localIdent > remoteIdent)
+                if (cmpResult > 0)
                     return 1
             }
         }
-        
+
         return 0  ; 所有标识符相同
     }
     
@@ -275,8 +281,10 @@ class VersionChecker {
     static _IsNumeric(str) {
         if (str == "")
             return false
+
         Loop Parse str {
-            if (A_LoopField < "0" || A_LoopField > "9")
+            charCode := Ord(A_LoopField)
+            if (charCode < 48 || charCode > 57)  ; ASCII '0'=48, '9'=57
                 return false
         }
         return true
