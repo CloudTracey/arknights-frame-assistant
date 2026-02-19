@@ -6,7 +6,6 @@ class Constants {
     static DelayA := 35.3      ; 30帧
     static DelayB := 19.6      ; 60帧  
     static DelayC := 11.3      ; 120帧
-    static SkillAndRetreatDelay := 1
     
     ; 按键名称映射
     static KeyNames := Map(

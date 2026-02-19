@@ -2,7 +2,7 @@
 ; 按下暂停
 ActionPressPause(ThisHotkey) {
     Send "{ESC Down}"
-    USleep(State.CurrentDelay)
+    USleep(50)
     Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -14,16 +14,15 @@ ActionReleasePause(ThisHotkey) {
         PureKeyWait(ThisHotkey)
     }
     Send "{ESC Down}"
-    USleep(State.CurrentDelay)
+    USleep(50)
     Send "{ESC Up}"
 }
 ; 切换倍速
 ActionGameSpeed(ThisHotkey) {
     Send "{f Down}"
-    USleep(State.CurrentDelay)
-    Send "{f Up}"
     Send "{g Down}"
-    USleep(State.CurrentDelay)
+    USleep(50)
+    Send "{f Up}"
     Send "{g Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -77,13 +76,20 @@ Action166ms(ThisHotkey) {
 ActionPauseSelect(ThisHotkey) {
     if !IsMouseInClient()
         return
+    Pos := PauseButtonPosition()
+    MouseGetPos &xpos, &ypos
+    BlockInput "MouseMove"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{Lbutton Down}"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{LButton Up}"
+    USleep(State.CurrentDelay * 1.3)
+    MouseMove xpos, ypos
+    Send "{RButton Down}"
+    BlockInput "MouseMoveOff"
     Send "{ESC Down}"
-    USleep(State.CurrentDelay)
-    Send "{Click Left}"
-    Send "{ESC Up}"
-    USleep(State.CurrentDelay * 1.2)
-    Send "{ESC Down}"
-    USleep(State.CurrentDelay)
+    Send "{RButton Up}"
+    USleep(45)
     Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -92,7 +98,7 @@ ActionPauseSelect(ThisHotkey) {
 ; 干员技能
 ActionSkill(ThisHotkey) {
     Send "{e Down}"
-    USleep(State.CurrentDelay)
+    USleep(50)
     Send "{e Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -101,7 +107,7 @@ ActionSkill(ThisHotkey) {
 ; 干员撤退
 ActionRetreat(ThisHotkey) {
     Send "{q Down}"
-    USleep(State.CurrentDelay)
+    USleep(50)
     Send "{q Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -111,10 +117,11 @@ ActionRetreat(ThisHotkey) {
 ActionOneClickSkill(ThisHotkey) {
     if !IsMouseInClient()
         return
-    Send "{Click Left}"
-    USleep(Constants.SkillAndRetreatDelay * 1.5)
+    Send "{RButton Down}"
+    Send "{RButton Up}"
+    USleep(50)
     Send "{e Down}"
-    USleep(State.CurrentDelay * 1.3)
+    USleep(50)
     Send "{e Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -124,10 +131,11 @@ ActionOneClickSkill(ThisHotkey) {
 ActionOneClickRetreat(ThisHotkey) {
     if !IsMouseInClient()
         return
-    Send "{Click Left}"
-    USleep(Constants.SkillAndRetreatDelay * 1.5)
+    Send "{RButton Down}"
+    Send "{RButton Up}"
+    USleep(50)
     Send "{q Down}"
-    USleep(State.CurrentDelay * 1.3)
+    USleep(50)
     Send "{q Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -137,17 +145,24 @@ ActionOneClickRetreat(ThisHotkey) {
 ActionPauseSkill(ThisHotkey) {
     if !IsMouseInClient()
         return
+    Pos := PauseButtonPosition()
+    MouseGetPos &xpos, &ypos
+    BlockInput "MouseMove"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{Lbutton Down}"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{LButton Up}"
+    USleep(State.CurrentDelay * 1.3)
+    MouseMove xpos, ypos
+    Send "{RButton Down}"
+    BlockInput "MouseMoveOff"
     Send "{ESC Down}"
-    USleep(State.CurrentDelay)
-    Send "{Click Left}"
-    Send "{ESC Up}"
-    USleep(Constants.SkillAndRetreatDelay * 1.4)
-    Send "{ESC Down}"
-    USleep(State.CurrentDelay)
-    Send "{ESC Up}"
+    Send "{RButton Up}"
+    USleep(50)
     Send "{e Down}"
-    USleep(State.CurrentDelay * 1.2)
+    USleep(50)
     Send "{e Up}"
+    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
     PureKeyWait(ThisHotkey)
@@ -156,17 +171,24 @@ ActionPauseSkill(ThisHotkey) {
 ActionPauseRetreat(ThisHotkey) {
     if !IsMouseInClient()
         return
+    Pos := PauseButtonPosition()
+    MouseGetPos &xpos, &ypos
+    BlockInput "MouseMove"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{Lbutton Down}"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{LButton Up}"
+    USleep(State.CurrentDelay * 1.3)
+    MouseMove xpos, ypos
+    Send "{RButton Down}"
+    BlockInput "MouseMoveOff"
     Send "{ESC Down}"
-    USleep(State.CurrentDelay)
-    Send "{Click Left}"
-    Send "{ESC Up}"
-    USleep(Constants.SkillAndRetreatDelay * 1.4)
-    Send "{ESC Down}"
-    USleep(State.CurrentDelay)
-    Send "{ESC Up}"
+    Send "{RButton Up}"
+    USleep(50)
     Send "{q Down}"
-    USleep(State.CurrentDelay * 1.2)
+    USleep(50)
     Send "{q Up}"
+    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
     PureKeyWait(ThisHotkey)

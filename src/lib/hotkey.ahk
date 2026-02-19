@@ -22,7 +22,7 @@ HotkeyOn() {
         hotkeyValue := Config.GetHotkey(keyVar)
         if (hotkeyValue != "" && ActionCallbacks.Has(keyVar)) {
             callback := ActionCallbacks[keyVar]
-            if (hotkeyValue ~= "i)^(E|Q|F|G|RButton)$") {
+            if (hotkeyValue ~= "i)^(E|Q|F|G|RButton|MButton)$") {
                 Hotkey(hotkeyValue, callback, "On")
             }
             else {
@@ -40,7 +40,7 @@ HotkeyOff() {
         hotkeyValue := Config.GetHotkey(keyVar)
         if (hotkeyValue != "" && ActionCallbacks.Has(keyVar)) {
             callback := ActionCallbacks[keyVar]
-            if (hotkeyValue ~= "i)^(E|Q|F|G|RButton)$") {
+            if (hotkeyValue ~= "i)^(E|Q|F|G|RButton|MButton)$") {
                 Hotkey(hotkeyValue, callback, "Off")
             }
             else {
