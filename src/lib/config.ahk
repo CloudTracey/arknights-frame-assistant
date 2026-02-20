@@ -29,7 +29,8 @@ class Constants {
         "AutoOpenSettings", "自动打开设置界面",
         "Frame", "游戏内帧数设置",
         "AutoUpdate", "自动检查更新",
-        "LastDismissedVersion", "上次忽略的更新版本"
+        "LastDismissedVersion", "上次忽略的更新版本",
+        "GitHubToken", "GitHub Token"
     )
 }
 
@@ -90,7 +91,17 @@ class Config {
         
         ; 加载重要设置
         for keyVar, defaultVal in this._defaultImportant {
-            this._importantSettings[keyVar] := IniRead(this.IniFile, "Main", keyVar, defaultVal)
+            if (keyVar = "GitHubToken") {
+                ; Token需要解码
+                encodedToken := IniRead(this.IniFile, "Main", keyVar, defaultVal)
+                ; 调试输出
+                OutputDebug("[Config] Token读取 - INI中的值长度: " StrLen(encodedToken) ", 值: [" encodedToken "]")
+                decodedToken := this.DecodeToken(encodedToken)
+                OutputDebug("[Config] Token读取 - 解码后长度: " StrLen(decodedToken))
+                this._importantSettings[keyVar] := decodedToken
+            } else {
+                this._importantSettings[keyVar] := IniRead(this.IniFile, "Main", keyVar, defaultVal)
+            }
         }
         
         ; 如果配置文件不存在，创建并写入默认值
@@ -110,7 +121,14 @@ class Config {
         
         ; 写入所有默认重要设置
         for keyVar, defaultVal in this._defaultImportant {
-            IniWrite(defaultVal, this.IniFile, "Main", keyVar)
+            if (keyVar = "GitHubToken") {
+                ; Token需要编码存储，即使为空
+                encodedVal := this.EncodeToken(defaultVal)
+                OutputDebug("[Config] Token写入 - 默认值长度: " StrLen(defaultVal) ", 编码后长度: " StrLen(encodedVal))
+                IniWrite(encodedVal, this.IniFile, "Main", keyVar)
+            } else {
+                IniWrite(defaultVal, this.IniFile, "Main", keyVar)
+            }
         }
         
         ; 写入所有默认按键设置
@@ -134,7 +152,12 @@ class Config {
         ; 保存重要设置
         for keyVar, _ in Constants.ImportantNames {
             if settingsMap.HasProp(keyVar) {
-                IniWrite(settingsMap.%keyVar%, this.IniFile, "Main", keyVar)
+                if (keyVar = "GitHubToken") {
+                    ; Token需要编码存储
+                    IniWrite(this.EncodeToken(settingsMap.%keyVar%), this.IniFile, "Main", keyVar)
+                } else {
+                    IniWrite(settingsMap.%keyVar%, this.IniFile, "Main", keyVar)
+                }
             }
         }
         
@@ -154,7 +177,12 @@ class Config {
         
         ; 保存重要设置
         for keyVar, value in this._importantSettings {
-            IniWrite(value, this.IniFile, "Main", keyVar)
+            if (keyVar = "GitHubToken") {
+                ; Token需要编码存储
+                IniWrite(this.EncodeToken(value), this.IniFile, "Main", keyVar)
+            } else {
+                IniWrite(value, this.IniFile, "Main", keyVar)
+            }
         }
     }
     
@@ -193,7 +221,8 @@ class Config {
         "AutoOpenSettings", "1",
         "Frame", "3",
         "AutoUpdate", "1",
-        "LastDismissedVersion", ""
+        "LastDismissedVersion", "",
+        "GitHubToken", ""
     )
     
     ; 获取所有按键设置（用于遍历）
@@ -201,6 +230,18 @@ class Config {
     
     ; 获取所有重要设置（用于遍历）
     static AllImportant => this._importantSettings
+    
+    ; -- Token存储方法 --
+    
+    ; 编码Token（直接返回原文，不编码）
+    static EncodeToken(plainToken) {
+        return plainToken  ; 直接返回原文
+    }
+    
+    ; 解码Token（直接返回原文，不解码）
+    static DecodeToken(encodedToken) {
+        return encodedToken  ; 直接返回原文
+    }
 }
 
 ; -- 状态管理 --

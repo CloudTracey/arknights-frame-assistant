@@ -79,7 +79,19 @@ class Updater {
             
             case "rate_limited":
                 if (isManual) {
-                    UpdateUI.ShowCheckFailedDialog(checkResult.message)
+                    suggestToken := checkResult.HasProp("suggestToken") ? checkResult.suggestToken : false
+                    UpdateUI.ShowCheckFailedDialog(checkResult.message, suggestToken)
+                }
+            
+            case "token_invalid":
+                if (isManual) {
+                    ; Token无效，引导用户重新配置
+                    result := MsgBox(checkResult.message "`n`n是否现在修改Token设置？", "Token无效", "YesNo Icon!")
+                    if (result = "Yes") {
+                        ; 重置Token验证状态
+                        VersionChecker.TokenValidated := false
+                        GuiManager.Show()
+                    }
                 }
             
             case "check_failed":

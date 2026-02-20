@@ -98,11 +98,21 @@ class UpdateUI {
     }
     
     ; 显示更新检查失败的提示
-    static ShowCheckFailedDialog(message := "") {
+    static ShowCheckFailedDialog(message := "", suggestToken := false) {
         if (message = "") {
             message := "检查更新失败，请检查网络连接后重试。"
         }
-        MsgBox(message, "检查失败", "Icon!")
+        
+        if (suggestToken) {
+            ; 显示带有Token配置引导的对话框
+            result := MsgBox(message "`n`n是否现在配置GitHub Token？", "检查失败", "YesNo Icon!")
+            if (result = "Yes") {
+                ; 打开设置界面
+                GuiManager.Show()
+            }
+        } else {
+            MsgBox(message, "检查失败", "Icon!")
+        }
     }
     
     ; 显示正在下载的提示

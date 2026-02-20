@@ -37,6 +37,10 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
         State.ControlObj := ""
     ; -- 如果点的是 Edit 控件 --
     if (State.ControlObj && State.ControlObj.Type == "Edit") {
+        ; 排除 GitHubToken 输入框（该控件用于文本输入，不是按键绑定）
+        if (State.ControlObj.Name == "GitHubToken") {
+            return
+        }
         ; 若为首次点击Edit控件
         if(State.LastEditObject == "") {
             ; 记录点击前的控件值，并修改值，以及记录本次点击

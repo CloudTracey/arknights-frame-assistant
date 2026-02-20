@@ -94,6 +94,13 @@ class GuiManager {
         this.GuiFrame := this.MainGui.Add("DropDownList", "x+12 y+-18 vFrame AltSubmit", ["30", "60", "120"])
         this.MainGui["Frame"].Value := Config.GetImportant("Frame")
         
+        ; GitHub Token设置
+        this.MainGui.Add("Text", "x30 y+18 w90 Right +0x200", "GitHub Token:")
+        this.MainGui.Add("Edit", "x+10 yp w380 vGitHubToken Password", Config.GetImportant("GitHubToken"))
+        this.MainGui.SetFont("s8 cGray")
+        this.MainGui.Add("Text", "x30 y+8 w480", "请使用无特殊权限的Classic Token以提高API请求配额")
+        this.MainGui.SetFont("s9 cDefault")
+        
         ; 提示语
         this.MainGui.SetFont("s9 c1b98d7")
         this.MainGui.Add("Text", "xm y+15 w" (this.GuiWidth - 30) " Center", "注: 请确保游戏内的按键为默认设置，点击输入框修改按键，使用ESC和退格键清除按键")
