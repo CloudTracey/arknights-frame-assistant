@@ -194,13 +194,16 @@ ActionPauseRetreat(ThisHotkey) {
     PureKeyWait(ThisHotkey)
 }
 ; 模拟鼠标左键点击
-RbuttonClick(ThisHotkey) {
+LbuttonClick(ThisHotkey) {
     if !IsMouseInClient()
         return
-    Send "{Click Left}"
-    if InStr(ThisHotkey, "Wheel")
+    Send "{Lbutton Down}"
+    if InStr(ThisHotkey, "Wheel") {
+        Send "{LButton Up}"
         return
+    }
     PureKeyWait(ThisHotkey)
+    Send "{LButton Up}"
 }
 
 ; == 工具函数 ==

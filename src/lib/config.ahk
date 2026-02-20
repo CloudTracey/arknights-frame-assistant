@@ -20,7 +20,8 @@ class Constants {
         "OneClickSkill", "一键技能",
         "OneClickRetreat", "一键撤退",
         "PauseSkill", "暂停技能",
-        "PauseRetreat", "暂停撤退"
+        "PauseRetreat", "暂停撤退",
+        "LbuttonClick", "左键点击"
     )
     
     ; 重要设置名称映射
@@ -141,6 +142,10 @@ class Config {
     static SaveToIni(settingsMap) {
         if this.IniFile = ""
             this.InitPath()
+        
+        ; 先删除整个Section以清理旧配置
+        try IniDelete(this.IniFile, "Hotkeys")
+        try IniDelete(this.IniFile, "Main")
             
         ; 保存按键设置
         for keyVar, _ in Constants.KeyNames {
@@ -169,6 +174,10 @@ class Config {
     static SaveAllToIni() {
         if this.IniFile = ""
             this.InitPath()
+        
+        ; 先删除整个Section以清理旧配置
+        try IniDelete(this.IniFile, "Hotkeys")
+        try IniDelete(this.IniFile, "Main")
         
         ; 保存按键设置
         for keyVar, value in this._hotkeySettings {
@@ -212,7 +221,8 @@ class Config {
         "OneClickSkill", "e",
         "OneClickRetreat", "q",
         "PauseSkill", "XButton2",
-        "PauseRetreat", "XButton1"
+        "PauseRetreat", "XButton1",
+        "LbuttonClick", "z"
     )
     
     ; 内部：默认重要设置
