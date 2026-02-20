@@ -123,6 +123,10 @@ class Config {
     static SaveToIni(settingsMap) {
         if this.IniFile = ""
             this.InitPath()
+        
+        ; 先删除整个Section以清理旧配置
+        try IniDelete(this.IniFile, "Hotkeys")
+        try IniDelete(this.IniFile, "Main")
             
         ; 保存按键设置
         for keyVar, _ in Constants.KeyNames {
@@ -146,6 +150,10 @@ class Config {
     static SaveAllToIni() {
         if this.IniFile = ""
             this.InitPath()
+        
+        ; 先删除整个Section以清理旧配置
+        try IniDelete(this.IniFile, "Hotkeys")
+        try IniDelete(this.IniFile, "Main")
         
         ; 保存按键设置
         for keyVar, value in this._hotkeySettings {
