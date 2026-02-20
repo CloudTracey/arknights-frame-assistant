@@ -95,8 +95,8 @@ class Config {
             if (keyVar = "GitHubToken") {
                 ; Token需要解码
                 encodedToken := IniRead(this.IniFile, "Main", keyVar, defaultVal)
-                ; 调试输出
-                OutputDebug("[Config] Token读取 - INI中的值长度: " StrLen(encodedToken) ", 值: [" encodedToken "]")
+                ; 调试输出（仅记录长度，不记录Token值）
+                OutputDebug("[Config] Token读取 - INI中的值长度: " StrLen(encodedToken))
                 decodedToken := this.DecodeToken(encodedToken)
                 OutputDebug("[Config] Token读取 - 解码后长度: " StrLen(decodedToken))
                 this._importantSettings[keyVar] := decodedToken
