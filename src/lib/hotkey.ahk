@@ -12,7 +12,8 @@ ActionCallbacks := Map(
     "OneClickSkill", ActionOneClickSkill,
     "OneClickRetreat", ActionOneClickRetreat,
     "PauseSkill", ActionPauseSkill,
-    "PauseRetreat", ActionPauseRetreat
+    "PauseRetreat", ActionPauseRetreat,
+    "LbuttonClick", LbuttonClick
 )
 
 ; 启用热键

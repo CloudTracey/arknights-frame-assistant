@@ -81,6 +81,7 @@ class GuiManager {
         AddBindRow("一键撤退", "OneClickRetreat")
         AddBindRow("暂停技能", "PauseSkill")
         AddBindRow("暂停撤退", "PauseRetreat")
+        AddBindRow("模拟左键点击", "LbuttonClick")
         
         ; 重要设置
         this.MainGui.Add("Text", "x15 y+30 w" (this.GuiWidth - 30) " h1 0x10")
