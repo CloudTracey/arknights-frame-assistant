@@ -19,4 +19,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: simple
           prerelease: true
-          prerelease-type: alpha
+          prerelease-type: beta
