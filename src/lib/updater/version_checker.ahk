@@ -582,19 +582,42 @@ class VersionChecker {
         return true
     }
     
+    ; 内部：转义正则表达式中的特殊字符
+    static _EscapeRegex(str) {
+        ; 需要转义的正则元字符: \ . ^ $ | ? * + ( ) { } [ ]
+        result := str
+        result := StrReplace(result, "\", "\\")
+        result := StrReplace(result, ".", "\.")
+        result := StrReplace(result, "^", "\^")
+        result := StrReplace(result, "$", "\$")
+        result := StrReplace(result, "|", "\|")
+        result := StrReplace(result, "?", "\?")
+        result := StrReplace(result, "*", "\*")
+        result := StrReplace(result, "+", "\+")
+        result := StrReplace(result, "(", "\(")
+        result := StrReplace(result, ")", "\)")
+        result := StrReplace(result, "{", "\{")
+        result := StrReplace(result, "}", "\}")
+        result := StrReplace(result, "[", "\[")
+        result := StrReplace(result, "]", "\]")
+        return result
+    }
+    
     ; 内部：从JSON字符串中提取字段值
     static _ExtractJsonValue(json, key) {
         ; 匹配 "key":"value" 格式
         ; 使用Chr构建正则表达式避免引号问题
         q := Chr(34)  ; 双引号
         notQ := Chr(94) Chr(34)  ; [^"]
-        pattern := q key q ":\s*" q "([" notQ "]*)" q
+        ; 对key中的正则元字符进行转义
+        escapedKey := this._EscapeRegex(key)
+        pattern := q escapedKey q ":\s*" q "([" notQ "]*)" q
         if (RegExMatch(json, pattern, &match)) {
             return match[1]
         }
         
         ; 尝试匹配数字
-        pattern := q key q ":\s*(\d+)"
+        pattern := q escapedKey q ":\s*(\d+)"
         if (RegExMatch(json, pattern, &match)) {
             return match[1]
         }

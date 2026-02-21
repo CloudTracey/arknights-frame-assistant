@@ -97,7 +97,7 @@ class GuiManager {
         
         ; GitHub Token设置
         this.MainGui.Add("Text", "x30 y+18 w90 Right +0x200", "GitHub Token:")
-        this.MainGui.Add("Edit", "x+10 yp w380 vGitHubToken Password", Config.GetImportant("GitHubToken"))
+        this.MainGui.Add("Edit", "x+10 yp w380 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant("GitHubToken"))
         this.MainGui.SetFont("s8 cGray")
         this.MainGui.Add("Text", "x30 y+8 w480", "请使用无特殊权限的Classic Token以提高API请求配额")
         this.MainGui.SetFont("s9 cDefault")
