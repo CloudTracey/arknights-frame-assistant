@@ -2,4 +2,5 @@
 ai_rule.md
 test_list/
 屏幕位置/
-.exe
+*.exe
+nul

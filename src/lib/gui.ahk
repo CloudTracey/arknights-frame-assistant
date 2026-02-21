@@ -25,9 +25,13 @@ class GuiManager {
         this.WindowName := "明日方舟帧操小助手 ArknightsFrameAssistant - " Version.Get()
         State.GuiWindowName := this.WindowName
         this.MainGui := Gui(, this.WindowName)
-        this.MainGui.Opt("+MinimizeBox")
+        this.MainGui.Opt("+MinimizeBox -MaximizeBox")
         this.MainGui.BackColor := "FFFFFF"
+        WinSetTransColor("ffa8a8", this.MainGui)
         this.MainGui.SetFont("s9", "Microsoft YaHei UI")
+        hWnd := this.MainGui.Hwnd
+        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
+        this.MainGui.OnEvent("Close", (*) => EventBus.Publish("SettingsCancel"))
         
         ; 创建控件
         this._CreateControls()
@@ -53,7 +57,7 @@ class GuiManager {
         ; 辅助函数：添加绑定行
         AddBindRow(LabelText, KeyVar, Notes := "") {
             this.MainGui.Add("Text", "xs+10 y+12 w90 Right +0x200", LabelText) 
-            this.MainGui.Add("Edit", "x+10 yp w120 Center ReadOnly Uppercase v" KeyVar, Config.GetHotkey(KeyVar))
+            this.MainGui.Add("Edit", "x+10 yp w120 Center -TabStop Uppercase v" KeyVar, Config.GetHotkey(KeyVar))
             if (Notes != "") {
                 this.MainGui.SetFont("s8 cGray")
                 this.MainGui.Add("Text", "x+5 yp+3", Notes)
@@ -67,7 +71,7 @@ class GuiManager {
         AddBindRow("额外暂停键A", "PressPause")
         AddBindRow("额外暂停键B", "ReleasePause", "(松开触发)")
         this.MainGui.Add("Text", "xs+10 y+17 w90 Right +0x200", "切换倍速") 
-        this.MainGui.Add("Edit", "x+10 yp w120 Center ReadOnly Uppercase v" "GameSpeed", Config.GetHotkey("GameSpeed"))
+        this.MainGui.Add("Edit", "x+10 yp w120 Center -TabStop Uppercase v" "GameSpeed", Config.GetHotkey("GameSpeed"))
         AddBindRow("暂停选中", "PauseSelect")
         AddBindRow("干员技能", "Skill")
         AddBindRow("干员撤退", "Retreat")
