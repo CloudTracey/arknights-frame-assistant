@@ -18,6 +18,3 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: simple
-          prerelease: true
-          prerelease-type: beta
-          skip-github-release: true
