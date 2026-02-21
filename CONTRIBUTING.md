@@ -43,7 +43,6 @@ E:\AFA
 │   │   ├── updater/          # 更新器模块
 │   │   └── version.ahk       # 版本信息
 │   └── lib/
-├── 屏幕位置/                  # 屏幕位置配置
 ├── test/                     # 测试清单
 ├── .github/
 │   ├── workflows/            # CI/CD 工作流
