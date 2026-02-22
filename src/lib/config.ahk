@@ -31,6 +31,7 @@ class Constants {
         "Frame", "游戏内帧数设置",
         "AutoUpdate", "自动检查更新",
         "LastDismissedVersion", "上次忽略的更新版本",
+        "UseGitHubToken", "是否使用GitHub Token",
         "GitHubToken", "GitHub Token"
     )
 }
@@ -231,6 +232,7 @@ class Config {
         "Frame", "3",
         "AutoUpdate", "1",
         "LastDismissedVersion", "",
+        "UseGitHubToken", "0",
         "GitHubToken", ""
     )
     

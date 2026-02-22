@@ -84,7 +84,7 @@ class GuiManager {
         this.TxtOther := this.MainGui.Add("Text", "ys h20 w" this.ColWidth " Center", "其他设置")
         TabOther := this.MainGui.Add("Text", "x" this.GuiWidth / 2 " y0 h25 w" this.ColWidth " Center BackgroundTrans")
         ; 为标签添加点击事件
-        TabKeybind.OnEvent("Click", (*) => this.SwitchTab("keybind"))
+        TabKeybind.OnEvent("Click", (*) => this.SwitchTab("keyBind"))
         TabOther.OnEvent("Click", (*) => this.SwitchTab("other"))
 
         this.TabIndicator := this.MainGui.Add("Text", "xs y23 w" this.ColWidth " h2 Background1994d2") ; 选中指示线
@@ -190,12 +190,13 @@ class GuiManager {
         this.btnCheckUpdate.OnEvent("Click", (*) => EventBus.Publish("CheckUpdateClick"))
         this.OtherSettingsControls.Push(this.btnCheckUpdate)
         ; github token
-        checkboxUseGithubToken := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vUseGithubToken", " 使用GitHub Token: ")
-        checkboxUseGithubToken.OnEvent("Click", (*) => this.SetEditDisabled(githubTokenEdit, checkboxUseGithubToken.Value))
+        checkboxUseGitHubToken := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vUseGitHubToken", " 使用GitHub Token: ")
+        this.MainGui["UseGitHubToken"].Value := Config.GetImportant("UseGitHubToken")
+        checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetEditDisabled(githubTokenEdit, checkboxUseGitHubToken.Value))
         githubTokenEdit := this.MainGui.Add("Edit", "x+10 yp+2 w380 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant("GitHubToken"))
-        this.SetEditDisabled(githubTokenEdit, checkboxUseGithubToken.Value)
-        hint3 := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token")
-        this.OtherSettingsControls.Push(checkboxUseGithubToken)
+        this.SetEditDisabled(githubTokenEdit, checkboxUseGitHubToken.Value)
+        hint3 := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token，修改后需保存或应用设置才能生效")
+        this.OtherSettingsControls.Push(checkboxUseGitHubToken)
         this.OtherSettingsControls.Push(githubTokenEdit)
         this.OtherSettingsControls.Push(hint3)
     }
@@ -285,7 +286,7 @@ class GuiManager {
             return
         this.CurrentTab := tabName
         
-        if (tabName = "keybind") {
+        if (tabName = "keyBind") {
             ; 切换到按键设置页
             ; 更新标签样式
             this.TxtKeybind.SetFont("c1994d2")  ; 蓝色（选中）

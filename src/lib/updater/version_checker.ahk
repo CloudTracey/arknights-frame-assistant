@@ -277,31 +277,34 @@ class VersionChecker {
     ; 返回: {status, localVersion, remoteVersion, downloadUrl, message}
     static Check() {
         localVersion := Version.Get()
-        
-        ; 检查是否配置了Token
-        gitHubToken := Config.GetImportant("GitHubToken")
-        if (gitHubToken != "") {
-            ; 如果配置了Token，先验证Token有效性
-            if (!this.TokenValidated) {
-                tokenResult := this.ValidateToken(gitHubToken)
-                if (!tokenResult.valid) {
-                    this._Log("Token验证失败，阻止更新检查")
-                    return {status: "token_invalid", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: tokenResult.message "。请检查GitHub Token设置。"}
+        ; 检查是否使用GitHub Token进行更新检查
+        useGitHubToken := Config.GetImportant("UseGitHubToken")
+        if (useGitHubToken == 1) {
+            ; 检查是否配置了Token
+            gitHubToken := Config.GetImportant("GitHubToken")
+            if (gitHubToken != "") {
+                ; 如果配置了Token，先验证Token有效性
+                if (!this.TokenValidated) {
+                    tokenResult := this.ValidateToken(gitHubToken)
+                    if (!tokenResult.valid) {
+                        this._Log("Token验证失败，阻止更新检查")
+                        return {status: "token_invalid", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: tokenResult.message "。请检查GitHub Token设置。"}
+                    }
                 }
             }
         }
-        
         ; 直接从API获取最新版本
-        return this._FetchFromApi(localVersion)
+        return this._FetchFromApi(localVersion, useGitHubToken)
     }
     
     ; 内部：从API获取最新版本
-    static _FetchFromApi(localVersion) {
+    static _FetchFromApi(localVersion, useGitHubToken) {
         this._Log("========== 开始版本检查 ==========")
         this._Log("Timestamp: " this._Timestamp())
         this._Log("本地版本: [" localVersion "] 长度: " StrLen(localVersion))
         this._Log("API URL: " this.ApiUrl)
         this._Log("超时设置: " this.TimeoutMs "ms")
+        gitHubToken := ""
         
         ; 检查本地版本是否有效
         if (localVersion = "") {
@@ -309,9 +312,12 @@ class VersionChecker {
             return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "无法获取本地版本号"}
         }
         
-        ; 获取Token
-        gitHubToken := Config.GetImportant("GitHubToken")
-        this._Log("GitHub Token长度: " StrLen(gitHubToken))
+        ; 是否使用GitHub Token进行更新检查
+        if (useGitHubToken == 1) {
+            ; 获取Token
+            gitHubToken := Config.GetImportant("GitHubToken")
+            this._Log("GitHub Token长度: " StrLen(gitHubToken))
+        }
         
         ; 构建请求头Map（用于日志）
         headersMap := Map(
