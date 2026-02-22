@@ -203,9 +203,8 @@ class Config {
     }
     
     ; 恢复默认设置
-    static ResetToDefaults() {
+    static ResetHotkeyToDefaults() {
         this._hotkeySettings := this._defaultHotkeys.Clone()
-        this._importantSettings := this._defaultImportant.Clone()
     }
     
     ; 内部：默认按键设置
