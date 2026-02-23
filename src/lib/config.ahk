@@ -163,9 +163,9 @@ class Config {
                     IniWrite(this.EncodeToken(settingsMap.%keyVar%), this.IniFile, "Main", keyVar)
                 } else {
                     IniWrite(settingsMap.%keyVar%, this.IniFile, "Main", keyVar)
+                }
             }
         }
-    }
         
         ; 重新加载到内存
         this.LoadFromIni()
