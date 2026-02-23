@@ -49,7 +49,7 @@ class GuiManager {
         this._SubscribeEvents()
 
         ; 初始化标签页
-        this.SwitchTab("KeyBind")
+        this.SwitchTab("keyBind")
         
         ; 设置托盘菜单
         A_TrayMenu.Delete
