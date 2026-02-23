@@ -59,8 +59,9 @@ E:\AFA
 
 ### 代码风格
 
-- 函数名使用驼峰命名法（如 `CheckVersion`）
-- 变量名使用小写加下划线（如 `game_process`）
+- 函数名与方法名使用大驼峰命名法（如 `CheckVersion()`）
+- 全局变量名和静态变量名使用大驼峰命名法（如`static WindowName`）
+- 局部变量名使用小驼峰命名法（如 `gameProcess`）
 - 常量使用全大写（如 `MAX_RETRY`）
 - 添加适当的注释说明复杂逻辑
 

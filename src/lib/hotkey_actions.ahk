@@ -194,7 +194,7 @@ ActionPauseRetreat(ThisHotkey) {
     PureKeyWait(ThisHotkey)
 }
 ; 模拟鼠标左键点击
-LbuttonClick(ThisHotkey) {
+LButtonClick(ThisHotkey) {
     if !IsMouseInClient()
         return
     Send "{Lbutton Down}"

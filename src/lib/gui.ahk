@@ -4,11 +4,11 @@ class GuiManager {
     ; GUI实例和控件引用（静态属性）
     static MainGui := ""
     static WindowName := ""
-    static btnSave := ""
-    static btnDefaultHotkeys := ""
-    static btnCheckUpdate := ""
-    static btnApply := ""
-    static btnCancel := ""
+    static BtnSave := ""
+    static BtnDefaultHotkeys := ""
+    static BtnCheckUpdate := ""
+    static BtnApply := ""
+    static BtnCancel := ""
     static GuiFrame := ""
     
     ; 窗口尺寸常量
@@ -101,7 +101,7 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("暂停选中", "PauseSelect")*)
         this.KeybindControls.Push(AddBindRow("干员技能", "Skill")*)
         this.KeybindControls.Push(AddBindRow("干员撤退", "Retreat")*)
-        this.KeybindControls.Push(AddBindRow("模拟左键点击", "LbuttonClick")*)
+        this.KeybindControls.Push(AddBindRow("模拟左键点击", "LButtonClick")*)
         
         ; 按键设置 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vKeybindRightGroup", "")
@@ -147,16 +147,16 @@ class GuiManager {
         BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - 45
         BtnX_Cancel := this.GuiWidth - this.BtnW - 45
         
-        this.btnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键设置标签下显示
-        this.btnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
+        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键设置标签下显示
+        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
         
-        this.btnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
-        this.btnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
-        this.btnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
-        this.btnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
-        this.btnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
-        this.btnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
-        this.KeybindControls.Push(this.btnDefaultHotkeys)
+        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
+        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
+        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
+        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
+        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
+        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
+        this.KeybindControls.Push(this.BtnDefaultHotkeys)
 
         ; 空白占位
         this.MainGui.Add("Text", "xm y+15 w1 h1")
@@ -186,9 +186,9 @@ class GuiManager {
         this.MainGui["AutoUpdate"].Value := Config.GetImportant("AutoUpdate")
         this.OtherSettingsControls.Push(checkboxAutoUpdate)
         ; 手动检查更新
-        this.btnCheckUpdate := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "手动检查更新")
-        this.btnCheckUpdate.OnEvent("Click", (*) => EventBus.Publish("CheckUpdateClick"))
-        this.OtherSettingsControls.Push(this.btnCheckUpdate)
+        this.BtnCheckUpdate := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "手动检查更新")
+        this.BtnCheckUpdate.OnEvent("Click", (*) => EventBus.Publish("CheckUpdateClick"))
+        this.OtherSettingsControls.Push(this.BtnCheckUpdate)
         ; github token
         checkboxUseGitHubToken := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vUseGitHubToken", " 使用GitHub Token: ")
         this.MainGui["UseGitHubToken"].Value := Config.GetImportant("UseGitHubToken")
@@ -226,7 +226,7 @@ class GuiManager {
     ; 显示GUI窗口
     static Show() {
         this.MainGui.Show()
-        this.btnSave.Focus()
+        this.BtnSave.Focus()
         if (IsSet(WatchActiveWindow)) {
             SetTimer WatchActiveWindow, 50
         }
@@ -264,7 +264,7 @@ class GuiManager {
     
     ; 聚焦保存按钮
     static FocusSaveButton() {
-        this.btnSave.Focus()
+        this.BtnSave.Focus()
     }
     
     ; 获取窗口名称（用于WinActive等）
