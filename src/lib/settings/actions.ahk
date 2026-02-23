@@ -12,7 +12,7 @@ SubscribeSettingEvents() {
 HandleSettingsReset(*) {
     Result := MsgBox("  确定重置按键为默认设置吗 ？","重置按键设置", "YesNo")
     if (Result == "Yes") {
-        Config.ResetToDefaults()
+        Config.ResetHotkeyToDefaults()
         EventBus.Publish("GuiUpdateControls")
         EventBus.Publish("HotkeyReload")
     }
