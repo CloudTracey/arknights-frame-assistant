@@ -30,8 +30,11 @@ ActionGameSpeed(ThisHotkey) {
 }
 ; 前进33ms，由于波动，过帧间隔设置为30ms，避免一次过两帧
 Action33ms(ThisHotkey) {
-    if !IsMouseInClient()
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     Pos := PauseButtonPosition()
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
@@ -46,14 +49,20 @@ Action33ms(ThisHotkey) {
     BlockInput "MouseMoveOff"
     USleep(30)
     Send "{ESC Up}"
-    if InStr(ThisHotkey, "Wheel")
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 ; 前进166ms
 Action166ms(ThisHotkey) {
-    if !IsMouseInClient()
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     Pos := PauseButtonPosition()
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
@@ -68,14 +77,20 @@ Action166ms(ThisHotkey) {
     Send "{ESC Down}"
     USleep(45)
     Send "{ESC Up}"
-    if InStr(ThisHotkey, "Wheel")
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 ; 暂停选中
 ActionPauseSelect(ThisHotkey) {
-    if !IsMouseInClient()
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     Pos := PauseButtonPosition()
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
@@ -91,9 +106,12 @@ ActionPauseSelect(ThisHotkey) {
     Send "{RButton Up}"
     USleep(45)
     Send "{ESC Up}"
-    if InStr(ThisHotkey, "Wheel")
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 ; 干员技能
 ActionSkill(ThisHotkey) {
@@ -115,36 +133,51 @@ ActionRetreat(ThisHotkey) {
 }
 ; 一键技能
 ActionOneClickSkill(ThisHotkey) {
-    if !IsMouseInClient()
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     Send "{RButton Down}"
     Send "{RButton Up}"
     USleep(50)
     Send "{e Down}"
     USleep(50)
     Send "{e Up}"
-    if InStr(ThisHotkey, "Wheel")
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 ; 一键撤退
 ActionOneClickRetreat(ThisHotkey) {
-    if !IsMouseInClient()
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     Send "{RButton Down}"
     Send "{RButton Up}"
     USleep(50)
     Send "{q Down}"
     USleep(50)
     Send "{q Up}"
-    if InStr(ThisHotkey, "Wheel")
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 ; 暂停技能
 ActionPauseSkill(ThisHotkey) {
-    if !IsMouseInClient()
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     Pos := PauseButtonPosition()
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
@@ -163,14 +196,20 @@ ActionPauseSkill(ThisHotkey) {
     USleep(50)
     Send "{e Up}"
     Send "{ESC Up}"
-    if InStr(ThisHotkey, "Wheel")
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 ; 暂停撤退
 ActionPauseRetreat(ThisHotkey) {
-    if !IsMouseInClient()
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     Pos := PauseButtonPosition()
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
@@ -189,21 +228,29 @@ ActionPauseRetreat(ThisHotkey) {
     USleep(50)
     Send "{q Up}"
     Send "{ESC Up}"
-    if InStr(ThisHotkey, "Wheel")
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 ; 模拟鼠标左键点击
 LButtonClick(ThisHotkey) {
-    if !IsMouseInClient()
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
+    }
     Send "{Lbutton Down}"
     if InStr(ThisHotkey, "Wheel") {
         Send "{LButton Up}"
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
     PureKeyWait(ThisHotkey)
     Send "{LButton Up}"
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 
 ; == 工具函数 ==
