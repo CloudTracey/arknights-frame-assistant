@@ -29,28 +29,37 @@
 ```
 E:\AFA
 ├── src/
-│   ├── main.ahk              # 主入口文件
-│   ├── lib/
-│   │   ├── gui.ahk           # GUI 相关
-│   │   ├── hotkey.ahk        # 热键处理
-│   │   ├── hotkey_actions.ahk # 热键动作
-│   │   ├── config.ahk        # 配置管理
-│   │   ├── game_monitor.ahk  # 游戏监控
-│   │   ├── setting.ahk       # 设置功能
-│   │   ├── eventbus.ahk      # 事件总线
-│   │   ├── key_bind.ahk      # 按键绑定
-│   │   ├── settings/         # 设置模块
-│   │   ├── updater/          # 更新器模块
-│   │   └── version.ahk       # 版本信息
+│   ├── main.ahk                  # 主入口文件（程序启动点）
 │   └── lib/
-├── test/                     # 测试清单
+│       ├── config.ahk            # 配置管理（Config/State/Constants 类）
+│       ├── eventbus.ahk          # 事件总线（模块间通信）
+│       ├── game_launcher.ahk     # 游戏启动器（自动启动游戏）
+│       ├── game_monitor.ahk      # 游戏监控（进程监控与自动退出）
+│       ├── gui.ahk               # GUI 界面管理（设置窗口）
+│       ├── hotkey.ahk            # 热键管理（注册/注销热键）
+│       ├── hotkey_actions.ahk    # 热键动作实现（13 个功能函数）
+│       ├── key_bind.ahk          # 按键绑定（InputHook 捕获按键）
+│       ├── setting.ahk           # 设置管理入口（包含子模块）
+│       │   ├── actions.ahk       # 设置操作（重置/保存/应用/取消）
+│       │   ├── loader.ahk        # 设置加载
+│       │   └── saver.ahk         # 设置保存（含验证逻辑）
+│       ├── updater/              # 自动更新模块
+│       │   ├── downloader.ahk    # 更新下载器
+│       │   ├── self_replacer.ahk # 自替换脚本（批处理生成）
+│       │   ├── updater.ahk       # 更新协调器（流程控制）
+│       │   ├── updater_ui.ahk    # 更新 UI（对话框）
+│       │   └── version_checker.ahk # 版本检查器（GitHub API）
+│       └── version.ahk           # 内置版本信息
+├── test/                         # 测试清单目录
 ├── .github/
-│   ├── workflows/            # CI/CD 工作流
-│   └── CODEOWNERS            # 代码所有者
-├── README.md                 # 项目说明
-├── CHANGELOG.md              # 更新日志
-├── LICENSE                   # 许可证
-└── version.txt               # 版本文件
+│   ├── workflows/                # CI/CD 工作流
+│   └── CODEOWNERS                # 代码所有者
+├── README.md                     # 项目说明
+├── CHANGELOG.md                  # 更新日志
+├── CONTRIBUTING.md               # 贡献指南
+├── LICENSE                       # 许可证
+├── logo.png                      # 项目图标
+└── version.txt                   # 版本信息
 ```
 
 ## 代码规范
@@ -96,7 +105,6 @@ CheckGameProcess(process_name) {
 1. **问题类型**: Bug 报告 / 功能请求
 2. **环境信息**:
    - AFA 版本号
-   - AutoHotkey 版本
    - Windows 版本
    - 游戏分辨率
 3. **问题描述**: 清晰简洁地描述问题
@@ -111,10 +119,18 @@ CheckGameProcess(process_name) {
 
 **Issue 标签：**
 
-- `bug`: 报告程序错误
-- `enhancement`: 功能改进或新功能建议
-- `documentation`: 文档相关问题
-- `question`: 使用问题
+| 标签 | 说明 |
+|------|------|
+| `bug` | 报告程序错误 |
+| `enhancement` | 功能改进或新功能建议 |
+| `documentation` | 文档相关问题 |
+| `question` | 使用问题 |
+| `help wanted` | 需要帮助 |
+| `good first issue` | 适合新手的任务 |
+| `duplicate` | 重复的 Issue |
+| `invalid` | 无效的 Issue |
+| `wontfix` | 不会修复 |
+| `test` | 待测试项或测试结果 |
 
 ### 提交功能请求
 
@@ -201,6 +217,7 @@ git checkout -b feature/your-feature-name
    - `perf`: 性能优化
    - `test`: 测试相关
    - `chore`: 构建过程或辅助工具的变动
+   - `ui`: GUI相关修改 
 
    **示例：**
    ```
@@ -280,11 +297,8 @@ git checkout -b feature/your-feature-name
 
 ## 版本发布流程
 
-本项目使用 [release-please](https://github.com/googleapis/release-please) 进行版本管理：
-
 1. 遵循 Conventional Commits 规范提交代码
-2. release-please 会自动修改 CHANGELOG 和版本号
-3. 维护者审核后发布新版本
+2. 维护者审核后发布新版本
 
 **版本号格式：** [语义化版本](https://semver.org/lang/zh-CN/)
 - `主版本号.次版本号.修订号`（如 `1.0.0`）
