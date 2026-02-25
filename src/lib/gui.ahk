@@ -6,6 +6,7 @@ class GuiManager {
     static WindowName := ""
     static BtnSave := ""
     static BtnDefaultHotkeys := ""
+    static BtnCheckGamePath := ""
     static BtnCheckUpdate := ""
     static BtnApply := ""
     static BtnCancel := ""
@@ -173,9 +174,25 @@ class GuiManager {
         this.MainGui["AutoExit"].Value := Config.GetImportant("AutoExit")
         this.OtherSettingsControls.Push(checkboxAutoExit)
         ; 自动打开设置
-        checkboxAutoOpenSettings := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoOpenSettings", " 小助手启动时自动打开设置窗口")
+        checkboxAutoOpenSettings := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoOpenSettings", " 启动时打开设置窗口")
         this.MainGui["AutoOpenSettings"].Value := Config.GetImportant("AutoOpenSettings")
         this.OtherSettingsControls.Push(checkboxAutoOpenSettings)
+        ; 自动启动游戏
+        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoRunGame", " 启动的同时启动明日方舟")
+        this.MainGui["AutoRunGame"].Value := Config.GetImportant("AutoRunGame")
+        this.OtherSettingsControls.Push(checkboxAutoRunGame)
+        ; 识别游戏路径
+        this.BtnCheckGamePath := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "识别游戏路径")
+        hint3 := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", "请先启动游戏再进行识别，修改后需保存或应用设置才能生效")
+        this.BtnCheckGamePath.OnEvent("Click", (*) => EventBus.Publish("CheckGamePathClick"))
+        this.OtherSettingsControls.Push(this.BtnCheckGamePath)
+        this.OtherSettingsControls.Push(hint3)
+        ; 游戏路径
+        txtGamePath := this.MainGui.Add("Text", "x" this.GuiXMargin - 4 " y+10 h24", " 游戏路径: ")
+        editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w597 h20 vGamePath -Multi +0x1", Config.GetImportant("GamePath"))
+        this.OtherSettingsControls.Push(txtGamePath)
+        this.OtherSettingsControls.Push(editGamePath)
+
         ; - 更新设置 -
         sep3 := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
         sep3txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  更新设置  ")
@@ -192,13 +209,13 @@ class GuiManager {
         ; github token
         checkboxUseGitHubToken := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vUseGitHubToken", " 使用GitHub Token: ")
         this.MainGui["UseGitHubToken"].Value := Config.GetImportant("UseGitHubToken")
-        checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetEditDisabled(githubTokenEdit, checkboxUseGitHubToken.Value))
-        githubTokenEdit := this.MainGui.Add("Edit", "x+10 yp+2 w380 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant("GitHubToken"))
-        this.SetEditDisabled(githubTokenEdit, checkboxUseGitHubToken.Value)
-        hint3 := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token，修改后需保存或应用设置才能生效")
+        checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetEditDisabled(editgithubToken, checkboxUseGitHubToken.Value))
+        editgithubToken := this.MainGui.Add("Edit", "x+10 yp+2 w515 h20 vGitHubToken -Multi +0x1", Config.GetImportant("GitHubToken"))
+        this.SetEditDisabled(editgithubToken, checkboxUseGitHubToken.Value)
+        hint4 := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token，修改后需保存或应用设置才能生效")
         this.OtherSettingsControls.Push(checkboxUseGitHubToken)
-        this.OtherSettingsControls.Push(githubTokenEdit)
-        this.OtherSettingsControls.Push(hint3)
+        this.OtherSettingsControls.Push(editgithubToken)
+        this.OtherSettingsControls.Push(hint4)
     }
     
     ; 内部：更新所有控件值（从配置）

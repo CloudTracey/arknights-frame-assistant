@@ -1,7 +1,7 @@
 ; == 设置保存器 ==
 
 ; 记录热键并写入配置文件
-HotkeyIniWrite() {
+SettingsIniWrite() {
     EventBus.Publish("SettingsWillSave")
     SavedObj := GuiManager.Submit()
     UsedKeys := Map()
@@ -40,6 +40,16 @@ HotkeyIniWrite() {
         }
     }
     
+    ; 验证游戏路径
+    if (SavedObj.HasProp("GamePath") && SavedObj.GamePath != "") {
+        if !FileExist(SavedObj.GamePath) {
+            result := MsgBox("游戏路径不存在：`n" SavedObj.GamePath "`n`n是否仍要保存？", "路径不存在", "YesNo Icon!")
+            if (result = "No") {
+                Exit
+            }
+        }
+    }
+
     ; 保存到INI
     Config.SaveToIni(SavedObj)
 }
