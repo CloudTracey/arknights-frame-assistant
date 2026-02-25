@@ -209,12 +209,12 @@ class GuiManager {
         ; github token
         checkboxUseGitHubToken := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vUseGitHubToken", " 使用GitHub Token: ")
         this.MainGui["UseGitHubToken"].Value := Config.GetImportant("UseGitHubToken")
-        checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetEditDisabled(editgithubToken, checkboxUseGitHubToken.Value))
-        editgithubToken := this.MainGui.Add("Edit", "x+10 yp+2 w515 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant("GitHubToken"))
-        this.SetEditDisabled(editgithubToken, checkboxUseGitHubToken.Value)
+        checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value))
+        editGithubToken := this.MainGui.Add("Edit", "x+10 yp+2 w515 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant("GitHubToken"))
+        this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value)
         hint4 := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token，修改后需保存或应用设置才能生效")
         this.OtherSettingsControls.Push(checkboxUseGitHubToken)
-        this.OtherSettingsControls.Push(editgithubToken)
+        this.OtherSettingsControls.Push(editGithubToken)
         this.OtherSettingsControls.Push(hint4)
     }
     
