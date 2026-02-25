@@ -53,6 +53,10 @@ if not A_IsAdmin
 #Include ./lib/updater/self_replacer.ahk
 #Include ./lib/updater/updater.ahk
 
+; 包含游戏启动器
+#Include ./lib/game_launcher.ahk
+GameLauncher.Init()
+
 ; 订阅设置相关事件
 SubscribeSettingEvents()
 SubscribeHotkeyEvents()
@@ -66,7 +70,7 @@ HotkeyOn()
 #Include ./lib/gui.ahk
 #Include ./lib/updater/updater_ui.ahk
 
-; 触发应用启动事件（触发自动更新检查）
+; 触发应用启动事件（触发自动更新检查和游戏自动启动）
 EventBus.Publish("AppStarted")
 
 ; 包含游戏监控

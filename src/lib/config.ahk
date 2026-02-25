@@ -32,7 +32,9 @@ class Constants {
         "AutoUpdate", "自动检查更新",
         "LastDismissedVersion", "上次忽略的更新版本",
         "UseGitHubToken", "是否使用GitHub Token",
-        "GitHubToken", "GitHub Token"
+        "GitHubToken", "GitHub Token",
+        "GamePath", "游戏路径",
+        "AutoRunGame", "随小助手自动启动明日方舟"
     )
 }
 
@@ -233,7 +235,9 @@ class Config {
         "AutoUpdate", "1",
         "LastDismissedVersion", "",
         "UseGitHubToken", "0",
-        "GitHubToken", ""
+        "GitHubToken", "",
+        "GamePath", "",
+        "AutoRunGame", "0"
     )
     
     ; 获取所有按键设置（用于遍历）

@@ -60,7 +60,7 @@ SubscribeHotkeyEvents() {
 ; 处理热键重载事件
 HandleHotkeyReload(*) {
     HotkeyOff()
-    HotkeyIniWrite()
+    SettingsIniWrite()
     LoadSettings()
     ResetGameStateIfNeeded()
     HotkeyOn()
