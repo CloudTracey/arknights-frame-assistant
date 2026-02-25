@@ -72,3 +72,5 @@ class GameLauncher {
         return false
     }
 }
+
+GameLauncher.Init()

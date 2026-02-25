@@ -1,4 +1,8 @@
 ; == 热键控制 ==
+; 订阅热键事件
+EventBus.Subscribe("HotkeyOff", HotkeyOff)
+EventBus.Subscribe("HotkeyOn", HotkeyOn)
+
 ; 热键回调函数映射表
 ActionCallbacks := Map(
     "PressPause", ActionPressPause,
@@ -17,7 +21,7 @@ ActionCallbacks := Map(
 )
 
 ; 启用热键
-HotkeyOn() {
+HotkeyOn(*) {
     HotIfWinActive("ahk_exe Arknights.exe")
     for keyVar, _ in Constants.KeyNames {
         hotkeyValue := Config.GetHotkey(keyVar)
@@ -35,7 +39,7 @@ HotkeyOn() {
 }
 
 ; 禁用热键
-HotkeyOff() {
+HotkeyOff(*) {
     HotIfWinActive("ahk_exe Arknights.exe")
     for keyVar, _ in Constants.KeyNames {
         hotkeyValue := Config.GetHotkey(keyVar)
@@ -50,18 +54,4 @@ HotkeyOff() {
         }
     }
     HotIf
-}
-
-; 订阅热键重载事件
-SubscribeHotkeyEvents() {
-    EventBus.Subscribe("HotkeyReload", HandleHotkeyReload)
-}
-
-; 处理热键重载事件
-HandleHotkeyReload(*) {
-    HotkeyOff()
-    SettingsIniWrite()
-    LoadSettings()
-    ResetGameStateIfNeeded()
-    HotkeyOn()
 }
