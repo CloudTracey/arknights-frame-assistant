@@ -21,7 +21,6 @@
 ### 环境要求
 
 - **操作系统**: Windows 10/11
-- **AutoHotkey**: 版本 2.0 或更高
 - **编辑器**: 推荐使用 VS Code 配合 AutoHotkey v2 Language Support 扩展
 
 ### 项目结构
@@ -29,28 +28,37 @@
 ```
 E:\AFA
 ├── src/
-│   ├── main.ahk              # 主入口文件
-│   ├── lib/
-│   │   ├── gui.ahk           # GUI 相关
-│   │   ├── hotkey.ahk        # 热键处理
-│   │   ├── hotkey_actions.ahk # 热键动作
-│   │   ├── config.ahk        # 配置管理
-│   │   ├── game_monitor.ahk  # 游戏监控
-│   │   ├── setting.ahk       # 设置功能
-│   │   ├── eventbus.ahk      # 事件总线
-│   │   ├── key_bind.ahk      # 按键绑定
-│   │   ├── settings/         # 设置模块
-│   │   ├── updater/          # 更新器模块
-│   │   └── version.ahk       # 版本信息
+│   ├── main.ahk                  # 主入口文件（程序启动点）
 │   └── lib/
-├── test/                     # 测试清单
+│       ├── config.ahk            # 配置管理（Config/State/Constants 类）
+│       ├── eventbus.ahk          # 事件总线（模块间通信）
+│       ├── game_launcher.ahk     # 游戏启动器（自动启动游戏）
+│       ├── game_monitor.ahk      # 游戏监控（进程监控与自动退出）
+│       ├── gui.ahk               # GUI 界面管理（设置窗口）
+│       ├── hotkey.ahk            # 热键管理（注册/注销热键）
+│       ├── hotkey_actions.ahk    # 热键动作实现（13 个功能函数）
+│       ├── key_bind.ahk          # 按键绑定（InputHook 捕获按键）
+│       ├── setting.ahk           # 设置管理入口（包含子模块）
+│       │   ├── actions.ahk       # 设置操作（重置/保存/应用/取消）
+│       │   ├── loader.ahk        # 设置加载
+│       │   └── saver.ahk         # 设置保存（含验证逻辑）
+│       ├── updater/              # 自动更新模块
+│       │   ├── downloader.ahk    # 更新下载器
+│       │   ├── self_replacer.ahk # 自替换脚本（批处理生成）
+│       │   ├── updater.ahk       # 更新协调器（流程控制）
+│       │   ├── updater_ui.ahk    # 更新 UI（对话框）
+│       │   └── version_checker.ahk # 版本检查器（GitHub API）
+│       └── version.ahk           # 内置版本信息
+├── test/                         # 测试清单目录
 ├── .github/
-│   ├── workflows/            # CI/CD 工作流
-│   └── CODEOWNERS            # 代码所有者
-├── README.md                 # 项目说明
-├── CHANGELOG.md              # 更新日志
-├── LICENSE                   # 许可证
-└── version.txt               # 版本文件
+│   ├── workflows/                # CI/CD 工作流
+│   └── CODEOWNERS                # 代码所有者
+├── README.md                     # 项目说明
+├── CHANGELOG.md                  # 更新日志
+├── CONTRIBUTING.md               # 贡献指南
+├── LICENSE                       # 许可证
+├── logo.png                      # 项目图标
+└── version.txt                   # 版本信息
 ```
 
 ## 代码规范
@@ -90,41 +98,9 @@ CheckGameProcess(process_name) {
 
 如果您发现了 bug 或有功能建议，请通过 GitHub Issues 提交。
 
-**提交 Issue 时，请（尽量）包含以下信息：**
-并不是严格要求，如果问题或者建议很简单那可以用一句话概括
-
-1. **问题类型**: Bug 报告 / 功能请求
-2. **环境信息**:
-   - AFA 版本号
-   - AutoHotkey 版本
-   - Windows 版本
-   - 游戏分辨率
-3. **问题描述**: 清晰简洁地描述问题
-4. **复现步骤**（Bug 报告）:
-   - 步骤 1
-   - 步骤 2
-   - ...
-5. **期望行为**: 描述您期望发生的情况
-6. **实际行为**: 描述实际发生的情况
-7. **截图或视频**（如适用）
-8. **日志文件**（如适用）
-
-**Issue 标签：**
-
-- `bug`: 报告程序错误
-- `enhancement`: 功能改进或新功能建议
-- `documentation`: 文档相关问题
-- `question`: 使用问题
-
 ### 提交功能请求
 
 在提交新功能请求前，请先检查是否已有类似Issue。
-
-功能请求应包含：
-- 功能名称
-- 功能描述
-- 使用场景
-- 可能的实现方案（如有）
 
 ### 提交代码
 
@@ -156,6 +132,9 @@ git checkout -b feature/your-feature-name
 - `bugfix/描述` - Bug 修复
 - `hotfix/描述` - 紧急修复
 - `docs/描述` - 文档更新
+- `style/描述` - 代码格式（不影响功能）
+- `ui/描述` - GUI修改
+- `perf/描述` - 性能优化
 
 #### 开发流程
 
@@ -201,6 +180,7 @@ git checkout -b feature/your-feature-name
    - `perf`: 性能优化
    - `test`: 测试相关
    - `chore`: 构建过程或辅助工具的变动
+   - `ui`: GUI相关修改 
 
    **示例：**
    ```
@@ -221,12 +201,7 @@ git checkout -b feature/your-feature-name
 
 2. 在 GitHub 上创建 Pull Request，目标分支选择 `develop`
 
-3. **PR 描述应包含：**
-   - 功能/修复的简要描述
-   - 相关的 Issue 编号（如有）
-   - 更改的详细说明
-   - 测试步骤和结果
-   - 截图（如适用）
+3. 参照PULL_REQUEST_TEMPLATE.md提供的模版
 
 4. 等待代码审查
 
@@ -280,11 +255,8 @@ git checkout -b feature/your-feature-name
 
 ## 版本发布流程
 
-本项目使用 [release-please](https://github.com/googleapis/release-please) 进行版本管理：
-
 1. 遵循 Conventional Commits 规范提交代码
-2. release-please 会自动修改 CHANGELOG 和版本号
-3. 维护者审核后发布新版本
+2. 维护者审核后发布新版本
 
 **版本号格式：** [语义化版本](https://semver.org/lang/zh-CN/)
 - `主版本号.次版本号.修订号`（如 `1.0.0`）
