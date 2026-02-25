@@ -1,10 +1,10 @@
 ; == 设置管理入口 ==
 
 ; 加载器：负责从配置文件加载设置
-#Include ./settings/loader.ahk
+#Include ./loader.ahk
 
 ; 保存器：负责保存设置到配置文件
-#Include ./settings/saver.ahk
+#Include ./saver.ahk
 
 ; 操作器：负责处理用户设置操作
-#Include ./settings/actions.ahk
+#Include ./actions.ahk

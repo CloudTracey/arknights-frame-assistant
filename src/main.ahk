@@ -42,29 +42,23 @@ if not A_IsAdmin
 #Include ./lib/key_bind.ahk
 
 ; 包含热键控制
-#Include ./lib/hotkey.ahk
+#Include ./lib/hotkey_control.ahk
 
 ; 包含设置管理
-#Include ./lib/setting.ahk
+#Include ./lib/settings/settings_manager.ahk
 
 ; 包含更新模块
 #Include ./lib/updater/version_checker.ahk
 #Include ./lib/updater/downloader.ahk
 #Include ./lib/updater/self_replacer.ahk
-#Include ./lib/updater/updater.ahk
+#Include ./lib/updater/updater_manager.ahk
 
 ; 包含游戏启动器
 #Include ./lib/game_launcher.ahk
-GameLauncher.Init()
-
-; 订阅设置相关事件
-SubscribeSettingEvents()
-SubscribeHotkeyEvents()
-SubscribeKeyBindEvents()
 
 ; 初始化
-LoadSettings()
-HotkeyOn()
+Loader.LoadSettings()
+EventBus.Publish("HotkeyOn")
 
 ; 包含GUI
 #Include ./lib/gui.ahk
