@@ -140,7 +140,7 @@ ActionOneClickSkill(ThisHotkey) {
     }
     Send "{RButton Down}"
     Send "{RButton Up}"
-    USleep(50)
+    USleep(State.SkillAndRetreatDelay)
     Send "{e Down}"
     USleep(50)
     Send "{e Up}"
@@ -160,7 +160,7 @@ ActionOneClickRetreat(ThisHotkey) {
     }
     Send "{RButton Down}"
     Send "{RButton Up}"
-    USleep(50)
+    USleep(State.SkillAndRetreatDelay)
     Send "{q Down}"
     USleep(50)
     Send "{q Up}"
@@ -191,7 +191,7 @@ ActionPauseSkill(ThisHotkey) {
     BlockInput "MouseMoveOff"
     Send "{ESC Down}"
     Send "{RButton Up}"
-    USleep(50)
+    USleep(State.SkillAndRetreatDelay)
     Send "{e Down}"
     USleep(50)
     Send "{e Up}"
@@ -223,7 +223,7 @@ ActionPauseRetreat(ThisHotkey) {
     BlockInput "MouseMoveOff"
     Send "{ESC Down}"
     Send "{RButton Up}"
-    USleep(50)
+    USleep(State.SkillAndRetreatDelay)
     Send "{q Down}"
     USleep(50)
     Send "{q Up}"

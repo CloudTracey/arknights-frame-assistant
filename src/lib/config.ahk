@@ -34,7 +34,8 @@ class Constants {
         "UseGitHubToken", "是否使用GitHub Token",
         "GitHubToken", "GitHub Token",
         "GamePath", "游戏路径",
-        "AutoRunGame", "随小助手自动启动明日方舟"
+        "AutoRunGame", "随小助手自动启动明日方舟",
+        "SkillAndRetreatDelay", "技能和撤退点击延迟"
     )
 }
 
@@ -205,7 +206,7 @@ class Config {
         this._IsLoaded := true
     }
     
-    ; 恢复默认设置
+    ; 恢复按键默认设置
     static ResetHotkeyToDefaults() {
         this._HotkeySettings := this._DefaultHotkeys.Clone()
     }
@@ -237,7 +238,8 @@ class Config {
         "UseGitHubToken", "0",
         "GitHubToken", "",
         "GamePath", "",
-        "AutoRunGame", "0"
+        "AutoRunGame", "0",
+        "SkillAndRetreatDelay", "50"
     )
     
     ; 获取所有按键设置（用于遍历）
@@ -266,6 +268,9 @@ class State {
     
     ; 当前延迟值
     static CurrentDelay := 11.3  ; 默认120帧
+
+    ; 技能和撤退点击延迟
+    static SkillAndRetreatDelay := 50  ; 默认50ms
     
     ; 按键绑定状态
     static ModifyHook := InputHook("L0")
@@ -287,6 +292,11 @@ class State {
         } else {
             this.CurrentDelay := Constants.DelayC
         }
+    }
+
+    ; 根据帧数设置更新延迟
+    static UpdateSkillAndRetreatDelay() {
+        this.SkillAndRetreatDelay := Config.GetImportant("SkillAndRetreatDelay")
     }
 }
 

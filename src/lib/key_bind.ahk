@@ -1,4 +1,7 @@
 ; == 按键绑定 == 
+; 订阅设置保存前事件
+EventBus.Subscribe("SettingsWillSave", HandleSettingsWillSave)
+
 ; 在设置窗口监听鼠标左键
 OnMessage(0x0201, WM_LBUTTONDOWN)
 
@@ -18,11 +21,6 @@ StopHook() {
     }
 }
 
-; 订阅设置保存前事件
-SubscribeKeyBindEvents() {
-    EventBus.Subscribe("SettingsWillSave", HandleSettingsWillSave)
-}
-
 ; 处理设置保存前事件
 HandleSettingsWillSave(*) {
     StopHook()
@@ -38,7 +36,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
     ; -- 如果点的是 Edit 控件 --
     if (State.ControlObj && State.ControlObj.Type == "Edit") {
         ; 排除非按键绑定输入框
-        if (State.ControlObj.Name == "GitHubToken" || State.ControlObj.Name == "GamePath") {
+        if (State.ControlObj.Name == "GitHubToken" || State.ControlObj.Name == "GamePath" || State.ControlObj.Name == "SkillAndRetreatDelay") {
             return
         }
         ; 若为首次点击Edit控件
