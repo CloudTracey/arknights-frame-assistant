@@ -21,7 +21,6 @@
 ### 环境要求
 
 - **操作系统**: Windows 10/11
-- **AutoHotkey**: 版本 2.0 或更高
 - **编辑器**: 推荐使用 VS Code 配合 AutoHotkey v2 Language Support 扩展
 
 ### 项目结构
@@ -99,48 +98,9 @@ CheckGameProcess(process_name) {
 
 如果您发现了 bug 或有功能建议，请通过 GitHub Issues 提交。
 
-**提交 Issue 时，请（尽量）包含以下信息：**
-并不是严格要求，如果问题或者建议很简单那可以用一句话概括
-
-1. **问题类型**: Bug 报告 / 功能请求
-2. **环境信息**:
-   - AFA 版本号
-   - Windows 版本
-   - 游戏分辨率
-3. **问题描述**: 清晰简洁地描述问题
-4. **复现步骤**（Bug 报告）:
-   - 步骤 1
-   - 步骤 2
-   - ...
-5. **期望行为**: 描述您期望发生的情况
-6. **实际行为**: 描述实际发生的情况
-7. **截图或视频**（如适用）
-8. **日志文件**（如适用）
-
-**Issue 标签：**
-
-| 标签 | 说明 |
-|------|------|
-| `bug` | 报告程序错误 |
-| `enhancement` | 功能改进或新功能建议 |
-| `documentation` | 文档相关问题 |
-| `question` | 使用问题 |
-| `help wanted` | 需要帮助 |
-| `good first issue` | 适合新手的任务 |
-| `duplicate` | 重复的 Issue |
-| `invalid` | 无效的 Issue |
-| `wontfix` | 不会修复 |
-| `test` | 待测试项或测试结果 |
-
 ### 提交功能请求
 
 在提交新功能请求前，请先检查是否已有类似Issue。
-
-功能请求应包含：
-- 功能名称
-- 功能描述
-- 使用场景
-- 可能的实现方案（如有）
 
 ### 提交代码
 
@@ -172,6 +132,9 @@ git checkout -b feature/your-feature-name
 - `bugfix/描述` - Bug 修复
 - `hotfix/描述` - 紧急修复
 - `docs/描述` - 文档更新
+- `style/描述` - 代码格式（不影响功能）
+- `ui/描述` - GUI修改
+- `perf/描述` - 性能优化
 
 #### 开发流程
 
@@ -238,12 +201,7 @@ git checkout -b feature/your-feature-name
 
 2. 在 GitHub 上创建 Pull Request，目标分支选择 `develop`
 
-3. **PR 描述应包含：**
-   - 功能/修复的简要描述
-   - 相关的 Issue 编号（如有）
-   - 更改的详细说明
-   - 测试步骤和结果
-   - 截图（如适用）
+3. 参照PULL_REQUEST_TEMPLATE.md提供的模版
 
 4. 等待代码审查
 
