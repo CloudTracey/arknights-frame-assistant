@@ -201,15 +201,17 @@ class GuiManager {
 
         ; - 高级设置 -
         sep4 := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
-        sep4txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  高级设置  ")
+        sep4txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  自定义设置  ")
         this.OtherSettingsControls.Push(sep4)
         this.OtherSettingsControls.Push(sep4txt)
         ; 技能和撤退点击延迟设置
         txtSkillAndRetreatDelay := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10 Section", "技能和撤退点击延迟")
-        this.SkillAndRetreatDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vSkillAndRetreatDelay", Config.GetImportant("SkillAndRetreatDelay"))
+        this.SkillAndRetreatDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vSkillAndRetreatDelay Number", Config.GetImportant("SkillAndRetreatDelay"))
+        updownSkillAndRetreatDelay := this.MainGui.Add("UpDown", ,Config.GetImportant("SkillAndRetreatDelay"))
         hint5 := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中干员到按下【技能】和【撤退】的时长")
         this.OtherSettingsControls.Push(txtSkillAndRetreatDelay)
         this.OtherSettingsControls.Push(this.SkillAndRetreatDelay)
+        this.OtherSettingsControls.Push(updownSkillAndRetreatDelay)
         this.OtherSettingsControls.Push(hint5)
 
         ; 底部按钮
