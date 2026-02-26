@@ -12,6 +12,7 @@ class GuiManager {
     static BtnCancel := ""
     static GuiFrame := ""
     static SkillAndRetreatDelay := ""
+    static SwitchHotkey := ""
     
     ; 窗口尺寸常量
     static GuiWidth := 720
@@ -54,8 +55,10 @@ class GuiManager {
         this.SwitchTab("keyBind")
         
         ; 设置托盘菜单
+        A_IconTip := "AFA`n热键已启用"
         A_TrayMenu.Delete
         A_TrayMenu.Add("打开按键设置", (*) => this.Show())
+        A_TrayMenu.Add("启用/禁用热键", (*) => EventBus.Publish("SwitchHotkey"))
         A_TrayMenu.Add("重启小助手", (*) => Reload())
         A_TrayMenu.Add("退出", (*) => ExitApp())
         A_TrayMenu.Default := "打开按键设置"
@@ -143,7 +146,7 @@ class GuiManager {
         this.KeybindControls.Push(hint2)
 
         ; -- 其他设置 --
-        this.MainGui.Add("GroupBox", "x0 y45 w" this.ColWidth " h0 Section vImportantGroupz", "")
+        this.MainGui.Add("GroupBox", "x0 y45 w" this.ColWidth " h0 Section vOtherSettingsGroup", "")
         ; - 启动与退出设置 -
         sep2 := this.MainGui.Add("Text", "x" this.GuiXMargin " ys+10 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
         sep2txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  启动与退出设置  ")
@@ -199,20 +202,25 @@ class GuiManager {
         this.OtherSettingsControls.Push(hint4)
         this.MainGui.Add("Text", "yp+30 w0 h0")
 
-        ; - 高级设置 -
+        ; - 自定义设置 -
         sep4 := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
         sep4txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  自定义设置  ")
         this.OtherSettingsControls.Push(sep4)
         this.OtherSettingsControls.Push(sep4txt)
         ; 技能和撤退点击延迟设置
         txtSkillAndRetreatDelay := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10 Section", "技能和撤退点击延迟")
-        this.SkillAndRetreatDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vSkillAndRetreatDelay Number", Config.GetImportant("SkillAndRetreatDelay"))
-        updownSkillAndRetreatDelay := this.MainGui.Add("UpDown", ,Config.GetImportant("SkillAndRetreatDelay"))
+        this.SkillAndRetreatDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vSkillAndRetreatDelay Number", Config.GetCustom("SkillAndRetreatDelay"))
+        updownSkillAndRetreatDelay := this.MainGui.Add("UpDown", ,Config.GetCustom("SkillAndRetreatDelay"))
         hint5 := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中干员到按下【技能】和【撤退】的时长")
         this.OtherSettingsControls.Push(txtSkillAndRetreatDelay)
         this.OtherSettingsControls.Push(this.SkillAndRetreatDelay)
         this.OtherSettingsControls.Push(updownSkillAndRetreatDelay)
         this.OtherSettingsControls.Push(hint5)
+        ; 启用/禁用热键快捷键
+        txtSwitchHotkey := this.MainGui.Add("Text", "x" this.GuiXMargin " y+16 Right +0x200", "启用/禁用热键快捷键") 
+        this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w120 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom("SwitchHotkey"))
+        this.OtherSettingsControls.Push(txtSwitchHotkey)
+        this.OtherSettingsControls.Push(this.SwitchHotkey)
 
         ; 底部按钮
         BtnMargin := 15
@@ -253,11 +261,21 @@ class GuiManager {
             }
         }
     }
+
+    ; 内部：更新其他控件值（从配置）
+    static _UpdateCustomControlsFromConfig() {
+        for key, value in Config.AllCustom {
+            try {
+                this.MainGui[key].Value := value
+            }
+        }
+    }
     
     ; 内部：订阅事件总线
     static _SubscribeEvents() {
         EventBus.Subscribe("GuiUpdateHotkeyControls", (*) => this._UpdateHotkeyControlsFromConfig())
-        EventBus.Subscribe("GuiUpdateSettingsControls", (*) => this._UpdateImportantControlsFromConfig())
+        EventBus.Subscribe("GuiUpdateImportantControls", (*) => this._UpdateImportantControlsFromConfig())
+        EventBus.Subscribe("GuiUpdateCustomControls", (*) => this._UpdateCustomControlsFromConfig())
         EventBus.Subscribe("GuiHide", (*) => this.Hide())
         EventBus.Subscribe("KeyBindFocusSave", (*) => this.FocusSaveButton())
         EventBus.Subscribe("GuiHideStopHook", HandleGuiHideStopHook)

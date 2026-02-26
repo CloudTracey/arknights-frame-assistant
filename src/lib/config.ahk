@@ -34,8 +34,14 @@ class Constants {
         "UseGitHubToken", "是否使用GitHub Token",
         "GitHubToken", "GitHub Token",
         "GamePath", "游戏路径",
-        "AutoRunGame", "随小助手自动启动明日方舟",
-        "SkillAndRetreatDelay", "技能和撤退点击延迟"
+        "AutoRunGame", "随小助手自动启动明日方舟"
+        
+    )
+
+    ; 自定义设置名称映射
+    static CustomNames := Map(
+        "SkillAndRetreatDelay", "技能和撤退点击延迟",
+        "SwitchHotkey", "启用/禁用热键"
     )
 }
 
@@ -44,6 +50,7 @@ class Config {
     ; 内部存储
     static _HotkeySettings := Map()
     static _ImportantSettings := Map()
+    static _CustomSettings := Map()
     static _IsLoaded := false
     
     ; 配置文件路径
@@ -80,6 +87,18 @@ class Config {
     static SetImportant(key, value) {
         this._ImportantSettings[key] := value
     }
+
+    ; 获取自定义设置
+    static GetCustom(key) {
+        if !this._IsLoaded
+            this.LoadFromIni()
+        return this._CustomSettings.Has(key) ? this._CustomSettings[key] : ""
+    }
+    
+    ; 设置自定义设置
+    static SetCustom(key, value) {
+        this._CustomSettings[key] := value
+    }
     
     ; 从配置文件加载
     static LoadFromIni() {
@@ -107,6 +126,11 @@ class Config {
             } else {
                 this._ImportantSettings[keyVar] := IniRead(this.IniFile, "Main", keyVar, defaultVal)
             }
+        }
+
+        ; 加载自定义设置
+        for keyVar, defaultVal in this._DefaultCustom {
+            this._CustomSettings[keyVar] := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
         }
         
         ; 如果配置文件不存在，创建并写入默认值
@@ -140,6 +164,11 @@ class Config {
         for keyVar, defaultVal in this._DefaultHotkeys {
             IniWrite(defaultVal, this.IniFile, "Hotkeys", keyVar)
         }
+
+        ; 写入所有默认自定义设置
+        for keyVar, defaultVal in this._DefaultCustom {
+            IniWrite(defaultVal, this.IniFile, "Custom", keyVar)
+        }
     }
     
     ; 保存到配置文件
@@ -167,6 +196,13 @@ class Config {
                 } else {
                     IniWrite(settingsMap.%keyVar%, this.IniFile, "Main", keyVar)
                 }
+            }
+        }
+
+        ; 保存自定义设置
+        for keyVar, _ in Constants.CustomNames {
+            if settingsMap.HasProp(keyVar) {
+                IniWrite(settingsMap.%keyVar%, this.IniFile, "Custom", keyVar)
             }
         }
         
@@ -197,12 +233,18 @@ class Config {
                 IniWrite(value, this.IniFile, "Main", keyVar)
             }
         }
+
+        ; 保存自定义设置
+        for keyVar, value in this._CustomSettings {
+            IniWrite(value, this.IniFile, "Custom", keyVar)
+        }
     }
     
     ; 加载默认值
     static LoadDefaults() {
         this._HotkeySettings := this._DefaultHotkeys.Clone()
         this._ImportantSettings := this._DefaultImportant.Clone()
+        this._CustomSettings := this._DefaultCustom.Clone()
         this._IsLoaded := true
     }
     
@@ -238,8 +280,13 @@ class Config {
         "UseGitHubToken", "0",
         "GitHubToken", "",
         "GamePath", "",
-        "AutoRunGame", "0",
-        "SkillAndRetreatDelay", "50"
+        "AutoRunGame", "0"
+    )
+
+    ; 内部：默认自定义设置
+    static _DefaultCustom := Map(
+        "SkillAndRetreatDelay", "50",
+        "SwitchHotkey", ""
     )
     
     ; 获取所有按键设置（用于遍历）
@@ -247,6 +294,9 @@ class Config {
     
     ; 获取所有重要设置（用于遍历）
     static AllImportant => this._ImportantSettings
+
+    ; 获取所有自定义设置（用于遍历）
+    static AllCustom => this._CustomSettings
     
     ; -- Token存储方法 --
     
@@ -294,9 +344,9 @@ class State {
         }
     }
 
-    ; 根据帧数设置更新延迟
+    ; 根据设置更新技能与撤退点击延迟
     static UpdateSkillAndRetreatDelay() {
-        this.SkillAndRetreatDelay := Config.GetImportant("SkillAndRetreatDelay")
+        this.SkillAndRetreatDelay := Config.GetCustom("SkillAndRetreatDelay")
     }
 }
 
