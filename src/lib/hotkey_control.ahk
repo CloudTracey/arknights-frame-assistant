@@ -1,7 +1,7 @@
 ; == 热键控制 ==
 class HotkeyController {
     ; 热键状态
-    static HotkeyState := false
+    static HotkeyState := true
     
     ; 初始化热键控制器
     static Init() {
@@ -50,7 +50,6 @@ class HotkeyController {
                 }
             }
         }
-        this.HotkeyState := true
         HotIf
     }
 
@@ -69,7 +68,6 @@ class HotkeyController {
                 }
             }
         }
-        this.HotkeyState := false
         HotIf
     }
 
@@ -77,12 +75,14 @@ class HotkeyController {
     static SwitchHotkey() {
         if(HotkeyController.HotkeyState == true) {
             HotkeyController.HotkeyOff
+            HotkeyController.HotkeyState := false
             TrayTip("热键已禁用", "AFA", 4)
             A_IconTip := "AFA`n热键已禁用"
             return
         }
         if(HotkeyController.HotkeyState == false) {
             HotkeyController.HotkeyOn
+            HotkeyController.HotkeyState := true
             TrayTip("热键已启用", "AFA", 4)
             A_IconTip := "AFA`n热键已启用"
             return
