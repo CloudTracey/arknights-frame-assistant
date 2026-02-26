@@ -393,7 +393,7 @@ class GuiManager {
 
 ; 处理GUI隐藏时停止Hook的事件
 HandleGuiHideStopHook(*) {
-    StopHook()
+    KeyBinder.StopHook()
 }
 
 ; 初始化GUI

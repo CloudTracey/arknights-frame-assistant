@@ -9,8 +9,6 @@ class KeyBinder {
     static ControlObj := ""
     static WaitingModify := false
 
-
-
     ; 创建Hook
     static CreateHook() {
         ; 创建HookA
@@ -33,23 +31,6 @@ class KeyBinder {
     ; 处理设置保存前事件
     static HandleSettingsWillSave(*) {
         KeyBinder.StopHook()
-    }
-
-    ; 窗口活动监控
-    static WatchActiveWindow(){
-        ; 当窗口失去焦点时
-        if(WinActive(State.GuiWindowName) == 0) {
-            ; 如果上次点击的是edit控件
-            if(this.LastEditObject != "") {
-                ; 将上次点击的edit控件还原至点击前的状态
-                this.LastEditObject.Value := this.OriginalValue
-                this.LastEditObject := ""
-                this.WaitingModify := false
-                ; 释放可能存在的Hook
-                this.StopHook()
-                EventBus.Publish("KeyBindFocusSave")
-            }
-        }
     }
 
     ; 改绑按键
@@ -148,6 +129,23 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
     }
     ; 无事发生
     return
+}
+
+; 窗口活动监控
+WatchActiveWindow(){
+    ; 当窗口失去焦点时
+    if(WinActive(State.GuiWindowName) == 0) {
+        ; 如果上次点击的是edit控件
+        if(KeyBinder.LastEditObject != "") {
+            ; 将上次点击的edit控件还原至点击前的状态
+            KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
+            KeyBinder.LastEditObject := ""
+            KeyBinder.WaitingModify := false
+            ; 释放可能存在的Hook
+            KeyBinder.StopHook()
+            EventBus.Publish("KeyBindFocusSave")
+        }
+    }
 }
 
 ; 订阅设置保存前事件
