@@ -56,9 +56,8 @@ if not A_IsAdmin
 ; 包含游戏启动器
 #Include ./lib/game_launcher.ahk
 
-; 初始化
+; 加载设置
 Loader.LoadSettings()
-EventBus.Publish("HotkeyOn")
 
 ; 包含GUI
 #Include ./lib/gui.ahk
@@ -69,3 +68,7 @@ EventBus.Publish("AppStarted")
 
 ; 包含游戏监控
 #Include ./lib/game_monitor.ahk
+
+; 初始化按键
+EventBus.Publish("HotkeyOn")
+EventBus.Publish("SetSwitchKey")

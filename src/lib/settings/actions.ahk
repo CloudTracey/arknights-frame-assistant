@@ -11,20 +11,28 @@ HandleSettingsReset(*) {
     Result := MsgBox("  确定重置按键为默认设置吗 ？","重置按键设置", "YesNo")
     if (Result == "Yes") {
         EventBus.Publish("HotkeyOff")
+        EventBus.Publish("UnsetSwitchKey")
         Config.ResetHotkeyToDefaults()
         EventBus.Publish("GuiUpdateHotkeyControls")
         Saver.SettingsIniWrite()
         Loader.LoadSettings()
-        EventBus.Publish("HotkeyOn")
+        if(HotkeyController.HotkeyState == true) {
+            EventBus.Publish("HotkeyOn")
+        }
+        EventBus.Publish("SetSwitchKey")
     }
 }
 
 ; 处理保存设置事件
 HandleSettingsSave(*) {
     EventBus.Publish("HotkeyOff")
+    EventBus.Publish("UnsetSwitchKey")
     Saver.SettingsIniWrite()
     Loader.LoadSettings()
-    EventBus.Publish("HotkeyOn")
+    if(HotkeyController.HotkeyState == true) {
+        EventBus.Publish("HotkeyOn")
+    }
+    EventBus.Publish("SetSwitchKey")
     Saver.ResetGameStateIfNeeded()
     EventBus.Publish("GuiHide")
     MsgBox("设置已保存！后续可从右下角托盘区图标右键菜单打开设置", "保存成功", "Iconi")
@@ -33,9 +41,13 @@ HandleSettingsSave(*) {
 ; 处理应用设置事件
 HandleSettingsApply(*) {
     EventBus.Publish("HotkeyOff")
+    EventBus.Publish("UnsetSwitchKey")
     Saver.SettingsIniWrite()
     Loader.LoadSettings()
-    EventBus.Publish("HotkeyOn")
+    if(HotkeyController.HotkeyState == true) {
+        EventBus.Publish("HotkeyOn")
+    }
+    EventBus.Publish("SetSwitchKey")
     Saver.ResetGameStateIfNeeded()
     MsgBox("设置已应用！", "应用成功")
 }
@@ -44,7 +56,8 @@ HandleSettingsApply(*) {
 HandleSettingsCancel(*) {
     ; 通过事件总线通知GUI恢复显示
     EventBus.Publish("GuiUpdateHotkeyControls")
-    EventBus.Publish("GuiUpdateSettingsControls")
+    EventBus.Publish("GuiUpdateImportantControls")
+    EventBus.Publish("GuiUpdateCustomControls")
     ; 通过事件总线通知GUI隐藏
     EventBus.Publish("GuiHide")
 }
