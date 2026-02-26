@@ -201,7 +201,7 @@ class GuiManager {
 
         ; - 高级设置 -
         sep4 := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
-        sep4txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  高级设置  ")
+        sep4txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  自定义设置  ")
         this.OtherSettingsControls.Push(sep4)
         this.OtherSettingsControls.Push(sep4txt)
         ; 技能和撤退点击延迟设置
