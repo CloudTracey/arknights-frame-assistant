@@ -322,13 +322,6 @@ class State {
     ; 技能和撤退点击延迟
     static SkillAndRetreatDelay := 50  ; 默认50ms
     
-    ; 按键绑定状态
-    static ModifyHook := InputHook("L0")
-    static LastEditObject := ""
-    static OriginalValue := ""
-    static ControlObj := ""
-    static WaitingModify := false
-    
     ; GUI窗口名称
     static GuiWindowName := ""
     
