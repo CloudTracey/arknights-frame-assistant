@@ -91,11 +91,15 @@ class HotkeyController {
 
     ; 设置热键启用/禁用快捷键
     static SetSwitchKey() {
-        Hotkey(Config.GetCustom("SwitchHotkey"), this.SwitchHotkey, "On")
+        switchKey := Config.GetCustom("SwitchHotkey")
+        if (switchKey != "")
+            Hotkey(switchKey, this.SwitchHotkey, "On")
     }
     ; 解除设置热键启用/禁用快捷键
     static UnsetSwitchKey() {
-        Hotkey(Config.GetCustom("SwitchHotkey"), this.SwitchHotkey, "Off")
+        switchKey := Config.GetCustom("SwitchHotkey")
+        if (switchKey != "")
+            Hotkey(switchKey, this.SwitchHotkey, "Off")
     }
 }
 ; 初始化热键控制器
