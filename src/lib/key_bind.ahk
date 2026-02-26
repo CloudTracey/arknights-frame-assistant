@@ -3,7 +3,6 @@
 class KeyBinder {
     ; 按键绑定状态
     static ModifyHookA := InputHook("L0")
-    static ModifyHookB := InputHook("L0")
     static LastEditObject := ""
     static OriginalValue := ""
     static ControlObj := ""
@@ -15,8 +14,8 @@ class KeyBinder {
         this.ModifyHookA := InputHook("L0")
         this.ModifyHookA.VisibleNonText := false
         this.ModifyHookA.KeyOpt("{All}", "E")
-        this.ModifyHookA.KeyOpt("{LCtrl}{RCtrl}{LAlt}{RAlt}{LShift}{RShift}", "E")
-        this.ModifyHookA.OnEnd := (*) => this.EndChange(this.ModifyHookA.EndKey)
+        this.ModifyHookA.KeyOpt("{LCtrl}{RCtrl}{LAlt}{RAlt}{LShift}{RShift}", "-E")
+        this.ModifyHookA.OnEnd := (*) => this.EndChange(this.ModifyHookA.EndMods . this.ModifyHookA.EndKey)
         this.ModifyHookA.Start()
         ; 创建HookB
 

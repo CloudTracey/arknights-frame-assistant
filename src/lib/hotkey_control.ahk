@@ -42,7 +42,7 @@ class HotkeyController {
             hotkeyValue := Config.GetHotkey(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
-                if (hotkeyValue ~= "i)^(E|Q|F|G|RButton|MButton)$") {
+                if (hotkeyValue ~= "i)\b(E|Q|F|G|RButton|MButton)$") {
                     Hotkey(hotkeyValue, callback, "On")
                 }
                 else {
@@ -60,7 +60,7 @@ class HotkeyController {
             hotkeyValue := Config.GetHotkey(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
-                if (hotkeyValue ~= "i)^(E|Q|F|G|RButton|MButton)$") {
+                if (hotkeyValue ~= "i)\b(E|Q|F|G|RButton|MButton)$") {
                     Hotkey(hotkeyValue, callback, "Off")
                 }
                 else {

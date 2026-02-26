@@ -277,7 +277,7 @@ USleep(delay_ms) {
 }
 ; 去除修饰符前缀
 PureKeyWait(ThisHotkey) {
-    pureKey := RegExReplace(ThisHotkey, "^[~*$#!^+&]+")
+    pureKey := RegExReplace(ThisHotkey, "^[~*$!^+#&<>()]+")
     KeyWait(pureKey)
 }
 ; 判断鼠标是否在Client区域内
