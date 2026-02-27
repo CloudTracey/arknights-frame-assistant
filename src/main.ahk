@@ -42,32 +42,46 @@ if not A_IsAdmin
 #Include ./lib/key_bind.ahk
 
 ; 包含热键控制
-#Include ./lib/hotkey.ahk
+#Include ./lib/hotkey_control.ahk
 
 ; 包含设置管理
-#Include ./lib/setting.ahk
+#Include ./lib/settings/settings_manager.ahk
 
 ; 包含更新模块
 #Include ./lib/updater/version_checker.ahk
 #Include ./lib/updater/downloader.ahk
 #Include ./lib/updater/self_replacer.ahk
-#Include ./lib/updater/updater.ahk
+#Include ./lib/updater/updater_manager.ahk
 
-; 订阅设置相关事件
-SubscribeSettingEvents()
-SubscribeHotkeyEvents()
-SubscribeKeyBindEvents()
+; 包含游戏启动器
+#Include ./lib/game_launcher.ahk
 
-; 初始化
-LoadSettings()
-HotkeyOn()
+; 加载设置
+Loader.LoadSettings()
+
+; 包含更新公告模块
+#Include ./lib/changelog/changelog.ahk
+#Include ./lib/changelog/changelog_ui.ahk
+#Include ./lib/changelog/changelog_checker.ahk
+
+; 检查并显示更新公告
+ChangelogChecker.CheckAndShow()
 
 ; 包含GUI
 #Include ./lib/gui.ahk
 #Include ./lib/updater/updater_ui.ahk
 
-; 触发应用启动事件（触发自动更新检查）
+; 触发应用启动事件（触发自动更新检查和游戏自动启动）
 EventBus.Publish("AppStarted")
 
 ; 包含游戏监控
 #Include ./lib/game_monitor.ahk
+
+; 初始化按键
+EventBus.Publish("HotkeyOn")
+EventBus.Publish("SetSwitchKey")
+
+; 刷新GUI以正确应用文本
+EventBus.Publish("GuiUpdateHotkeyControls")
+EventBus.Publish("GuiUpdateImportantControls")
+EventBus.Publish("GuiUpdateCustomControls")
