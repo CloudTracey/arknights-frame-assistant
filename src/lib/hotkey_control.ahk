@@ -8,7 +8,6 @@ class HotkeyController {
         HotkeyController._SubscribeEvents()
     }
     
-    
     ; 内部：订阅热键事件
     static _SubscribeEvents() {
         EventBus.Subscribe("HotkeyOff", (*) => this.HotkeyOff())
@@ -35,6 +34,9 @@ class HotkeyController {
         "LButtonClick", LButtonClick,
     )
 
+    ; 已激活热键映射表
+    static ActiveHotkeys := Map()
+
     ; 启用热键
     static HotkeyOn(*) {
         HotIfWinActive("ahk_exe Arknights.exe")
@@ -42,11 +44,13 @@ class HotkeyController {
             hotkeyValue := Config.GetHotkey(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
-                if (hotkeyValue ~= "i)\b(E|Q|F|G|RButton|MButton)$") {
+                if (hotkeyValue ~= "i)\b(E|Q|F|G|RButton|MButton)\b$") {
                     Hotkey(hotkeyValue, callback, "On")
+                    HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
                 }
                 else {
                     Hotkey("~" hotkeyValue, callback, "On")
+                    HotkeyController.ActiveHotkeys.Set("~" hotkeyValue, "~" hotkeyValue)
                 }
             }
         }
@@ -56,28 +60,21 @@ class HotkeyController {
     ; 禁用热键
     static HotkeyOff(*) {
         HotIfWinActive("ahk_exe Arknights.exe")
-        for keyVar, _ in Constants.KeyNames {
-            hotkeyValue := Config.GetHotkey(keyVar)
-            if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
-                callback := this.ActionCallbacks[keyVar]
-                if (hotkeyValue ~= "i)\b(E|Q|F|G|RButton|MButton)$") {
-                    Hotkey(hotkeyValue, callback, "Off")
-                }
-                else {
-                    Hotkey("~" hotkeyValue, callback, "Off")
-                }
-            }
+        for _ , hotkeyValue in HotkeyController.ActiveHotkeys {
+            Hotkey(hotkeyValue, , "Off")
         }
+        HotkeyController.ActiveHotkeys := Map()
         HotIf
     }
 
     ; 切换热键启用/禁用
     static SwitchHotkey() {
+        HotIfWinActive("ahk_exe Arknights.exe")
         if(HotkeyController.HotkeyState == true) {
             HotkeyController.HotkeyOff()
             HotkeyController.HotkeyState := false
             TrayTip
-            TrayTip("热键已禁用", "AFA", 4)
+            TrayTip("热键已禁用", "AFA")
             A_IconTip := "AFA`n热键已禁用"
             return
         }
@@ -85,10 +82,11 @@ class HotkeyController {
             HotkeyController.HotkeyOn()
             HotkeyController.HotkeyState := true
             TrayTip
-            TrayTip("热键已启用", "AFA", 4)
+            TrayTip("热键已启用", "AFA")
             A_IconTip := "AFA`n热键已启用"
             return
         }
+        HotIf
     }
 
     ; 设置热键启用/禁用快捷键
