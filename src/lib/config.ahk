@@ -34,7 +34,8 @@ class Constants {
         "UseGitHubToken", "是否使用GitHub Token",
         "GitHubToken", "GitHub Token",
         "GamePath", "游戏路径",
-        "AutoRunGame", "随小助手自动启动明日方舟"
+        "AutoRunGame", "随小助手自动启动明日方舟",
+        "DismissedChangelogVersion", "已忽略公告版本"
     )
 
     ; 自定义设置名称映射
@@ -192,10 +193,15 @@ class Config {
             if settingsMap.HasProp(keyVar) {
                 if (keyVar = "GitHubToken") {
                     ; Token需要编码存储
-                    IniWrite(this.EncodeToken(settingsMap.%keyVar%), this.IniFile, "Main", keyVar)
+                    this.SetImportant(keyVar, this.EncodeToken(settingsMap.%keyVar%))
                 } else {
-                    IniWrite(settingsMap.%keyVar%, this.IniFile, "Main", keyVar)
+                    this.SetImportant(keyVar, settingsMap.%keyVar%)
                 }
+            }
+        }
+        for keyVar, _ in Constants.ImportantNames {
+            if this._ImportantSettings.Has(keyVar) {
+                IniWrite(this._ImportantSettings[keyVar], this.IniFile, "Main", keyVar)
             }
         }
 
@@ -283,7 +289,9 @@ class Config {
         "UseGitHubToken", "0",
         "GitHubToken", "",
         "GamePath", "",
-        "AutoRunGame", "0"
+        "AutoRunGame", "0",
+        "LastLaunchedVersion", "",
+        "DismissedChangelogVersion", ""
     )
 
     ; 内部：默认自定义设置

@@ -159,6 +159,7 @@ class KeyBinder {
         ; 将鼠标键位转为可读
         value := RegExReplace(value, "i)XBUTTON1", "鼠标后侧键")
         value := RegExReplace(value, "i)XBUTTON2", "鼠标前侧键")
+        value := RegExReplace(value, "i)MButton", "鼠标中键")
         value := RegExReplace(value, "i)RBUTTON", "鼠标右键")
         value := RegExReplace(value, "i)WHEELDOWN", "滚轮向后")
         value := RegExReplace(value, "i)WHEELUP", "滚轮向前")
