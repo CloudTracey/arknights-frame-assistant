@@ -59,6 +59,14 @@ if not A_IsAdmin
 ; 加载设置
 Loader.LoadSettings()
 
+; 包含更新公告模块
+#Include ./lib/changelog/changelog.ahk
+#Include ./lib/changelog/changelog_ui.ahk
+#Include ./lib/changelog/changelog_checker.ahk
+
+; 检查并显示更新公告
+ChangelogChecker.CheckAndShow()
+
 ; 包含GUI
 #Include ./lib/gui.ahk
 #Include ./lib/updater/updater_ui.ahk

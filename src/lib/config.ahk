@@ -34,7 +34,9 @@ class Constants {
         "UseGitHubToken", "是否使用GitHub Token",
         "GitHubToken", "GitHub Token",
         "GamePath", "游戏路径",
-        "AutoRunGame", "随小助手自动启动明日方舟"
+        "AutoRunGame", "随小助手自动启动明日方舟",
+        "LastLaunchedVersion", "上次启动版本",
+        "DismissedChangelogVersion", "已忽略公告版本"
     )
 
     ; 自定义设置名称映射
@@ -283,7 +285,9 @@ class Config {
         "UseGitHubToken", "0",
         "GitHubToken", "",
         "GamePath", "",
-        "AutoRunGame", "0"
+        "AutoRunGame", "0",
+        "LastLaunchedVersion", "",
+        "DismissedChangelogVersion", ""
     )
 
     ; 内部：默认自定义设置
