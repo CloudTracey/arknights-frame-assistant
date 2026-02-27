@@ -69,7 +69,6 @@ class HotkeyController {
 
     ; 切换热键启用/禁用
     static SwitchHotkey() {
-        HotIfWinActive("ahk_exe Arknights.exe")
         if(HotkeyController.HotkeyState == true) {
             HotkeyController.HotkeyOff()
             HotkeyController.HotkeyState := false
@@ -86,14 +85,15 @@ class HotkeyController {
             A_IconTip := "AFA`n热键已启用"
             return
         }
-        HotIf
     }
 
     ; 设置热键启用/禁用快捷键
     static SetSwitchKey() {
+        HotIfWinActive("ahk_exe Arknights.exe")
         switchKey := Config.GetCustom("SwitchHotkey")
         if (switchKey != "")
             Hotkey(switchKey, this.SwitchHotkey, "On")
+        HotIf
     }
     ; 解除设置热键启用/禁用快捷键
     static UnsetSwitchKey() {
