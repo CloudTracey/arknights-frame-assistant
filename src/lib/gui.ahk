@@ -248,6 +248,7 @@ class GuiManager {
     static _UpdateHotkeyControlsFromConfig() {
         for key, value in Config.AllHotkeys {
             try {
+                value := KeyBinder.VirtualNewkeyFormat(value)
                 this.MainGui[key].Value := value
             }
         }
@@ -266,6 +267,7 @@ class GuiManager {
     static _UpdateCustomControlsFromConfig() {
         for key, value in Config.AllCustom {
             try {
+                value := KeyBinder.VirtualNewkeyFormat(value)
                 this.MainGui[key].Value := value
             }
         }
@@ -393,7 +395,7 @@ class GuiManager {
 
 ; 处理GUI隐藏时停止Hook的事件
 HandleGuiHideStopHook(*) {
-    StopHook()
+    KeyBinder.StopHook()
 }
 
 ; 初始化GUI

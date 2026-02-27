@@ -72,3 +72,8 @@ EventBus.Publish("AppStarted")
 ; 初始化按键
 EventBus.Publish("HotkeyOn")
 EventBus.Publish("SetSwitchKey")
+
+; 刷新GUI以正确应用文本
+EventBus.Publish("GuiUpdateHotkeyControls")
+EventBus.Publish("GuiUpdateImportantControls")
+EventBus.Publish("GuiUpdateCustomControls")

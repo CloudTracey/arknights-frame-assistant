@@ -14,6 +14,7 @@ HandleSettingsReset(*) {
         EventBus.Publish("UnsetSwitchKey")
         Config.ResetHotkeyToDefaults()
         EventBus.Publish("GuiUpdateHotkeyControls")
+        EventBus.Publish("GuiUpdateCustomControls")
         Saver.SettingsIniWrite()
         Loader.LoadSettings()
         if(HotkeyController.HotkeyState == true) {
