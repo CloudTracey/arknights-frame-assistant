@@ -1,5 +1,4 @@
 ; == 按键绑定 == 
-
 class KeyBinder {
     ; 按键绑定状态
     static ModifyHook := InputHook("L0")
@@ -33,7 +32,6 @@ class KeyBinder {
     ; 处理指定按键释放
     static OnKeyUp(ih, vk, sc) {
         KeyBinder.ReleaseKey := GetKeyName(Format("vk{:x}sc{:x}", vk, sc))
-        MsgBox("key: " KeyBinder.ReleaseKey)
         KeyBinder.ReleaseKey := RegExReplace(KeyBinder.ReleaseKey, "i)^L", "<")
         KeyBinder.ReleaseKey := RegExReplace(KeyBinder.ReleaseKey, "i)^R", ">")
         KeyBinder.ReleaseKey := RegExReplace(KeyBinder.ReleaseKey, "i)CONTROL$", "^")
@@ -179,5 +177,11 @@ EventBus.Subscribe("SettingsWillSave", KeyBinder.HandleSettingsWillSave)
     pureKey := RegExReplace(A_ThisHotkey, "^[~*$!^+#&<>()]+")
     KeyBinder.ModifyHook.OnEnd := (*) => KeyBinder.EndChange(KeyBinder.ModifyHook.EndMods . pureKey)
     KeyBinder.ModifyHook.Stop()
+}
+; 避免触发GUI菜单导致卡死
+~LAlt::
+~RAlt::
+{
+    Send "{Blind}{vkE8}"
 }
 #HotIf
