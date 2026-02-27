@@ -3,7 +3,6 @@
 class ChangelogChecker {
     static CheckAndShow() {
         currentVersion := Version.Get()
-        lastVersion := Config.GetImportant("LastLaunchedVersion")
         dismissedVersion := Config.GetImportant("DismissedChangelogVersion")
         
         if dismissedVersion != currentVersion {

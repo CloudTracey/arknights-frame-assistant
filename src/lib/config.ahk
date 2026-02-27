@@ -201,7 +201,7 @@ class Config {
         }
         for keyVar, _ in Constants.ImportantNames {
             if this._ImportantSettings.Has(keyVar) {
-                IniWrite(this._ImportantSettings[keyVar], this.IniFile, "main", keyVar)
+                IniWrite(this._ImportantSettings[keyVar], this.IniFile, "Main", keyVar)
             }
         }
 

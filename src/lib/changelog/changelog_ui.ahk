@@ -53,8 +53,8 @@ class ChangelogUI {
     static _OnConfirm(chkBox) {
         if chkBox.Value {
             Config.SetImportant("DismissedChangelogVersion", this.CurrentVersion)
-            IniWrite(Config._ImportantSettings["DismissedChangelogVersion"], Config.IniFile, "main", "DismissedChangelogVersion")
+            IniWrite(Config._ImportantSettings["DismissedChangelogVersion"], Config.IniFile, "Main", "DismissedChangelogVersion")
         }
-        this.GuiObj.Hide()
+        this.GuiObj.Destroy()
     }
 }
