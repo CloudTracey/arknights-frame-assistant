@@ -35,7 +35,6 @@ class Constants {
         "GitHubToken", "GitHub Token",
         "GamePath", "游戏路径",
         "AutoRunGame", "随小助手自动启动明日方舟",
-        "LastLaunchedVersion", "上次启动版本",
         "DismissedChangelogVersion", "已忽略公告版本"
     )
 

@@ -6,15 +6,11 @@ class ChangelogChecker {
         lastVersion := Config.GetImportant("LastLaunchedVersion")
         dismissedVersion := Config.GetImportant("DismissedChangelogVersion")
         
-        if lastVersion != currentVersion {
-            if dismissedVersion != currentVersion {
-                if ChangelogData.HasContent(currentVersion) {
-                    content := ChangelogData.GetContent(currentVersion)
-                    ChangelogUI.Show(currentVersion, content)
-                }
+        if dismissedVersion != currentVersion {
+            if ChangelogData.HasContent(currentVersion) {
+                content := ChangelogData.GetContent(currentVersion)
+                ChangelogUI.Show(currentVersion, content)
             }
-            
-            Config.SetImportant("LastLaunchedVersion", currentVersion)
         }
     }
 }

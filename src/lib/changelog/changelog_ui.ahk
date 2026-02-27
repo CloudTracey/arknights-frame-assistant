@@ -34,7 +34,7 @@ class ChangelogUI {
         
         this.GuiObj.OnEvent("Close", (*) => this._OnConfirm(chkDontShowAgain))
         
-        this.GuiObj.Show("w480 AutoSize Center")
+        this.GuiObj.Show()
     }
 
     static _AddSection(title, items, color) {
@@ -53,6 +53,7 @@ class ChangelogUI {
     static _OnConfirm(chkBox) {
         if chkBox.Value {
             Config.SetImportant("DismissedChangelogVersion", this.CurrentVersion)
+            IniWrite(Config._ImportantSettings["DismissedChangelogVersion"], Config.IniFile, "main", "DismissedChangelogVersion")
         }
         this.GuiObj.Hide()
     }
