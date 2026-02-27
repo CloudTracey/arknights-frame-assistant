@@ -194,10 +194,15 @@ class Config {
             if settingsMap.HasProp(keyVar) {
                 if (keyVar = "GitHubToken") {
                     ; Token需要编码存储
-                    IniWrite(this.EncodeToken(settingsMap.%keyVar%), this.IniFile, "Main", keyVar)
+                    this.SetImportant(keyVar, this.EncodeToken(settingsMap.%keyVar%))
                 } else {
-                    IniWrite(settingsMap.%keyVar%, this.IniFile, "Main", keyVar)
+                    this.SetImportant(keyVar, settingsMap.%keyVar%)
                 }
+            }
+        }
+        for keyVar, _ in Constants.ImportantNames {
+            if this._ImportantSettings.Has(keyVar) {
+                IniWrite(this._ImportantSettings[keyVar], this.IniFile, "main", keyVar)
             }
         }
 
