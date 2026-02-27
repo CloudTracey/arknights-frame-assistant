@@ -35,7 +35,6 @@ class Constants {
         "GitHubToken", "GitHub Token",
         "GamePath", "游戏路径",
         "AutoRunGame", "随小助手自动启动明日方舟"
-        
     )
 
     ; 自定义设置名称映射
@@ -179,11 +178,12 @@ class Config {
         ; 先删除整个Section以清理旧配置
         try IniDelete(this.IniFile, "Hotkeys")
         try IniDelete(this.IniFile, "Main")
+        try IniDelete(this.IniFile, "Custom")
             
         ; 保存按键设置
         for keyVar, _ in Constants.KeyNames {
-            if settingsMap.HasProp(keyVar) {
-                IniWrite(settingsMap.%keyVar%, this.IniFile, "Hotkeys", keyVar)
+            if this._HotkeySettings.Has(keyVar) {
+                IniWrite(this._HotkeySettings[keyVar], this.IniFile, "Hotkeys", keyVar)
             }
         }
         
@@ -205,9 +205,11 @@ class Config {
                 IniWrite(settingsMap.%keyVar%, this.IniFile, "Custom", keyVar)
             }
         }
-        
-        ; 重新加载到内存
-        this.LoadFromIni()
+        for keyVar, _ in Constants.CustomNames {
+            if this._CustomSettings.Has(keyVar) {
+                IniWrite(this._CustomSettings[keyVar], this.IniFile, "Custom", keyVar)
+            }
+        }
     }
     
     ; 保存所有内存中的配置到配置文件（用于非GUI场景）
@@ -251,6 +253,7 @@ class Config {
     ; 恢复按键默认设置
     static ResetHotkeyToDefaults() {
         this._HotkeySettings := this._DefaultHotkeys.Clone()
+        this._CustomSettings.Set("SwitchHotkey", this._DefaultCustom["SwitchHotkey"])
     }
     
     ; 内部：默认按键设置
