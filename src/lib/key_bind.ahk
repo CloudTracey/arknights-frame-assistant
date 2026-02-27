@@ -33,6 +33,12 @@ class KeyBinder {
     ; 处理指定按键释放
     static OnKeyUp(ih, vk, sc) {
         KeyBinder.ReleaseKey := GetKeyName(Format("vk{:x}sc{:x}", vk, sc))
+        MsgBox("key: " KeyBinder.ReleaseKey)
+        KeyBinder.ReleaseKey := RegExReplace(KeyBinder.ReleaseKey, "i)^L", "<")
+        KeyBinder.ReleaseKey := RegExReplace(KeyBinder.ReleaseKey, "i)^R", ">")
+        KeyBinder.ReleaseKey := RegExReplace(KeyBinder.ReleaseKey, "i)CONTROL$", "^")
+        KeyBinder.ReleaseKey := RegExReplace(KeyBinder.ReleaseKey, "i)ALT$", "!")
+        KeyBinder.ReleaseKey := RegExReplace(KeyBinder.ReleaseKey, "i)SHIFT$", "+")
         KeyBinder.ModifyHook.Stop()
     }
 
