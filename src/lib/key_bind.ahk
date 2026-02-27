@@ -2,29 +2,44 @@
 
 class KeyBinder {
     ; 按键绑定状态
-    static ModifyHookA := InputHook("L0")
+    static ModifyHook := InputHook("L0")
     static LastEditObject := ""
     static OriginalValue := ""
     static ControlObj := ""
     static WaitingModify := false
+    static ReleaseKey := ""
 
     ; 创建Hook
     static CreateHook() {
         ; 创建HookA
-        this.ModifyHookA := InputHook("L0")
-        this.ModifyHookA.VisibleNonText := false
-        this.ModifyHookA.KeyOpt("{All}", "E")
-        this.ModifyHookA.KeyOpt("{LCtrl}{RCtrl}{LAlt}{RAlt}{LShift}{RShift}", "-E")
-        this.ModifyHookA.OnEnd := (*) => this.EndChange(this.ModifyHookA.EndMods . this.ModifyHookA.EndKey)
-        this.ModifyHookA.Start()
-        ; 创建HookB
-
+        this.ReleaseKey :=  ""
+        this.ModifyHook := InputHook("L0")
+        this.ModifyHook.VisibleNonText := false
+        this.ModifyHook.KeyOpt("{All}", "E")
+        this.ModifyHook.KeyOpt("{LCtrl}{RCtrl}{LAlt}{RAlt}{LShift}{RShift}", "-E +N")
+        this.ModifyHook.OnKeyDown := (ih, vk, sc) => this.OnKeyDown(ih, vk, sc)
+        this.ModifyHook.OnKeyUp := (ih, vk, sc) => this.OnKeyUp(ih, vk, sc)
+        this.ModifyHook.OnEnd := (*) => this.EndChange(this.ModifyHook.EndMods . this.ReleaseKey . this.ModifyHook.EndKey)
+        this.ModifyHook.Start()
     }
     ; 释放Hook
     static StopHook() {
-        if(this.ModifyHookA.InProgress) {
-            this.ModifyHookA.Stop()
+        if(this.ModifyHook.InProgress) {
+            this.ModifyHook.OnEnd := ""
+            this.ModifyHook.Stop()
+            EventBus.Publish("KeyBindFocusSave")
         }
+    }
+
+    ; 处理指定按键释放
+    static OnKeyDown(ih, vk, sc) {
+
+    }
+
+    ; 处理指定按键释放
+    static OnKeyUp(ih, vk, sc) {
+        KeyBinder.ReleaseKey := GetKeyName(Format("vk{:x}sc{:x}", vk, sc))
+        KeyBinder.ModifyHook.Stop()
     }
 
     ; 处理设置保存前事件
@@ -36,30 +51,32 @@ class KeyBinder {
     static EndChange(Newkey) {
         ; 若没有输入按键
         if(Newkey == "") {
-            if(this.WaitingModify == true)
+            if(KeyBinder.WaitingModify == true)
                 return
-            if(this.ModifyHookA.InProgress) {
-                this.ModifyHookA.Stop()
+            if(KeyBinder.ModifyHook.InProgress) {
+                KeyBinder.ModifyHook.Stop()
             }
-            this.WaitingModify := false
+            KeyBinder.WaitingModify := false
             EventBus.Publish("KeyBindFocusSave")
             return
         }
         ; 若有输入按键且不是鼠标左键
         if(Newkey != "") {
-            if(Newkey == "Escape" OR Newkey == "Backspace") {
-                this.ControlObj.Value := ""
+            pureNewkey := RegExReplace(Newkey, "^[~*$!^+#&<>()]+")
+            if(pureNewkey == "Escape" OR pureNewkey == "Backspace") {
+                KeyBinder.ControlObj.Value := ""
             }
-            else if(Newkey == "LWin" OR Newkey == "RWin") {
-                this.LastEditObject.Value := this.OriginalValue
+            else if(pureNewkey == "LWin" OR pureNewkey == "RWin") {
+                KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
             }
             else {
-                this.ControlObj.Value := Newkey
+                KeyBinder.ControlObj.Value := Newkey
             }
         }
-        this.LastEditObject := ""
-        this.WaitingModify := false
-        this.StopHook()
+        KeyBinder.LastEditObject := ""
+        KeyBinder.WaitingModify := false
+        KeyBinder.ReleaseKey :=  ""
+        KeyBinder.StopHook()
         EventBus.Publish("KeyBindFocusSave")
     }
 }
