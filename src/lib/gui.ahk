@@ -248,6 +248,7 @@ class GuiManager {
     static _UpdateHotkeyControlsFromConfig() {
         for key, value in Config.AllHotkeys {
             try {
+                value := KeyBinder.VirtualNewkeyFormat(value)
                 this.MainGui[key].Value := value
             }
         }
@@ -266,6 +267,7 @@ class GuiManager {
     static _UpdateCustomControlsFromConfig() {
         for key, value in Config.AllCustom {
             try {
+                value := KeyBinder.VirtualNewkeyFormat(value)
                 this.MainGui[key].Value := value
             }
         }
