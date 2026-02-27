@@ -17,7 +17,6 @@ class KeyBinder {
         this.ModifyHook.VisibleNonText := false
         this.ModifyHook.KeyOpt("{All}", "E")
         this.ModifyHook.KeyOpt("{LCtrl}{RCtrl}{LAlt}{RAlt}{LShift}{RShift}", "-E +N")
-        this.ModifyHook.OnKeyDown := (ih, vk, sc) => this.OnKeyDown(ih, vk, sc)
         this.ModifyHook.OnKeyUp := (ih, vk, sc) => this.OnKeyUp(ih, vk, sc)
         this.ModifyHook.OnEnd := (*) => this.EndChange(this.ModifyHook.EndMods . this.ReleaseKey . this.ModifyHook.EndKey)
         this.ModifyHook.Start()
@@ -29,11 +28,6 @@ class KeyBinder {
             this.ModifyHook.Stop()
             EventBus.Publish("KeyBindFocusSave")
         }
-    }
-
-    ; 处理指定按键释放
-    static OnKeyDown(ih, vk, sc) {
-
     }
 
     ; 处理指定按键释放
@@ -169,13 +163,15 @@ EventBus.Subscribe("SettingsWillSave", KeyBinder.HandleSettingsWillSave)
 
 ; 鼠标录制
 #HotIf KeyBinder.WaitingModify
-RButton::
-MButton::
-XButton1::
-XButton2::
-WheelUp::
-WheelDown::
+*RButton::
+*MButton::
+*XButton1::
+*XButton2::
+*WheelUp::
+*WheelDown::
 {
-    KeyBinder.EndChange(A_ThisHotkey)
+    pureKey := RegExReplace(A_ThisHotkey, "^[~*$!^+#&<>()]+")
+    KeyBinder.ModifyHook.OnEnd := (*) => KeyBinder.EndChange(KeyBinder.ModifyHook.EndMods . pureKey)
+    KeyBinder.ModifyHook.Stop()
 }
 #HotIf
