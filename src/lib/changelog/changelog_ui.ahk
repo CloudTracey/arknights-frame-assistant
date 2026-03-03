@@ -41,12 +41,12 @@ class ChangelogUI {
         if items.Length = 0
             return
         
-        this.GuiObj.SetFont("s12 bold", "Microsoft YaHei UI")
+        this.GuiObj.SetFont("s13 bold", "Microsoft YaHei UI")
         this.GuiObj.Add("Text", "x" this.GuiObj.MarginX " y+9 w450 Section", title)
         
-        this.GuiObj.SetFont("s9", "Microsoft YaHei UI")
+        this.GuiObj.SetFont("s10", "Microsoft YaHei UI")
         for item in items {
-            this.GuiObj.Add("Text", "xs+15 y+5 w570", "• " item)
+            this.GuiObj.Add("Text", "xs+15 y+12 w570", "• " item)
         }
     }
 
