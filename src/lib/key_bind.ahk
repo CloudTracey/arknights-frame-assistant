@@ -65,7 +65,10 @@ class KeyBinder {
             pureNewkey := RegExReplace(Newkey, "^[~*$!^+#&<>()]+")
             if(pureNewkey == "Escape" OR pureNewkey == "Backspace") {
                 KeyBinder.ControlObj.Value := ""
-                Config.SetHotkey(KeyBinder.ControlObj.Name, "")
+                if(KeyBinder.ControlObj.Name == "SwitchHotkey")
+                    Config.SetCustom(KeyBinder.ControlObj.Name, "")
+                else
+                    Config.SetHotkey(KeyBinder.ControlObj.Name, "")
             }
             else if(pureNewkey == "LWin" OR pureNewkey == "RWin") {
                 KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
