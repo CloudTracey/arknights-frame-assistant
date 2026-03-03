@@ -218,7 +218,7 @@ class GuiManager {
         this.OtherSettingsControls.Push(hint5)
         ; 启用/禁用热键快捷键
         txtSwitchHotkey := this.MainGui.Add("Text", "x" this.GuiXMargin " y+16 Right +0x200", "启用/禁用热键快捷键") 
-        this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w120 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom("SwitchHotkey"))
+        this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom("SwitchHotkey"))
         this.OtherSettingsControls.Push(txtSwitchHotkey)
         this.OtherSettingsControls.Push(this.SwitchHotkey)
 
