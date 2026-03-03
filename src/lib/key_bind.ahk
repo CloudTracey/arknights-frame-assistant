@@ -90,6 +90,8 @@ class KeyBinder {
 
     ; 格式化显示键值
     static VirtualNewkeyFormat(value) {
+        if(value == "")
+            return
         ; 将<替换为L，>替换为R
         value := RegExReplace(value, "<", "L")
         value := RegExReplace(value, ">", "R")
@@ -170,6 +172,8 @@ class KeyBinder {
     }
     ; 格式化实际键值
     static RealNewkeyFormat(value) {
+        if(value == "")
+            return
         ; 提取CTRL、SHIFT、ALT修饰符
         hasLCTRL := false
         hasLSHIFT := false
