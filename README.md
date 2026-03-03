@@ -154,6 +154,5 @@ A: 退出方式：
 ## 声明
 
 - 本程序使用 [GNU General Public License v3.0 only](https://spdx.org/licenses/GPL-3.0-only.html) 开源
-- 从 [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights) 偷学了一点 README 格式和 GUI 样式，感谢巨人的肩膀（
+- 从 [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights) 偷学了一点 README 格式和 GUI 样式，感谢巨人的肩膀
 - 本工具仅供学习交流使用，请勿用于商业用途
-- 使用本工具所产生的一切后果由使用者自行承担
