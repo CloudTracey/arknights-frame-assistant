@@ -21,6 +21,8 @@ class Saver {
             }
         }
         for keyVar, keyName in Constants.CustomNames {
+            if (keyVar != "SwitchHotkey")
+                continue
             if (!SavedObj.HasProp(keyVar))
                 continue
             currentKey := SavedObj.%keyVar%
