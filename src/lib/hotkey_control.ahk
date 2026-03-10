@@ -31,7 +31,12 @@ class HotkeyController {
         "OneClickRetreat", ActionOneClickRetreat,
         "PauseSkill", ActionPauseSkill,
         "PauseRetreat", ActionPauseRetreat,
-        "LButtonClick", LButtonClick,
+        "LButtonClick", ActionLButtonClick,
+        "CeaseOperations", ActionCeaseOperations,
+        "Skip", ActionSkip,
+        "Back", ActionBack,
+        "Harvest", ActionHarvest,
+        "CollectCollectibles", ActionCollectCollectibles
     )
 
     ; 已激活热键映射表
@@ -44,7 +49,7 @@ class HotkeyController {
             hotkeyValue := Config.GetHotkey(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
-                if (hotkeyValue ~= "i)\b(E|Q|F|G|V|RButton|MButton|Space)\b$") {
+                if (hotkeyValue ~= "i)\b(E|Q|F|G|V|RButton|MButton|Space|ESC)\b$") {
                     Hotkey(hotkeyValue, callback, "On")
                     HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
                 }

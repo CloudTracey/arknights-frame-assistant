@@ -3,9 +3,9 @@
 ; -- 常量定义 --
 class Constants {
     ; 延迟常量
-    static DelayA := 35.3      ; 30帧
-    static DelayB := 19.6      ; 60帧  
-    static DelayC := 11.3      ; 120帧
+    static DelayA := 34      ; 30帧
+    static DelayB := 17      ; 60帧  
+    static DelayC := 9      ; 120帧
     
     ; 按键名称映射
     static KeyNames := Map(
@@ -21,7 +21,12 @@ class Constants {
         "OneClickRetreat", "一键撤退",
         "PauseSkill", "暂停技能",
         "PauseRetreat", "暂停撤退",
-        "LButtonClick", "左键点击"
+        "LButtonClick", "左键点击",
+        "CeaseOperations", "放弃行动",
+        "Skip", "跳过招募动画/剧情",
+        "Back", "返回上级菜单",
+        "Harvest", "基建快速收取",
+        "CollectCollectibles", "肉鸽收下道具"
     )
     
     ; 重要设置名称映射
@@ -52,6 +57,49 @@ class Config {
     static _ImportantSettings := Map()
     static _CustomSettings := Map()
     static _IsLoaded := false
+
+    ; 内部：默认按键设置
+    static _DefaultHotkeys := Map(
+        "PressPause", "f",
+        "ReleasePause", "Space",
+        "GameSpeed", "d",
+        "PauseSelect", "w",
+        "Skill", "s",
+        "Retreat", "a",
+        "33ms", "r",
+        "166ms", "t",
+        "OneClickSkill", "e",
+        "OneClickRetreat", "q",
+        "PauseSkill", "XButton2",
+        "PauseRetreat", "XButton1",
+        "LButtonClick", "z",
+        "CeaseOperations", "",
+        "Skip", "",
+        "Back", "",
+        "Harvest", "",
+        "CollectCollectibles", ""
+    )
+    
+    ; 内部：默认重要设置
+    static _DefaultImportant := Map(
+        "AutoExit", "1",
+        "AutoOpenSettings", "1",
+        "Frame", "3",
+        "AutoUpdate", "1",
+        "LastDismissedVersion", "",
+        "UseGitHubToken", "0",
+        "GitHubToken", "",
+        "GamePath", "",
+        "AutoRunGame", "0",
+        "LastLaunchedVersion", "",
+        "DismissedChangelogVersion", ""
+    )
+
+    ; 内部：默认自定义设置
+    static _DefaultCustom := Map(
+        "SkillAndRetreatDelay", "50",
+        "SwitchHotkey", ""
+    )
     
     ; 配置文件路径
     static IniFile := ""
@@ -263,44 +311,6 @@ class Config {
         this._HotkeySettings := this._DefaultHotkeys.Clone()
         this._CustomSettings.Set("SwitchHotkey", this._DefaultCustom["SwitchHotkey"])
     }
-    
-    ; 内部：默认按键设置
-    static _DefaultHotkeys := Map(
-        "PressPause", "f",
-        "ReleasePause", "Space",
-        "GameSpeed", "d",
-        "PauseSelect", "w",
-        "Skill", "s",
-        "Retreat", "a",
-        "33ms", "r",
-        "166ms", "t",
-        "OneClickSkill", "e",
-        "OneClickRetreat", "q",
-        "PauseSkill", "XButton2",
-        "PauseRetreat", "XButton1",
-        "LButtonClick", "z"
-    )
-    
-    ; 内部：默认重要设置
-    static _DefaultImportant := Map(
-        "AutoExit", "1",
-        "AutoOpenSettings", "1",
-        "Frame", "3",
-        "AutoUpdate", "1",
-        "LastDismissedVersion", "",
-        "UseGitHubToken", "0",
-        "GitHubToken", "",
-        "GamePath", "",
-        "AutoRunGame", "0",
-        "LastLaunchedVersion", "",
-        "DismissedChangelogVersion", ""
-    )
-
-    ; 内部：默认自定义设置
-    static _DefaultCustom := Map(
-        "SkillAndRetreatDelay", "50",
-        "SwitchHotkey", ""
-    )
     
     ; 获取所有按键设置（用于遍历）
     static AllHotkeys => this._HotkeySettings

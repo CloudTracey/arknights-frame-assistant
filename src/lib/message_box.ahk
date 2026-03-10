@@ -3,7 +3,7 @@
 
 class MessageBox {
     ; 窗口尺寸常量
-    static DefaultWidth := 300
+    static DefaultWidth := 340
     static MinHeight := 120
     static MaxHeight := 400
     
