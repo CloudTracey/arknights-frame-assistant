@@ -1,0 +1,83 @@
+name: Bug 报告
+description: 报告程序错误或异常行为
+title: '[Bug] '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您提交 Bug 报告！请填写以下信息，帮助我们更快地定位和解决问题。
+
+  - type: input
+    id: afa_version
+    attributes:
+      label: AFA 版本号
+      placeholder: 例如：v1.2.1
+    validations:
+      required: true
+
+  - type: input
+    id: windows_version
+    attributes:
+      label: Windows 版本
+      placeholder: 例如：Windows 11 22H2
+    validations:
+      required: true
+
+  - type: input
+    id: resolution
+    attributes:
+      label: 游戏分辨率
+      placeholder: 例如：1920x1080
+
+  - type: input
+    id: refresh_rate
+    attributes:
+      label: 屏幕刷新率
+      placeholder: 例如：60Hz / 120Hz / 144Hz
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 请清晰简洁地描述您遇到的问题
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      description: 请提供详细的复现步骤
+      value: |
+        1. 第一步操作...
+        2. 第二步操作...
+        3. 第三步操作...
+        4. 问题出现
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 描述您期望发生的情况
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 描述实际发生的情况（可附带截图）
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志文件
+      description: 如有错误日志或调试信息，请在此粘贴
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充说明
+      description: 其他有助于定位问题的信息

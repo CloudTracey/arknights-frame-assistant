@@ -1,0 +1,45 @@
+name: 文档改进
+description: 报告文档错误或提出文档改进建议
+title: '[Docs] '
+labels: ['documentation']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您帮助改进文档！请填写以下信息。
+
+  - type: checkboxes
+    id: doc_type
+    attributes:
+      label: 涉及文档
+      options:
+        - label: README.md
+        - label: CONTRIBUTING.md
+        - label: 其他
+
+  - type: input
+    id: other_doc
+    attributes:
+      label: 其他文档路径
+      description: 如果选择了"其他"，请填写文档路径
+      placeholder: 例如：docs/guide.md
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 描述文档中存在的问题（如错误、遗漏、表述不清等）
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: 建议修改
+      description: 提供您的修改建议或示例
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充说明
+      description: 其他需要说明的信息

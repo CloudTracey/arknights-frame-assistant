@@ -75,7 +75,7 @@ class GuiManager {
         ; 辅助函数：添加绑定行
         AddBindRow(LabelText, KeyVar) {
             controls := []
-            txt := this.MainGui.Add("Text", "xs+45 y+16 w90 Right +0x200", LabelText) 
+            txt := this.MainGui.Add("Text", "xs+15 y+16 w120 Right +0x200", LabelText) 
             edit := this.MainGui.Add("Edit", "x+20 yp-4 w140 Center -TabStop Uppercase v" KeyVar, Config.GetHotkey(KeyVar))
             controls.Push(txt)
             controls.Push(edit)
@@ -107,6 +107,8 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("干员技能", "Skill")*)
         this.KeybindControls.Push(AddBindRow("干员撤退", "Retreat")*)
         this.KeybindControls.Push(AddBindRow("模拟左键点击", "LButtonClick")*)
+        this.KeybindControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
+        this.KeybindControls.Push(AddBindRow("基建快速收取", "Harvest")*)
         
         ; 按键设置 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vKeybindRightGroup", "")
@@ -118,13 +120,16 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("一键撤退", "OneClickRetreat")*)
         this.KeybindControls.Push(AddBindRow("暂停技能", "PauseSkill")*)
         this.KeybindControls.Push(AddBindRow("暂停撤退", "PauseRetreat")*)
+        this.KeybindControls.Push(AddBindRow("跳过招募动画/剧情", "Skip")*)
+        this.KeybindControls.Push(AddBindRow("肉鸽收取道具", "CollectCollectibles")*)
+        this.KeybindControls.Push(AddBindRow("返回上级菜单", "Back")*)
         ; 空白占位
-        placeholder1 := this.MainGui.Add("Text", "xs+45 y+16 w90 Right +0x200")
+        placeholder1 := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.KeybindControls.Push(placeholder1)
 
         ; 按键设置提示语
         this.MainGui.SetFont("s9 c1994d2")
-        hint1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【ESC】和【BACKSPACE】清除按键")
+        hint1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
         this.MainGui.SetFont("s9 cDefault")
         this.KeybindControls.Push(hint1)
 
@@ -142,8 +147,31 @@ class GuiManager {
         ; 帧数设置提示语
         this.MainGui.SetFont("s9 c1994d2")
         hint2 := this.MainGui.Add("Text", "x0 y+15 w" this.GuiWidth " Center", "请确保上方“游戏内帧数”设置与游戏内保持一致，若屏幕刷新率低于120，请关闭游戏内的“垂直同步”")
-        this.MainGui.SetFont("s9 cDefault")
         this.KeybindControls.Push(hint2)
+        hint3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "或确保“游戏内帧数”设置与显示器刷新率一致再开启“垂直同步”")
+        this.MainGui.SetFont("s9 cDefault")
+        this.KeybindControls.Push(hint3)
+
+        ; 底部按钮
+        BtnMargin := 15
+        BtnX_DefaultHotkeys := 45
+        BtnX_Save := this.GuiWidth - (this.BtnW * 3) - BtnMargin * 2 - 45
+        BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - 45
+        BtnX_Cancel := this.GuiWidth - this.BtnW - 45
+        
+        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键设置标签下显示
+        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
+        
+        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
+        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
+        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
+        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
+        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
+        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
+        this.KeybindControls.Push(this.BtnDefaultHotkeys)
+
+        ; 空白占位
+        this.MainGui.Add("Text", "xm y+15 w1 h1")
 
         ; -- 其他设置 --
         this.MainGui.Add("GroupBox", "x0 y45 w" this.ColWidth " h0 Section vOtherSettingsGroup", "")
@@ -166,10 +194,10 @@ class GuiManager {
         this.OtherSettingsControls.Push(checkboxAutoRunGame)
         ; 识别游戏路径
         this.BtnCheckGamePath := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "识别游戏路径")
-        hint3 := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", "请先启动游戏再进行识别")
+        hint4 := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", "请先启动游戏再进行识别")
         this.BtnCheckGamePath.OnEvent("Click", (*) => EventBus.Publish("CheckGamePathClick"))
         this.OtherSettingsControls.Push(this.BtnCheckGamePath)
-        this.OtherSettingsControls.Push(hint3)
+        this.OtherSettingsControls.Push(hint4)
         ; 游戏路径
         txtGamePath := this.MainGui.Add("Text", "x" this.GuiXMargin +17 " y+10 h24", " 游戏路径: ")
         editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w576 h20 vGamePath -Multi +0x1", Config.GetImportant("GamePath"))
@@ -189,17 +217,20 @@ class GuiManager {
         ; 手动检查更新
         this.BtnCheckUpdate := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "手动检查更新")
         this.BtnCheckUpdate.OnEvent("Click", (*) => EventBus.Publish("CheckUpdateClick"))
+        this.BtnManualDownload := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "手动下载更新")
+        this.BtnManualDownload.OnEvent("Click", (*) => EventBus.Publish("OnManualDownload"))
         this.OtherSettingsControls.Push(this.BtnCheckUpdate)
+        this.OtherSettingsControls.Push(this.BtnManualDownload)
         ; github token
         checkboxUseGitHubToken := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vUseGitHubToken", " 使用GitHub Token: ")
         this.MainGui["UseGitHubToken"].Value := Config.GetImportant("UseGitHubToken")
         checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value))
         editGithubToken := this.MainGui.Add("Edit", "x+10 yp+2 w515 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant("GitHubToken"))
         this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value)
-        hint4 := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token，修改后需保存或应用设置才能生效")
+        hint5 := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token，修改后需保存或应用设置才能生效")
         this.OtherSettingsControls.Push(checkboxUseGitHubToken)
         this.OtherSettingsControls.Push(editGithubToken)
-        this.OtherSettingsControls.Push(hint4)
+        this.OtherSettingsControls.Push(hint5)
         this.MainGui.Add("Text", "yp+30 w0 h0")
 
         ; - 自定义设置 -
@@ -211,37 +242,16 @@ class GuiManager {
         txtSkillAndRetreatDelay := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10 Section", "技能和撤退点击延迟")
         this.SkillAndRetreatDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vSkillAndRetreatDelay Number", Config.GetCustom("SkillAndRetreatDelay"))
         updownSkillAndRetreatDelay := this.MainGui.Add("UpDown", ,Config.GetCustom("SkillAndRetreatDelay"))
-        hint5 := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中干员到按下【技能】和【撤退】的时长，单位为毫秒")
+        hint6 := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中干员到按下【技能】和【撤退】的时长，单位为毫秒")
         this.OtherSettingsControls.Push(txtSkillAndRetreatDelay)
         this.OtherSettingsControls.Push(this.SkillAndRetreatDelay)
         this.OtherSettingsControls.Push(updownSkillAndRetreatDelay)
-        this.OtherSettingsControls.Push(hint5)
+        this.OtherSettingsControls.Push(hint6)
         ; 启用/禁用热键快捷键
         txtSwitchHotkey := this.MainGui.Add("Text", "x" this.GuiXMargin " y+16 Right +0x200", "启用/禁用热键快捷键") 
         this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom("SwitchHotkey"))
         this.OtherSettingsControls.Push(txtSwitchHotkey)
         this.OtherSettingsControls.Push(this.SwitchHotkey)
-
-        ; 底部按钮
-        BtnMargin := 15
-        BtnX_DefaultHotkeys := 45
-        BtnX_Save := this.GuiWidth - (this.BtnW * 3) - BtnMargin * 2 - 45
-        BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - 45
-        BtnX_Cancel := this.GuiWidth - this.BtnW - 45
-        
-        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+40 w" this.BtnW " h32", "重置按键") ; 仅在按键设置标签下显示
-        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
-        
-        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
-        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
-        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
-        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
-        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
-        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
-        this.KeybindControls.Push(this.BtnDefaultHotkeys)
-
-        ; 空白占位
-        this.MainGui.Add("Text", "xm y+15 w1 h1")
     }
     
     ; 内部：更新热键控件值（从配置）

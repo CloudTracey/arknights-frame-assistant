@@ -1,0 +1,41 @@
+name: 使用问题
+description: 询问使用方法或遇到的使用困惑
+title: '[Question] '
+labels: ['question']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您提出问题！请填写以下信息，以便我们更好地帮助您。
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 问题描述
+      description: 详细描述您遇到的问题或困惑
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: 已尝试的解决方法
+      description: 描述您已经尝试过哪些解决方式
+
+  - type: input
+    id: afa_version
+    attributes:
+      label: AFA 版本号
+      placeholder: 例如：v1.2.1
+
+  - type: input
+    id: windows_version
+    attributes:
+      label: Windows 版本
+      placeholder: 例如：Windows 11 22H2
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充说明
+      description: 其他需要说明的信息
