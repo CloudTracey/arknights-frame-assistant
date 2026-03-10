@@ -121,7 +121,7 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("暂停技能", "PauseSkill")*)
         this.KeybindControls.Push(AddBindRow("暂停撤退", "PauseRetreat")*)
         this.KeybindControls.Push(AddBindRow("跳过招募动画/剧情", "Skip")*)
-        this.KeybindControls.Push(AddBindRow("肉鸽收下道具", "CollectCollectibles")*)
+        this.KeybindControls.Push(AddBindRow("肉鸽收取道具", "CollectCollectibles")*)
         this.KeybindControls.Push(AddBindRow("返回上级菜单", "Back")*)
         ; 空白占位
         placeholder1 := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")

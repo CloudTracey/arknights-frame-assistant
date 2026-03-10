@@ -26,7 +26,7 @@ class Constants {
         "Skip", "跳过招募动画/剧情",
         "Back", "返回上级菜单",
         "Harvest", "基建快速收取",
-        "CollectCollectibles", "肉鸽收下道具"
+        "CollectCollectibles", "肉鸽收取道具"
     )
     
     ; 重要设置名称映射
