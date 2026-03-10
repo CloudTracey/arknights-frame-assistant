@@ -1,6 +1,12 @@
 ; == 更新UI模块 ==
 
 class UpdateUI {
+    ; 初始化：订阅事件
+    static Init() {
+        ; 订阅手动下载
+        EventBus.Subscribe("OnManualDownload", (*) => this.OnManualDownload())
+    }
+
     ; 更新对话框实例和参数
     static UpdateDialog := ""
     static UpdateDialogParams := ""
@@ -138,29 +144,39 @@ class UpdateUI {
         if (retryCount = 0) {
             message := "正在下载更新，请稍候..."
         } else {
-            message := "正在下载更新，请稍候...`n（第 " retryCount " 次重试）"
+            message := "正在下载更新，请稍候...`n（第 " retryCount " 次重试，如多次下载失败请尝试手动下载）"
         }
         
         ; 添加文本
         this.DownloadingDialog.Add("Text", "x20 y20 w300 Center vDownloadText", message)
-        
-        ; 添加取消按钮
-        btnW := 80
-        btnH := 26
-        btnX := (340 - btnW) / 2  ; 窗口宽度340，按钮居中
-        btnY := 60
-        this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" btnX " y" btnY " w" btnW " h" btnH, "取消下载(&C)")
+
+        ; 添加手动下载渠道
+        manualBtnW := 80
+        manualBtnH := 26
+        padding := 70
+        manualBtnY := 60
+        ; 手动下载按钮 - 左下角
+        manualBtn := this.DownloadingDialog.Add("Button", "x" padding " y" manualBtnY " w" manualBtnW " h" manualBtnH, "手动下载(&M)")
+        manualBtn.OnEvent("Click", (*) => EventBus.Publish("OnManualDownload"))
+        ; 取消下载按钮 - 右下角
+        cancelBtnX := 340 - padding - manualBtnW
+        this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " y" manualBtnY " w" manualBtnW " h" manualBtnH, "取消下载(&C)")
         this.DownloadingCancelBtn.OnEvent("Click", (*) => this.OnDownloadCancel())
-        
+
         ; 显示对话框（非模态，不阻塞）
         this.DownloadingDialog.Show("w340 h110 Center")
     }
     
+    ; 手动下载按钮点击事件
+    static OnManualDownload() {
+        ; 打开浏览器访问下载地址页面
+        Run("https://www.bilibili.com/opus/1178139405104185363")
+        ; 关闭下载对话框
+        try this.CloseDownloadingDialog()
+    }
+
     ; 下载取消按钮点击事件
     static OnDownloadCancel() {
-        ; 调用下载器的取消方法
-        UpdateDownloader.Cancel()
-        
         ; 更新UI显示取消状态
         if (this.DownloadingDialog != "") {
             try {
@@ -170,7 +186,6 @@ class UpdateUI {
                 this.DownloadingDialog["DownloadText"].Value := "正在取消下载..."
             }
         }
-        
         ; 发布取消事件
         EventBus.Publish("UpdateDownloadCancelled")
     }
@@ -207,3 +222,6 @@ class UpdateUI {
         MessageBox.Info("自动检查更新已禁用。`n如需开启，请在配置文件中设置 AutoUpdate=1", "提示")
     }
 }
+
+; 初始化更新UI
+UpdateUI.Init()

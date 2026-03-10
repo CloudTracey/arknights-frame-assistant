@@ -1,0 +1,51 @@
+name: 功能请求
+description: 提出新功能建议或功能改进
+title: '[Feature] '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您提出功能建议！请填写以下信息，帮助我们更好地理解和评估您的建议。
+
+  - type: input
+    id: feature_name
+    attributes:
+      label: 功能名称
+      description: 给功能起一个简洁的名称
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 功能描述
+      description: 详细描述您希望添加的功能
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: 使用场景
+      description: 描述该功能的使用场景和目标用户
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 现有替代方案
+      description: 当前是否有其他方式实现类似效果？如有，请说明
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 可能的实现方案
+      description: 如果您有技术背景，可以提供可能的实现思路（可选）
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充说明
+      description: 其他需要说明的信息

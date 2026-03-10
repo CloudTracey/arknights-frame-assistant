@@ -13,9 +13,9 @@ ActionReleasePause(ThisHotkey) {
     if InStr(ThisHotkey, "Wheel") == 0 {
         PureKeyWait(ThisHotkey)
     }
-    Send "{ESC Down}"
+    Send "{Space Down}"
     USleep(50)
-    Send "{ESC Up}"
+    Send "{Space Up}"
 }
 ; 切换倍速
 ActionGameSpeed(ThisHotkey) {
@@ -35,20 +35,12 @@ Action33ms(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    Pos := PauseButtonPosition()
-    MouseGetPos &xpos, &ypos
-    BlockInput "MouseMove"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{Lbutton Down}"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{LButton Up}"
-    USleep(30)
     Send "{ESC Down}"
-    USleep(15)
-    MouseMove xpos, ypos
-    BlockInput "MouseMoveOff"
     USleep(30)
+    Send "{Space Down}"
+    USleep(50)
     Send "{ESC Up}"
+    Send "{Space Up}"
     if InStr(ThisHotkey, "Wheel") {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -63,20 +55,12 @@ Action166ms(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    Pos := PauseButtonPosition()
-    MouseGetPos &xpos, &ypos
-    BlockInput "MouseMove"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{Lbutton Down}"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{LButton Up}"
-    USleep(45)
-    MouseMove xpos, ypos
-    BlockInput "MouseMoveOff"
-    USleep(120)
     Send "{ESC Down}"
-    USleep(45)
+    USleep(165)
+    Send "{Space Down}"
+    USleep(50)
     Send "{ESC Up}"
+    Send "{Space Up}"
     if InStr(ThisHotkey, "Wheel") {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -91,20 +75,13 @@ ActionPauseSelect(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    Pos := PauseButtonPosition()
-    MouseGetPos &xpos, &ypos
-    BlockInput "MouseMove"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{Lbutton Down}"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{LButton Up}"
-    USleep(State.CurrentDelay * 1.3)
-    MouseMove xpos, ypos
+    Send "{Space Down}"
+    USleep(State.CurrentDelay)
     Send "{RButton Down}"
-    BlockInput "MouseMoveOff"
-    Send "{ESC Down}"
     Send "{RButton Up}"
-    USleep(45)
+    Send "{ESC Down}"
+    USleep(50)
+    Send "{Space Up}"
     Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel") {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -112,6 +89,7 @@ ActionPauseSelect(ThisHotkey) {
     }
     PureKeyWait(ThisHotkey)
     DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+
 }
 ; 干员技能
 ActionSkill(ThisHotkey) {
@@ -178,24 +156,11 @@ ActionPauseSkill(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    Pos := PauseButtonPosition()
-    MouseGetPos &xpos, &ypos
-    BlockInput "MouseMove"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{Lbutton Down}"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{LButton Up}"
-    USleep(State.CurrentDelay * 1.3)
-    MouseMove xpos, ypos
-    Send "{RButton Down}"
-    BlockInput "MouseMoveOff"
-    Send "{ESC Down}"
-    Send "{RButton Up}"
-    USleep(State.SkillAndRetreatDelay)
+    ActionPauseSelect("")
+    USleep(State.SkillAndRetreatDelay - 50)
     Send "{e Down}"
     USleep(50)
     Send "{e Up}"
-    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel") {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -210,24 +175,11 @@ ActionPauseRetreat(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    Pos := PauseButtonPosition()
-    MouseGetPos &xpos, &ypos
-    BlockInput "MouseMove"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{Lbutton Down}"
-    MouseMove Pos.PBX, Pos.PBY
-    Send "{LButton Up}"
-    USleep(State.CurrentDelay * 1.3)
-    MouseMove xpos, ypos
-    Send "{RButton Down}"
-    BlockInput "MouseMoveOff"
-    Send "{ESC Down}"
-    Send "{RButton Up}"
-    USleep(State.SkillAndRetreatDelay)
+    ActionPauseSelect("")
+    USleep(State.SkillAndRetreatDelay - 50)
     Send "{q Down}"
     USleep(50)
     Send "{q Up}"
-    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel") {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -236,7 +188,7 @@ ActionPauseRetreat(ThisHotkey) {
     DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 ; 模拟鼠标左键点击
-LButtonClick(ThisHotkey) {
+ActionLButtonClick(ThisHotkey) {
     oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -252,14 +204,103 @@ LButtonClick(ThisHotkey) {
     Send "{LButton Up}"
     DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
+; 放弃行动
+ActionCeaseOperations(ThisHotkey) {
+    Send "{v Down}"
+    USleep(50)
+    Send "{v Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 跳过招募动画/剧情
+ActionSkip(ThisHotkey) {
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    Pos := PauseButtonPosition()
+    MouseGetPos &xpos, &ypos
+    BlockInput "MouseMove"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{Lbutton Down}"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{LButton Up}"
+    USleep(40)
+    MouseMove xpos, ypos
+    BlockInput "MouseMoveOff"
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
+; 返回上级菜单
+ActionBack(ThisHotkey) {
+    Send "{ESC Down}"
+    USleep(50)
+    Send "{ESC Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 基建快速收取
+ActionHarvest(ThisHotkey) {
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    Pos := HarvestButtonPosition()
+    MouseGetPos &xpos, &ypos
+    BlockInput "MouseMove"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{Lbutton Down}"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{LButton Up}"
+    USleep(40)
+    MouseMove xpos, ypos
+    BlockInput "MouseMoveOff"
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
+; 肉鸽收集藏品
+ActionCollectCollectibles(ThisHotkey){
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    Pos := CollectButtonPosition()
+    MouseGetPos &xpos, &ypos
+    BlockInput "MouseMove"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{Lbutton Down}"
+    MouseMove Pos.PBX, Pos.PBY
+    Send "{LButton Up}"
+    USleep(40)
+    MouseMove xpos, ypos
+    BlockInput "MouseMoveOff"
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
 
 ; == 工具函数 ==
 ; 高精度延迟
 USleep(delay_ms) {
+    if (delay_ms < 0)
+        delay_ms := 0
     static freq := 0
-    ;if (delay_ms <= State.CurrentDelay) {
-    ;   delay_ms := State.CurrentDelay
-    ;}
     if (freq = 0)
         DllCall("QueryPerformanceFrequency", "Int64*", &freq)
     start := 0
@@ -271,12 +312,14 @@ USleep(delay_ms) {
         if (current >= target)
             break
         remaining := (target - current) * 1000 / freq
-        if (remaining > 2)
+        if (remaining > 4)
             DllCall("Sleep", "UInt", 1)
     }
 }
 ; 去除修饰符前缀
 PureKeyWait(ThisHotkey) {
+    if (ThisHotkey == "") 
+        return
     pureKey := RegExReplace(ThisHotkey, "^[~*$!^+#&<>()]+")
     KeyWait(pureKey)
 }
@@ -296,5 +339,19 @@ PauseButtonPosition() {
     WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
     PButtonX := ww * 0.9442
     PButtonY := wh * 0.0666
+    return {PBX: PButtonX, PBY: PButtonY}
+}
+; 获取基建收取按钮位置
+HarvestButtonPosition() {
+    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    PButtonX := ww * 0.1297
+    PButtonY := wh * 0.9527
+    return {PBX: PButtonX, PBY: PButtonY}
+}
+; 获取“收下”按钮位置
+CollectButtonPosition() {
+    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    PButtonX := ww * 0.1104
+    PButtonY := wh * 0.7250
     return {PBX: PButtonX, PBY: PButtonY}
 }

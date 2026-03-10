@@ -17,6 +17,10 @@ class ChangelogUI {
         
         this.GuiObj.SetFont("s16 bold", "Microsoft YaHei UI")
         this.GuiObj.Add("Text", "y10 w600 Center", "AFA " version " 版本更新公告")
+
+        ; 临时通知
+        this.GuiObj.SetFont("s10", "Microsoft YaHei UI")
+        this.GuiObj.Add("Text", "y+10 w600 Center cff4646", "游戏版本更新后可能需要去游戏设置里重置一下按键")
         
         this.GuiObj.SetFont("s9", "Microsoft YaHei UI")
         this.GuiObj.Add("Text", "w600 h1 Backgroundd0d0d0 y+15")
@@ -42,11 +46,11 @@ class ChangelogUI {
             return
         
         this.GuiObj.SetFont("s13 bold", "Microsoft YaHei UI")
-        this.GuiObj.Add("Text", "x" this.GuiObj.MarginX " y+9 w450 Section", title)
+        this.GuiObj.Add("Text", "x" this.GuiObj.MarginX " y+13 w450 Section", title)
         
         this.GuiObj.SetFont("s10", "Microsoft YaHei UI")
         for item in items {
-            this.GuiObj.Add("Text", "xs+15 y+12 w570", "• " item)
+            this.GuiObj.Add("Text", "xs+15 y+10 w570", "• " item)
         }
     }
 

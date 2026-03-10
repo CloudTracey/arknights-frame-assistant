@@ -63,7 +63,7 @@ class KeyBinder {
         ; 若有输入按键且不是鼠标左键
         if(Newkey != "") {
             pureNewkey := RegExReplace(Newkey, "^[~*$!^+#&<>()]+")
-            if(pureNewkey == "Escape" OR pureNewkey == "Backspace") {
+            if(pureNewkey == "Backspace") {
                 KeyBinder.ControlObj.Value := ""
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, "")
@@ -168,6 +168,9 @@ class KeyBinder {
         value := RegExReplace(value, "i)RBUTTON", "鼠标右键")
         value := RegExReplace(value, "i)WHEELDOWN", "滚轮向后")
         value := RegExReplace(value, "i)WHEELUP", "滚轮向前")
+        value := RegExReplace(value, "i)WHEELLEFT", "滚轮向左")
+        value := RegExReplace(value, "i)WHEELRIGHT", "滚轮向右")
+        value := RegExReplace(value, "i)ESCAPE", "ESC")
         return value
     }
     ; 格式化实际键值
