@@ -62,11 +62,11 @@ class GuiManager {
         ; 设置托盘菜单
         A_IconTip := "AFA`n热键已启用"
         A_TrayMenu.Delete
-        A_TrayMenu.Add("打开按键设置", (*) => this.Show())
+        A_TrayMenu.Add("打开设置界面", (*) => this.Show())
         A_TrayMenu.Add("启用/禁用热键", (*) => EventBus.Publish("SwitchHotkey"))
         A_TrayMenu.Add("重启小助手", (*) => Reload())
         A_TrayMenu.Add("退出", (*) => ExitApp())
-        A_TrayMenu.Default := "打开按键设置"
+        A_TrayMenu.Default := "打开设置界面"
 
         ; 根据设置决定是否自动显示
         if (Config.GetImportant("AutoOpenSettings") == "1") {
@@ -107,7 +107,7 @@ class GuiManager {
         this.MainGui.Add("Text", "x0 y25 w" this.GuiWidth " h1 Backgroundd0d0d0") ; 分割线
         
         ; -- 作战按键 --
-        ; 按键设置 - 左列
+        ; 作战按键 - 左列
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vKeybindLeftGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindLeftGroup"])
 
@@ -118,7 +118,7 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("干员技能", "Skill")*)
         this.KeybindControls.Push(AddBindRow("干员撤退", "Retreat")*)
         
-        ; 按键设置 - 右列
+        ; 作战按键 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vKeybindRightGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindRightGroup"])
         
@@ -132,7 +132,7 @@ class GuiManager {
         placeholder1 := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.KeybindControls.Push(placeholder1)
 
-        ; 按键设置提示语
+        ; 作战按键提示语
         this.MainGui.SetFont("s9 c1994d2")
         hint1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
         this.MainGui.SetFont("s9 cDefault")
@@ -165,7 +165,7 @@ class GuiManager {
         this.QuickControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
         this.QuickControls.Push(AddBindRow("基建快速收取", "Harvest")*)
         
-        ; 按键设置 - 右列
+        ; 快捷按键 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vQuickRightGroup", "")
         this.QuickControls.Push(this.MainGui["QuickRightGroup"])
         
@@ -176,7 +176,7 @@ class GuiManager {
         placeholder1 := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.QuickControls.Push(placeholder1)
 
-        ; 按键设置提示语
+        ; 快捷按键提示语
         this.MainGui.SetFont("s9 c1994d2")
         hintQuick := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
         this.MainGui.SetFont("s9 cDefault")
@@ -271,7 +271,7 @@ class GuiManager {
         BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - 45
         BtnX_Cancel := this.GuiWidth - this.BtnW - 45
         
-        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键设置相关标签下显示
+        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键相关标签下显示
         this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
         this.KeybindControls.Push(this.BtnDefaultHotkeys)
         this.QuickControls.Push(this.BtnDefaultHotkeys)
