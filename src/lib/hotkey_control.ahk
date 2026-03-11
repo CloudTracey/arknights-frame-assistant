@@ -36,7 +36,19 @@ class HotkeyController {
         "Skip", ActionSkip,
         "Back", ActionBack,
         "Harvest", ActionHarvest,
-        "CollectCollectibles", ActionCollectCollectibles
+        "CollectCollectibles", ActionCollectCollectibles,
+        "CheckEnemies", ActionCheckEnemies,
+        "DispatchCenter", ActionDispatchCenter,
+        "Freeze", ActionFreeze,
+        "Refresh", ActionRefresh,
+        "Upgrade", ActionUpgrade,
+        "Sell", ActionSell,
+        "Ready", ActionReady,
+        "StrongHoldProtocolLButtonClick", ActionLButtonClick,
+        "StrongHoldProtocolRetreat", ActionRetreat,
+        "StrongHoldProtocolOneClickRetreat", ActionOneClickRetreat,
+        "OneClickSell", ActionOneClickSell,
+        "OneClickPurchase", ActionOneClickPurchase
     )
 
     ; 已激活热键映射表
@@ -49,7 +61,7 @@ class HotkeyController {
             hotkeyValue := Config.GetHotkey(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
-                if (hotkeyValue ~= "i)\b(E|Q|F|G|V|RButton|MButton|Space|Escape)\b$") {
+                if (hotkeyValue ~= "i)\b(E|Q|F|G|V|W|A|S|D|G|X|C|RButton|MButton|Space|Escape|Tab)\b$") {
                     Hotkey(hotkeyValue, callback, "On")
                     HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
                 }

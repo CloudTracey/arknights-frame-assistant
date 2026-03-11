@@ -9,6 +9,7 @@ class Constants {
     
     ; 按键名称映射
     static KeyNames := Map(
+        ; 作战按键
         "PressPause", "额外暂停键 A",
         "ReleasePause", "额外暂停键 B",
         "GameSpeed", "切换倍速",
@@ -21,12 +22,26 @@ class Constants {
         "OneClickRetreat", "一键撤退",
         "PauseSkill", "暂停技能",
         "PauseRetreat", "暂停撤退",
+        ; 快捷按键
         "LButtonClick", "左键点击",
         "CeaseOperations", "放弃行动",
         "Skip", "跳过招募动画/剧情",
         "Back", "返回上级菜单",
         "Harvest", "基建快速收取",
-        "CollectCollectibles", "肉鸽收取道具"
+        "CollectCollectibles", "肉鸽收取道具",
+        ; 卫戍协议按键
+        "CheckEnemies", "查看敌人",
+        "DispatchCenter", "调度中心",  ; 不知道舟里的调度中心指的是哪种调度中心，随便选了一个译名
+        "Freeze", "冻结",
+        "Refresh", "刷新",
+        "Upgrade", "升级",
+        "Sell", "出售",
+        "Ready", "准备就绪",
+        "StrongHoldProtocolLButtonClick", "卫戍协议模拟左键点击",
+        "StrongHoldProtocolRetreat", "卫戍协议单位撤退",
+        "StrongHoldProtocolOneClickRetreat", "卫戍协议一键撤退",
+        "OneClickSell", "一键出售",
+        "OneClickPurchase", "一键购买"
     )
     
     ; 重要设置名称映射
@@ -60,6 +75,7 @@ class Config {
 
     ; 内部：默认按键设置
     static _DefaultHotkeys := Map(
+        ; 作战按键
         "PressPause", "f",
         "ReleasePause", "Space",
         "GameSpeed", "d",
@@ -72,12 +88,26 @@ class Config {
         "OneClickRetreat", "q",
         "PauseSkill", "XButton2",
         "PauseRetreat", "XButton1",
+        ; 快捷按键
         "LButtonClick", "z",
         "CeaseOperations", "",
         "Skip", "",
         "Back", "",
         "Harvest", "",
-        "CollectCollectibles", ""
+        "CollectCollectibles", "",
+        ; 卫戍协议按键
+        "CheckEnemies", "w",
+        "DispatchCenter", "a",
+        "Freeze", "s",
+        "Refresh", "d",
+        "Upgrade", "g",
+        "Sell", "x",
+        "Ready", "c",
+        "StrongHoldProtocolLButtonClick", "",
+        "StrongHoldProtocolRetreat", "",
+        "StrongHoldProtocolOneClickRetreat", "",
+        "OneClickSell", "",
+        "OneClickPurchase", ""
     )
     
     ; 内部：默认重要设置

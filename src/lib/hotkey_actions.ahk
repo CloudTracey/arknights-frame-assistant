@@ -299,6 +299,102 @@ ActionCollectCollectibles(ThisHotkey){
     DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 
+; -- 卫戍协议 --
+; 查看敌人
+ActionCheckEnemies(ThisHotkey) {
+    Send "{w Down}"
+    USleep(50)
+    Send "{w Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 调度中心
+ActionDispatchCenter(ThisHotkey) {
+    Send "{a Down}"
+    USleep(50)
+    Send "{a Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 冻结
+ActionFreeze(ThisHotkey) {
+    Send "{s Down}"
+    USleep(50)
+    Send "{s Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 刷新
+ActionRefresh(ThisHotkey) {
+    Send "{d Down}"
+    USleep(50)
+    Send "{d Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 升级
+ActionUpgrade(ThisHotkey) {
+    Send "{g Down}"
+    USleep(50)
+    Send "{g Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 出售
+ActionSell(ThisHotkey) {
+    Send "{x Down}"
+    USleep(50)
+    Send "{x Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 准备就绪
+ActionReady(ThisHotkey) {
+    Send "{c Down}"
+    USleep(50)
+    Send "{c Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 一键出售
+ActionOneClickSell(ThisHotkey) {
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    Send "{LButton Down}"
+    Send "{LButton Up}"
+    USleep(State.SkillAndRetreatDelay)
+    Send "{X Down}"
+    USleep(50)
+    Send "{X Up}"
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
+; 一键购买
+ActionOneClickPurchase(ThisHotkey) {
+    Send "{LButton Down}"
+    Send "{LButton Up}"
+    USleep(40)
+    Send "{LButton Down}"
+    Send "{LButton Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+
 ; == 工具函数 ==
 ; 高精度延迟
 USleep(delay_ms) {

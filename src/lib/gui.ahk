@@ -184,6 +184,39 @@ class GuiManager {
         this.QuickControls.Push(hintQuick)
 
         ; -- 卫戍协议 --
+        ; 卫戍协议 - 左列
+        this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vStrongHoldProtocolLeftGroup", "")
+        this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolLeftGroup"])
+
+        this.StrongHoldProtocolControls.Push(AddBindRow("查看敌人", "CheckEnemies")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("调度中心", "DispatchCenter")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("冻结", "Freeze")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("刷新", "Refresh")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("准备就绪", "Ready")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("模拟左键点击", "StrongHoldProtocolLButtonClick")*)
+        
+        ; 卫戍协议 - 右列
+        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vStrongHoldProtocolRightGroup", "")
+        this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolRightGroup"])
+        
+        this.StrongHoldProtocolControls.Push(AddBindRow("升级", "Upgrade")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("出售", "Sell")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("单位撤退", "StrongHoldProtocolRetreat")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("一键撤退", "StrongHoldProtocolOneClickRetreat")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("一键出售", "OneClickSell")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("一键购买", "OneClickPurchase")*)
+
+        ; 空白占位
+        placeholderStrongHoldProtocol := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
+        this.StrongHoldProtocolControls.Push(placeholderStrongHoldProtocol)
+
+        ; 卫戍协议提示语
+        this.MainGui.SetFont("s9 c1994d2")
+        hintStrongHoldProtocol1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的卫戍协议按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
+        hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 yp+30 w" this.GuiWidth " Center", "此页面内按键为独立按键，与“作战按键”、“快捷按键”互不干扰，切换到此页面后“作战按键”、“快捷按键”将被禁用")
+        this.MainGui.SetFont("s9 cDefault")
+        this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol1)
+        this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
 
         ; -- 其他设置 --
         this.MainGui.Add("GroupBox", "x0 y45 w" this.ColWidth " h0 Section vOtherSettingsGroup", "")
