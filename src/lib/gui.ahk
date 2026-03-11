@@ -22,12 +22,12 @@ class GuiManager {
     static BtnW := 100
 
     ; 存储不同标签页的控件
-    static KeybindControls := []      ; 作战按键相关控件
-    static QuickControls := [] ; 快捷按键相关控件
+    static KeybindControls := []      ; 常规作战相关控件
+    static QuickControls := [] ; 快捷功能相关控件
     static StrongHoldProtocolControls := [] ; 卫戍协议相关控件
     static OtherSettingsControls := [] ; 其他设置相关控件
-    static TxtKeybind := ""           ; "作战按键"标签文本
-    static TxtQuick := ""             ; "快捷按键"标签文本
+    static TxtKeybind := ""           ; "常规作战"标签文本
+    static TxtQuick := ""             ; "快捷功能"标签文本
     static TxtStrongHoldProtocol := ""  ; "卫戍协议"标签文本
     static TxtOther := ""             ; "其他设置"标签文本
     static CurrentTab := ""    ; 当前显示的标签页
@@ -90,9 +90,9 @@ class GuiManager {
 
         ; 让text控件假装自己是tab控件
         this.MainGui.SetFont("s9")
-        this.TxtKeybind := this.MainGui.Add("Text", "x0 y5 h20 w" this.TabWidth " Center Section c1994d2", "作战按键")
+        this.TxtKeybind := this.MainGui.Add("Text", "x0 y5 h20 w" this.TabWidth " Center Section c1994d2", "常规作战")
         TabKeybind := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
-        this.TxtQuick := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "快捷按键")
+        this.TxtQuick := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "快捷功能")
         TabQuick := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
         this.TxtStrongHoldProtocol := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "卫戍协议")
         TabStrongHoldProtocol := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
@@ -107,8 +107,8 @@ class GuiManager {
         this.TabIndicator := this.MainGui.Add("Text", "xs y23 w" this.TabWidth " h2 Background1994d2") ; 选中指示线
         this.MainGui.Add("Text", "x0 y25 w" this.GuiWidth " h1 Backgroundd0d0d0") ; 分割线
         
-        ; -- 作战按键 --
-        ; 作战按键 - 左列
+        ; -- 常规作战 --
+        ; 常规作战 - 左列
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vKeybindLeftGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindLeftGroup"])
 
@@ -119,7 +119,7 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("单位技能", "Skill")*)
         this.KeybindControls.Push(AddBindRow("单位撤退", "Retreat")*)
         
-        ; 作战按键 - 右列
+        ; 常规作战 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vKeybindRightGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindRightGroup"])
         
@@ -133,7 +133,7 @@ class GuiManager {
         placeholderKeybind := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.KeybindControls.Push(placeholderKeybind)
 
-        ; 作战按键提示语
+        ; 常规作战提示语
         this.MainGui.SetFont("s9 c1994d2")
         hintKeybind1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
         hintKeybind2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "！！此页面内按键与“卫戍协议”按键互不干扰，位于此页面时“卫戍协议”按键将被禁用！！")
@@ -180,8 +180,8 @@ class GuiManager {
         ; 空白占位
         this.MainGui.Add("Text", "xm y+15 w1 h1")
 
-        ; -- 快捷按键 --
-        ; 快捷按键 - 左列
+        ; -- 快捷功能 --
+        ; 快捷功能 - 左列
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
         this.QuickControls.Push(this.MainGui["QuickLeftGroup"])
 
@@ -189,7 +189,7 @@ class GuiManager {
         this.QuickControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
         this.QuickControls.Push(AddBindRow("基建快速收取", "Harvest")*)
         
-        ; 快捷按键 - 右列
+        ; 快捷功能 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vQuickRightGroup", "")
         this.QuickControls.Push(this.MainGui["QuickRightGroup"])
         
@@ -200,7 +200,7 @@ class GuiManager {
         placeholderQuick := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.QuickControls.Push(placeholderQuick)
 
-        ; 快捷按键提示语
+        ; 快捷功能提示语
         this.MainGui.SetFont("s9 c1994d2")
         hintQuick1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
         hintQuick2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "！！此页面内按键与“卫戍协议”按键互不干扰，位于此页面时“卫戍协议”按键将被禁用！！")
@@ -238,7 +238,7 @@ class GuiManager {
         ; 卫戍协议提示语
         this.MainGui.SetFont("s9 c1994d2")
         hintStrongHoldProtocol1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的卫戍协议按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
-        hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "！！此页面内按键为独立按键，与“作战按键”、“快捷按键”互不干扰，位于此页面时“作战按键”、“快捷按键”将被禁用！！")
+        hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "！！此页面内按键为独立按键，与“常规作战”、“快捷功能”互不干扰，位于此页面时“常规作战”、“快捷功能”将被禁用！！")
         this.MainGui.SetFont("s9 cDefault")
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol1)
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
@@ -458,7 +458,7 @@ class GuiManager {
         ; 首先隐藏所有标签页的控件
         this._HideAllControls()
         
-        ; 切换到作战按键页
+        ; 切换到常规作战页
         if (tabName = "keyBind") {
             ; 更新标签样式
             this.TxtKeybind.SetFont("c1994d2")  ; 蓝色（选中）
@@ -470,11 +470,11 @@ class GuiManager {
             this.TxtKeybind.GetPos(&x)
             this.TabIndicator.Move(x, 23)
             
-            ; 显示作战按键控件
+            ; 显示常规作战控件
             this._ShowControls(this.KeybindControls)
         }
 
-        ; 切换到快捷按键页
+        ; 切换到快捷功能页
         else if (tabName = "quick") {
             ; 更新标签样式
             this.TxtKeybind.SetFont("cDefault")  ; 默认色
@@ -486,7 +486,7 @@ class GuiManager {
             this.TxtQuick.GetPos(&x)
             this.TabIndicator.Move(x, 23)
             
-            ; 显示快捷按键控件
+            ; 显示快捷功能控件
             this._ShowControls(this.QuickControls)
         }
 

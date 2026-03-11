@@ -9,7 +9,7 @@ class Constants {
     
     ; 按键名称映射
     static KeyNames := Map(
-        ; 作战按键
+        ; 常规作战
         "PressPause", "按下暂停",
         "ReleasePause", "松开暂停",
         "GameSpeed", "切换倍速",
@@ -22,7 +22,7 @@ class Constants {
         "OneClickRetreat", "一键撤退",
         "PauseSkill", "暂停技能",
         "PauseRetreat", "暂停撤退",
-        ; 快捷按键
+        ; 快捷功能
         "LButtonClick", "左键点击",
         "CeaseOperations", "放弃行动",
         "Skip", "跳过招募动画/剧情",
@@ -75,7 +75,7 @@ class Config {
 
     ; 内部：默认按键设置
     static _DefaultHotkeys := Map(
-        ; 作战按键
+        ; 常规作战
         "PressPause", "f",
         "ReleasePause", "Space",
         "GameSpeed", "d",
@@ -88,7 +88,7 @@ class Config {
         "OneClickRetreat", "q",
         "PauseSkill", "XButton2",
         "PauseRetreat", "XButton1",
-        ; 快捷按键
+        ; 快捷功能
         "LButtonClick", "z",
         "CeaseOperations", "",
         "Skip", "",

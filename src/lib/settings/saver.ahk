@@ -55,9 +55,9 @@ class Saver {
 
     ; 内部：检查按键冲突
     ; 检测规则：
-    ; 1. 作战按键 + 快捷按键 + SwitchHotkey 互相检测
+    ; 1. 常规作战 + 快捷功能 + SwitchHotkey 互相检测
     ; 2. 卫戍协议按键 + SwitchHotkey 互相检测
-    ; 3. 卫戍协议按键不与作战/快捷按键检测冲突
+    ; 3. 卫戍协议按键不与作战/快捷功能检测冲突
     static _CheckKeyConflicts(SavedObj) {
         ; 定义按键分组
         battleKeys := ["PressPause", "ReleasePause", "GameSpeed", "PauseSelect",
