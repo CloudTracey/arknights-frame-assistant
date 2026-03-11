@@ -16,14 +16,19 @@ class GuiManager {
     
     ; 窗口尺寸常量
     static GuiWidth := 720
+    static TabWidth := this.GuiWidth / 4
     static ColWidth := this.GuiWidth / 2
     static GuiXMargin := 30
     static BtnW := 100
 
     ; 存储不同标签页的控件
-    static KeybindControls := []      ; 按键设置相关控件
+    static KeybindControls := []      ; 作战按键相关控件
+    static QuickControls := [] ; 快捷按键相关控件
+    static StrongHoldProtocolControls := [] ; 卫戍协议相关控件
     static OtherSettingsControls := [] ; 其他设置相关控件
-    static TxtKeybind := ""           ; "按键设置"标签文本
+    static TxtKeybind := ""           ; "作战按键"标签文本
+    static TxtQuick := ""             ; "快捷按键"标签文本
+    static TxtStrongHoldProtocol := ""  ; "卫戍协议"标签文本
     static TxtOther := ""             ; "其他设置"标签文本
     static CurrentTab := ""    ; 当前显示的标签页
     
@@ -84,18 +89,24 @@ class GuiManager {
 
         ; 让text控件假装自己是tab控件
         this.MainGui.SetFont("s9")
-        this.TxtKeybind := this.MainGui.Add("Text", "x0 y5 h20 w" this.ColWidth " Center Section c1994d2", "按键设置")
-        TabKeybind := this.MainGui.Add("Text", "x0 y0 h25 w" this.ColWidth " Center BackgroundTrans")
-        this.TxtOther := this.MainGui.Add("Text", "ys h20 w" this.ColWidth " Center", "其他设置")
-        TabOther := this.MainGui.Add("Text", "x" this.GuiWidth / 2 " y0 h25 w" this.ColWidth " Center BackgroundTrans")
+        this.TxtKeybind := this.MainGui.Add("Text", "x0 y5 h20 w" this.TabWidth " Center Section c1994d2", "作战按键")
+        TabKeybind := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtQuick := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "快捷按键")
+        TabQuick := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtStrongHoldProtocol := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "卫戍协议")
+        TabStrongHoldProtocol := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtOther := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "其他设置")
+        TabOther := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
         ; 为标签添加点击事件
         TabKeybind.OnEvent("Click", (*) => this.SwitchTab("keyBind"))
+        TabQuick.OnEvent("Click", (*) => this.SwitchTab("quick"))
+        TabStrongHoldProtocol.OnEvent("Click", (*) => this.SwitchTab("strongHoldProtocol"))
         TabOther.OnEvent("Click", (*) => this.SwitchTab("other"))
 
-        this.TabIndicator := this.MainGui.Add("Text", "xs y23 w" this.ColWidth " h2 Background1994d2") ; 选中指示线
+        this.TabIndicator := this.MainGui.Add("Text", "xs y23 w" this.TabWidth " h2 Background1994d2") ; 选中指示线
         this.MainGui.Add("Text", "x0 y25 w" this.GuiWidth " h1 Backgroundd0d0d0") ; 分割线
         
-        ; -- 按键设置 --
+        ; -- 作战按键 --
         ; 按键设置 - 左列
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vKeybindLeftGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindLeftGroup"])
@@ -106,9 +117,6 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("暂停选中", "PauseSelect")*)
         this.KeybindControls.Push(AddBindRow("干员技能", "Skill")*)
         this.KeybindControls.Push(AddBindRow("干员撤退", "Retreat")*)
-        this.KeybindControls.Push(AddBindRow("模拟左键点击", "LButtonClick")*)
-        this.KeybindControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
-        this.KeybindControls.Push(AddBindRow("基建快速收取", "Harvest")*)
         
         ; 按键设置 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vKeybindRightGroup", "")
@@ -120,9 +128,6 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("一键撤退", "OneClickRetreat")*)
         this.KeybindControls.Push(AddBindRow("暂停技能", "PauseSkill")*)
         this.KeybindControls.Push(AddBindRow("暂停撤退", "PauseRetreat")*)
-        this.KeybindControls.Push(AddBindRow("跳过招募动画/剧情", "Skip")*)
-        this.KeybindControls.Push(AddBindRow("肉鸽收取道具", "CollectCollectibles")*)
-        this.KeybindControls.Push(AddBindRow("返回上级菜单", "Back")*)
         ; 空白占位
         placeholder1 := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.KeybindControls.Push(placeholder1)
@@ -152,26 +157,32 @@ class GuiManager {
         this.MainGui.SetFont("s9 cDefault")
         this.KeybindControls.Push(hint3)
 
-        ; 底部按钮
-        BtnMargin := 15
-        BtnX_DefaultHotkeys := 45
-        BtnX_Save := this.GuiWidth - (this.BtnW * 3) - BtnMargin * 2 - 45
-        BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - 45
-        BtnX_Cancel := this.GuiWidth - this.BtnW - 45
-        
-        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键设置标签下显示
-        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
-        
-        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
-        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
-        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
-        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
-        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
-        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
-        this.KeybindControls.Push(this.BtnDefaultHotkeys)
+        ; -- 快捷按键 --
+        this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
+        this.QuickControls.Push(this.MainGui["QuickLeftGroup"])
 
+        this.QuickControls.Push(AddBindRow("模拟左键点击", "LButtonClick")*)
+        this.QuickControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
+        this.QuickControls.Push(AddBindRow("基建快速收取", "Harvest")*)
+        
+        ; 按键设置 - 右列
+        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vQuickRightGroup", "")
+        this.QuickControls.Push(this.MainGui["QuickRightGroup"])
+        
+        this.QuickControls.Push(AddBindRow("跳过招募动画/剧情", "Skip")*)
+        this.QuickControls.Push(AddBindRow("肉鸽收取道具", "CollectCollectibles")*)
+        this.QuickControls.Push(AddBindRow("返回上级菜单", "Back")*)
         ; 空白占位
-        this.MainGui.Add("Text", "xm y+15 w1 h1")
+        placeholder1 := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
+        this.QuickControls.Push(placeholder1)
+
+        ; 按键设置提示语
+        this.MainGui.SetFont("s9 c1994d2")
+        hintQuick := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
+        this.MainGui.SetFont("s9 cDefault")
+        this.QuickControls.Push(hintQuick)
+
+        ; -- 卫戍协议 --
 
         ; -- 其他设置 --
         this.MainGui.Add("GroupBox", "x0 y45 w" this.ColWidth " h0 Section vOtherSettingsGroup", "")
@@ -252,6 +263,29 @@ class GuiManager {
         this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom("SwitchHotkey"))
         this.OtherSettingsControls.Push(txtSwitchHotkey)
         this.OtherSettingsControls.Push(this.SwitchHotkey)
+        
+        ; -- 底部按钮 --
+        BtnMargin := 15
+        BtnX_DefaultHotkeys := 45
+        BtnX_Save := this.GuiWidth - (this.BtnW * 3) - BtnMargin * 2 - 45
+        BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - 45
+        BtnX_Cancel := this.GuiWidth - this.BtnW - 45
+        
+        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键设置相关标签下显示
+        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
+        this.KeybindControls.Push(this.BtnDefaultHotkeys)
+        this.QuickControls.Push(this.BtnDefaultHotkeys)
+        this.StrongHoldProtocolControls.Push(this.BtnDefaultHotkeys)
+        
+        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
+        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
+        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
+        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
+        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
+        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
+
+        ; 空白占位
+        this.MainGui.Add("Text", "xm y+15 w1 h1")
     }
     
     ; 内部：更新热键控件值（从配置）
@@ -350,55 +384,110 @@ class GuiManager {
             ctrl.Opt("+Disabled")
     }
 
+    ; 内部：隐藏所有标签页的控件
+    static _HideAllControls() {
+        for ctrl in this.KeybindControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+        for ctrl in this.QuickControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+        for ctrl in this.StrongHoldProtocolControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+        for ctrl in this.OtherSettingsControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+    }
+
+    ; 内部：显示指定控件组
+    static _ShowControls(controls) {
+        for ctrl in controls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := true
+            }
+        }
+    }
+
     ; 切换标签页
     static SwitchTab(tabName) {
         if (tabName = this.CurrentTab)
             return
         this.CurrentTab := tabName
         
+        ; 首先隐藏所有标签页的控件
+        this._HideAllControls()
+        
+        ; 切换到作战按键页
         if (tabName = "keyBind") {
-            ; 切换到按键设置页
             ; 更新标签样式
             this.TxtKeybind.SetFont("c1994d2")  ; 蓝色（选中）
+            this.TxtQuick.SetFont("cDefault")   ; 默认色
+            this.TxtStrongHoldProtocol.SetFont("cDefault")  ; 默认色
             this.TxtOther.SetFont("cDefault")   ; 默认色
+            
             ; 移动指示线
-            this.TabIndicator.Move(0, 23)
+            this.TxtKeybind.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
             
-            ; 显示按键设置控件
-            for ctrl in this.KeybindControls {
-                if (IsObject(ctrl)) {
-                    try ctrl.Visible := true
-                }
-            }
-            
-            ; 隐藏其他设置控件
-            for ctrl in this.OtherSettingsControls {
-                if (IsObject(ctrl)) {
-                    try ctrl.Visible := false
-                }
-            }
+            ; 显示作战按键控件
+            this._ShowControls(this.KeybindControls)
         }
-        else if (tabName = "other") {
-            ; 切换到其他设置页
+
+        ; 切换到快捷按键页
+        else if (tabName = "quick") {
             ; 更新标签样式
             this.TxtKeybind.SetFont("cDefault")  ; 默认色
-            this.TxtOther.SetFont("c1994d2")     ; 蓝色（选中）
-            ; 移动指示线
-            this.TabIndicator.Move(this.ColWidth, 23)
+            this.TxtQuick.SetFont("c1994d2")     ; 蓝色（选中）
+            this.TxtStrongHoldProtocol.SetFont("cDefault")  ; 默认色
+            this.TxtOther.SetFont("cDefault")    ; 默认色
             
-            ; 隐藏按键设置控件
-            for ctrl in this.KeybindControls {
-                if (IsObject(ctrl)) {
-                    try ctrl.Visible := false
-                }
-            }
+            ; 移动指示线
+            this.TxtQuick.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+            
+            ; 显示快捷按键控件
+            this._ShowControls(this.QuickControls)
+        }
+
+        ; 切换到卫戍协议页
+        else if (tabName = "strongHoldProtocol") {
+            ; 更新标签样式
+            this.TxtKeybind.SetFont("cDefault")  ; 默认色
+            this.TxtQuick.SetFont("cDefault")    ; 默认色
+            this.TxtStrongHoldProtocol.SetFont("c1994d2")  ; 蓝色（选中）
+            this.TxtOther.SetFont("cDefault")    ; 默认色
+            
+            ; 移动指示线
+            this.TxtStrongHoldProtocol.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+            
+            ; 显示卫戍协议控件
+            this._ShowControls(this.StrongHoldProtocolControls)
+        }
+
+        ; 切换到其他设置页
+        else if (tabName = "other") {
+            ; 更新标签样式
+            this.TxtKeybind.SetFont("cDefault")  ; 默认色
+            this.TxtQuick.SetFont("cDefault")    ; 默认色
+            this.TxtStrongHoldProtocol.SetFont("cDefault")  ; 默认色
+            this.TxtOther.SetFont("c1994d2")     ; 蓝色（选中）
+            
+            ; 移动指示线
+            this.TxtOther.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
             
             ; 显示其他设置控件
-            for ctrl in this.OtherSettingsControls {
-                if (IsObject(ctrl)) {
-                    try ctrl.Visible := true
-                }
-            }
+            this._ShowControls(this.OtherSettingsControls)
         }
     }
 }
