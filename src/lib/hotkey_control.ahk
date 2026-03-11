@@ -49,7 +49,7 @@ class HotkeyController {
             hotkeyValue := Config.GetHotkey(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
-                if (hotkeyValue ~= "i)\b(E|Q|F|G|V|RButton|MButton|Space|ESC)\b$") {
+                if (hotkeyValue ~= "i)\b(E|Q|F|G|V|RButton|MButton|Space|Escape)\b$") {
                     Hotkey(hotkeyValue, callback, "On")
                     HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
                 }

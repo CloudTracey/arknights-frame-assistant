@@ -21,44 +21,47 @@
 ### 环境要求
 
 - **操作系统**: Windows 10/11
-- **编辑器**: 推荐使用 VS Code 配合 AutoHotkey v2 Language Support 扩展
+- **编辑器**: 推荐使用 VS Code 配合 AHK++ 扩展开发
 
 ### 项目结构
 
 ```
-E:\AFA
-├── src/
+├── src/                          # 源代码目录
 │   ├── main.ahk                  # 主入口文件（程序启动点）
-│   └── lib/
+│   └── lib/                      # 核心库模块
+│       ├── changelog/            # 更新日志模块
+│       │   ├── changelog.ahk     # 更新日志核心逻辑
+│       │   ├── changelog_checker.ahk  # 更新日志检查器
+│       │   └── changelog_ui.ahk  # 更新日志 UI
 │       ├── config.ahk            # 配置管理（Config/State/Constants 类）
 │       ├── eventbus.ahk          # 事件总线（模块间通信）
 │       ├── game_launcher.ahk     # 游戏启动器（自动启动游戏）
 │       ├── game_monitor.ahk      # 游戏监控（进程监控与自动退出）
 │       ├── gui.ahk               # GUI 界面管理（设置窗口）
-│       ├── hotkey.ahk            # 热键管理（注册/注销热键）
-│       ├── hotkey_actions.ahk    # 热键动作实现（13 个功能函数）
+│       ├── hotkey_actions.ahk    # 热键动作实现（功能函数）
+│       ├── hotkey_control.ahk    # 热键管理（注册/注销热键）
 │       ├── key_bind.ahk          # 按键绑定（InputHook 捕获按键）
-│       ├── setting.ahk           # 设置管理入口（包含子模块）
+│       ├── message_box.ahk       # 消息框工具（自定义对话框）
+│       ├── settings/             # 设置管理模块
 │       │   ├── actions.ahk       # 设置操作（重置/保存/应用/取消）
 │       │   ├── loader.ahk        # 设置加载
-│       │   └── saver.ahk         # 设置保存（含验证逻辑）
+│       │   ├── saver.ahk         # 设置保存（含验证逻辑）
+│       │   └── settings_manager.ahk  # 设置管理器入口
 │       ├── updater/              # 自动更新模块
 │       │   ├── downloader.ahk    # 更新下载器
 │       │   ├── self_replacer.ahk # 自替换脚本（批处理生成）
-│       │   ├── updater.ahk       # 更新协调器（流程控制）
+│       │   ├── updater_manager.ahk   # 更新协调器（流程控制）
 │       │   ├── updater_ui.ahk    # 更新 UI（对话框）
-│       │   └── version_checker.ahk # 版本检查器（GitHub API）
+│       │   └── version_checker.ahk   # 版本检查器（GitHub API）
 │       └── version.ahk           # 内置版本信息
-├── test/                         # 测试清单目录
-├── .github/
-│   ├── workflows/                # CI/CD 工作流
-│   └── CODEOWNERS                # 代码所有者
-├── README.md                     # 项目说明
-├── CHANGELOG.md                  # 更新日志
+├── .github/                      # GitHub 配置
+│   ├── CODEOWNERS                # 代码所有者
+│   ├── ISSUE_TEMPLATE/           # Issue 模板
+│   └── PULL_REQUEST_TEMPLATE.md  # PR 模板
 ├── CONTRIBUTING.md               # 贡献指南
 ├── LICENSE                       # 许可证
 ├── logo.png                      # 项目图标
-└── version.txt                   # 版本信息
+└── README.md                     # 项目说明
 ```
 
 ## 代码规范
@@ -128,13 +131,14 @@ git checkout -b feature/your-feature-name
 ```
 
 分支命名规范：
-- `feature/描述` - 新功能
+- `feat/描述` - 新功能
 - `bugfix/描述` - Bug 修复
 - `hotfix/描述` - 紧急修复
 - `docs/描述` - 文档更新
 - `style/描述` - 代码格式（不影响功能）
 - `ui/描述` - GUI修改
 - `perf/描述` - 性能优化
+- `refactor/描述` - 代码重构
 
 #### 开发流程
 
