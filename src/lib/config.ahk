@@ -56,7 +56,7 @@ class Constants {
         "GamePath", "游戏路径",
         "AutoRunGame", "随小助手自动启动明日方舟",
         "DismissedChangelogVersion", "已忽略公告版本",
-        "DefaultStrongHoldProtocol", "默认启动卫戍协议模式"
+        "DefaultStrongHoldProtocol", "默认启动卫戍协议方案"
     )
 
     ; 自定义设置名称映射

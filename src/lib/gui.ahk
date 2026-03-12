@@ -248,8 +248,8 @@ class GuiManager {
         checkboxAutoOpenSettings.OnEvent("Click", (*) => this.SetIsModifiedTrue())
         this.MainGui["AutoOpenSettings"].Value := Config.GetImportant("AutoOpenSettings")
         this.OtherSettingsControls.Push(checkboxAutoOpenSettings)
-        ; 默认启动卫戍协议模式
-        checkboxDefaultStrongHoldProtocol := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vDefaultStrongHoldProtocol", " 默认启动卫戍协议模式")
+        ; 默认启动卫戍协议方案
+        checkboxDefaultStrongHoldProtocol := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vDefaultStrongHoldProtocol", " 默认启动卫戍协议方案")
         checkboxDefaultStrongHoldProtocol.OnEvent("Click", (*) => this.SetIsModifiedTrue())
         this.MainGui["DefaultStrongHoldProtocol"].Value := Config.GetImportant("DefaultStrongHoldProtocol")
         this.OtherSettingsControls.Push(checkboxDefaultStrongHoldProtocol)
@@ -603,7 +603,7 @@ class GuiManager {
             if (this.IsOnStrongHoldProtocol == true) {
                 this.IsOnStrongHoldProtocol := false
                 TrayTip
-                TrayTip("已退出卫戍协议模式", "AFA")
+                TrayTip("已退出卫戍协议方案", "AFA")
             }
         }
         else if (tabName = "strongHoldProtocol") {
@@ -611,7 +611,7 @@ class GuiManager {
             if (this.IsOnStrongHoldProtocol == false) {
                 this.IsOnStrongHoldProtocol := true
                 TrayTip
-                TrayTip("已启用卫戍协议模式", "AFA")
+                TrayTip("已启用卫戍协议方案", "AFA")
             }
         }
         ; "other"标签页不改变热键
