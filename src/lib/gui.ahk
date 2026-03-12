@@ -29,6 +29,7 @@ class GuiManager {
     static QuickControls := [] ; 快捷操作相关控件
     static StrongHoldProtocolControls := [] ; 卫戍协议相关控件
     static OtherSettingsControls := [] ; 其他设置相关控件
+    static NotOtherControls := [] ; 仅非其他设置相关控件
     static TxtKeybind := ""           ; "常规作战"标签文本
     static TxtQuick := ""             ; "快捷操作"标签文本
     static TxtStrongHoldProtocol := ""  ; "卫戍协议"标签文本
@@ -150,23 +151,23 @@ class GuiManager {
 
         ; 分割线
         sepKeybind := this.MainGui.Add("Text", "x" this.GuiXMargin " y+15 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0") ; 分割线
-        this.KeybindControls.Push(sepKeybind)
+        this.NotOtherControls.Push(sepKeybind)
 
         ; 游戏内帧数设置
         txtFrame := this.MainGui.Add("Text", "x45 y+20 w90 Right", "游戏内帧数")
         this.GuiFrame := this.MainGui.Add("DropDownList", "x+20 y+-18 w120 vFrame AltSubmit", ["30", "60", "120"])
         this.GuiFrame.OnEvent("Change", (*) => this.SetIsModifiedTrue())
         this.MainGui["Frame"].Value := Config.GetImportant("Frame")
-        this.KeybindControls.Push(txtFrame)
-        this.KeybindControls.Push(this.GuiFrame)
+        this.NotOtherControls.Push(txtFrame)
+        this.NotOtherControls.Push(this.GuiFrame)
 
         ; 帧数设置提示语
         this.MainGui.SetFont("s9 c1994d2")
         hintFrame1 := this.MainGui.Add("Text", "x0 y+15 w" this.GuiWidth " Center", "请确保上方“游戏内帧数”设置与游戏内保持一致，若屏幕刷新率低于120，请关闭游戏内的“垂直同步”")
-        this.KeybindControls.Push(hintFrame1)
+        this.NotOtherControls.Push(hintFrame1)
         hintFrame2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "或确保“游戏内帧数”设置与显示器刷新率一致再开启“垂直同步”")
         this.MainGui.SetFont("s9 cDefault")
-        this.KeybindControls.Push(hintFrame2)
+        this.NotOtherControls.Push(hintFrame2)
 
         ; -- 快捷操作 --
         ; 快捷操作 - 左列
@@ -332,6 +333,7 @@ class GuiManager {
         
         this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键相关标签下显示
         this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
+        this.NotOtherControls.Push(this.BtnDefaultHotkeys)
         
         this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
         this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
@@ -455,7 +457,15 @@ class GuiManager {
     }
 
     ; 内部：隐藏所有标签页的控件
-    static _HideAllControls() {
+    static _HideAllControls(special := "") {
+        if (special == "NotOther") {
+            for ctrl in this.NotOtherControls {
+                if (IsObject(ctrl)) {
+                    try ctrl.Visible := false
+                }
+            }   
+            return
+        }
         for ctrl in this.KeybindControls {
             if (IsObject(ctrl)) {
                 try ctrl.Visible := false
@@ -511,6 +521,8 @@ class GuiManager {
             
             ; 显示常规作战控件
             this._ShowControls(this.KeybindControls)
+            ; 显示仅非其他设置控件
+            this._ShowControls(this.NotOtherControls)
         }
 
         ; 切换到快捷操作页
@@ -532,6 +544,8 @@ class GuiManager {
             
             ; 显示快捷操作控件
             this._ShowControls(this.QuickControls)
+            ; 显示仅非其他设置控件
+            this._ShowControls(this.NotOtherControls)
         }
 
         ; 切换到卫戍协议页
@@ -553,6 +567,8 @@ class GuiManager {
             
             ; 显示卫戍协议控件
             this._ShowControls(this.StrongHoldProtocolControls)
+            ; 显示仅非其他设置控件
+            this._ShowControls(this.NotOtherControls)
         }
 
         ; 切换到其他设置页
@@ -569,6 +585,8 @@ class GuiManager {
             
             ; 显示其他设置控件
             this._ShowControls(this.OtherSettingsControls)
+            ; 隐藏仅非其他设置控件
+            this._HideAllControls("NotOther")
         }
         EventBus.Publish("GuiUpdateHotkeyControls")
         EventBus.Publish("GuiUpdateImportantControls")
