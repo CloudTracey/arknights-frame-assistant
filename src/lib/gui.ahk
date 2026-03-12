@@ -230,7 +230,7 @@ class GuiManager {
         this.MainGui.SetFont("s9 c1994d2")
         hintStrongHoldProtocol1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的卫戍协议按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
         this.MainGui.SetFont("s9 c1994d2 bold")
-        hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "为避免冲突，切换到此页面时“常规作战”、“快捷操作”将被禁用")
+        hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "为避免冲突，切换到此页面时“常规作战”、“快捷操作”按键将被禁用")
         this.MainGui.SetFont("s9 cDefault Norm")
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol1)
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
