@@ -153,11 +153,17 @@ ActionPauseSkill(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    ActionPauseSelect("")
-    USleep(State.SkillAndRetreatDelay - 50)
+    Send "{Space Down}"
+    USleep(State.CurrentDelay)
+    Send "{RButton Down}"
+    Send "{RButton Up}"
+    Send "{ESC Down}"
+    USleep(State.SkillAndRetreatDelay)
     Send "{e Down}"
     USleep(50)
     Send "{e Up}"
+    Send "{Space Up}"
+    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel") {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -172,11 +178,17 @@ ActionPauseRetreat(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    ActionPauseSelect("")
-    USleep(State.SkillAndRetreatDelay - 50)
+    Send "{Space Down}"
+    USleep(State.CurrentDelay)
+    Send "{RButton Down}"
+    Send "{RButton Up}"
+    Send "{ESC Down}"
+    USleep(State.SkillAndRetreatDelay)
     Send "{q Down}"
     USleep(50)
     Send "{q Up}"
+    Send "{Space Up}"
+    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel") {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -405,8 +417,8 @@ ActionOneClickPurchase(ThisHotkey) {
 ; == 工具函数 ==
 ; 高精度延迟
 USleep(delay_ms) {
-    if (delay_ms < 0)
-        delay_ms := 0
+    if (delay_ms <= 0)
+        return
     static freq := 0
     if (freq = 0)
         DllCall("QueryPerformanceFrequency", "Int64*", &freq)
