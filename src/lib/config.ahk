@@ -9,24 +9,39 @@ class Constants {
     
     ; 按键名称映射
     static KeyNames := Map(
-        "PressPause", "额外暂停键 A",
-        "ReleasePause", "额外暂停键 B",
+        ; 常规作战
+        "PressPause", "按下暂停",
+        "ReleasePause", "松开暂停",
         "GameSpeed", "切换倍速",
         "PauseSelect", "暂停选中",
-        "Skill", "干员技能",
-        "Retreat", "干员撤退",
+        "Skill", "单位技能",
+        "Retreat", "单位撤退",
         "33ms", "前进 33ms",
         "166ms", "前进 166ms",
         "OneClickSkill", "一键技能",
         "OneClickRetreat", "一键撤退",
         "PauseSkill", "暂停技能",
         "PauseRetreat", "暂停撤退",
+        ; 快捷操作
         "LButtonClick", "左键点击",
         "CeaseOperations", "放弃行动",
         "Skip", "跳过招募动画/剧情",
         "Back", "返回上级菜单",
         "Harvest", "基建快速收取",
-        "CollectCollectibles", "肉鸽收取道具"
+        "CollectCollectibles", "肉鸽收取道具",
+        ; 卫戍协议按键
+        "CheckEnemies", "查看敌人",
+        "DispatchCenter", "调度中心",  ; 不知道舟里的调度中心指的是哪种调度中心，随便选了一个译名
+        "Freeze", "冻结",
+        "Refresh", "刷新",
+        "Upgrade", "升级",
+        "Sell", "出售",
+        "Ready", "准备就绪",
+        "StrongHoldProtocolLButtonClick", "卫戍协议模拟左键点击",
+        "StrongHoldProtocolRetreat", "卫戍协议单位撤退",
+        "StrongHoldProtocolOneClickRetreat", "卫戍协议一键撤退",
+        "OneClickSell", "一键出售",
+        "OneClickPurchase", "一键购买"
     )
     
     ; 重要设置名称映射
@@ -40,12 +55,13 @@ class Constants {
         "GitHubToken", "GitHub Token",
         "GamePath", "游戏路径",
         "AutoRunGame", "随小助手自动启动明日方舟",
-        "DismissedChangelogVersion", "已忽略公告版本"
+        "DismissedChangelogVersion", "已忽略公告版本",
+        "DefaultStrongHoldProtocol", "默认启动卫戍协议方案"
     )
 
     ; 自定义设置名称映射
     static CustomNames := Map(
-        "SkillAndRetreatDelay", "技能和撤退点击延迟",
+        "ClickDelay", "点击延迟",
         "SwitchHotkey", "启用/禁用热键"
     )
 }
@@ -60,6 +76,7 @@ class Config {
 
     ; 内部：默认按键设置
     static _DefaultHotkeys := Map(
+        ; 常规作战
         "PressPause", "f",
         "ReleasePause", "Space",
         "GameSpeed", "d",
@@ -72,12 +89,26 @@ class Config {
         "OneClickRetreat", "q",
         "PauseSkill", "XButton2",
         "PauseRetreat", "XButton1",
+        ; 快捷操作
         "LButtonClick", "z",
         "CeaseOperations", "",
         "Skip", "",
         "Back", "",
         "Harvest", "",
-        "CollectCollectibles", ""
+        "CollectCollectibles", "",
+        ; 卫戍协议按键
+        "CheckEnemies", "w",
+        "DispatchCenter", "a",
+        "Freeze", "s",
+        "Refresh", "d",
+        "Upgrade", "g",
+        "Sell", "x",
+        "Ready", "c",
+        "StrongHoldProtocolLButtonClick", "",
+        "StrongHoldProtocolRetreat", "",
+        "StrongHoldProtocolOneClickRetreat", "",
+        "OneClickSell", "",
+        "OneClickPurchase", ""
     )
     
     ; 内部：默认重要设置
@@ -92,12 +123,13 @@ class Config {
         "GamePath", "",
         "AutoRunGame", "0",
         "LastLaunchedVersion", "",
-        "DismissedChangelogVersion", ""
+        "DismissedChangelogVersion", "",
+        "DefaultStrongHoldProtocol", "0"
     )
 
     ; 内部：默认自定义设置
     static _DefaultCustom := Map(
-        "SkillAndRetreatDelay", "50",
+        "ClickDelay", "50",
         "SwitchHotkey", ""
     )
     
@@ -116,6 +148,11 @@ class Config {
     static GetHotkey(key) {
         if !this._IsLoaded
             this.LoadFromIni()
+        else {
+            for keyVar, defaultVal in this._DefaultHotkeys {
+                this._HotkeySettings[keyVar] := IniRead(this.IniFile, "Hotkeys", keyVar, defaultVal)
+            }
+        }
         return this._HotkeySettings.Has(key) ? this._HotkeySettings[key] : ""
     }
     
@@ -128,6 +165,21 @@ class Config {
     static GetImportant(key) {
         if !this._IsLoaded
             this.LoadFromIni()
+        else {
+            for keyVar, defaultVal in this._DefaultImportant {
+                if (keyVar = "GitHubToken") {
+                    ; Token 需要解码
+                    encodedToken := IniRead(this.IniFile, "Main", keyVar, defaultVal)
+                    ; 调试输出（仅记录长度，不记录 Token 值）
+                    OutputDebug("[Config] Token 读取 - INI 中的值长度：" StrLen(encodedToken))
+                    decodedToken := this.DecodeToken(encodedToken)
+                    OutputDebug("[Config] Token 读取 - 解码后长度：" StrLen(decodedToken))
+                    this._ImportantSettings[keyVar] := decodedToken
+                } else {
+                    this._ImportantSettings[keyVar] := IniRead(this.IniFile, "Main", keyVar, defaultVal)
+                }
+            }
+        }
         return this._ImportantSettings.Has(key) ? this._ImportantSettings[key] : ""
     }
     
@@ -140,6 +192,11 @@ class Config {
     static GetCustom(key) {
         if !this._IsLoaded
             this.LoadFromIni()
+        else {
+            for keyVar, defaultVal in this._DefaultCustom {
+                this._CustomSettings[keyVar] := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
+            }
+        }
         return this._CustomSettings.Has(key) ? this._CustomSettings[key] : ""
     }
     
@@ -342,8 +399,8 @@ class State {
     ; 当前延迟值
     static CurrentDelay := 11.3  ; 默认120帧
 
-    ; 技能和撤退点击延迟
-    static SkillAndRetreatDelay := 50  ; 默认50ms
+    ; 点击延迟
+    static ClickDelay := 50  ; 默认50ms
     
     ; GUI窗口名称
     static GuiWindowName := ""
@@ -361,8 +418,8 @@ class State {
     }
 
     ; 根据设置更新技能与撤退点击延迟
-    static UpdateSkillAndRetreatDelay() {
-        this.SkillAndRetreatDelay := Config.GetCustom("SkillAndRetreatDelay")
+    static UpdateClickDelay() {
+        this.ClickDelay := Config.GetCustom("ClickDelay")
     }
 }
 

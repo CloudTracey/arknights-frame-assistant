@@ -4,37 +4,10 @@ class Saver {
     static SettingsIniWrite() {
         EventBus.Publish("SettingsWillSave")
         SavedObj := GuiManager.Submit()
+        
         ; 检查按键冲突
-        UsedKeys := Map()
-        for keyVar, keyName in Constants.KeyNames {
-            if (!SavedObj.HasProp(keyVar))
-                continue
-            currentKey := SavedObj.%keyVar%
-            if (currentKey != "") {
-                ; 按键冲突提示
-                if (UsedKeys.Has(currentKey)) {
-                    prevKeyName := UsedKeys[currentKey]
-                    MessageBox.Error("按键冲突！`n【" currentKey "】 已经被设置为: 【" prevKeyName "】`n请先修改重复的按键。", "保存失败")
-                    Exit
-                }
-                UsedKeys[currentKey] := keyName
-            }
-        }
-        for keyVar, keyName in Constants.CustomNames {
-            if (keyVar != "SwitchHotkey")
-                continue
-            if (!SavedObj.HasProp(keyVar))
-                continue
-            currentKey := SavedObj.%keyVar%
-            if (currentKey != "") {
-                ; 按键冲突提示
-                if (UsedKeys.Has(currentKey)) {
-                    prevKeyName := UsedKeys[currentKey]
-                    MessageBox.Error("按键冲突！`n【" currentKey "】 已经被设置为: 【" prevKeyName "】`n请先修改重复的按键。", "保存失败")
-                    Exit
-                }
-                UsedKeys[currentKey] := keyName
-            }
+        if (!this._CheckKeyConflicts(SavedObj)) {
+            Exit
         }
         
         ; 验证GitHub Token（如果输入了的话）
@@ -78,6 +51,79 @@ class Saver {
 
         ; 保存到INI
         Config.SaveToIni(SavedObj)
+    }
+
+    ; 内部：检查按键冲突
+    ; 检测规则：
+    ; 1. 常规作战 + 快捷操作 + SwitchHotkey 互相检测
+    ; 2. 卫戍协议按键 + SwitchHotkey 互相检测
+    ; 3. 卫戍协议按键不与作战/快捷操作检测冲突
+    static _CheckKeyConflicts(SavedObj) {
+        ; 定义按键分组
+        battleKeys := ["PressPause", "ReleasePause", "GameSpeed", "PauseSelect",
+                       "Skill", "Retreat", "33ms", "166ms", "OneClickSkill",
+                       "OneClickRetreat", "PauseSkill", "PauseRetreat",
+                       "LButtonClick", "CeaseOperations", "Skip", "Back",
+                       "Harvest", "CollectCollectibles"]
+
+        strongholdKeys := ["CheckEnemies", "DispatchCenter", "Freeze", "Refresh",
+                          "Upgrade", "Sell", "Ready", "StrongHoldProtocolLButtonClick",
+                          "StrongHoldProtocolRetreat", "StrongHoldProtocolOneClickRetreat",
+                          "OneClickSell", "OneClickPurchase"]
+
+        ; 获取SwitchHotkey值
+        switchHotkey := SavedObj.HasProp("SwitchHotkey") ? SavedObj.SwitchHotkey : ""
+
+        ; 检测组A：作战+快捷
+        battleUsed := Map()
+        for keyVar in battleKeys {
+            if (!SavedObj.HasProp(keyVar))
+                continue
+            currentKey := SavedObj.%keyVar%
+            if (currentKey != "") {
+                if (battleUsed.Has(currentKey)) {
+                    this._ShowConflictError(currentKey, battleUsed[currentKey], Constants.KeyNames[keyVar])
+                    return false
+                }
+                battleUsed[currentKey] := Constants.KeyNames[keyVar]
+            }
+        }
+        ; 将SwitchHotkey加入组A检测
+        if (switchHotkey != "") {
+            if (battleUsed.Has(switchHotkey)) {
+                this._ShowConflictError(switchHotkey, battleUsed[switchHotkey], "启用/禁用热键")
+                return false
+            }
+        }
+
+        ; 检测组B：卫戍协议
+        strongholdUsed := Map()
+        for keyVar in strongholdKeys {
+            if (!SavedObj.HasProp(keyVar))
+                continue
+            currentKey := SavedObj.%keyVar%
+            if (currentKey != "") {
+                if (strongholdUsed.Has(currentKey)) {
+                    this._ShowConflictError(currentKey, strongholdUsed[currentKey], Constants.KeyNames[keyVar])
+                    return false
+                }
+                strongholdUsed[currentKey] := Constants.KeyNames[keyVar]
+            }
+        }
+        ; 将SwitchHotkey加入组B检测
+        if (switchHotkey != "") {
+            if (strongholdUsed.Has(switchHotkey)) {
+                this._ShowConflictError(switchHotkey, strongholdUsed[switchHotkey], "启用/禁用热键")
+                return false
+            }
+        }
+
+        return true
+    }
+
+    ; 内部：显示冲突错误
+    static _ShowConflictError(conflictKey, prevName, currentName) {
+        MessageBox.Error("按键冲突！`n【" conflictKey "】`n已被【" prevName "】使用，与【" currentName "】冲突`n`n请先修改重复的按键。", "保存失败")
     }
 
     ; 重置游戏状态

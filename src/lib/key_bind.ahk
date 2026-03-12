@@ -69,6 +69,7 @@ class KeyBinder {
                     Config.SetCustom(KeyBinder.ControlObj.Name, "")
                 else
                     Config.SetHotkey(KeyBinder.ControlObj.Name, "")
+                GuiManager.SetIsModifiedTrue()
             }
             else if(pureNewkey == "LWin" OR pureNewkey == "RWin") {
                 KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
@@ -79,6 +80,7 @@ class KeyBinder {
                     Config.SetCustom(KeyBinder.ControlObj.Name, realNewkey)
                 else 
                     Config.SetHotkey(KeyBinder.ControlObj.Name, realNewkey) ; 把人不能读也不该读的东西丢给内存
+                GuiManager.SetIsModifiedTrue()
             }
         }
         KeyBinder.LastEditObject := ""
@@ -258,7 +260,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
     ; -- 如果点的是 Edit 控件 --
     if (KeyBinder.ControlObj && KeyBinder.ControlObj.Type == "Edit") {
         ; 排除非按键绑定输入框
-        if (KeyBinder.ControlObj.Name == "GitHubToken" || KeyBinder.ControlObj.Name == "GamePath" || KeyBinder.ControlObj.Name == "SkillAndRetreatDelay") {
+        if (KeyBinder.ControlObj.Name == "GitHubToken" || KeyBinder.ControlObj.Name == "GamePath" || KeyBinder.ControlObj.Name == "ClickDelay") {
             return
         }
         ; 若为首次点击Edit控件

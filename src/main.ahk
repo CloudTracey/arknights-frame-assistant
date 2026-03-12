@@ -81,7 +81,6 @@ EventBus.Publish("AppStarted")
 #Include ./lib/game_monitor.ahk
 
 ; 初始化按键
-EventBus.Publish("HotkeyOn")
 EventBus.Publish("SetSwitchKey")
 
 ; 刷新GUI以正确应用文本

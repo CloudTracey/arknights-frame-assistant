@@ -11,21 +11,31 @@ class GuiManager {
     static BtnApply := ""
     static BtnCancel := ""
     static GuiFrame := ""
-    static SkillAndRetreatDelay := ""
+    static ClickDelay := ""
     static SwitchHotkey := ""
+    static IsModified := false
+    static IsOnStrongHoldProtocol := false
+    static DefaultTab := ""
     
     ; 窗口尺寸常量
     static GuiWidth := 720
+    static TabWidth := this.GuiWidth / 4
     static ColWidth := this.GuiWidth / 2
     static GuiXMargin := 30
     static BtnW := 100
 
     ; 存储不同标签页的控件
-    static KeybindControls := []      ; 按键设置相关控件
+    static KeybindControls := []      ; 常规作战相关控件
+    static QuickControls := [] ; 快捷操作相关控件
+    static StrongHoldProtocolControls := [] ; 卫戍协议相关控件
     static OtherSettingsControls := [] ; 其他设置相关控件
-    static TxtKeybind := ""           ; "按键设置"标签文本
+    static NotOtherControls := [] ; 仅非其他设置相关控件
+    static TxtKeybind := ""           ; "常规作战"标签文本
+    static TxtQuick := ""             ; "快捷操作"标签文本
+    static TxtStrongHoldProtocol := ""  ; "卫戍协议"标签文本
     static TxtOther := ""             ; "其他设置"标签文本
     static CurrentTab := ""    ; 当前显示的标签页
+    static LastActiveTab := "keyBind"  ; 最后选中的功能性标签页（排除"其他设置"）
     
     ; 初始化GUI（单例模式）
     static Init() {
@@ -52,16 +62,20 @@ class GuiManager {
         this._SubscribeEvents()
 
         ; 初始化标签页
-        this.SwitchTab("keyBind")
+        if (Config.GetImportant("DefaultStrongHoldProtocol") == "1")
+            this.DefaultTab := "strongHoldProtocol"
+        else
+            this.DefaultTab := "keyBind"
+        this.SwitchTab(this.DefaultTab)
         
         ; 设置托盘菜单
         A_IconTip := "AFA`n热键已启用"
         A_TrayMenu.Delete
-        A_TrayMenu.Add("打开按键设置", (*) => this.Show())
+        A_TrayMenu.Add("打开设置界面", (*) => this.Show())
         A_TrayMenu.Add("启用/禁用热键", (*) => EventBus.Publish("SwitchHotkey"))
         A_TrayMenu.Add("重启小助手", (*) => Reload())
         A_TrayMenu.Add("退出", (*) => ExitApp())
-        A_TrayMenu.Default := "打开按键设置"
+        A_TrayMenu.Default := "打开设置界面"
 
         ; 根据设置决定是否自动显示
         if (Config.GetImportant("AutoOpenSettings") == "1") {
@@ -84,19 +98,25 @@ class GuiManager {
 
         ; 让text控件假装自己是tab控件
         this.MainGui.SetFont("s9")
-        this.TxtKeybind := this.MainGui.Add("Text", "x0 y5 h20 w" this.ColWidth " Center Section c1994d2", "按键设置")
-        TabKeybind := this.MainGui.Add("Text", "x0 y0 h25 w" this.ColWidth " Center BackgroundTrans")
-        this.TxtOther := this.MainGui.Add("Text", "ys h20 w" this.ColWidth " Center", "其他设置")
-        TabOther := this.MainGui.Add("Text", "x" this.GuiWidth / 2 " y0 h25 w" this.ColWidth " Center BackgroundTrans")
+        this.TxtKeybind := this.MainGui.Add("Text", "x0 y5 h20 w" this.TabWidth " Center Section c1994d2", "常规作战")
+        TabKeybind := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtQuick := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "快捷操作")
+        TabQuick := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtStrongHoldProtocol := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "卫戍协议")
+        TabStrongHoldProtocol := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtOther := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "其他设置")
+        TabOther := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
         ; 为标签添加点击事件
         TabKeybind.OnEvent("Click", (*) => this.SwitchTab("keyBind"))
+        TabQuick.OnEvent("Click", (*) => this.SwitchTab("quick"))
+        TabStrongHoldProtocol.OnEvent("Click", (*) => this.SwitchTab("strongHoldProtocol"))
         TabOther.OnEvent("Click", (*) => this.SwitchTab("other"))
 
-        this.TabIndicator := this.MainGui.Add("Text", "xs y23 w" this.ColWidth " h2 Background1994d2") ; 选中指示线
+        this.TabIndicator := this.MainGui.Add("Text", "xs y23 w" this.TabWidth " h2 Background1994d2") ; 选中指示线
         this.MainGui.Add("Text", "x0 y25 w" this.GuiWidth " h1 Backgroundd0d0d0") ; 分割线
         
-        ; -- 按键设置 --
-        ; 按键设置 - 左列
+        ; -- 常规作战 --
+        ; 常规作战 - 左列
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vKeybindLeftGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindLeftGroup"])
 
@@ -104,13 +124,10 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("松开暂停", "ReleasePause")*)
         this.KeybindControls.Push(AddBindRow("切换倍速", "GameSpeed")*)
         this.KeybindControls.Push(AddBindRow("暂停选中", "PauseSelect")*)
-        this.KeybindControls.Push(AddBindRow("干员技能", "Skill")*)
-        this.KeybindControls.Push(AddBindRow("干员撤退", "Retreat")*)
-        this.KeybindControls.Push(AddBindRow("模拟左键点击", "LButtonClick")*)
-        this.KeybindControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
-        this.KeybindControls.Push(AddBindRow("基建快速收取", "Harvest")*)
+        this.KeybindControls.Push(AddBindRow("单位技能", "Skill")*)
+        this.KeybindControls.Push(AddBindRow("单位撤退", "Retreat")*)
         
-        ; 按键设置 - 右列
+        ; 常规作战 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vKeybindRightGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindRightGroup"])
         
@@ -120,98 +137,155 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("一键撤退", "OneClickRetreat")*)
         this.KeybindControls.Push(AddBindRow("暂停技能", "PauseSkill")*)
         this.KeybindControls.Push(AddBindRow("暂停撤退", "PauseRetreat")*)
-        this.KeybindControls.Push(AddBindRow("跳过招募动画/剧情", "Skip")*)
-        this.KeybindControls.Push(AddBindRow("肉鸽收取道具", "CollectCollectibles")*)
-        this.KeybindControls.Push(AddBindRow("返回上级菜单", "Back")*)
         ; 空白占位
-        placeholder1 := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
-        this.KeybindControls.Push(placeholder1)
+        placeholderKeybind := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
+        this.KeybindControls.Push(placeholderKeybind)
 
-        ; 按键设置提示语
+        ; 常规作战提示语
         this.MainGui.SetFont("s9 c1994d2")
-        hint1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
-        this.MainGui.SetFont("s9 cDefault")
-        this.KeybindControls.Push(hint1)
+        hintKeybind1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
+        this.MainGui.SetFont("s9 c1994d2 bold")
+        hintKeybind2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "为避免冲突，切换到此页面时“卫戍协议”按键将被禁用")
+        this.MainGui.SetFont("s9 cDefault Norm")
+        this.KeybindControls.Push(hintKeybind1)
+        this.KeybindControls.Push(hintKeybind2)
 
         ; 分割线
-        sep1 := this.MainGui.Add("Text", "x" this.GuiXMargin " y+15 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0") ; 分割线
-        this.KeybindControls.Push(sep1)
+        sepKeybind := this.MainGui.Add("Text", "x" this.GuiXMargin " y+15 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0") ; 分割线
+        this.NotOtherControls.Push(sepKeybind)
 
         ; 游戏内帧数设置
         txtFrame := this.MainGui.Add("Text", "x45 y+20 w90 Right", "游戏内帧数")
         this.GuiFrame := this.MainGui.Add("DropDownList", "x+20 y+-18 w120 vFrame AltSubmit", ["30", "60", "120"])
+        this.GuiFrame.OnEvent("Change", (*) => this.SetIsModifiedTrue())
         this.MainGui["Frame"].Value := Config.GetImportant("Frame")
-        this.KeybindControls.Push(txtFrame)
-        this.KeybindControls.Push(this.GuiFrame)
+        this.NotOtherControls.Push(txtFrame)
+        this.NotOtherControls.Push(this.GuiFrame)
 
         ; 帧数设置提示语
         this.MainGui.SetFont("s9 c1994d2")
-        hint2 := this.MainGui.Add("Text", "x0 y+15 w" this.GuiWidth " Center", "请确保上方“游戏内帧数”设置与游戏内保持一致，若屏幕刷新率低于120，请关闭游戏内的“垂直同步”")
-        this.KeybindControls.Push(hint2)
-        hint3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "或确保“游戏内帧数”设置与显示器刷新率一致再开启“垂直同步”")
+        hintFrame1 := this.MainGui.Add("Text", "x0 y+15 w" this.GuiWidth " Center", "请确保上方“游戏内帧数”设置与游戏内保持一致，若屏幕刷新率低于120，请关闭游戏内的“垂直同步”")
+        this.NotOtherControls.Push(hintFrame1)
+        hintFrame2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "或确保“游戏内帧数”设置与显示器刷新率一致再开启“垂直同步”")
         this.MainGui.SetFont("s9 cDefault")
-        this.KeybindControls.Push(hint3)
+        this.NotOtherControls.Push(hintFrame2)
 
-        ; 底部按钮
-        BtnMargin := 15
-        BtnX_DefaultHotkeys := 45
-        BtnX_Save := this.GuiWidth - (this.BtnW * 3) - BtnMargin * 2 - 45
-        BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - 45
-        BtnX_Cancel := this.GuiWidth - this.BtnW - 45
+        ; -- 快捷操作 --
+        ; 快捷操作 - 左列
+        this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
+        this.QuickControls.Push(this.MainGui["QuickLeftGroup"])
+
+        this.QuickControls.Push(AddBindRow("模拟左键点击", "LButtonClick")*)
+        this.QuickControls.Push(AddBindRow("基建快速收取", "Harvest")*)
+        this.QuickControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
         
-        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键设置标签下显示
-        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
+        ; 快捷操作 - 右列
+        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vQuickRightGroup", "")
+        this.QuickControls.Push(this.MainGui["QuickRightGroup"])
         
-        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
-        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
-        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
-        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
-        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
-        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
-        this.KeybindControls.Push(this.BtnDefaultHotkeys)
+        this.QuickControls.Push(AddBindRow("跳过招募动画/剧情", "Skip")*)
+        this.QuickControls.Push(AddBindRow("肉鸽收取道具", "CollectCollectibles")*)
+        this.QuickControls.Push(AddBindRow("返回上级菜单", "Back")*)
+        ; 空白占位
+        placeholderQuick := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
+        this.QuickControls.Push(placeholderQuick)
+
+        ; 快捷操作提示语
+        this.MainGui.SetFont("s9 c1994d2")
+        hintQuick1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
+        hintQuick2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "“放弃行动/返回上级菜单”的功能完全一致，设置其中一个即可通用，也可设置两个不同的按键")
+        this.MainGui.SetFont("s9 c1994d2 bold")
+        hintQuick3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "为避免冲突，切换到此页面时“卫戍协议”按键将被禁用")
+        this.MainGui.SetFont("s9 cDefault Norm")
+        this.QuickControls.Push(hintQuick1)
+        this.QuickControls.Push(hintQuick2)
+        this.QuickControls.Push(hintQuick3)
+
+        ; -- 卫戍协议 --
+        ; 卫戍协议 - 左列
+        this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vStrongHoldProtocolLeftGroup", "")
+        this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolLeftGroup"])
+
+        this.StrongHoldProtocolControls.Push(AddBindRow("查看敌人", "CheckEnemies")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("调度中心", "DispatchCenter")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("冻结", "Freeze")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("刷新", "Refresh")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("准备就绪", "Ready")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("模拟左键点击", "StrongHoldProtocolLButtonClick")*)
+        
+        ; 卫戍协议 - 右列
+        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vStrongHoldProtocolRightGroup", "")
+        this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolRightGroup"])
+        
+        this.StrongHoldProtocolControls.Push(AddBindRow("升级", "Upgrade")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("出售", "Sell")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("单位撤退", "StrongHoldProtocolRetreat")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("一键撤退", "StrongHoldProtocolOneClickRetreat")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("一键出售", "OneClickSell")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("一键购买", "OneClickPurchase")*)
 
         ; 空白占位
-        this.MainGui.Add("Text", "xm y+15 w1 h1")
+        placeholderStrongHoldProtocol := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
+        this.StrongHoldProtocolControls.Push(placeholderStrongHoldProtocol)
+
+        ; 卫戍协议提示语
+        this.MainGui.SetFont("s9 c1994d2")
+        hintStrongHoldProtocol1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的卫戍协议按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
+        this.MainGui.SetFont("s9 c1994d2 bold")
+        hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "为避免冲突，切换到此页面时“常规作战”、“快捷操作”按键将被禁用")
+        this.MainGui.SetFont("s9 cDefault Norm")
+        this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol1)
+        this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
 
         ; -- 其他设置 --
         this.MainGui.Add("GroupBox", "x0 y45 w" this.ColWidth " h0 Section vOtherSettingsGroup", "")
         ; - 启动与退出设置 -
-        sep2 := this.MainGui.Add("Text", "x" this.GuiXMargin " ys+10 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
-        sep2txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  启动与退出设置  ")
-        this.OtherSettingsControls.Push(sep2)
-        this.OtherSettingsControls.Push(sep2txt)
+        sepLaunch := this.MainGui.Add("Text", "x" this.GuiXMargin " ys+10 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
+        sepLaunchTxt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  启动与退出设置  ")
+        this.OtherSettingsControls.Push(sepLaunch)
+        this.OtherSettingsControls.Push(sepLaunchTxt)
         ; 自动关闭
         checkboxAutoExit := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoExit", " 随游戏进程关闭自动退出（强烈建议开启）")
+        checkboxAutoExit.OnEvent("Click", (*) => this.SetIsModifiedTrue())
         this.MainGui["AutoExit"].Value := Config.GetImportant("AutoExit")
         this.OtherSettingsControls.Push(checkboxAutoExit)
         ; 自动打开设置
         checkboxAutoOpenSettings := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoOpenSettings", " 启动时打开设置窗口")
+        checkboxAutoOpenSettings.OnEvent("Click", (*) => this.SetIsModifiedTrue())
         this.MainGui["AutoOpenSettings"].Value := Config.GetImportant("AutoOpenSettings")
         this.OtherSettingsControls.Push(checkboxAutoOpenSettings)
+        ; 默认启动卫戍协议方案
+        checkboxDefaultStrongHoldProtocol := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vDefaultStrongHoldProtocol", " 默认启动卫戍协议方案")
+        checkboxDefaultStrongHoldProtocol.OnEvent("Click", (*) => this.SetIsModifiedTrue())
+        this.MainGui["DefaultStrongHoldProtocol"].Value := Config.GetImportant("DefaultStrongHoldProtocol")
+        this.OtherSettingsControls.Push(checkboxDefaultStrongHoldProtocol)
         ; 自动启动游戏
         checkboxAutoRunGame := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoRunGame", " 同时启动明日方舟")
+        checkboxAutoRunGame.OnEvent("Click", (*) => this.SetIsModifiedTrue())
         this.MainGui["AutoRunGame"].Value := Config.GetImportant("AutoRunGame")
         this.OtherSettingsControls.Push(checkboxAutoRunGame)
         ; 识别游戏路径
         this.BtnCheckGamePath := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "识别游戏路径")
-        hint4 := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", "请先启动游戏再进行识别")
+        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", "请先启动游戏再进行识别")
         this.BtnCheckGamePath.OnEvent("Click", (*) => EventBus.Publish("CheckGamePathClick"))
         this.OtherSettingsControls.Push(this.BtnCheckGamePath)
-        this.OtherSettingsControls.Push(hint4)
+        this.OtherSettingsControls.Push(hintGamePath)
         ; 游戏路径
         txtGamePath := this.MainGui.Add("Text", "x" this.GuiXMargin +17 " y+10 h24", " 游戏路径: ")
         editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w576 h20 vGamePath -Multi +0x1", Config.GetImportant("GamePath"))
+        editGamePath.OnEvent("Change", (*) => this.SetIsModifiedTrue())
         this.OtherSettingsControls.Push(txtGamePath)
         this.OtherSettingsControls.Push(editGamePath)
         this.MainGui.Add("Text", "yp+30 w0 h0")
 
         ; - 更新设置 -
-        sep3 := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
-        sep3txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  更新设置  ")
-        this.OtherSettingsControls.Push(sep3)
-        this.OtherSettingsControls.Push(sep3txt)
+        sepUpdate := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
+        sepUpdateTxt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  更新设置  ")
+        this.OtherSettingsControls.Push(sepUpdate)
+        this.OtherSettingsControls.Push(sepUpdateTxt)
         ; 自动检查更新
         checkboxAutoUpdate := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoUpdate", " 自动检查更新")
+        checkboxAutoUpdate.OnEvent("Click", (*) => this.SetIsModifiedTrue())
         this.MainGui["AutoUpdate"].Value := Config.GetImportant("AutoUpdate")
         this.OtherSettingsControls.Push(checkboxAutoUpdate)
         ; 手动检查更新
@@ -223,35 +297,58 @@ class GuiManager {
         this.OtherSettingsControls.Push(this.BtnManualDownload)
         ; github token
         checkboxUseGitHubToken := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vUseGitHubToken", " 使用GitHub Token: ")
+        checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetIsModifiedTrue())
         this.MainGui["UseGitHubToken"].Value := Config.GetImportant("UseGitHubToken")
         checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value))
         editGithubToken := this.MainGui.Add("Edit", "x+10 yp+2 w515 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant("GitHubToken"))
         this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value)
-        hint5 := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token，修改后需保存或应用设置才能生效")
+        hintGithubToken := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token")
         this.OtherSettingsControls.Push(checkboxUseGitHubToken)
         this.OtherSettingsControls.Push(editGithubToken)
-        this.OtherSettingsControls.Push(hint5)
+        this.OtherSettingsControls.Push(hintGithubToken)
         this.MainGui.Add("Text", "yp+30 w0 h0")
 
         ; - 自定义设置 -
-        sep4 := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
-        sep4txt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  自定义设置  ")
-        this.OtherSettingsControls.Push(sep4)
-        this.OtherSettingsControls.Push(sep4txt)
-        ; 技能和撤退点击延迟设置
-        txtSkillAndRetreatDelay := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10 Section", "技能和撤退点击延迟")
-        this.SkillAndRetreatDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vSkillAndRetreatDelay Number", Config.GetCustom("SkillAndRetreatDelay"))
-        updownSkillAndRetreatDelay := this.MainGui.Add("UpDown", ,Config.GetCustom("SkillAndRetreatDelay"))
-        hint6 := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中干员到按下【技能】和【撤退】的时长，单位为毫秒")
-        this.OtherSettingsControls.Push(txtSkillAndRetreatDelay)
-        this.OtherSettingsControls.Push(this.SkillAndRetreatDelay)
-        this.OtherSettingsControls.Push(updownSkillAndRetreatDelay)
-        this.OtherSettingsControls.Push(hint6)
+        sepCustom := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
+        sepCustomTxt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  自定义设置  ")
+        this.OtherSettingsControls.Push(sepCustom)
+        this.OtherSettingsControls.Push(sepCustomTxt)
+        ; 点击延迟设置
+        txtClickDelay := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10 Section", "点击延迟")
+        this.ClickDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vClickDelay Number", Config.GetCustom("ClickDelay"))
+        this.ClickDelay.OnEvent("Change", (*) => this.SetIsModifiedTrue())
+        updownClickDelay := this.MainGui.Add("UpDown", ,Config.GetCustom("ClickDelay"))
+        hintClickDelay := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中单位到按下【技能】【撤退】【出售】和【一键购买】双击的间隔，单位为毫秒")
+        this.OtherSettingsControls.Push(txtClickDelay)
+        this.OtherSettingsControls.Push(this.ClickDelay)
+        this.OtherSettingsControls.Push(updownClickDelay)
+        this.OtherSettingsControls.Push(hintClickDelay)
         ; 启用/禁用热键快捷键
         txtSwitchHotkey := this.MainGui.Add("Text", "x" this.GuiXMargin " y+16 Right +0x200", "启用/禁用热键快捷键") 
         this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom("SwitchHotkey"))
         this.OtherSettingsControls.Push(txtSwitchHotkey)
         this.OtherSettingsControls.Push(this.SwitchHotkey)
+        
+        ; -- 底部按钮 --
+        BtnMargin := 15
+        BtnX_DefaultHotkeys := 30
+        BtnX_Save := this.GuiWidth - (this.BtnW * 3) - BtnMargin * 2 - BtnX_DefaultHotkeys
+        BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - BtnX_DefaultHotkeys
+        BtnX_Cancel := this.GuiWidth - this.BtnW - BtnX_DefaultHotkeys
+        
+        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键相关标签下显示
+        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
+        this.NotOtherControls.Push(this.BtnDefaultHotkeys)
+        
+        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
+        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
+        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
+        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
+        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
+        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
+
+        ; 空白占位
+        this.MainGui.Add("Text", "xm y+15 w1 h1")
     }
     
     ; 内部：更新热键控件值（从配置）
@@ -350,56 +447,203 @@ class GuiManager {
             ctrl.Opt("+Disabled")
     }
 
+    ; 将修改状态改为已修改
+    static SetIsModifiedTrue() {
+        if (this.IsModified == true)
+            return
+        this.IsModified := true
+    }
+
+    ; 将修改状态改为未修改
+    static SetIsModifiedFalse() {
+        if (this.IsModified == false)
+            return
+        this.IsModified := false
+    }
+
+    ; 内部：隐藏所有标签页的控件
+    static _HideAllControls(special := "") {
+        if (special == "NotOther") {
+            for ctrl in this.NotOtherControls {
+                if (IsObject(ctrl)) {
+                    try ctrl.Visible := false
+                }
+            }   
+            return
+        }
+        for ctrl in this.KeybindControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+        for ctrl in this.QuickControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+        for ctrl in this.StrongHoldProtocolControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+        for ctrl in this.OtherSettingsControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+    }
+
+    ; 内部：显示指定控件组
+    static _ShowControls(controls) {
+        for ctrl in controls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := true
+            }
+        }
+    }
+
+    ; 内部：更新标签页UI
+    static _UpdateTabUI(tabName) {
+        ; 首先隐藏所有标签页的控件
+        this._HideAllControls()
+        
+        ; 切换到常规作战页
+        if (tabName = "keyBind") {
+            ; 更新标签样式
+            this.TxtKeybind.SetFont("c1994d2")  ; 蓝色（选中）
+            this.TxtQuick.SetFont("cDefault")   ; 默认色
+            this.TxtStrongHoldProtocol.SetFont("cDefault")  ; 默认色
+            this.TxtOther.SetFont("cDefault")   ; 默认色
+
+            ; 更新标签文本
+            this.TxtKeybind.text := "常规作战 √"
+            this.TxtQuick.text := "快捷操作 √"
+            this.TxtStrongHoldProtocol.text := "卫戍协议 ×"
+            
+            ; 移动指示线
+            this.TxtKeybind.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+            
+            ; 显示常规作战控件
+            this._ShowControls(this.KeybindControls)
+            ; 显示仅非其他设置控件
+            this._ShowControls(this.NotOtherControls)
+        }
+
+        ; 切换到快捷操作页
+        else if (tabName = "quick") {
+            ; 更新标签样式
+            this.TxtKeybind.SetFont("cDefault")  ; 默认色
+            this.TxtQuick.SetFont("c1994d2")     ; 蓝色（选中）
+            this.TxtStrongHoldProtocol.SetFont("cDefault")  ; 默认色
+            this.TxtOther.SetFont("cDefault")    ; 默认色
+
+            ; 更新标签文本
+            this.TxtKeybind.text := "常规作战 √"
+            this.TxtQuick.text := "快捷操作 √"
+            this.TxtStrongHoldProtocol.text := "卫戍协议 ×"
+            
+            ; 移动指示线
+            this.TxtQuick.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+            
+            ; 显示快捷操作控件
+            this._ShowControls(this.QuickControls)
+            ; 显示仅非其他设置控件
+            this._ShowControls(this.NotOtherControls)
+        }
+
+        ; 切换到卫戍协议页
+        else if (tabName = "strongHoldProtocol") {
+            ; 更新标签样式
+            this.TxtKeybind.SetFont("cDefault")  ; 默认色
+            this.TxtQuick.SetFont("cDefault")    ; 默认色
+            this.TxtStrongHoldProtocol.SetFont("c1994d2")  ; 蓝色（选中）
+            this.TxtOther.SetFont("cDefault")    ; 默认色
+
+            ; 更新标签文本
+            this.TxtKeybind.text := "常规作战 ×"
+            this.TxtQuick.text := "快捷操作 ×"
+            this.TxtStrongHoldProtocol.text := "卫戍协议 √"
+            
+            ; 移动指示线
+            this.TxtStrongHoldProtocol.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+            
+            ; 显示卫戍协议控件
+            this._ShowControls(this.StrongHoldProtocolControls)
+            ; 显示仅非其他设置控件
+            this._ShowControls(this.NotOtherControls)
+        }
+
+        ; 切换到其他设置页
+        else if (tabName = "other") {
+            ; 更新标签样式
+            this.TxtKeybind.SetFont("cDefault")  ; 默认色
+            this.TxtQuick.SetFont("cDefault")    ; 默认色
+            this.TxtStrongHoldProtocol.SetFont("cDefault")  ; 默认色
+            this.TxtOther.SetFont("c1994d2")     ; 蓝色（选中）
+            
+            ; 移动指示线
+            this.TxtOther.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+            
+            ; 显示其他设置控件
+            this._ShowControls(this.OtherSettingsControls)
+            ; 隐藏仅非其他设置控件
+            this._HideAllControls("NotOther")
+        }
+        EventBus.Publish("GuiUpdateHotkeyControls")
+        EventBus.Publish("GuiUpdateImportantControls")
+        EventBus.Publish("GuiUpdateCustomControls")
+    }
+
     ; 切换标签页
     static SwitchTab(tabName) {
         if (tabName = this.CurrentTab)
             return
+        if (this.IsModified == true) {
+            result := MessageBox.Confirm("  修改尚未保存，确定离开此页面吗 ？","保存提示")
+            if (result == "No")
+                return
+        }
         this.CurrentTab := tabName
         
-        if (tabName = "keyBind") {
-            ; 切换到按键设置页
-            ; 更新标签样式
-            this.TxtKeybind.SetFont("c1994d2")  ; 蓝色（选中）
-            this.TxtOther.SetFont("cDefault")   ; 默认色
-            ; 移动指示线
-            this.TabIndicator.Move(0, 23)
-            
-            ; 显示按键设置控件
-            for ctrl in this.KeybindControls {
-                if (IsObject(ctrl)) {
-                    try ctrl.Visible := true
-                }
-            }
-            
-            ; 隐藏其他设置控件
-            for ctrl in this.OtherSettingsControls {
-                if (IsObject(ctrl)) {
-                    try ctrl.Visible := false
-                }
+        ; 记录最后选中的标签页（排除"其他设置"）
+        if (tabName != "other") {
+            this.LastActiveTab := tabName
+        }
+        
+        ; 如果当前处于热键禁用状态，只更新UI，不切换热键
+        if (!HotkeyController.HotkeyState) {
+            this._UpdateTabUI(tabName)
+            return
+        }
+        
+        ; 根据标签页切换热键组
+        if (tabName = "keyBind" || tabName = "quick") {
+            HotkeyController.EnableByTab("keyBind")
+            if (this.IsOnStrongHoldProtocol == true) {
+                this.IsOnStrongHoldProtocol := false
+                TrayTip
+                TrayTip("已退出卫戍协议方案", "AFA")
             }
         }
-        else if (tabName = "other") {
-            ; 切换到其他设置页
-            ; 更新标签样式
-            this.TxtKeybind.SetFont("cDefault")  ; 默认色
-            this.TxtOther.SetFont("c1994d2")     ; 蓝色（选中）
-            ; 移动指示线
-            this.TabIndicator.Move(this.ColWidth, 23)
-            
-            ; 隐藏按键设置控件
-            for ctrl in this.KeybindControls {
-                if (IsObject(ctrl)) {
-                    try ctrl.Visible := false
-                }
-            }
-            
-            ; 显示其他设置控件
-            for ctrl in this.OtherSettingsControls {
-                if (IsObject(ctrl)) {
-                    try ctrl.Visible := true
-                }
+        else if (tabName = "strongHoldProtocol") {
+            HotkeyController.EnableByTab("strongHoldProtocol")
+            if (this.IsOnStrongHoldProtocol == false) {
+                this.IsOnStrongHoldProtocol := true
+                TrayTip
+                TrayTip("已启用卫戍协议方案", "AFA")
             }
         }
+        ; "other"标签页不改变热键
+        
+        ; 更新UI
+        this._UpdateTabUI(tabName)
+
+        ; 将修改状态改回未修改
+        this.SetIsModifiedFalse()
     }
 }
 

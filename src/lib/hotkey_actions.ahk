@@ -1,4 +1,5 @@
 ; == 功能实现 ==
+; -- 常规作战 --
 ; 按下暂停
 ActionPressPause(ThisHotkey) {
     Send "{ESC Down}"
@@ -10,9 +11,6 @@ ActionPressPause(ThisHotkey) {
 }
 ; 松开暂停
 ActionReleasePause(ThisHotkey) {
-    if InStr(ThisHotkey, "Wheel") == 0 {
-        PureKeyWait(ThisHotkey)
-    }
     Send "{Space Down}"
     USleep(50)
     Send "{Space Up}"
@@ -89,7 +87,6 @@ ActionPauseSelect(ThisHotkey) {
     }
     PureKeyWait(ThisHotkey)
     DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-
 }
 ; 干员技能
 ActionSkill(ThisHotkey) {
@@ -118,7 +115,7 @@ ActionOneClickSkill(ThisHotkey) {
     }
     Send "{RButton Down}"
     Send "{RButton Up}"
-    USleep(State.SkillAndRetreatDelay)
+    USleep(State.ClickDelay)
     Send "{e Down}"
     USleep(50)
     Send "{e Up}"
@@ -138,7 +135,7 @@ ActionOneClickRetreat(ThisHotkey) {
     }
     Send "{RButton Down}"
     Send "{RButton Up}"
-    USleep(State.SkillAndRetreatDelay)
+    USleep(State.ClickDelay)
     Send "{q Down}"
     USleep(50)
     Send "{q Up}"
@@ -156,11 +153,17 @@ ActionPauseSkill(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    ActionPauseSelect("")
-    USleep(State.SkillAndRetreatDelay - 50)
+    Send "{Space Down}"
+    USleep(State.CurrentDelay)
+    Send "{RButton Down}"
+    Send "{RButton Up}"
+    Send "{ESC Down}"
+    USleep(State.ClickDelay)
     Send "{e Down}"
     USleep(50)
     Send "{e Up}"
+    Send "{Space Up}"
+    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel") {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -175,11 +178,17 @@ ActionPauseRetreat(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    ActionPauseSelect("")
-    USleep(State.SkillAndRetreatDelay - 50)
+    Send "{Space Down}"
+    USleep(State.CurrentDelay)
+    Send "{RButton Down}"
+    Send "{RButton Up}"
+    Send "{ESC Down}"
+    USleep(State.ClickDelay)
     Send "{q Down}"
     USleep(50)
     Send "{q Up}"
+    Send "{Space Up}"
+    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel") {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -187,6 +196,8 @@ ActionPauseRetreat(ThisHotkey) {
     PureKeyWait(ThisHotkey)
     DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
+
+; -- 快捷操作 --
 ; 模拟鼠标左键点击
 ActionLButtonClick(ThisHotkey) {
     oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
@@ -194,7 +205,7 @@ ActionLButtonClick(ThisHotkey) {
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    Send "{Lbutton Down}"
+    Send "{LButton Down}"
     if InStr(ThisHotkey, "Wheel") {
         Send "{LButton Up}"
         DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -207,8 +218,10 @@ ActionLButtonClick(ThisHotkey) {
 ; 放弃行动
 ActionCeaseOperations(ThisHotkey) {
     Send "{v Down}"
+    Send "{ESC Down}"
     USleep(50)
     Send "{v Up}"
+    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
     PureKeyWait(ThisHotkey)
@@ -239,8 +252,10 @@ ActionSkip(ThisHotkey) {
 }
 ; 返回上级菜单
 ActionBack(ThisHotkey) {
+    Send "{v Down}"
     Send "{ESC Down}"
     USleep(50)
+    Send "{v Up}"
     Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
@@ -295,11 +310,115 @@ ActionCollectCollectibles(ThisHotkey){
     DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 
+; -- 卫戍协议 --
+; 查看敌人
+ActionCheckEnemies(ThisHotkey) {
+    Send "{w Down}"
+    USleep(50)
+    Send "{w Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 调度中心
+ActionDispatchCenter(ThisHotkey) {
+    Send "{a Down}"
+    USleep(50)
+    Send "{a Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 冻结
+ActionFreeze(ThisHotkey) {
+    Send "{s Down}"
+    USleep(50)
+    Send "{s Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 刷新
+ActionRefresh(ThisHotkey) {
+    Send "{d Down}"
+    USleep(50)
+    Send "{d Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 升级
+ActionUpgrade(ThisHotkey) {
+    Send "{g Down}"
+    USleep(50)
+    Send "{g Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 出售
+ActionSell(ThisHotkey) {
+    Send "{x Down}"
+    USleep(50)
+    Send "{x Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 准备就绪
+ActionReady(ThisHotkey) {
+    Send "{c Down}"
+    USleep(50)
+    Send "{c Up}"
+    if InStr(ThisHotkey, "Wheel")
+        return
+    PureKeyWait(ThisHotkey)
+}
+; 一键出售
+ActionOneClickSell(ThisHotkey) {
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    Send "{LButton Down}"
+    Send "{LButton Up}"
+    USleep(State.ClickDelay)
+    Send "{X Down}"
+    USleep(50)
+    Send "{X Up}"
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
+; 一键购买
+ActionOneClickPurchase(ThisHotkey) {
+    oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    Send "{LButton Down}"
+    Send "{LButton Up}"
+    USleep(State.ClickDelay)
+    Send "{LButton Down}"
+    Send "{LButton Up}"
+    if InStr(ThisHotkey, "Wheel") {
+        DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
+
 ; == 工具函数 ==
 ; 高精度延迟
 USleep(delay_ms) {
-    if (delay_ms < 0)
-        delay_ms := 0
+    if (delay_ms <= 0)
+        return
     static freq := 0
     if (freq = 0)
         DllCall("QueryPerformanceFrequency", "Int64*", &freq)
