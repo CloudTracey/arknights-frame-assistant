@@ -22,7 +22,7 @@ class Constants {
         "OneClickRetreat", "一键撤退",
         "PauseSkill", "暂停技能",
         "PauseRetreat", "暂停撤退",
-        ; 快捷功能
+        ; 快捷操作
         "LButtonClick", "左键点击",
         "CeaseOperations", "放弃行动",
         "Skip", "跳过招募动画/剧情",
@@ -88,7 +88,7 @@ class Config {
         "OneClickRetreat", "q",
         "PauseSkill", "XButton2",
         "PauseRetreat", "XButton1",
-        ; 快捷功能
+        ; 快捷操作
         "LButtonClick", "z",
         "CeaseOperations", "",
         "Skip", "",

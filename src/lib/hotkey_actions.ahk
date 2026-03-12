@@ -189,7 +189,7 @@ ActionPauseRetreat(ThisHotkey) {
     DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 
-; -- 快捷功能 --
+; -- 快捷操作 --
 ; 模拟鼠标左键点击
 ActionLButtonClick(ThisHotkey) {
     oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")

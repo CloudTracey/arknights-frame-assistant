@@ -25,11 +25,11 @@ class GuiManager {
 
     ; 存储不同标签页的控件
     static KeybindControls := []      ; 常规作战相关控件
-    static QuickControls := [] ; 快捷功能相关控件
+    static QuickControls := [] ; 快捷操作相关控件
     static StrongHoldProtocolControls := [] ; 卫戍协议相关控件
     static OtherSettingsControls := [] ; 其他设置相关控件
     static TxtKeybind := ""           ; "常规作战"标签文本
-    static TxtQuick := ""             ; "快捷功能"标签文本
+    static TxtQuick := ""             ; "快捷操作"标签文本
     static TxtStrongHoldProtocol := ""  ; "卫戍协议"标签文本
     static TxtOther := ""             ; "其他设置"标签文本
     static CurrentTab := ""    ; 当前显示的标签页
@@ -94,7 +94,7 @@ class GuiManager {
         this.MainGui.SetFont("s9")
         this.TxtKeybind := this.MainGui.Add("Text", "x0 y5 h20 w" this.TabWidth " Center Section c1994d2", "常规作战")
         TabKeybind := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
-        this.TxtQuick := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "快捷功能")
+        this.TxtQuick := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "快捷操作")
         TabQuick := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
         this.TxtStrongHoldProtocol := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", "卫戍协议")
         TabStrongHoldProtocol := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
@@ -183,8 +183,8 @@ class GuiManager {
         ; 空白占位
         this.MainGui.Add("Text", "xm y+15 w1 h1")
 
-        ; -- 快捷功能 --
-        ; 快捷功能 - 左列
+        ; -- 快捷操作 --
+        ; 快捷操作 - 左列
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
         this.QuickControls.Push(this.MainGui["QuickLeftGroup"])
 
@@ -192,7 +192,7 @@ class GuiManager {
         this.QuickControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
         this.QuickControls.Push(AddBindRow("基建快速收取", "Harvest")*)
         
-        ; 快捷功能 - 右列
+        ; 快捷操作 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vQuickRightGroup", "")
         this.QuickControls.Push(this.MainGui["QuickRightGroup"])
         
@@ -203,7 +203,7 @@ class GuiManager {
         placeholderQuick := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.QuickControls.Push(placeholderQuick)
 
-        ; 快捷功能提示语
+        ; 快捷操作提示语
         this.MainGui.SetFont("s9 c1994d2")
         hintQuick1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
         hintQuick2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", " ** 为避免冲突，切换到此页面时“卫戍协议”按键将被禁用 ** ")
@@ -241,7 +241,7 @@ class GuiManager {
         ; 卫戍协议提示语
         this.MainGui.SetFont("s9 c1994d2")
         hintStrongHoldProtocol1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的卫戍协议按键为默认设置，点击输入框修改按键，使用【BACKSPACE】清除按键")
-        hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", " ** 为避免冲突，切换到此页面时“常规作战”、“快捷功能”将被禁用 ** ")
+        hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", " ** 为避免冲突，切换到此页面时“常规作战”、“快捷操作”将被禁用 ** ")
         this.MainGui.SetFont("s9 cDefault")
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol1)
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
@@ -503,7 +503,7 @@ class GuiManager {
             this._ShowControls(this.KeybindControls)
         }
 
-        ; 切换到快捷功能页
+        ; 切换到快捷操作页
         else if (tabName = "quick") {
             ; 更新标签样式
             this.TxtKeybind.SetFont("cDefault")  ; 默认色
@@ -520,7 +520,7 @@ class GuiManager {
             this.TxtQuick.GetPos(&x)
             this.TabIndicator.Move(x, 23)
             
-            ; 显示快捷功能控件
+            ; 显示快捷操作控件
             this._ShowControls(this.QuickControls)
         }
 
