@@ -115,7 +115,7 @@ ActionOneClickSkill(ThisHotkey) {
     }
     Send "{RButton Down}"
     Send "{RButton Up}"
-    USleep(State.SkillAndRetreatDelay)
+    USleep(State.ClickDelay)
     Send "{e Down}"
     USleep(50)
     Send "{e Up}"
@@ -135,7 +135,7 @@ ActionOneClickRetreat(ThisHotkey) {
     }
     Send "{RButton Down}"
     Send "{RButton Up}"
-    USleep(State.SkillAndRetreatDelay)
+    USleep(State.ClickDelay)
     Send "{q Down}"
     USleep(50)
     Send "{q Up}"
@@ -158,7 +158,7 @@ ActionPauseSkill(ThisHotkey) {
     Send "{RButton Down}"
     Send "{RButton Up}"
     Send "{ESC Down}"
-    USleep(State.SkillAndRetreatDelay)
+    USleep(State.ClickDelay)
     Send "{e Down}"
     USleep(50)
     Send "{e Up}"
@@ -183,7 +183,7 @@ ActionPauseRetreat(ThisHotkey) {
     Send "{RButton Down}"
     Send "{RButton Up}"
     Send "{ESC Down}"
-    USleep(State.SkillAndRetreatDelay)
+    USleep(State.ClickDelay)
     Send "{q Down}"
     USleep(50)
     Send "{q Up}"
@@ -383,7 +383,7 @@ ActionOneClickSell(ThisHotkey) {
     }
     Send "{LButton Down}"
     Send "{LButton Up}"
-    USleep(State.SkillAndRetreatDelay)
+    USleep(State.ClickDelay)
     Send "{X Down}"
     USleep(50)
     Send "{X Up}"
@@ -403,7 +403,7 @@ ActionOneClickPurchase(ThisHotkey) {
     }
     Send "{LButton Down}"
     Send "{LButton Up}"
-    USleep(40)
+    USleep(State.ClickDelay)
     Send "{LButton Down}"
     Send "{LButton Up}"
     if InStr(ThisHotkey, "Wheel") {

@@ -11,7 +11,7 @@ class GuiManager {
     static BtnApply := ""
     static BtnCancel := ""
     static GuiFrame := ""
-    static SkillAndRetreatDelay := ""
+    static ClickDelay := ""
     static SwitchHotkey := ""
     static IsModified := false
     static IsOnStrongHoldProtocol := false
@@ -313,16 +313,16 @@ class GuiManager {
         sepCustomTxt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  自定义设置  ")
         this.OtherSettingsControls.Push(sepCustom)
         this.OtherSettingsControls.Push(sepCustomTxt)
-        ; 技能和撤退点击延迟设置
-        txtSkillAndRetreatDelay := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10 Section", "技能和撤退点击延迟")
-        this.SkillAndRetreatDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vSkillAndRetreatDelay Number", Config.GetCustom("SkillAndRetreatDelay"))
-        this.SkillAndRetreatDelay.OnEvent("Change", (*) => this.SetIsModifiedTrue())
-        updownSkillAndRetreatDelay := this.MainGui.Add("UpDown", ,Config.GetCustom("SkillAndRetreatDelay"))
-        hintSkillAndRetreatDelay := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中单位到按下【技能】【撤退】【出售】的时长，单位为毫秒")
-        this.OtherSettingsControls.Push(txtSkillAndRetreatDelay)
-        this.OtherSettingsControls.Push(this.SkillAndRetreatDelay)
-        this.OtherSettingsControls.Push(updownSkillAndRetreatDelay)
-        this.OtherSettingsControls.Push(hintSkillAndRetreatDelay)
+        ; 点击延迟设置
+        txtClickDelay := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10 Section", "点击延迟")
+        this.ClickDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vClickDelay Number", Config.GetCustom("ClickDelay"))
+        this.ClickDelay.OnEvent("Change", (*) => this.SetIsModifiedTrue())
+        updownClickDelay := this.MainGui.Add("UpDown", ,Config.GetCustom("ClickDelay"))
+        hintClickDelay := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中单位到按下【技能】【撤退】【出售】和【一键购买】双击的间隔，单位为毫秒")
+        this.OtherSettingsControls.Push(txtClickDelay)
+        this.OtherSettingsControls.Push(this.ClickDelay)
+        this.OtherSettingsControls.Push(updownClickDelay)
+        this.OtherSettingsControls.Push(hintClickDelay)
         ; 启用/禁用热键快捷键
         txtSwitchHotkey := this.MainGui.Add("Text", "x" this.GuiXMargin " y+16 Right +0x200", "启用/禁用热键快捷键") 
         this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom("SwitchHotkey"))

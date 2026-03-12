@@ -61,7 +61,7 @@ class Constants {
 
     ; 自定义设置名称映射
     static CustomNames := Map(
-        "SkillAndRetreatDelay", "技能和撤退点击延迟",
+        "ClickDelay", "点击延迟",
         "SwitchHotkey", "启用/禁用热键"
     )
 }
@@ -129,7 +129,7 @@ class Config {
 
     ; 内部：默认自定义设置
     static _DefaultCustom := Map(
-        "SkillAndRetreatDelay", "50",
+        "ClickDelay", "50",
         "SwitchHotkey", ""
     )
     
@@ -399,8 +399,8 @@ class State {
     ; 当前延迟值
     static CurrentDelay := 11.3  ; 默认120帧
 
-    ; 技能和撤退点击延迟
-    static SkillAndRetreatDelay := 50  ; 默认50ms
+    ; 点击延迟
+    static ClickDelay := 50  ; 默认50ms
     
     ; GUI窗口名称
     static GuiWindowName := ""
@@ -418,8 +418,8 @@ class State {
     }
 
     ; 根据设置更新技能与撤退点击延迟
-    static UpdateSkillAndRetreatDelay() {
-        this.SkillAndRetreatDelay := Config.GetCustom("SkillAndRetreatDelay")
+    static UpdateClickDelay() {
+        this.ClickDelay := Config.GetCustom("ClickDelay")
     }
 }
 

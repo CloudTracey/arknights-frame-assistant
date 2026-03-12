@@ -260,7 +260,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
     ; -- 如果点的是 Edit 控件 --
     if (KeyBinder.ControlObj && KeyBinder.ControlObj.Type == "Edit") {
         ; 排除非按键绑定输入框
-        if (KeyBinder.ControlObj.Name == "GitHubToken" || KeyBinder.ControlObj.Name == "GamePath" || KeyBinder.ControlObj.Name == "SkillAndRetreatDelay") {
+        if (KeyBinder.ControlObj.Name == "GitHubToken" || KeyBinder.ControlObj.Name == "GamePath" || KeyBinder.ControlObj.Name == "ClickDelay") {
             return
         }
         ; 若为首次点击Edit控件

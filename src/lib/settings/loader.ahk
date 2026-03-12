@@ -5,6 +5,6 @@ class Loader {
     static LoadSettings() {
         Config.LoadFromIni()
         State.UpdateDelay()
-        State.UpdateSkillAndRetreatDelay()
+        State.UpdateClickDelay()
     }
 }
