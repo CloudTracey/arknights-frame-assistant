@@ -55,7 +55,8 @@ class Constants {
         "GitHubToken", "GitHub Token",
         "GamePath", "游戏路径",
         "AutoRunGame", "随小助手自动启动明日方舟",
-        "DismissedChangelogVersion", "已忽略公告版本"
+        "DismissedChangelogVersion", "已忽略公告版本",
+        "DefaultStrongHoldProtocol", "默认启动卫戍协议模式"
     )
 
     ; 自定义设置名称映射
@@ -122,7 +123,8 @@ class Config {
         "GamePath", "",
         "AutoRunGame", "0",
         "LastLaunchedVersion", "",
-        "DismissedChangelogVersion", ""
+        "DismissedChangelogVersion", "",
+        "DefaultStrongHoldProtocol", "0"
     )
 
     ; 内部：默认自定义设置

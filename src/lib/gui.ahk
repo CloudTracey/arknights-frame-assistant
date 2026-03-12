@@ -15,6 +15,7 @@ class GuiManager {
     static SwitchHotkey := ""
     static IsModified := false
     static IsOnStrongHoldProtocol := false
+    static DefaultTab := ""
     
     ; 窗口尺寸常量
     static GuiWidth := 720
@@ -60,7 +61,11 @@ class GuiManager {
         this._SubscribeEvents()
 
         ; 初始化标签页
-        this.SwitchTab("keyBind")
+        if (Config.GetImportant("DefaultStrongHoldProtocol") == "1")
+            this.DefaultTab := "strongHoldProtocol"
+        else
+            this.DefaultTab := "keyBind"
+        this.SwitchTab(this.DefaultTab)
         
         ; 设置托盘菜单
         A_IconTip := "AFA`n热键已启用"
@@ -163,26 +168,6 @@ class GuiManager {
         this.MainGui.SetFont("s9 cDefault")
         this.KeybindControls.Push(hintFrame2)
 
-        ; -- 底部按钮 --
-        BtnMargin := 15
-        BtnX_DefaultHotkeys := 30
-        BtnX_Save := this.GuiWidth - (this.BtnW * 3) - BtnMargin * 2 - BtnX_DefaultHotkeys
-        BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - BtnX_DefaultHotkeys
-        BtnX_Cancel := this.GuiWidth - this.BtnW - BtnX_DefaultHotkeys
-        
-        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键相关标签下显示
-        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
-        
-        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
-        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
-        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
-        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
-        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
-        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
-
-        ; 空白占位
-        this.MainGui.Add("Text", "xm y+15 w1 h1")
-
         ; -- 快捷操作 --
         ; 快捷操作 - 左列
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
@@ -263,6 +248,11 @@ class GuiManager {
         checkboxAutoOpenSettings.OnEvent("Click", (*) => this.SetIsModifiedTrue())
         this.MainGui["AutoOpenSettings"].Value := Config.GetImportant("AutoOpenSettings")
         this.OtherSettingsControls.Push(checkboxAutoOpenSettings)
+        ; 默认启动卫戍协议模式
+        checkboxDefaultStrongHoldProtocol := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vDefaultStrongHoldProtocol", " 默认启动卫戍协议模式")
+        checkboxDefaultStrongHoldProtocol.OnEvent("Click", (*) => this.SetIsModifiedTrue())
+        this.MainGui["DefaultStrongHoldProtocol"].Value := Config.GetImportant("DefaultStrongHoldProtocol")
+        this.OtherSettingsControls.Push(checkboxDefaultStrongHoldProtocol)
         ; 自动启动游戏
         checkboxAutoRunGame := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoRunGame", " 同时启动明日方舟")
         checkboxAutoRunGame.OnEvent("Click", (*) => this.SetIsModifiedTrue())
@@ -332,6 +322,26 @@ class GuiManager {
         this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom("SwitchHotkey"))
         this.OtherSettingsControls.Push(txtSwitchHotkey)
         this.OtherSettingsControls.Push(this.SwitchHotkey)
+        
+        ; -- 底部按钮 --
+        BtnMargin := 15
+        BtnX_DefaultHotkeys := 30
+        BtnX_Save := this.GuiWidth - (this.BtnW * 3) - BtnMargin * 2 - BtnX_DefaultHotkeys
+        BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - BtnX_DefaultHotkeys
+        BtnX_Cancel := this.GuiWidth - this.BtnW - BtnX_DefaultHotkeys
+        
+        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键相关标签下显示
+        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
+        
+        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default", "保存并关闭")
+        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
+        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default", "应用设置")
+        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
+        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
+        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
+
+        ; 空白占位
+        this.MainGui.Add("Text", "xm y+15 w1 h1")
     }
     
     ; 内部：更新热键控件值（从配置）
