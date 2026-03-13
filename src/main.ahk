@@ -61,6 +61,7 @@ if not A_IsAdmin
 
 ; 加载设置
 Loader.LoadSettings()
+HotkeyController.HotkeyOn()
 
 ; 包含更新公告模块
 #Include ./lib/changelog/changelog.ahk

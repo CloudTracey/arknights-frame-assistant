@@ -157,11 +157,11 @@ class HotkeyController {
                 } else {
                     if (hotkeyValue ~= "i)\b(E|Q|F|G|V|W|A|S|D|G|X|C|RButton|MButton|Space|Escape|Tab)\b$") {
                         Hotkey(hotkeyValue, callback, "On")
-                        this.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
+                        HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
                     }
                     else {
                         Hotkey("~" hotkeyValue, callback, "On")
-                        this.ActiveHotkeys.Set("~" hotkeyValue, "~" hotkeyValue)
+                        HotkeyController.ActiveHotkeys.Set("~" hotkeyValue, "~" hotkeyValue)
                     }
                 }
             }

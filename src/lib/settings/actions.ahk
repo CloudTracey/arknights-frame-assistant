@@ -18,7 +18,7 @@ HandleSettingsReset(*) {
         Saver.SettingsIniWrite()
         Loader.LoadSettings()
         if(HotkeyController.HotkeyState == true) {
-            EventBus.Publish("HotkeyOn")
+            HotkeyController.EnableByTab(GuiManager.LastActiveTab)
         }
         EventBus.Publish("SetSwitchKey")
         ; 清除GUI的已修改状态
@@ -33,7 +33,7 @@ HandleSettingsSave(*) {
     Saver.SettingsIniWrite()
     Loader.LoadSettings()
     if(HotkeyController.HotkeyState == true) {
-        EventBus.Publish("HotkeyOn")
+        HotkeyController.EnableByTab(GuiManager.LastActiveTab)
     }
     EventBus.Publish("SetSwitchKey")
     Saver.ResetGameStateIfNeeded()
@@ -50,7 +50,7 @@ HandleSettingsApply(*) {
     Saver.SettingsIniWrite()
     Loader.LoadSettings()
     if(HotkeyController.HotkeyState == true) {
-        EventBus.Publish("HotkeyOn")
+        HotkeyController.EnableByTab(GuiManager.LastActiveTab)
     }
     EventBus.Publish("SetSwitchKey")
     Saver.ResetGameStateIfNeeded()
