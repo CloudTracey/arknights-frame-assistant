@@ -403,7 +403,7 @@ ActionOneClickPurchase(ThisHotkey) {
     }
     Send "{LButton Down}"
     Send "{LButton Up}"
-    USleep(State.ClickDelay)
+    USleep(60)
     Send "{LButton Down}"
     Send "{LButton Up}"
     if InStr(ThisHotkey, "Wheel") {
