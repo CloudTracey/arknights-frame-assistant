@@ -210,7 +210,7 @@ class HotkeyController {
         if(HotkeyController.HotkeyState == false) {
             HotkeyController.HotkeyState := true
             ; 根据最后选中的标签页启用对应热键组
-            this.EnableByTab(GuiManager.LastActiveTab)
+            HotkeyController.EnableByTab(GuiManager.LastActiveTab)
             if (GuiManager.LastActiveTab == "strongHoldProtocol")
                 GuiManager.IsOnStrongHoldProtocol := true
             TrayTip
