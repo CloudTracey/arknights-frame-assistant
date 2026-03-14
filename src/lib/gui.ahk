@@ -218,10 +218,10 @@ class GuiManager {
         this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolRightGroup"])
         
         this.StrongHoldProtocolControls.Push(AddBindRow("升级", "Upgrade")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("出售", "Sell")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("出售/销毁", "Sell")*)
         this.StrongHoldProtocolControls.Push(AddBindRow("单位撤退", "StrongHoldProtocolRetreat")*)
         this.StrongHoldProtocolControls.Push(AddBindRow("一键撤退", "StrongHoldProtocolOneClickRetreat")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("一键出售", "OneClickSell")*)
+        this.StrongHoldProtocolControls.Push(AddBindRow("一键出售/销毁", "OneClickSell")*)
         this.StrongHoldProtocolControls.Push(AddBindRow("一键购买", "OneClickPurchase")*)
 
         ; 空白占位
@@ -318,7 +318,7 @@ class GuiManager {
         this.ClickDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vClickDelay Number", Config.GetCustom("ClickDelay"))
         this.ClickDelay.OnEvent("Change", (*) => this.SetIsModifiedTrue())
         updownClickDelay := this.MainGui.Add("UpDown", ,Config.GetCustom("ClickDelay"))
-        hintClickDelay := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中单位到按下【技能】【撤退】【出售】和【一键购买】双击的间隔，单位为毫秒")
+        hintClickDelay := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中单位到按下【技能】【撤退】【出售】的间隔，单位为毫秒，太短点击会失灵")
         this.OtherSettingsControls.Push(txtClickDelay)
         this.OtherSettingsControls.Push(this.ClickDelay)
         this.OtherSettingsControls.Push(updownClickDelay)
