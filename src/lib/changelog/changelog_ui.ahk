@@ -20,20 +20,20 @@ class ChangelogUI {
 
         ; 临时通知
         this.GuiObj.SetFont("s10", "Microsoft YaHei UI")
-        this.GuiObj.Add("Text", "y+10 w600 Center cff4646", "3月10日游戏版本更新后可能需要去游戏设置里重置一下按键")
+        this.GuiObj.Add("Text", "y+10 w600 Center cff4646", "！使用前可能需要去游戏设置里重置一下按键！")
         
         this.GuiObj.SetFont("s9", "Microsoft YaHei UI")
-        this.GuiObj.Add("Text", "w600 h1 Backgroundd0d0d0 y+15")
+        ; this.GuiObj.Add("Text", "w600 h1 Backgroundd0d0d0 y+15")
         
         this._AddSection("新功能", content.newFeatures, "c1994d2")
         this._AddSection("改进", content.improvements, "cFFA500")
         this._AddSection("问题修复", content.bugFixes, "cFF6B6B")
         
-        this.GuiObj.Add("Text", "x" this.GuiObj.MarginX " w600 h1 Backgroundd0d0d0 y+15")
+        ; this.GuiObj.Add("Text", "x" this.GuiObj.MarginX " w600 h1 Backgroundd0d0d0 y+15")
         
         chkDontShowAgain := this.GuiObj.Add("Checkbox", "xs y+30", "直到下次更新前不再弹出")
         
-        btnConfirm := this.GuiObj.Add("Button", "x275 yp-6 w100 Default", "确定")
+        btnConfirm := this.GuiObj.Add("Button", "x275 yp-12 w100 Default", "确定")
         btnConfirm.OnEvent("Click", (*) => this._OnConfirm(chkDontShowAgain))
         
         this.GuiObj.OnEvent("Close", (*) => this._OnConfirm(chkDontShowAgain))

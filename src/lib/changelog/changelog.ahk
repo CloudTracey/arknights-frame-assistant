@@ -7,10 +7,10 @@ class ChangelogData {
                 
             ],
             improvements: [
-                "将卫戍协议的出售和销毁整合为同一个功能"
+                "微调了更新公告的窗口结构"
             ],
             bugFixes: [
-                "修复了部分文本错误"
+                "修正了部分文本错误"
             ]
         }
     )
