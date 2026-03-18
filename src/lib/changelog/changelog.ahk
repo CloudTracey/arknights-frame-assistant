@@ -7,10 +7,10 @@ class ChangelogData {
                 
             ],
             improvements: [
-                "微调了更新公告的窗口结构"
+                
             ],
             bugFixes: [
-                "修正了部分文本错误"
+                "尝试修复出售和一键出售在部分设备上失效的问题"
             ]
         }
     )
