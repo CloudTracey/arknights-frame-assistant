@@ -123,7 +123,7 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("按下暂停", "PressPause")*)
         this.KeybindControls.Push(AddBindRow("松开暂停", "ReleasePause")*)
         this.KeybindControls.Push(AddBindRow("切换倍速", "GameSpeed")*)
-        this.KeybindControls.Push(AddBindRow("暂停选中", "PauseSelect")*)
+        this.KeybindControls.Push(AddBindRow("暂停时选中", "PauseSelect")*)
         this.KeybindControls.Push(AddBindRow("单位技能", "Skill")*)
         this.KeybindControls.Push(AddBindRow("单位撤退", "Retreat")*)
         
