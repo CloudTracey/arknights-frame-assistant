@@ -156,7 +156,7 @@ class GuiManager {
 
         ; 游戏内帧率设置
         txtFrame := this.MainGui.Add("Text", "x45 y+20 w90 Right", "游戏内帧率")
-        this.GuiFrame := this.MainGui.Add("DropDownList", "x+20 y+-18 w120 vFrame AltSubmit", ["30", "60", "120"])
+        this.GuiFrame := this.MainGui.Add("DropDownList", "x+20 y+-18 w120 vFrame", ["30", "60", "90", "120", "144", "165", "240"])
         this.GuiFrame.OnEvent("Change", (*) => this.SetIsModifiedTrue())
         this.MainGui["Frame"].Value := Config.GetImportant("Frame")
         this.NotOtherControls.Push(txtFrame)

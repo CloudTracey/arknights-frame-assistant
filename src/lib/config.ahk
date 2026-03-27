@@ -3,10 +3,14 @@
 ; -- 常量定义 --
 class Constants {
     ; 延迟常量
-    static DelayA := 34      ; 30帧
-    static DelayB := 17      ; 60帧  
-    static DelayC := 9      ; 120帧
-    
+    static Delay30 := 34      ; 30帧
+    static Delay60 := 17      ; 60帧  
+    static Delay90 := 12      ; 90帧
+    static Delay120 := 9      ; 120帧
+    static Delay144 := 7      ; 144帧  
+    static Delay165 := 7      ; 165帧
+    static Delay240 := 5      ; 240帧
+
     ; 按键名称映射
     static KeyNames := Map(
         ; 常规作战
@@ -409,11 +413,19 @@ class State {
     static UpdateDelay() {
         frame := Config.GetImportant("Frame")
         if (frame == "1") {
-            this.CurrentDelay := Constants.DelayA
+            this.CurrentDelay := Constants.Delay30
         } else if (frame == "2") {
-            this.CurrentDelay := Constants.DelayB
-        } else {
-            this.CurrentDelay := Constants.DelayC
+            this.CurrentDelay := Constants.Delay60
+        } else if (frame == "3") {
+            this.CurrentDelay := Constants.Delay90
+        } else if (frame == "4") {
+            this.CurrentDelay := Constants.Delay120
+        } else if (frame == "5") {
+            this.CurrentDelay := Constants.Delay144
+        } else if (frame == "6") {
+            this.CurrentDelay := Constants.Delay165
+        } else if (frame == "7") {
+            this.CurrentDelay := Constants.Delay240
         }
     }
 
