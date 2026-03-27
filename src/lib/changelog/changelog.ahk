@@ -7,10 +7,10 @@ class ChangelogData {
                 
             ],
             improvements: [
-                
+                "“游戏内帧率”选项增加了更多帧率的适配"
             ],
             bugFixes: [
-                "尝试修复出售和一键出售在部分设备上失效的问题"
+                "修复了在较老版本系统中调用DPI感知相关API时报错的问题"
             ]
         }
     )

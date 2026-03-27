@@ -17,10 +17,6 @@ class ChangelogUI {
         
         this.GuiObj.SetFont("s16 bold", "Microsoft YaHei UI")
         this.GuiObj.Add("Text", "y10 w600 Center", "AFA " version " 版本更新公告")
-
-        ; 临时通知
-        this.GuiObj.SetFont("s10", "Microsoft YaHei UI")
-        this.GuiObj.Add("Text", "y+10 w600 Center cff4646", "！使用前可能需要去游戏设置里重置一下按键！")
         
         this.GuiObj.SetFont("s9", "Microsoft YaHei UI")
         ; this.GuiObj.Add("Text", "w600 h1 Backgroundd0d0d0 y+15")
