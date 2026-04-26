@@ -11,7 +11,7 @@ class VersionChecker {
     static CacheFile := ""
     
     ; 超时设置（毫秒）
-    static TimeoutMs := 10000
+    static TimeoutMs := 5000
     
     ; 是否启用调试日志（根据版本号判断，alpha版本启用）
     static DebugMode := false
@@ -88,9 +88,8 @@ class VersionChecker {
     ; 返回: {http, error} - error非空表示创建失败
     static _CreateHttpRequest(url, token := "") {
         try {
-            http := ComObject("WinHttp.WinHttpRequest.5.1")
-            http.SetTimeouts(this.TimeoutMs, this.TimeoutMs, this.TimeoutMs, this.TimeoutMs)
-            http.Open("GET", url, false)
+            http := ComObject("MSXML2.ServerXMLHTTP.6.0")
+            http.Open("GET", url, true)
             http.SetRequestHeader("Accept", "application/vnd.github.v3+json")
             http.SetRequestHeader("User-Agent", "ArknightsFrameAssistant/" Version.Get())
             if (token != "")
@@ -164,6 +163,17 @@ class VersionChecker {
             }
             
             req.http.Send()
+            tokenStart := A_TickCount
+            Loop {
+                Sleep(50)
+                if (req.http.readyState >= 4)
+                    break
+                if (A_TickCount - tokenStart > this.TimeoutMs) {
+                    try req.http.Abort()
+                    this._Log("Token验证超时")
+                    return {valid: false, message: "请求超时，请检查网络连接", username: "", rateLimit: ""}
+                }
+            }
             resp := this._GetResponseInfo(req.http)
             rateInfo := this._GetRateLimitInfo(req.http)
             
@@ -338,6 +348,17 @@ class VersionChecker {
             
             this._Log("发送请求...")
             req.http.Send()
+            checkStart := A_TickCount
+            Loop {
+                Sleep(50)
+                if (req.http.readyState >= 4)
+                    break
+                if (A_TickCount - checkStart > this.TimeoutMs) {
+                    try req.http.Abort()
+                    this._Log("版本检查超时")
+                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "请求超时，请检查网络连接"}
+                }
+            }
             this._Log("请求已发送，等待响应...")
             
             resp := this._GetResponseInfo(req.http)
