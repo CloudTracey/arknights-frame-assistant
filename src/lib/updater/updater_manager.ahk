@@ -124,6 +124,7 @@ class Updater {
             downloadUrl: params.downloadUrl,
             localVersion: params.localVersion,
             remoteVersion: params.remoteVersion,
+            onProgress: (data) => UpdateUI.UpdateDownloadProgress(data),
             onComplete: (result) => this.HandleDownloadSuccess(result),
             onError: (error) => this.HandleDownloadFailure(error, params, retryCount),
             onCancel: (info) => this.HandleDownloadCancelComplete()

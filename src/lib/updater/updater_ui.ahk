@@ -14,6 +14,10 @@ class UpdateUI {
     ; 下载对话框实例
     static DownloadingDialog := ""
     static DownloadingCancelBtn := ""
+    static DownloadingProgressBar := ""
+    static DownloadingSpeedText := ""
+    static DownloadingRemainingText := ""
+    static DownloadingSizeText := ""
     
     ; 显示更新提示对话框（支持忽略此版本）
     ; params: 包含以下字段的对象
@@ -125,7 +129,7 @@ class UpdateUI {
         }
     }
     
-    ; 显示正在下载的提示（带取消按钮）
+    ; 显示正在下载的提示（带取消按钮和进度条）
     ; retryCount: 重试次数（0表示首次下载，1+表示重试）
     static ShowDownloadingDialog(retryCount := 0) {
         ; 关闭已存在的下载对话框
@@ -148,23 +152,29 @@ class UpdateUI {
         }
         
         ; 添加文本
-        this.DownloadingDialog.Add("Text", "x20 y20 w300 Center vDownloadText", message)
+        this.DownloadingDialog.Add("Text", "x20 y15 w300 Center vDownloadText", message)
+        ; 进度条
+        this.DownloadingProgressBar := this.DownloadingDialog.Add("Progress", "x20 y+8 w300 h20 Range0-1000 vProgressBar")
+        ; 速度文本
+        this.DownloadingSpeedText := this.DownloadingDialog.Add("Text", "x20 y+5 w300 Center c6b6b6b vSpeedText", "")
+        ; 剩余时间文本
+        this.DownloadingRemainingText := this.DownloadingDialog.Add("Text", "x20 y+0 w300 Center c6b6b6b vRemainingText", "")
+        ; 已下载文本
+        this.DownloadingSizeText := this.DownloadingDialog.Add("Text", "x20 y+0 w300 Center c6b6b6b vSizeText", "")
 
-        ; 添加手动下载渠道
+        ; 添加手动下载和取消按钮
         manualBtnW := 80
         manualBtnH := 26
         padding := 70
-        manualBtnY := 60
-        ; 手动下载按钮 - 左下角
-        manualBtn := this.DownloadingDialog.Add("Button", "x" padding " y" manualBtnY " w" manualBtnW " h" manualBtnH, "手动下载(&M)")
-        manualBtn.OnEvent("Click", (*) => EventBus.Publish("OnManualDownload"))
-        ; 取消下载按钮 - 右下角
         cancelBtnX := 340 - padding - manualBtnW
-        this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " y" manualBtnY " w" manualBtnW " h" manualBtnH, "取消下载(&C)")
+        
+        manualBtn := this.DownloadingDialog.Add("Button", "x" padding " y+15 w" manualBtnW " h" manualBtnH, "手动下载(&M)")
+        manualBtn.OnEvent("Click", (*) => EventBus.Publish("OnManualDownload"))
+        this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " yp w" manualBtnW " h" manualBtnH, "取消下载(&C)")
         this.DownloadingCancelBtn.OnEvent("Click", (*) => this.OnDownloadCancel())
 
         ; 显示对话框（非模态，不阻塞）
-        this.DownloadingDialog.Show("w340 h110 Center")
+        this.DownloadingDialog.Show("w340 h190 Center")
     }
     
     ; 手动下载按钮点击事件
@@ -196,6 +206,58 @@ class UpdateUI {
             try this.DownloadingDialog.Destroy()
             this.DownloadingDialog := ""
             this.DownloadingCancelBtn := ""
+            this.DownloadingProgressBar := ""
+            this.DownloadingSpeedText := ""
+            this.DownloadingRemainingText := ""
+            this.DownloadingSizeText := ""
+        }
+    }
+    
+    ; 更新下载进度显示
+    ; data: {total, loaded, speed} — total为0时表示未知大小
+    static UpdateDownloadProgress(data) {
+        if (this.DownloadingDialog = "")
+            return
+        
+        total := data.total
+        loaded := data.loaded
+        speedBytes := data.speed
+        
+        ; 更新进度条 (Range0-1000，支持0.1%精度)
+        try {
+            if (total > 0) {
+                percentage := loaded * 1000 / total
+                this.DownloadingProgressBar.Value := Max(1, Min(percentage, 1000))
+            }
+        }
+        
+        ; 更新速度文本
+        try {
+            speedText := "下载速度: " FormatSpeed(speedBytes)
+            this.DownloadingSpeedText.Value := speedText
+        }
+        
+        ; 更新剩余时间
+        try {
+            if (total > 0 && loaded < total && speedBytes > 0) {
+                remainingSeconds := (total - loaded) / speedBytes
+                remainingText := "预计剩余: " FormatDuration(remainingSeconds)
+            } else if (loaded > 0) {
+                remainingText := "预计剩余: 计算中..."
+            } else {
+                remainingText := ""
+            }
+            this.DownloadingRemainingText.Value := remainingText
+        }
+        
+        ; 更新大小文本
+        try {
+            if (total > 0) {
+                sizeText := "已下载: " FormatSize(loaded) " / " FormatSize(total)
+            } else {
+                sizeText := "已下载: " FormatSize(loaded)
+            }
+            this.DownloadingSizeText.Value := sizeText
         }
     }
     
@@ -225,3 +287,42 @@ class UpdateUI {
 
 ; 初始化更新UI
 UpdateUI.Init()
+
+; 格式化文件大小
+FormatSize(bytes) {
+    if (bytes < 1024)
+        return bytes " B"
+    else if (bytes < 1048576)
+        return Format("{:.1f}", bytes / 1024) " KB"
+    else if (bytes < 1073741824)
+        return Format("{:.2f}", bytes / 1048576) " MB"
+    else
+        return Format("{:.2f}", bytes / 1073741824) " GB"
+}
+
+; 格式化下载速度
+FormatSpeed(bytesPerSec) {
+    if (bytesPerSec < 1024)
+        return Format("{:.0f}", bytesPerSec) " B/s"
+    else if (bytesPerSec < 1048576)
+        return Format("{:.1f}", bytesPerSec / 1024) " KB/s"
+    else
+        return Format("{:.2f}", bytesPerSec / 1048576) " MB/s"
+}
+
+; 格式化剩余时间（秒）
+FormatDuration(totalSeconds) {
+    totalSeconds := Integer(totalSeconds)
+    if (totalSeconds < 0)
+        return "计算中..."
+    if (totalSeconds < 60)
+        return totalSeconds "s"
+    if (totalSeconds < 3600) {
+        minutes := totalSeconds // 60
+        secs := Mod(totalSeconds, 60)
+        return minutes "m " secs "s"
+    }
+    hours := totalSeconds // 3600
+    minutes := Mod(totalSeconds, 60) // 60
+    return hours "h " minutes "m"
+}
