@@ -99,6 +99,7 @@ class UpdateDownloader {
         try {
             http := ComObject("MSXML2.ServerXMLHTTP.6.0")
             this.CurrentHttp := http
+            http.SetProxy(0)
             http.Open("HEAD", this.DownloadUrl, true)
             http.Send()
             
@@ -154,6 +155,7 @@ class UpdateDownloader {
             try {
                 http := ComObject("MSXML2.ServerXMLHTTP.6.0")
                 this.CurrentHttp := http
+                http.SetProxy(0)
                 http.Open("GET", this.DownloadUrl, true)
                 http.SetRequestHeader("User-Agent", "ArknightsFrameAssistant/" Version.Get())
                 http.Send()
@@ -224,6 +226,7 @@ class UpdateDownloader {
         try {
             http := ComObject("MSXML2.ServerXMLHTTP.6.0")
             this.CurrentHttp := http
+            http.SetProxy(0)
             http.Open("GET", this.DownloadUrl, true)
             http.SetRequestHeader("Range", "bytes=" rangeStart "-" rangeEnd)
             http.Send()

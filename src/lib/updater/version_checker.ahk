@@ -89,6 +89,7 @@ class VersionChecker {
     static _CreateHttpRequest(url, token := "") {
         try {
             http := ComObject("MSXML2.ServerXMLHTTP.6.0")
+            http.SetProxy(0)
             http.Open("GET", url, true)
             http.SetRequestHeader("Accept", "application/vnd.github.v3+json")
             http.SetRequestHeader("User-Agent", "ArknightsFrameAssistant/" Version.Get())
