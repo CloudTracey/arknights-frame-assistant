@@ -77,6 +77,8 @@ class UpdateUI {
         
         ; 显示对话框
         this.UpdateDialog.Show("w" dialogW " h170 Center")
+        ; 修复启动时多owned窗口堆叠导致的渲染异常
+        DllCall("RedrawWindow", "ptr", hWnd, "ptr", 0, "ptr", 0, "uint", 0x0103)
     }
     
     ; 点击"是"按钮

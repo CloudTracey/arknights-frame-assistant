@@ -31,14 +31,18 @@ class UpdateDownloader {
     static LastProgressTime := 0
     ; 标记是否正在下载（防止重复取消）
     static IsDownloading := false
-    ; 超时常量（毫秒）
-    static HeadTimeout := 10000
-    static ChunkTimeout := 10000
-    static FullTimeout := 5000
+    ; 超时常量
+    static HeadTimeout := 30000
+    static ChunkMaxTimeout := 120000
+    static FullMaxTimeout := 120000
+    static StallTimeout := 15000
+    static ConnStallTimeout := 10000
     ; 分块重试
     static ChunkRetries := 0
     static MaxChunkRetries := 3
     static ChunkRetryDelay := 2000
+    ; 上次分块完成时间（用于停滞检测）
+    static LastChunkTime := 0
     
     ; 取消当前下载
     static Cancel() {
@@ -69,6 +73,7 @@ class UpdateDownloader {
         this.LastProgressTime := 0
         this.IsDownloading := false
         this.ChunkRetries := 0
+        this.LastChunkTime := 0
     }
     
     ; 下载文件
@@ -103,16 +108,30 @@ class UpdateDownloader {
             http.Open("HEAD", this.DownloadUrl, true)
             http.Send()
             
-            ; 轮询等待响应，自带超时
+            ; 轮询等待响应，基于无数据活动的停滞检测
             headStart := A_TickCount
+            lastState := 0
+            stallStart := A_TickCount
             Loop {
                 if (this.IsCancelled) {
                     this._Cleanup()
                     this._FireCancel()
                     return
                 }
-                if (http.readyState >= 4)
+                rs := http.readyState
+                if (rs >= 4)
                     break
+                ; readyState有变化 → 重置停滞计时
+                if (rs != lastState) {
+                    lastState := rs
+                    stallStart := A_TickCount
+                }
+                ; 连接阶段停滞（readyState<3）超过 ConnStallTimeout
+                if (rs < 3 && A_TickCount - stallStart > this.ConnStallTimeout) {
+                    try http.Abort()
+                    throw Error("HEAD请求连接超时")
+                }
+                ; 绝对超时安全网
                 if (A_TickCount - headStart > this.HeadTimeout) {
                     try http.Abort()
                     throw Error("HEAD请求超时")
@@ -160,17 +179,28 @@ class UpdateDownloader {
                 http.SetRequestHeader("User-Agent", "ArknightsFrameAssistant/" Version.Get())
                 http.Send()
                 
-                ; 轮询等待完成，自带超时
+                ; 轮询等待完成，基于无数据活动的停滞检测
                 fullStart := A_TickCount
+                lastState := 0
+                stallStart := A_TickCount
                 Loop {
                     if (this.IsCancelled) {
                         this._Cleanup()
                         this._FireCancel()
                         return
                     }
-                    if (http.readyState >= 4)
+                    rs := http.readyState
+                    if (rs >= 4)
                         break
-                    if (A_TickCount - fullStart > this.FullTimeout) {
+                    if (rs != lastState) {
+                        lastState := rs
+                        stallStart := A_TickCount
+                    }
+                    if (rs < 3 && A_TickCount - stallStart > this.ConnStallTimeout) {
+                        try http.Abort()
+                        throw Error("下载请求连接超时")
+                    }
+                    if (A_TickCount - fullStart > this.FullMaxTimeout) {
                         try http.Abort()
                         throw Error("下载请求超时")
                     }
@@ -220,6 +250,13 @@ class UpdateDownloader {
             return
         }
         
+        ; 分块间停滞检测：非首块时，若长时间无分块完成则判停滞
+        if (this.ChunkIndex > 0 && this.LastChunkTime > 0 && A_TickCount - this.LastChunkTime > this.StallTimeout) {
+            this._Cleanup()
+            this._HandleErrorObj(Error("下载停滞：" (this.StallTimeout // 1000) "秒无新数据"))
+            return
+        }
+        
         rangeStart := this.ChunkIndex * this.ChunkSize
         rangeEnd := Min((this.ChunkIndex + 1) * this.ChunkSize - 1, this.TotalBytes - 1)
         
@@ -231,17 +268,36 @@ class UpdateDownloader {
             http.SetRequestHeader("Range", "bytes=" rangeStart "-" rangeEnd)
             http.Send()
             
-            ; 异步轮询等待，每50ms让出消息泵使GUI保持响应，自带超时
+            ; 异步轮询等待，基于无数据活动的停滞检测
             chunkStart := A_TickCount
+            lastState := 0
+            stallStart := A_TickCount
             Loop {
                 if (this.IsCancelled) {
                     this._Cleanup()
                     this._FireCancel()
                     return
                 }
-                if (http.readyState >= 4)
+                rs := http.readyState
+                if (rs >= 4)
                     break
-                if (A_TickCount - chunkStart > this.ChunkTimeout) {
+                ; readyState有变化 → 数据传输中，重置停滞计时
+                if (rs != lastState) {
+                    lastState := rs
+                    stallStart := A_TickCount
+                }
+                ; 连接阶段停滞（readyState<3）超过 ConnStallTimeout
+                if (rs < 3 && A_TickCount - stallStart > this.ConnStallTimeout) {
+                    try http.Abort()
+                    throw Error("下载分块连接超时")
+                }
+                ; 接收阶段停滞（readyState>=3）超过 StallTimeout — 数据流中断
+                if (rs >= 3 && A_TickCount - stallStart > this.StallTimeout) {
+                    try http.Abort()
+                    throw Error("下载分块数据停滞")
+                }
+                ; 绝对超时安全网
+                if (A_TickCount - chunkStart > this.ChunkMaxTimeout) {
                     try http.Abort()
                     throw Error("下载分块超时")
                 }
@@ -281,6 +337,7 @@ class UpdateDownloader {
             this.LoadedBytes := rangeStart + actualBytes
             this.ChunkIndex += 1
             this.ChunkRetries := 0
+            this.LastChunkTime := A_TickCount
             this._ReportProgress()
             
             SetTimer(() => UpdateDownloader._DownloadNextChunk(), -10)
