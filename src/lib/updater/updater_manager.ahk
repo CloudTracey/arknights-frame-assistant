@@ -53,6 +53,7 @@ class Updater {
         }
         
         ; 执行版本检查
+        EventBus.Publish("CheckUpdateStart")
         checkResult := VersionChecker.Check()
         
         ; 处理检查结果
@@ -72,6 +73,7 @@ class Updater {
                 lastDismissed := Config.GetImportant("LastDismissedVersion")
                 if (!isManual && lastDismissed == checkResult.remoteVersion) {
                     ; 自动检查时，如果该版本已被忽略，则跳过
+                    EventBus.Publish("CheckUpdateComplete")
                     return
                 }
                 
@@ -105,6 +107,7 @@ class Updater {
                     UpdateUI.ShowCheckFailedDialog(checkResult.message)
                 }
         }
+        EventBus.Publish("CheckUpdateComplete")
     }
     
     ; 带重试的下载
@@ -121,6 +124,7 @@ class Updater {
             downloadUrl: params.downloadUrl,
             localVersion: params.localVersion,
             remoteVersion: params.remoteVersion,
+            onProgress: (data) => UpdateUI.UpdateDownloadProgress(data),
             onComplete: (result) => this.HandleDownloadSuccess(result),
             onError: (error) => this.HandleDownloadFailure(error, params, retryCount),
             onCancel: (info) => this.HandleDownloadCancelComplete()
