@@ -31,6 +31,8 @@ class UpdateDownloader {
     static LastProgressTime := 0
     ; 标记是否正在下载（防止重复取消）
     static IsDownloading := false
+    ; 进度定时器回调（绑定为静态引用以正确停止）
+    static ProgressTimer := ObjBindMethod(UpdateDownloader, "_ReportProgress")
     ; 超时常量
     static HeadTimeout := 30000
     static ChunkMaxTimeout := 120000
@@ -412,12 +414,12 @@ class UpdateDownloader {
     
     ; 启动进度刷新计时器（200ms间隔，独立于分块完成）
     static _StartProgressTimer() {
-        SetTimer(() => UpdateDownloader._ReportProgress(), 200)
+        SetTimer(this.ProgressTimer, 200)
     }
     
     ; 停止进度刷新计时器
     static _StopProgressTimer() {
-        SetTimer(() => UpdateDownloader._ReportProgress(), 0)
+        SetTimer(this.ProgressTimer, 0)
     }
     
     ; 内部：触发完成回调
