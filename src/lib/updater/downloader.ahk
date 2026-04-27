@@ -94,6 +94,9 @@ class UpdateDownloader {
         if (params.HasProp("onCancel"))
             this.OnCancel := params.onCancel
         
+        ; 启动定期进度刷新（200ms间隔，速度实时更新）
+        this._StartProgressTimer()
+        
         ; 生成临时文件路径
         tempDir := A_Temp "\ArknightsFrameAssistant"
         if !DirExist(tempDir)
@@ -376,6 +379,7 @@ class UpdateDownloader {
             }
             
             this.IsDownloading := false
+            this._StopProgressTimer()
             this._FireComplete()
         } catch Error as e {
             this._Cleanup()
@@ -394,21 +398,26 @@ class UpdateDownloader {
     
     ; 内部：报告进度
     static _ReportProgress() {
-        now := A_TickCount
-        if (now - this.LastProgressTime < 100)
-            return
-        this.LastProgressTime := now
-        
         if (this.OnProgress = "" || !(Type(this.OnProgress) = "Func" || Type(this.OnProgress) = "Closure"))
             return
         
-        elapsed := Max((now - this.StartTime) / 1000, 0.001)
+        elapsed := Max((A_TickCount - this.StartTime) / 1000, 0.001)
         speed := this.LoadedBytes / elapsed
         this.OnProgress.Call({
             total: this.TotalBytes,
             loaded: this.LoadedBytes,
             speed: speed
         })
+    }
+    
+    ; 启动进度刷新计时器（200ms间隔，独立于分块完成）
+    static _StartProgressTimer() {
+        SetTimer(() => UpdateDownloader._ReportProgress(), 200)
+    }
+    
+    ; 停止进度刷新计时器
+    static _StopProgressTimer() {
+        SetTimer(() => UpdateDownloader._ReportProgress(), 0)
     }
     
     ; 内部：触发完成回调
@@ -447,6 +456,7 @@ class UpdateDownloader {
     
     ; 内部：清理资源
     static _Cleanup() {
+        this._StopProgressTimer()
         if (this.MasterStream != "") {
             try this.MasterStream.Close()
             this.MasterStream := ""
