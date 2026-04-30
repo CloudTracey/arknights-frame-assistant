@@ -94,12 +94,10 @@ class Updater {
             case "token_invalid":
                 if (isManual) {
                     ; Token无效，引导用户重新配置
-                    result := MessageBox.Confirm(checkResult.message "`n`n是否现在修改Token设置？", "Token无效")
-                    if (result = "Yes") {
-                        ; 重置Token验证状态
-                        VersionChecker.TokenValidated := false
-                        GuiManager.Show()
-                    }
+                    result := MessageBox.Info(checkResult.message)
+                    ; 重置Token验证状态
+                    VersionChecker.TokenValidated := false
+                    GuiManager.Show()
                 }
             
             case "check_failed":
@@ -215,7 +213,7 @@ class Updater {
         Config.SaveAllToIni()
         
         ; 显示提示
-        MessageBox.Info("已忽略版本 " data.remoteVersion " 的更新提示。`n`n下次检查更新时将不再提示此版本。", "已忽略")
+        MessageBox.Info("已忽略版本 " data.remoteVersion " 的更新提示。`n`n下次自动检查更新时将不再提示此版本。", "已忽略")
     }
     
     ; 显示更新对话框
