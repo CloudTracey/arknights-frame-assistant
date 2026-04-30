@@ -283,6 +283,13 @@ class GuiManager {
         sepUpdateTxt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  更新设置  ")
         this.OtherSettingsControls.Push(sepUpdate)
         this.OtherSettingsControls.Push(sepUpdateTxt)
+        ; 更新渠道
+        txtUpdateChannel := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10", "更新渠道")
+        dropdownUpdateChannel := this.MainGui.Add("DropDownList", "x+10 yp-2 w120 vUpdateChannel AltSubmit", ["正式版", "测试版"])
+        dropdownUpdateChannel.OnEvent("Change", (*) => this.SetIsModifiedTrue())
+        dropdownUpdateChannel.Value := Config.GetImportant("UpdateChannel")
+        this.OtherSettingsControls.Push(txtUpdateChannel)
+        this.OtherSettingsControls.Push(dropdownUpdateChannel)
         ; 自动检查更新
         checkboxAutoUpdate := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoUpdate", " 自动检查更新")
         checkboxAutoUpdate.OnEvent("Click", (*) => this.SetIsModifiedTrue())
