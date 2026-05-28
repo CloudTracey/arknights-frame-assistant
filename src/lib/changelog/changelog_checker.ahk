@@ -70,7 +70,7 @@ class ChangelogChecker {
             for i, entry in bodies {
                 if (i > 1)
                     result .= "`r`n`r`n---`r`n`r`n"
-                result .= VersionChecker._UnescapeJsonString(entry.body)
+                result .= "## " entry.tag_name "`r`n`r`n" VersionChecker._UnescapeJsonString(entry.body)
             }
             return result
         } catch {

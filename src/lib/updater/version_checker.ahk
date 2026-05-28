@@ -697,7 +697,7 @@ class VersionChecker {
         for i, release in newerReleases {
             if (i > 1)
                 body .= "`r`n`r`n---`r`n`r`n"
-            body .= release.body
+            body .= "## " release.tag_name "`r`n`r`n" release.body
         }
         return body
     }
