@@ -41,17 +41,17 @@ class ChangelogChecker {
                 tagName := tagMatch[1]
                 bodyStart := pos + StrLen(tagMatch[0])
 
-                ; 提取发布日期
-                publishedAt := ""
-                if (RegExMatch(content, '"published_at"\s*:\s*"([^"]*)"', &dateMatch, bodyStart)) {
-                    publishedAt := SubStr(dateMatch[1], 1, 10)
-                }
-
                 ; 在 tag_name 之后找到 body
                 q := Chr(34)
                 bodyPattern := q "body" q "\s*:\s*" q "((?:[^" q "\\]|\\.)*)" q
                 if (RegExMatch(content, bodyPattern, &bodyMatch, bodyStart)) {
-                    bodies.Push({tag_name: tagName, published_at: publishedAt, body: bodyMatch[1]})
+                    ; 提取日期
+                    date := ""
+                    datePattern := q "date" q "\s*:\s*" q "([^" q "]*)" q
+                    if (RegExMatch(content, datePattern, &dateMatch, bodyStart))
+                        date := dateMatch[1]
+
+                    bodies.Push({tag_name: tagName, body: bodyMatch[1], date: date})
                 }
 
                 pos := bodyStart
@@ -74,10 +74,12 @@ class ChangelogChecker {
             ; 拼接 body，反转义 JSON 转义
             result := ""
             for i, entry in bodies {
+                unescapedBody := VersionChecker._UnescapeJsonString(entry.body)
+                dateHeaderPattern := "m)^## (\d{4}-\d{2}-\d{2})"
+                cleanBody := RegExReplace(unescapedBody, dateHeaderPattern, "## " entry.tag_name " ($1)")
                 if (i > 1)
                     result .= "`r`n`r`n---`r`n`r`n"
-                dateStr := (entry.published_at != "") ? (" - " entry.published_at) : ""
-                result .= "## " entry.tag_name dateStr "`r`n`r`n" VersionChecker._UnescapeJsonString(entry.body)
+                result .= cleanBody
             }
             return result
         } catch {
