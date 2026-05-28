@@ -703,7 +703,8 @@ class VersionChecker {
         for i, release in newerReleases {
             if (i > 1)
                 body .= "`r`n`r`n---`r`n`r`n"
-            body .= "## " release.tag_name " - " release.published_at "`r`n`r`n" release.body
+            dateStr := (release.published_at != "") ? (" - " release.published_at) : ""
+            body .= "## " release.tag_name dateStr "`r`n`r`n" release.body
         }
         return body
     }

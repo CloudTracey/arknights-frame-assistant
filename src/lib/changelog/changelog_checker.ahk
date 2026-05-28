@@ -76,7 +76,8 @@ class ChangelogChecker {
             for i, entry in bodies {
                 if (i > 1)
                     result .= "`r`n`r`n---`r`n`r`n"
-                result .= "## " entry.tag_name " - " entry.published_at "`r`n`r`n" VersionChecker._UnescapeJsonString(entry.body)
+                dateStr := (entry.published_at != "") ? (" - " entry.published_at) : ""
+                result .= "## " entry.tag_name dateStr "`r`n`r`n" VersionChecker._UnescapeJsonString(entry.body)
             }
             return result
         } catch {
