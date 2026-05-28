@@ -531,8 +531,10 @@ class VersionChecker {
                 Sleep(50)
                 if (req.http.readyState >= 4)
                     break
-                if (A_TickCount - start > this.TimeoutMs)
+                if (A_TickCount - start > this.TimeoutMs) {
+                    try req.http.Abort()
                     return []
+                }
             }
 
             resp := this._GetResponseInfo(req.http)
