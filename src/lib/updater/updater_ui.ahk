@@ -26,21 +26,19 @@ class UpdateUI {
     ;   - downloadUrl: 下载链接
     ;   - isManual: 是否是手动检查（影响提示内容）
     static ShowUpdateDialog(params) {
-        ; 如果对话框已存在，先销毁旧的
         if (this.UpdateDialog != "") {
             this.UpdateDialog.Destroy()
             this.UpdateDialog := ""
             this.UpdateDialogParams := ""
         }
-        
+
         localVersion := params.localVersion
         remoteVersion := params.remoteVersion
         isManual := params.HasProp("isManual") ? params.isManual : false
-        
-        ; 保存参数供按钮事件使用
+        changelogBody := params.HasProp("changelogBody") ? params.changelogBody : ""
+
         this.UpdateDialogParams := params
-        
-        ; 创建自定义GUI对话框
+
         title := "发现新版本"
         this.UpdateDialog := Gui(, title)
         this.UpdateDialog.Opt("+Owner")
@@ -48,36 +46,37 @@ class UpdateUI {
         this.UpdateDialog.SetFont("s9", "Microsoft YaHei UI")
         hWnd := this.UpdateDialog.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
-        
-        
-        ; 添加图标和消息文本
+
         if (isManual) {
             message := "当前版本: " localVersion "`n最新版本: " remoteVersion "`n`n是否立即更新？"
         } else {
             message := "检测到新版本可用！`n当前版本: " localVersion "`n最新版本: " remoteVersion "`n`n是否立即更新？"
         }
-        this.UpdateDialog.Add("Text", "x60 y20 w320", message)
-        
-        ; 计算按钮位置
-        btnW := 100
-        btnH := 28
-        dialogW := 400
-        startX := (dialogW - (btnW * 3 + 20)) // 2
-        btnY := 120
-        
-        ; 添加三个按钮
+        this.UpdateDialog.Add("Text", "x20 y15 w360", message)
+
+        btnW := 100, btnH := 28, dialogW := 400
+
+        if (changelogBody != "") {
+            ; 有更新内容时显示 Edit 控件
+            editControl := this.UpdateDialog.Add("Edit", "x20 y+10 w360 h200 ReadOnly +VScroll", changelogBody)
+            startX := (dialogW - (btnW * 3 + 20)) // 2
+            btnY := 290
+            dialogH := 350
+        } else {
+            startX := (dialogW - (btnW * 3 + 20)) // 2
+            btnY := 120
+            dialogH := 170
+        }
+
         btnYes := this.UpdateDialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", "是(&Y)")
         btnNo := this.UpdateDialog.Add("Button", "x" (startX + btnW + 10) " y" btnY " w" btnW " h" btnH, "否(&N)")
         btnIgnore := this.UpdateDialog.Add("Button", "x" (startX + (btnW + 10) * 2) " y" btnY " w" btnW " h" btnH, "忽略此版本(&I)")
-        
-        ; 绑定按钮事件
+
         btnYes.OnEvent("Click", (*) => this.OnUpdateYes())
         btnNo.OnEvent("Click", (*) => this.OnUpdateNo())
         btnIgnore.OnEvent("Click", (*) => this.OnUpdateIgnore())
-        
-        ; 显示对话框
-        this.UpdateDialog.Show("w" dialogW " h170 Center")
-        ; 修复启动时多owned窗口堆叠导致的渲染异常
+
+        this.UpdateDialog.Show("w" dialogW " h" dialogH " Center")
         DllCall("RedrawWindow", "ptr", hWnd, "ptr", 0, "ptr", 0, "uint", 0x0103)
     }
     
