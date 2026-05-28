@@ -4,9 +4,9 @@ class ChangelogUI {
     static GuiObj := ""
     static CurrentVersion := ""
 
-    static Show(version, content) {
+    static Show(version, body) {
         this.CurrentVersion := version
-        
+
         this.GuiObj := Gui("+AlwaysOnTop", "更新公告")
         this.GuiObj.MarginX := 25
         this.GuiObj.MarginY := 20
@@ -14,40 +14,22 @@ class ChangelogUI {
         this.GuiObj.Opt("+Owner")
         hWnd := this.GuiObj.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
-        
+
         this.GuiObj.SetFont("s16 bold", "Microsoft YaHei UI")
         this.GuiObj.Add("Text", "y10 w600 Center", "AFA " version " 版本更新公告")
-        
-        this.GuiObj.SetFont("s9", "Microsoft YaHei UI")
-        ; this.GuiObj.Add("Text", "w600 h1 Backgroundd0d0d0 y+15")
-        
-        this._AddSection("新功能", content.newFeatures, "c1994d2")
-        this._AddSection("改进", content.improvements, "cFFA500")
-        this._AddSection("问题修复", content.bugFixes, "cFF6B6B")
-        
-        ; this.GuiObj.Add("Text", "x" this.GuiObj.MarginX " w600 h1 Backgroundd0d0d0 y+15")
-        
-        chkDontShowAgain := this.GuiObj.Add("Checkbox", "xs y+30", "直到下次更新前不再弹出")
-        
-        btnConfirm := this.GuiObj.Add("Button", "x275 yp-12 w100 Default", "确定")
-        btnConfirm.OnEvent("Click", (*) => this._OnConfirm(chkDontShowAgain))
-        
-        this.GuiObj.OnEvent("Close", (*) => this._OnConfirm(chkDontShowAgain))
-        
-        this.GuiObj.Show()
-    }
 
-    static _AddSection(title, items, color) {
-        if items.Length = 0
-            return
-        
-        this.GuiObj.SetFont("s14 bold", "Microsoft YaHei UI")
-        this.GuiObj.Add("Text", "x" this.GuiObj.MarginX " y+15 w450 Section", title)
-        
+        ; Edit 控件显示 Markdown 原文
         this.GuiObj.SetFont("s10 Norm", "Microsoft YaHei UI")
-        for item in items {
-            this.GuiObj.Add("Text", "xs+15 y+10 w570", "• " item)
-        }
+        this.GuiObj.Add("Edit", "xs y+15 w600 h350 ReadOnly +VScroll", body)
+
+        chkDontShowAgain := this.GuiObj.Add("Checkbox", "xs y+15", "直到下次更新前不再弹出")
+
+        btnConfirm := this.GuiObj.Add("Button", "x475 yp-12 w100 Default", "确定")
+        btnConfirm.OnEvent("Click", (*) => this._OnConfirm(chkDontShowAgain))
+
+        this.GuiObj.OnEvent("Close", (*) => this._OnConfirm(chkDontShowAgain))
+
+        this.GuiObj.Show()
     }
 
     static _OnConfirm(chkBox) {
