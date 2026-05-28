@@ -588,7 +588,13 @@ class VersionChecker {
                 body := this._UnescapeJsonString(bodyMatch[1])
             }
 
-            releases.Push({tag_name: tagName, prerelease: prerelease, downloadUrl: downloadUrl, body: body})
+            ; 提取发布日期（仅取 YYYY-MM-DD 部分）
+            publishedAt := ""
+            if (RegExMatch(searchStr, '"published_at"\s*:\s*"([^"]*)"', &dateMatch)) {
+                publishedAt := SubStr(dateMatch[1], 1, 10)
+            }
+
+            releases.Push({tag_name: tagName, prerelease: prerelease, downloadUrl: downloadUrl, body: body, published_at: publishedAt})
             pos := tagEnd
         }
         
@@ -655,7 +661,7 @@ class VersionChecker {
                 if (firstAdded)
                     json .= ","
                 escapedBody := this._EscapeJsonString(release.body)
-                json .= '{"tag_name":"' release.tag_name '","body":"' escapedBody '"}'
+                json .= '{"tag_name":"' release.tag_name '","published_at":"' release.published_at '","body":"' escapedBody '"}'
                 firstAdded := true
             }
             json .= ']}'
@@ -697,7 +703,7 @@ class VersionChecker {
         for i, release in newerReleases {
             if (i > 1)
                 body .= "`r`n`r`n---`r`n`r`n"
-            body .= "## " release.tag_name "`r`n`r`n" release.body
+            body .= "## " release.tag_name " - " release.published_at "`r`n`r`n" release.body
         }
         return body
     }

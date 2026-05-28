@@ -41,11 +41,17 @@ class ChangelogChecker {
                 tagName := tagMatch[1]
                 bodyStart := pos + StrLen(tagMatch[0])
 
+                ; 提取发布日期
+                publishedAt := ""
+                if (RegExMatch(content, '"published_at"\s*:\s*"([^"]*)"', &dateMatch, bodyStart)) {
+                    publishedAt := SubStr(dateMatch[1], 1, 10)
+                }
+
                 ; 在 tag_name 之后找到 body
                 q := Chr(34)
                 bodyPattern := q "body" q "\s*:\s*" q "((?:[^" q "\\]|\\.)*)" q
                 if (RegExMatch(content, bodyPattern, &bodyMatch, bodyStart)) {
-                    bodies.Push({tag_name: tagName, body: bodyMatch[1]})
+                    bodies.Push({tag_name: tagName, published_at: publishedAt, body: bodyMatch[1]})
                 }
 
                 pos := bodyStart
@@ -70,7 +76,7 @@ class ChangelogChecker {
             for i, entry in bodies {
                 if (i > 1)
                     result .= "`r`n`r`n---`r`n`r`n"
-                result .= "## " entry.tag_name "`r`n`r`n" VersionChecker._UnescapeJsonString(entry.body)
+                result .= "## " entry.tag_name " - " entry.published_at "`r`n`r`n" VersionChecker._UnescapeJsonString(entry.body)
             }
             return result
         } catch {
