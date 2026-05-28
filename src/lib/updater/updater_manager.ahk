@@ -82,7 +82,8 @@ class Updater {
                     localVersion: checkResult.localVersion,
                     remoteVersion: checkResult.remoteVersion,
                     downloadUrl: checkResult.downloadUrl,
-                    isManual: isManual
+                    isManual: isManual,
+                    changelogBody: checkResult.HasProp("changelogBody") ? checkResult.changelogBody : ""
                 })
             
             case "rate_limited":
