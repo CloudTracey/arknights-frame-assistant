@@ -259,6 +259,11 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
         KeyBinder.ControlObj := ""
     ; -- 如果点的是 Edit 控件 --
     if (KeyBinder.ControlObj && KeyBinder.ControlObj.Type == "Edit") {
+        ; 仅处理设置窗口内的 Edit 控件，排除更新弹窗、更新公告弹窗等
+        try {
+            if (KeyBinder.ControlObj.Gui.Hwnd != GuiManager.MainGui.Hwnd)
+                return
+        }
         ; 排除非按键绑定输入框
         if (KeyBinder.ControlObj.Name == "GitHubToken" || KeyBinder.ControlObj.Name == "GamePath" || KeyBinder.ControlObj.Name == "ClickDelay") {
             return
