@@ -16,15 +16,15 @@ class ChangelogUI {
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
 
         this.GuiObj.SetFont("s16 bold", "Microsoft YaHei UI")
-        this.GuiObj.Add("Text", "y10 w600 Center", "AFA版本更新公告")
+        this.GuiObj.Add("Text", "y10 w450 Center", "AFA版本更新公告")
 
         ; Edit 控件显示 Markdown 原文
         this.GuiObj.SetFont("s10 Norm", "Microsoft YaHei UI")
-        this.GuiObj.Add("Edit", "xs y+15 w600 h350 ReadOnly +VScroll", body)
+        this.GuiObj.Add("Edit", "xs y+15 w450 h350 ReadOnly +VScroll", body)
 
-        chkDontShowAgain := this.GuiObj.Add("Checkbox", "xs y+15", "直到下次更新前不再弹出")
+        chkDontShowAgain := this.GuiObj.Add("Checkbox", "xs y+20", "直到下次更新前不再弹出")
 
-        btnConfirm := this.GuiObj.Add("Button", "x475 yp-12 w100 Default", "确定")
+        btnConfirm := this.GuiObj.Add("Button", "x375 yp-12 w100 Default", "确定")
         btnConfirm.OnEvent("Click", (*) => this._OnConfirm(chkDontShowAgain))
 
         this.GuiObj.OnEvent("Close", (*) => this._OnConfirm(chkDontShowAgain))
