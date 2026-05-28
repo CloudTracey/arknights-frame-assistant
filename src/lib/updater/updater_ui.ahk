@@ -58,25 +58,30 @@ class UpdateUI {
 
         if (changelogBody != "") {
             ; 有更新内容时显示 Edit 控件
-            editControl := this.UpdateDialog.Add("Edit", "x20 y+10 w360 h200 ReadOnly +VScroll", changelogBody)
-            startX := (dialogW - (btnW * 3 + 20)) // 2
-            btnY := 290
-            dialogH := 350
+            this.UpdateDialog.Add("Edit", "x20 y+10 w360 h200 ReadOnly +VScroll", changelogBody)
+            startX := 20
+            btnGap := 30
+            btnY := 320
+            dialogH := 360
         } else {
-            startX := (dialogW - (btnW * 3 + 20)) // 2
+            btnGap := 10
+            startX := (dialogW - (btnW * 3 + btnGap * 2)) // 2
             btnY := 120
             dialogH := 170
         }
 
         btnYes := this.UpdateDialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", "是(&Y)")
-        btnNo := this.UpdateDialog.Add("Button", "x" (startX + btnW + 10) " y" btnY " w" btnW " h" btnH, "否(&N)")
-        btnIgnore := this.UpdateDialog.Add("Button", "x" (startX + (btnW + 10) * 2) " y" btnY " w" btnW " h" btnH, "忽略此版本(&I)")
+        btnNo := this.UpdateDialog.Add("Button", "x" (startX + btnW + btnGap) " y" btnY " w" btnW " h" btnH, "否(&N)")
+        btnIgnore := this.UpdateDialog.Add("Button", "x" (startX + (btnW + btnGap) * 2) " y" btnY " w" btnW " h" btnH, "忽略此版本(&I)")
 
         btnYes.OnEvent("Click", (*) => this.OnUpdateYes())
         btnNo.OnEvent("Click", (*) => this.OnUpdateNo())
         btnIgnore.OnEvent("Click", (*) => this.OnUpdateIgnore())
 
         this.UpdateDialog.Show("w" dialogW " h" dialogH " Center")
+        
+        btnYes.Focus
+
         DllCall("RedrawWindow", "ptr", hWnd, "ptr", 0, "ptr", 0, "uint", 0x0103)
     }
     
