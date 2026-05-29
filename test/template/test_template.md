@@ -9,7 +9,7 @@
 
 | 项目 | 信息 |
 |------|------|
-| AutoHotkey 版本 | `[AHK版本]` |
+| AutoHotkey 版本 | `v2.0.26` |
 | Windows 版本 | `[Win版本]` |
 | 测试日期 | `[YYYY-MM-DD]` |
 
