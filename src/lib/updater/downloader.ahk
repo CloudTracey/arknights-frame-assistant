@@ -47,7 +47,13 @@ class UpdateDownloader {
     static LastChunkTime := 0
     ; 复用的HTTP对象（避免每块新建COM对象）
     static ChunkHttp := ""
-    
+
+    ; 使分块HTTP对象失效（同时清理ChunkHttp和CurrentHttp，避免Abort后残留）
+    static _InvalidateChunkHttp() {
+        this.ChunkHttp := ""
+        this.CurrentHttp := ""
+    }
+
     ; 取消当前下载
     static Cancel() {
         this.IsCancelled := true
@@ -59,7 +65,6 @@ class UpdateDownloader {
     ; 重置状态
     static ResetCancel() {
         this.IsCancelled := false
-        this.CurrentHttp := ""
         this.MasterStream := ""
         this.TempFile := ""
         this.TotalBytes := 0
@@ -78,7 +83,7 @@ class UpdateDownloader {
         this.IsDownloading := false
         this.ChunkRetries := 0
         this.LastChunkTime := 0
-        this.ChunkHttp := ""
+        this._InvalidateChunkHttp()
     }
     
     ; 下载文件
@@ -299,17 +304,17 @@ class UpdateDownloader {
                 }
                 if (rs < 3 && A_TickCount - stallStart > this.ConnStallTimeout) {
                     try http.Abort()
-                    this.ChunkHttp := ""
+                    this._InvalidateChunkHttp()
                     throw Error("下载分块连接超时")
                 }
                 if (rs >= 3 && A_TickCount - stallStart > this.StallTimeout) {
                     try http.Abort()
-                    this.ChunkHttp := ""
+                    this._InvalidateChunkHttp()
                     throw Error("下载分块数据停滞")
                 }
                 if (A_TickCount - chunkStart > this.ChunkMaxTimeout) {
                     try http.Abort()
-                    this.ChunkHttp := ""
+                    this._InvalidateChunkHttp()
                     throw Error("下载分块超时")
                 }
                 Sleep(25)
@@ -362,7 +367,7 @@ class UpdateDownloader {
             ; 分块级重试：仅重试当前块，保留已下载数据
             if (this.ChunkRetries < this.MaxChunkRetries) {
                 this.ChunkRetries += 1
-                this.ChunkHttp := ""  ; 重建COM对象，避免Abort后状态残留
+                this._InvalidateChunkHttp()  ; 重建COM对象，避免Abort后状态残留
                 Sleep(this.ChunkRetryDelay)
                 SetTimer(() => UpdateDownloader._DownloadNextChunk(), -10)
                 return
@@ -470,8 +475,7 @@ class UpdateDownloader {
             try this.MasterStream.Close()
             this.MasterStream := ""
         }
-        this.CurrentHttp := ""
-        this.ChunkHttp := ""
+        this._InvalidateChunkHttp()
         this.IsDownloading := false
         
         if (this.IsCancelled && FileExist(this.TempFile)) {
