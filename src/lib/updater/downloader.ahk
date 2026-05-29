@@ -45,6 +45,8 @@ class UpdateDownloader {
     static ChunkRetryDelay := 2000
     ; 上次分块完成时间（用于停滞检测）
     static LastChunkTime := 0
+    ; 复用的HTTP对象（避免每块新建COM对象）
+    static ChunkHttp := ""
     
     ; 取消当前下载
     static Cancel() {
@@ -76,6 +78,7 @@ class UpdateDownloader {
         this.IsDownloading := false
         this.ChunkRetries := 0
         this.LastChunkTime := 0
+        this.ChunkHttp := ""
     }
     
     ; 下载文件
@@ -168,8 +171,8 @@ class UpdateDownloader {
         
         if (this.TotalBytes > 0) {
             ; 分块下载
-            ; 动态分块大小：目标约50次进度更新，最小16KB，最大512KB
-            this.ChunkSize := Max(16384, Min(524288, this.TotalBytes // 100))
+            ; 动态分块大小：目标约4次进度更新，最小256KB，最大10MB
+            this.ChunkSize := Max(262144, Min(10485760, this.TotalBytes // 4))
             this.TotalChunks := Ceil(this.TotalBytes / this.ChunkSize)
             this.ChunkIndex := 0
             this.LoadedBytes := 0
@@ -266,14 +269,18 @@ class UpdateDownloader {
         rangeEnd := Min((this.ChunkIndex + 1) * this.ChunkSize - 1, this.TotalBytes - 1)
         
         try {
-            http := ComObject("MSXML2.ServerXMLHTTP.6.0")
+            ; 复用COM对象，避免每块新建连接的开销
+            if (this.ChunkHttp = "") {
+                this.ChunkHttp := ComObject("MSXML2.ServerXMLHTTP.6.0")
+            }
+            http := this.ChunkHttp
             this.CurrentHttp := http
             http.SetProxy(0)
             http.Open("GET", this.DownloadUrl, true)
             http.SetRequestHeader("Range", "bytes=" rangeStart "-" rangeEnd)
             http.Send()
-            
-            ; 异步轮询等待，基于无数据活动的停滞检测
+
+            ; 异步轮询等待
             chunkStart := A_TickCount
             lastState := 0
             stallStart := A_TickCount
@@ -286,39 +293,38 @@ class UpdateDownloader {
                 rs := http.readyState
                 if (rs >= 4)
                     break
-                ; readyState有变化 → 数据传输中，重置停滞计时
                 if (rs != lastState) {
                     lastState := rs
                     stallStart := A_TickCount
                 }
-                ; 连接阶段停滞（readyState<3）超过 ConnStallTimeout
                 if (rs < 3 && A_TickCount - stallStart > this.ConnStallTimeout) {
                     try http.Abort()
+                    this.ChunkHttp := ""
                     throw Error("下载分块连接超时")
                 }
-                ; 接收阶段停滞（readyState>=3）超过 StallTimeout — 数据流中断
                 if (rs >= 3 && A_TickCount - stallStart > this.StallTimeout) {
                     try http.Abort()
+                    this.ChunkHttp := ""
                     throw Error("下载分块数据停滞")
                 }
-                ; 绝对超时安全网
                 if (A_TickCount - chunkStart > this.ChunkMaxTimeout) {
                     try http.Abort()
+                    this.ChunkHttp := ""
                     throw Error("下载分块超时")
                 }
                 Sleep(25)
             }
-            
+
             if (this.IsCancelled) {
                 this._Cleanup()
                 this._FireCancel()
                 return
             }
-            
+
             if (http.Status != 206 && http.Status != 200) {
                 throw Error("下载分块失败，HTTP状态: " http.Status)
             }
-            
+
             responseBody := http.ResponseBody
             
             ; 从Content-Range响应头获取实际接收的字节数
@@ -356,6 +362,7 @@ class UpdateDownloader {
             ; 分块级重试：仅重试当前块，保留已下载数据
             if (this.ChunkRetries < this.MaxChunkRetries) {
                 this.ChunkRetries += 1
+                this.ChunkHttp := ""  ; 重建COM对象，避免Abort后状态残留
                 Sleep(this.ChunkRetryDelay)
                 SetTimer(() => UpdateDownloader._DownloadNextChunk(), -10)
                 return
@@ -464,6 +471,7 @@ class UpdateDownloader {
             this.MasterStream := ""
         }
         this.CurrentHttp := ""
+        this.ChunkHttp := ""
         this.IsDownloading := false
         
         if (this.IsCancelled && FileExist(this.TempFile)) {
