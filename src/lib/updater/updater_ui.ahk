@@ -178,6 +178,7 @@ class UpdateUI {
         manualBtn.OnEvent("Click", (*) => EventBus.Publish("OnManualDownload"))
         this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " yp w" manualBtnW " h" manualBtnH, "取消下载(&C)")
         this.DownloadingCancelBtn.OnEvent("Click", (*) => this.OnDownloadCancel())
+        this.DownloadingDialog.OnEvent("Close", (*) => this.OnDownloadCancel())
 
         ; 显示对话框（非模态，不阻塞）
         this.DownloadingDialog.Show("w340 h190 Center")
@@ -187,8 +188,6 @@ class UpdateUI {
     static OnManualDownload() {
         ; 打开浏览器访问下载地址页面
         Run("https://www.bilibili.com/opus/1178139405104185363")
-        ; 关闭下载对话框
-        try this.CloseDownloadingDialog()
     }
 
     ; 下载取消按钮点击事件
