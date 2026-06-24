@@ -38,6 +38,7 @@ class HotkeyController {
         "Harvest", ActionHarvest,
         "CollectCollectibles", ActionCollectCollectibles,
         "SwitchView", ActionSwitchView,
+        "BeginPause", ActionBeginPause,
         "CheckEnemies", ActionCheckEnemies,
         "DispatchCenter", ActionDispatchCenter,
         "Freeze", ActionFreeze,
@@ -75,7 +76,8 @@ class HotkeyController {
         "Back", true,
         "Harvest", true,
         "CollectCollectibles", true,
-        "SwitchView", true
+        "SwitchView", true,
+        "BeginPause", true
     )
 
     static StrongHoldHotkeys := Map(

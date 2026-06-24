@@ -34,6 +34,7 @@ class Constants {
         "Harvest", "基建快速收取",
         "CollectCollectibles", "肉鸽收取道具",
         "SwitchView", "视角切换",
+        "BeginPause", "开局暂停",
         ; 卫戍协议按键
         "CheckEnemies", "查看敌人",
         "DispatchCenter", "调度中心",  ; 不知道舟里的调度中心指的是哪种调度中心，随便选了一个译名
@@ -103,6 +104,7 @@ class Config {
         "Harvest", "",
         "CollectCollectibles", "",
         "SwitchView", "",
+        "BeginPause", "",
         ; 卫戍协议按键
         "CheckEnemies", "w",
         "DispatchCenter", "a",
