@@ -31,6 +31,13 @@ class GuiManager {
     static QuickControls := [] ; 快捷操作相关控件
     static StrongHoldProtocolControls := [] ; 卫戍协议相关控件
     static OtherSettingsControls := [] ; 其他设置相关控件
+    static NavItems := []              ; 左侧导航项 Text 控件列表
+    static NavIndicators := []        ; 每个导航项的竖线指示器
+    static CurrentOtherCategory := "Launch"  ; 当前选中的分类
+    static _BottomBaseY := 0            ; 底部按钮基准 Y 坐标
+    static LaunchControls := []        ; "启动与退出"设置控件组
+    static UpdateControls := []        ; "更新"设置控件组
+    static CustomControls := []        ; "自定义"设置控件组
     static NotOtherControls := [] ; 仅非其他设置相关控件
     static TxtKeybind := ""           ; "常规作战"标签文本
     static TxtQuick := ""             ; "快捷操作"标签文本
@@ -174,6 +181,10 @@ class GuiManager {
         this.MainGui.SetFont("s9 cDefault")
         this.NotOtherControls.Push(hintFrame2)
 
+        ; 记录所有标签页底部基准 Y（取"常规作战"帧率提示的底部）
+        hintFrame2.GetPos(, &y, , &h)
+        this._BottomBaseY := y + h
+
         ; -- 快捷操作 --
         ; 快捷操作 - 左列
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
@@ -242,113 +253,170 @@ class GuiManager {
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
 
         ; -- 其他设置 --
-        this.MainGui.Add("GroupBox", "x0 y45 w" this.ColWidth " h0 Section vOtherSettingsGroup", "")
-        ; - 启动与退出设置 -
-        sepLaunch := this.MainGui.Add("Text", "x" this.GuiXMargin " ys+10 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
-        sepLaunchTxt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  启动与退出设置  ")
-        this.OtherSettingsControls.Push(sepLaunch)
-        this.OtherSettingsControls.Push(sepLaunchTxt)
+        ; 导航区域右侧分割线——高度跟随内容到底部按钮上方
+        dividerHeight := this._BottomBaseY + 20 - 38
+        this.OtherSettingsControls.Push(this.MainGui.Add("Text", "x130 y38 w1 h" dividerHeight " Backgroundd0d0d0"))
+
+        ; 其他设置 - 左侧导航
+        ; 导航项"启动与退出"（默认选中态：蓝色文字）
+        this.MainGui.SetFont("s9 c1994d2")
+        navLaunch := this.MainGui.Add("Text", "x0 y40 w130 Center Section", "启动与退出")
+        navLaunch.OnEvent("Click", (*) => this._SwitchOtherCategory("Launch"))
+        this.NavItems.Push(navLaunch)
+        this.OtherSettingsControls.Push(navLaunch)
+
+        ; 竖线指示器——跟随导航项高度
+        this.NavIndicators := []
+        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2"))
+        this.OtherSettingsControls.Push(this.NavIndicators[1])
+
+        ; 恢复默认字体
+        this.MainGui.SetFont("s9 cDefault norm")
+
+        ; 导航项"更新"（未选中态）
+        navUpdate := this.MainGui.Add("Text", "xs y+m w130 Center", "更新")
+        navUpdate.OnEvent("Click", (*) => this._SwitchOtherCategory("Update"))
+        this.NavItems.Push(navUpdate)
+        this.OtherSettingsControls.Push(navUpdate)
+        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.OtherSettingsControls.Push(this.NavIndicators[2])
+
+        ; 导航项"自定义"（未选中态）
+        navCustom := this.MainGui.Add("Text", "xs y+m w130 Center", "自定义")
+        navCustom.OnEvent("Click", (*) => this._SwitchOtherCategory("Custom"))
+        this.NavItems.Push(navCustom)
+        this.OtherSettingsControls.Push(navCustom)
+        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.OtherSettingsControls.Push(this.NavIndicators[3])
+
+        ; 其他设置 - 右侧内容区
+        ; 分类"启动与退出"
+        sepLaunch := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
+        sepLaunchTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", "  启动与退出设置  ")
+        this.LaunchControls.Push(sepLaunch)
+        this.LaunchControls.Push(sepLaunchTxt)
+
         ; 自动关闭
-        checkboxAutoExit := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoExit", " 随游戏进程关闭自动退出（强烈建议开启）")
+        checkboxAutoExit := this.MainGui.Add("Checkbox", "xs y+12 h24 vAutoExit", " 随游戏进程关闭自动退出（强烈建议开启）")
         checkboxAutoExit.OnEvent("Click", (*) => this.TrackChange("AutoExit"))
         this.MainGui["AutoExit"].Value := Config.GetImportant("AutoExit")
-        this.OtherSettingsControls.Push(checkboxAutoExit)
+        this.LaunchControls.Push(checkboxAutoExit)
+
         ; 自动打开设置
-        checkboxAutoOpenSettings := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoOpenSettings", " 启动时打开设置窗口")
+        checkboxAutoOpenSettings := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoOpenSettings", " 启动时打开设置窗口")
         checkboxAutoOpenSettings.OnEvent("Click", (*) => this.TrackChange("AutoOpenSettings"))
         this.MainGui["AutoOpenSettings"].Value := Config.GetImportant("AutoOpenSettings")
-        this.OtherSettingsControls.Push(checkboxAutoOpenSettings)
+        this.LaunchControls.Push(checkboxAutoOpenSettings)
+
         ; 默认启动卫戍协议方案
-        checkboxDefaultStrongHoldProtocol := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vDefaultStrongHoldProtocol", " 默认启动卫戍协议方案")
+        checkboxDefaultStrongHoldProtocol := this.MainGui.Add("Checkbox", "xs y+10 h24 vDefaultStrongHoldProtocol", " 默认启动卫戍协议方案")
         checkboxDefaultStrongHoldProtocol.OnEvent("Click", (*) => this.TrackChange("DefaultStrongHoldProtocol"))
         this.MainGui["DefaultStrongHoldProtocol"].Value := Config.GetImportant("DefaultStrongHoldProtocol")
-        this.OtherSettingsControls.Push(checkboxDefaultStrongHoldProtocol)
+        this.LaunchControls.Push(checkboxDefaultStrongHoldProtocol)
+
         ; 自动启动游戏
-        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoRunGame", " 同时启动明日方舟")
+        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoRunGame", " 同时启动明日方舟")
         checkboxAutoRunGame.OnEvent("Click", (*) => this.TrackChange("AutoRunGame"))
         this.MainGui["AutoRunGame"].Value := Config.GetImportant("AutoRunGame")
-        this.OtherSettingsControls.Push(checkboxAutoRunGame)
+        this.LaunchControls.Push(checkboxAutoRunGame)
+
         ; 识别游戏路径
-        this.BtnCheckGamePath := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "识别游戏路径")
+        this.BtnCheckGamePath := this.MainGui.Add("Button", "xs y+12 w" this.BtnW " h24", "识别游戏路径")
         hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", "请先启动游戏再进行识别")
         this.BtnCheckGamePath.OnEvent("Click", (*) => EventBus.Publish("CheckGamePathClick"))
-        this.OtherSettingsControls.Push(this.BtnCheckGamePath)
-        this.OtherSettingsControls.Push(hintGamePath)
-        ; 游戏路径
-        txtGamePath := this.MainGui.Add("Text", "x" this.GuiXMargin +17 " y+10 h24", " 游戏路径: ")
-        editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w576 h20 vGamePath -Multi +0x1", Config.GetImportant("GamePath"))
-        editGamePath.OnEvent("Change", (*) => this.TrackChange("GamePath"))
-        this.OtherSettingsControls.Push(txtGamePath)
-        this.OtherSettingsControls.Push(editGamePath)
-        this.MainGui.Add("Text", "yp+30 w0 h0")
+        this.LaunchControls.Push(this.BtnCheckGamePath)
+        this.LaunchControls.Push(hintGamePath)
 
-        ; - 更新设置 -
-        sepUpdate := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
-        sepUpdateTxt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  更新设置  ")
-        this.OtherSettingsControls.Push(sepUpdate)
-        this.OtherSettingsControls.Push(sepUpdateTxt)
+        ; 游戏路径
+        txtGamePath := this.MainGui.Add("Text", "xs y+10 h24", " 游戏路径: ")
+        editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w462 h20 vGamePath -Multi +0x1", Config.GetImportant("GamePath"))
+        editGamePath.OnEvent("Change", (*) => this.TrackChange("GamePath"))
+        this.LaunchControls.Push(txtGamePath)
+        this.LaunchControls.Push(editGamePath)
+
+        ; 分类"更新"
+        sepUpdate := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
+        sepUpdateTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", "  更新设置  ")
+        this.UpdateControls.Push(sepUpdate)
+        this.UpdateControls.Push(sepUpdateTxt)
+
         ; 更新渠道
-        txtUpdateChannel := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10", "更新渠道")
+        txtUpdateChannel := this.MainGui.Add("Text", "xs y+10", "更新渠道")
         dropdownUpdateChannel := this.MainGui.Add("DropDownList", "x+10 yp-2 w120 vUpdateChannel AltSubmit", ["正式版", "测试版"])
         dropdownUpdateChannel.OnEvent("Change", (*) => this.TrackChange("UpdateChannel"))
         dropdownUpdateChannel.Value := Config.GetImportant("UpdateChannel")
-        this.OtherSettingsControls.Push(txtUpdateChannel)
-        this.OtherSettingsControls.Push(dropdownUpdateChannel)
+        this.UpdateControls.Push(txtUpdateChannel)
+        this.UpdateControls.Push(dropdownUpdateChannel)
+
         ; 自动检查更新
-        checkboxAutoUpdate := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vAutoUpdate", " 自动检查更新")
+        checkboxAutoUpdate := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoUpdate", " 自动检查更新")
         checkboxAutoUpdate.OnEvent("Click", (*) => this.TrackChange("AutoUpdate"))
         this.MainGui["AutoUpdate"].Value := Config.GetImportant("AutoUpdate")
-        this.OtherSettingsControls.Push(checkboxAutoUpdate)
+        this.UpdateControls.Push(checkboxAutoUpdate)
+
         ; 手动检查更新
-        this.BtnCheckUpdate := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "手动检查更新")
+        this.BtnCheckUpdate := this.MainGui.Add("Button", "xs y+10 w" this.BtnW " h24", "手动检查更新")
         this.BtnCheckUpdate.OnEvent("Click", (*) => this.OnManualCheckClick())
         this.BtnManualDownload := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "手动下载更新")
         this.BtnManualDownload.OnEvent("Click", (*) => EventBus.Publish("OnManualDownload"))
-        this.OtherSettingsControls.Push(this.BtnCheckUpdate)
-        this.OtherSettingsControls.Push(this.BtnManualDownload)
+        this.UpdateControls.Push(this.BtnCheckUpdate)
+        this.UpdateControls.Push(this.BtnManualDownload)
+
         ; github token
-        checkboxUseGitHubToken := this.MainGui.Add("Checkbox", "x" this.GuiXMargin " y+10 h24 vUseGitHubToken", " 使用GitHub Token: ")
+        checkboxUseGitHubToken := this.MainGui.Add("Checkbox", "xs y+10 h24 vUseGitHubToken", " 使用GitHub Token: ")
         checkboxUseGitHubToken.OnEvent("Click", (*) => this.TrackChange("UseGitHubToken"))
         this.MainGui["UseGitHubToken"].Value := Config.GetImportant("UseGitHubToken")
         checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value))
-        editGithubToken := this.MainGui.Add("Edit", "x+10 yp+2 w515 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant("GitHubToken"))
+        editGithubToken := this.MainGui.Add("Edit", "x+10 yp+2 w382 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant("GitHubToken"))
         editGithubToken.OnEvent("Change", (*) => this.TrackChange("GitHubToken"))
         this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value)
-        hintGithubToken := this.MainGui.Add("Text", "xs+50 y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token")
-        this.OtherSettingsControls.Push(checkboxUseGitHubToken)
-        this.OtherSettingsControls.Push(editGithubToken)
-        this.OtherSettingsControls.Push(hintGithubToken)
-        this.MainGui.Add("Text", "yp+30 w0 h0")
+        hintGithubToken := this.MainGui.Add("Text", "xs y+6 c9c9c9c", "只要没有提示API配额超限，就不需要使用GitHub Token")
+        this.UpdateControls.Push(checkboxUseGitHubToken)
+        this.UpdateControls.Push(editGithubToken)
+        this.UpdateControls.Push(hintGithubToken)
 
-        ; - 自定义设置 -
-        sepCustom := this.MainGui.Add("Text", "x" this.GuiXMargin " y+20 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0 Center") ; 分割线
-        sepCustomTxt := this.MainGui.Add("Text", "x" this.GuiXMargin " xs+50 y+-9 Center ca0a0a0", "  自定义设置  ")
-        this.OtherSettingsControls.Push(sepCustom)
-        this.OtherSettingsControls.Push(sepCustomTxt)
+        ; 分类"自定义"
+        sepCustom := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
+        sepCustomTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", "  自定义设置  ")
+        this.CustomControls.Push(sepCustom)
+        this.CustomControls.Push(sepCustomTxt)
+
         ; 点击延迟设置
-        txtClickDelay := this.MainGui.Add("Text", "x" this.GuiXMargin " y+10 Section", "点击延迟")
+        txtClickDelay := this.MainGui.Add("Text", "xs y+10 Section", "点击延迟")
         this.ClickDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vClickDelay Number", Config.GetCustom("ClickDelay"))
         this.ClickDelay.OnEvent("Change", (*) => this.TrackChange("ClickDelay"))
-        updownClickDelay := this.MainGui.Add("UpDown", ,Config.GetCustom("ClickDelay"))
-        hintClickDelay := this.MainGui.Add("Text", "x+15 ys c9c9c9c", "从选中单位到按下【技能】【撤退】【出售】的间隔，单位为毫秒，太短点击会失灵")
-        this.OtherSettingsControls.Push(txtClickDelay)
-        this.OtherSettingsControls.Push(this.ClickDelay)
-        this.OtherSettingsControls.Push(updownClickDelay)
-        this.OtherSettingsControls.Push(hintClickDelay)
+        updownClickDelay := this.MainGui.Add("UpDown", , Config.GetCustom("ClickDelay"))
+        hintClickDelay := this.MainGui.Add("Text", "xs y+6 c9c9c9c", "从选中单位到按下【技能】【撤退】【出售】的间隔，单位为毫秒，太短点击会失灵")
+        this.CustomControls.Push(txtClickDelay)
+        this.CustomControls.Push(this.ClickDelay)
+        this.CustomControls.Push(updownClickDelay)
+        this.CustomControls.Push(hintClickDelay)
+
         ; 启用/禁用热键快捷键
-        txtSwitchHotkey := this.MainGui.Add("Text", "x" this.GuiXMargin " y+16 Right +0x200", "启用/禁用热键快捷键") 
+        txtSwitchHotkey := this.MainGui.Add("Text", "xs y+16 Right +0x200", "启用/禁用热键快捷键")
         this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom("SwitchHotkey"))
-        this.OtherSettingsControls.Push(txtSwitchHotkey)
-        this.OtherSettingsControls.Push(this.SwitchHotkey)
-        
+        this.CustomControls.Push(txtSwitchHotkey)
+        this.CustomControls.Push(this.SwitchHotkey)
+
+        ; 隐藏非默认分类的控件
+        for ctrl in this.UpdateControls {
+            try ctrl.Visible := false
+        }
+        for ctrl in this.CustomControls {
+            try ctrl.Visible := false
+        }
+
+        ; 底部按钮区域锚点，使用"常规作战"帧率提示底部 + 30px 间距
+        this.MainGui.Add("Text", "xm y" this._BottomBaseY + 20 " w0 h0 Section")
+
         ; -- 底部按钮 --
         BtnMargin := 15
         BtnX_DefaultHotkeys := 30
         BtnX_Save := this.GuiWidth - (this.BtnW * 3) - BtnMargin * 2 - BtnX_DefaultHotkeys
         BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - BtnX_DefaultHotkeys
         BtnX_Cancel := this.GuiWidth - this.BtnW - BtnX_DefaultHotkeys
-        
-        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " y+20 w" this.BtnW " h32", "重置按键") ; 仅在按键相关标签下显示
+
+        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " ys+15 w" this.BtnW " h32", "重置按键") ; 仅在按键相关标签下显示
         this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
         this.NotOtherControls.Push(this.BtnDefaultHotkeys)
 
@@ -596,6 +664,21 @@ class GuiManager {
                 try ctrl.Visible := false
             }
         }
+        for ctrl in this.LaunchControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+        for ctrl in this.UpdateControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+        for ctrl in this.CustomControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
     }
 
     ; 内部：显示指定控件组
@@ -693,14 +776,68 @@ class GuiManager {
             this.TxtOther.GetPos(&x)
             this.TabIndicator.Move(x, 23)
             
-            ; 显示其他设置控件
-            this._ShowControls(this.OtherSettingsControls)
+            ; 显示其他设置控件（按当前分类）
+            this._SwitchOtherCategory(this.CurrentOtherCategory, true)
             ; 隐藏仅非其他设置控件
             this._HideAllControls("NotOther")
         }
         EventBus.Publish("GuiUpdateHotkeyControls")
         EventBus.Publish("GuiUpdateImportantControls")
         EventBus.Publish("GuiUpdateCustomControls")
+    }
+
+    ; 内部：切换其他设置页面的分类
+    static _SwitchOtherCategory(categoryName, force := false) {
+        if (!force && categoryName = this.CurrentOtherCategory)
+            return
+        this.CurrentOtherCategory := categoryName
+
+        ; 确保导航元素可见
+        this._ShowControls(this.OtherSettingsControls)
+
+        ; 隐藏所有分类控件
+        for ctrl in this.LaunchControls {
+            try ctrl.Visible := false
+        }
+        for ctrl in this.UpdateControls {
+            try ctrl.Visible := false
+        }
+        for ctrl in this.CustomControls {
+            try ctrl.Visible := false
+        }
+
+        ; 显示目标分类控件
+        switch categoryName {
+        case "Launch":
+            for ctrl in this.LaunchControls {
+                try ctrl.Visible := true
+            }
+            targetIndex := 1
+        case "Update":
+            for ctrl in this.UpdateControls {
+                try ctrl.Visible := true
+            }
+            targetIndex := 2
+        case "Custom":
+            for ctrl in this.CustomControls {
+                try ctrl.Visible := true
+            }
+            targetIndex := 3
+        }
+
+        ; 更新导航项样式
+        for i, navItem in this.NavItems {
+            if (i = targetIndex) {
+                navItem.SetFont("c1994d2")
+            } else {
+                navItem.SetFont("cDefault")
+            }
+        }
+
+        ; 切换竖线指示器
+        for i, indicator in this.NavIndicators {
+            try indicator.Visible := (i = targetIndex)
+        }
     }
 
     ; 切换标签页
