@@ -335,6 +335,30 @@ ActionSwitchView(ThisHotkey) {
     PureKeyWait(ThisHotkey)
     try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
+; 开局暂停
+ActionBeginPause(ThisHotkey) {
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PosC := PauseButtonPositionColor()
+    while(GetKeyState(ThisHotkey, "P")) {
+        if PixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBY, PosC.PBCLX, PosC.PBY, 0xB5B2B2, 5)
+        {
+            Send "{ESC Down}"
+            USleep(50)
+            Send "{ESC Up}"
+            break
+        }
+    }
+    if InStr(ThisHotkey, "Wheel") {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
 
 
 ; -- 卫戍协议 --
@@ -500,6 +524,14 @@ PauseButtonPositionRight() {
     PButtonRX := ww * 0.9650
     PButtonRY := wh * 0.0700
     return {PBRX: PButtonRX, PBRY: PButtonRY}
+}
+; 获取暂停按钮颜色识别位置
+PauseButtonPositionColor() {
+    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    PButtonCLX := ww * 0.9396
+    PButtonCRX := ww * 0.9511
+    PButtonY := wh * 0.0700
+    return {PBCLX: PButtonCLX, PBCRX: PButtonCRX, PBY: PButtonY}
 }
 ; 获取基建收取按钮位置
 HarvestButtonPosition() {

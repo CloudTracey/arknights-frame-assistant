@@ -180,7 +180,8 @@ class GuiManager {
         this.QuickControls.Push(AddBindRow("模拟左键点击", "LButtonClick")*)
         this.QuickControls.Push(AddBindRow("基建快速收取", "Harvest")*)
         this.QuickControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
-        
+        this.QuickControls.Push(AddBindRow("开局暂停", "BeginPause")*)
+
         ; 快捷操作 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vQuickRightGroup", "")
         this.QuickControls.Push(this.MainGui["QuickRightGroup"])
