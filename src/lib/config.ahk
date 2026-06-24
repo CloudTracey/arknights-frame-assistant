@@ -26,6 +26,8 @@ class Constants {
         "OneClickRetreat", "一键撤退",
         "PauseSkill", "暂停技能",
         "PauseRetreat", "暂停撤退",
+        "SwitchView", "视角切换",
+        "BeginPause", "开局暂停",
         ; 快捷操作
         "LButtonClick", "左键点击",
         "CeaseOperations", "放弃行动",
@@ -33,8 +35,6 @@ class Constants {
         "Back", "返回上级菜单",
         "Harvest", "基建快速收取",
         "CollectCollectibles", "肉鸽收取道具",
-        "SwitchView", "视角切换",
-        "BeginPause", "开局暂停",
         ; 卫戍协议按键
         "CheckEnemies", "查看敌人",
         "DispatchCenter", "调度中心",  ; 不知道舟里的调度中心指的是哪种调度中心，随便选了一个译名
@@ -96,6 +96,8 @@ class Config {
         "OneClickRetreat", "q",
         "PauseSkill", "XButton2",
         "PauseRetreat", "XButton1",
+        "SwitchView", "",
+        "BeginPause", "",
         ; 快捷操作
         "LButtonClick", "z",
         "CeaseOperations", "",
@@ -103,8 +105,6 @@ class Config {
         "Back", "",
         "Harvest", "",
         "CollectCollectibles", "",
-        "SwitchView", "",
-        "BeginPause", "",
         ; 卫戍协议按键
         "CheckEnemies", "w",
         "DispatchCenter", "a",

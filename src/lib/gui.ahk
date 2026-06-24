@@ -128,6 +128,7 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("暂停时选中", "PauseSelect")*)
         this.KeybindControls.Push(AddBindRow("单位技能", "Skill")*)
         this.KeybindControls.Push(AddBindRow("单位撤退", "Retreat")*)
+        this.KeybindControls.Push(AddBindRow("开局暂停", "BeginPause")*)
         
         ; 常规作战 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vKeybindRightGroup", "")
@@ -139,6 +140,7 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("一键撤退", "OneClickRetreat")*)
         this.KeybindControls.Push(AddBindRow("暂停技能", "PauseSkill")*)
         this.KeybindControls.Push(AddBindRow("暂停撤退", "PauseRetreat")*)
+        this.KeybindControls.Push(AddBindRow("视角切换", "SwitchView")*)
         ; 空白占位
         placeholderKeybind := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.KeybindControls.Push(placeholderKeybind)
@@ -158,7 +160,7 @@ class GuiManager {
 
         ; 游戏内帧率设置
         txtFrame := this.MainGui.Add("Text", "x45 y+20 w90 Right", "游戏内帧率")
-        this.GuiFrame := this.MainGui.Add("DropDownList", "x+20 y+-18 w120 vFrame AltSubmit", ["30", "60", "90", "120", "144", "165", "240"])
+        this.GuiFrame := this.MainGui.Add("DropDownList", "x+20 y+-18 w120 vFrame AltSubmit", ["30", "60", "90", "120", "144", "165", "240+"])
         this.GuiFrame.OnEvent("Change", (*) => this.TrackChange("Frame"))
         this.MainGui["Frame"].Value := Config.GetImportant("Frame")
         this.NotOtherControls.Push(txtFrame)
@@ -180,7 +182,6 @@ class GuiManager {
         this.QuickControls.Push(AddBindRow("模拟左键点击", "LButtonClick")*)
         this.QuickControls.Push(AddBindRow("基建快速收取", "Harvest")*)
         this.QuickControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
-        this.QuickControls.Push(AddBindRow("开局暂停", "BeginPause")*)
 
         ; 快捷操作 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vQuickRightGroup", "")
@@ -189,7 +190,6 @@ class GuiManager {
         this.QuickControls.Push(AddBindRow("跳过招募动画/剧情", "Skip")*)
         this.QuickControls.Push(AddBindRow("肉鸽收取道具", "CollectCollectibles")*)
         this.QuickControls.Push(AddBindRow("返回上级菜单", "Back")*)
-        this.QuickControls.Push(AddBindRow("视角切换", "SwitchView")*)
         ; 空白占位
         placeholderQuick := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.QuickControls.Push(placeholderQuick)

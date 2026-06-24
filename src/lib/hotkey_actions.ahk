@@ -202,6 +202,52 @@ ActionPauseRetreat(ThisHotkey) {
     try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 
+; 视角切换
+ActionSwitchView(ThisHotkey) {
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PosL := PauseButtonPositionLeft()
+    PosR := PauseButtonPositionRight()
+    MouseGetPos &xpos, &ypos
+    TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
+    TouchInjector.Tap(xpos, ypos)
+    TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
+    TouchInjector.Tap(xpos, ypos)
+    if InStr(ThisHotkey, "Wheel") {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
+; 开局暂停
+ActionBeginPause(ThisHotkey) {
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PosC := PauseButtonPositionColor()
+    while(GetKeyState(ThisHotkey, "P")) {
+        if PixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBY, PosC.PBCLX, PosC.PBY, 0xB5B2B2, 5)
+        {
+            Send "{ESC Down}"
+            USleep(50)
+            Send "{ESC Up}"
+            break
+        }
+    }
+    if InStr(ThisHotkey, "Wheel") {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
+
 ; -- 快捷操作 --
 ; 模拟鼠标左键点击
 ActionLButtonClick(ThisHotkey) {
@@ -314,53 +360,6 @@ ActionCollectCollectibles(ThisHotkey){
     PureKeyWait(ThisHotkey)
     try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
-; 视角切换
-ActionSwitchView(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !IsMouseInClient() {
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-        return
-    }
-    PosL := PauseButtonPositionLeft()
-    PosR := PauseButtonPositionRight()
-    MouseGetPos &xpos, &ypos
-    TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
-    TouchInjector.Tap(xpos, ypos)
-    TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
-    TouchInjector.Tap(xpos, ypos)
-    if InStr(ThisHotkey, "Wheel") {
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-        return
-    }
-    PureKeyWait(ThisHotkey)
-    try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-}
-; 开局暂停
-ActionBeginPause(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !IsMouseInClient() {
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-        return
-    }
-    PosC := PauseButtonPositionColor()
-    while(GetKeyState(ThisHotkey, "P")) {
-        if PixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBY, PosC.PBCLX, PosC.PBY, 0xB5B2B2, 5)
-        {
-            Send "{ESC Down}"
-            USleep(50)
-            Send "{ESC Up}"
-            break
-        }
-    }
-    if InStr(ThisHotkey, "Wheel") {
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-        return
-    }
-    PureKeyWait(ThisHotkey)
-    try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-}
-
-
 ; -- 卫戍协议 --
 ; 查看敌人
 ActionCheckEnemies(ThisHotkey) {

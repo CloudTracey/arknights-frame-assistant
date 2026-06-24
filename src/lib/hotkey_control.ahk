@@ -66,7 +66,9 @@ class HotkeyController {
         "OneClickSkill", true,
         "OneClickRetreat", true,
         "PauseSkill", true,
-        "PauseRetreat", true
+        "PauseRetreat", true,
+        "SwitchView", true,
+        "BeginPause", true
     )
 
     static QuickHotkeys := Map(
@@ -75,9 +77,7 @@ class HotkeyController {
         "Skip", true,
         "Back", true,
         "Harvest", true,
-        "CollectCollectibles", true,
-        "SwitchView", true,
-        "BeginPause", true
+        "CollectCollectibles", true
     )
 
     static StrongHoldHotkeys := Map(
