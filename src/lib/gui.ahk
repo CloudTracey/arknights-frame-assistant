@@ -38,6 +38,14 @@ class GuiManager {
     static LaunchControls := []        ; "启动与退出"设置控件组
     static UpdateControls := []        ; "更新"设置控件组
     static CustomControls := []        ; "自定义"设置控件组
+    static AboutControls := []         ; "关于"页面控件组
+    ; 其他设置分类映射：分类名 → [控件组, 导航索引]
+    static OtherCategories := Map(
+        "Launch", [this.LaunchControls, 1],
+        "Update", [this.UpdateControls, 2],
+        "Custom", [this.CustomControls, 3],
+        "About", [this.AboutControls, 4]
+    )
     static NotOtherControls := [] ; 仅非其他设置相关控件
     static TxtKeybind := ""           ; "常规作战"标签文本
     static TxtQuick := ""             ; "快捷操作"标签文本
@@ -45,6 +53,8 @@ class GuiManager {
     static TxtOther := ""             ; "其他设置"标签文本
     static CurrentTab := ""    ; 当前显示的标签页
     static LastActiveTab := "keyBind"  ; 最后选中的功能性标签页（排除"其他设置"）
+    static FrameSkipLabels := Map()     ; 过帧标签控件（用于动态更新文本）
+    static FrameSkipDelayKeys := ["FrameSkip16msDelay", "FrameSkip33msDelay", "FrameSkip166msDelay"]
     
     ; 初始化GUI（单例模式）
     static Init() {
@@ -135,18 +145,25 @@ class GuiManager {
         this.KeybindControls.Push(AddBindRow("暂停时选中", "PauseSelect")*)
         this.KeybindControls.Push(AddBindRow("单位技能", "Skill")*)
         this.KeybindControls.Push(AddBindRow("单位撤退", "Retreat")*)
+        this.KeybindControls.Push(AddBindRow("视角切换", "SwitchView")*)
         
         ; 常规作战 - 右列
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth  " h0 Section vKeybindRightGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindRightGroup"])
         
-        this.KeybindControls.Push(AddBindRow("前进 33ms", "33ms")*)
-        this.KeybindControls.Push(AddBindRow("前进 166ms", "166ms")*)
+        row16ms := AddBindRow("前进 16ms", "16ms")
+        this.KeybindControls.Push(row16ms*)
+        this.FrameSkipLabels["16ms"] := row16ms[1]
+        row33ms := AddBindRow("前进 33ms", "33ms")
+        this.KeybindControls.Push(row33ms*)
+        this.FrameSkipLabels["33ms"] := row33ms[1]
+        row166ms := AddBindRow("前进 166ms", "166ms")
+        this.KeybindControls.Push(row166ms*)
+        this.FrameSkipLabels["166ms"] := row166ms[1]
         this.KeybindControls.Push(AddBindRow("一键技能", "OneClickSkill")*)
         this.KeybindControls.Push(AddBindRow("一键撤退", "OneClickRetreat")*)
         this.KeybindControls.Push(AddBindRow("暂停技能", "PauseSkill")*)
         this.KeybindControls.Push(AddBindRow("暂停撤退", "PauseRetreat")*)
-        this.KeybindControls.Push(AddBindRow("视角切换", "SwitchView")*)
         ; 空白占位
         placeholderKeybind := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.KeybindControls.Push(placeholderKeybind)
@@ -166,9 +183,10 @@ class GuiManager {
 
         ; 游戏内帧率设置
         txtFrame := this.MainGui.Add("Text", "x45 y+20 w90 Right", "游戏内帧率")
-        this.GuiFrame := this.MainGui.Add("DropDownList", "x+20 y+-18 w120 vFrame AltSubmit", ["30", "60", "90", "120", "144", "165", "240+"])
+        this.GuiFrame := this.MainGui.Add("DropDownList", "x+20 y+-18 w120 vFrame", Constants.FrameOptions)
         this.GuiFrame.OnEvent("Change", (*) => this.TrackChange("Frame"))
-        this.MainGui["Frame"].Value := Config.GetImportant("Frame")
+        frameText := Config.GetImportant("Frame")
+        this.MainGui["Frame"].Value := this._FrameTextToIndex(frameText)
         this.NotOtherControls.Push(txtFrame)
         this.NotOtherControls.Push(this.GuiFrame)
 
@@ -294,6 +312,14 @@ class GuiManager {
         this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
         this.OtherSettingsControls.Push(this.NavIndicators[3])
 
+        ; 导航项"关于"（未选中态）
+        navAbout := this.MainGui.Add("Text", "xs y+m w130 Center", "关于")
+        navAbout.OnEvent("Click", (*) => this._SwitchOtherCategory("About"))
+        this.NavItems.Push(navAbout)
+        this.OtherSettingsControls.Push(navAbout)
+        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.OtherSettingsControls.Push(this.NavIndicators[4])
+
         ; 其他设置 - 右侧内容区
         ; 分类"启动与退出"
         sepLaunch := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
@@ -403,13 +429,71 @@ class GuiManager {
         this.CustomControls.Push(txtSwitchHotkey)
         this.CustomControls.Push(this.SwitchHotkey)
 
+        ; 过帧档位1延迟
+        txtFrameSkip1 := this.MainGui.Add("Text", "xs y+16 Section", "过帧档位1")
+        editFrameSkip1 := this.MainGui.Add("Edit", "x+15 yp-2 w120 h21 vFrameSkip16msDelay Number", Config.GetCustom("FrameSkip16msDelay"))
+        editFrameSkip1.OnEvent("Change", (*) => this.TrackChange("FrameSkip16msDelay"))
+        this.CustomControls.Push(txtFrameSkip1)
+        this.CustomControls.Push(editFrameSkip1)
+
+        ; 过帧档位2延迟
+        txtFrameSkip2 := this.MainGui.Add("Text", "xs y+10", "过帧档位2")
+        editFrameSkip2 := this.MainGui.Add("Edit", "x+15 yp-2 w120 h21 vFrameSkip33msDelay Number", Config.GetCustom("FrameSkip33msDelay"))
+        editFrameSkip2.OnEvent("Change", (*) => this.TrackChange("FrameSkip33msDelay"))
+        this.CustomControls.Push(txtFrameSkip2)
+        this.CustomControls.Push(editFrameSkip2)
+
+        ; 过帧档位3延迟
+        txtFrameSkip3 := this.MainGui.Add("Text", "xs y+10", "过帧档位3")
+        editFrameSkip3 := this.MainGui.Add("Edit", "x+15 yp-2 w120 h21 vFrameSkip166msDelay Number", Config.GetCustom("FrameSkip166msDelay"))
+        editFrameSkip3.OnEvent("Change", (*) => this.TrackChange("FrameSkip166msDelay"))
+        this.CustomControls.Push(txtFrameSkip3)
+        this.CustomControls.Push(editFrameSkip3)
+        
+        ; 分类"关于"
+        ; 确保logo.png可用（编译时嵌入exe，运行时提取到AppData）
+        logoPath := A_AppData "\ArknightsFrameAssistant\PC\logo.png"
+        logoExpectedSize := 341766
+        needExtract := !FileExist(logoPath) || FileGetSize(logoPath) != logoExpectedSize
+        if (needExtract)
+            FileInstall "..\logo.png", logoPath, 1
+
+        this.MainGui.Add("Text", "x160 y48 w0 h0 Section")
+        logoSize := 256
+        logoX := 160 + (530 - logoSize) / 2
+        aboutLogo := this.MainGui.Add("Picture", "x" logoX " y48 w" logoSize " h" logoSize, logoPath)
+        this.AboutControls.Push(aboutLogo)
+
+        this.MainGui.SetFont("s12 bold", "Microsoft YaHei UI")
+        aboutVersion := this.MainGui.Add("Text", "xs y+10 w530 Center", Version.Get())
+        this.MainGui.SetFont("s9 c0645AD underline", "Microsoft YaHei UI")
+        this.AboutControls.Push(aboutVersion)
+
+        aboutChangelog := this.MainGui.Add("Text", "xs y+15 w530 Center", "更新公告")
+        aboutChangelog.OnEvent("Click", (*) => this._ShowChangelog())
+        this.AboutControls.Push(aboutChangelog)
+
+        aboutRepo := this.MainGui.Add("Text", "xs y+8 w530 Center", "GitHub仓库")
+        aboutRepo.OnEvent("Click", (*) => Run("https://github.com/CloudTracey/arknights-frame-assistant"))
+        this.AboutControls.Push(aboutRepo)
+
+        aboutFeedback := this.MainGui.Add("Text", "xs y+8 w530 Center", "反馈与建议")
+        aboutFeedback.OnEvent("Click", (*) => Run("https://github.com/CloudTracey/arknights-frame-assistant/issues"))
+        this.AboutControls.Push(aboutFeedback)
+
+        aboutBilibili := this.MainGui.Add("Text", "xs y+8 w530 Center", "我的B站主页")
+        aboutBilibili.OnEvent("Click", (*) => Run("https://space.bilibili.com/34961731"))
+        this.AboutControls.Push(aboutBilibili)
+
+        aboutArtist := this.MainGui.Add("Text", "xs y+8 w530 Center", "图标画师")
+        aboutArtist.OnEvent("Click", (*) => Run("https://www.mihuashi.com/profiles/8282001?role=painter"))
+        this.AboutControls.Push(aboutArtist)
+
+        this.MainGui.SetFont("s9 cDefault norm", "Microsoft YaHei UI")
+
         ; 隐藏非默认分类的控件
-        for ctrl in this.UpdateControls {
-            try ctrl.Visible := false
-        }
-        for ctrl in this.CustomControls {
-            try ctrl.Visible := false
-        }
+        this._HideOtherCategories()
+        this._ShowControls(this.LaunchControls)  ; 默认显示"启动与退出"
 
         ; 底部按钮区域锚点，使用"常规作战"帧率提示底部 + 30px 间距
         this.MainGui.Add("Text", "xm y" this._BottomBaseY + 20 " w0 h0 Section")
@@ -445,13 +529,24 @@ class GuiManager {
                 this.MainGui[key].Value := value
             }
         }
+        this._UpdateFrameSkipLabels()
+    }
+
+    static _UpdateFrameSkipLabels() {
+        try this.FrameSkipLabels["16ms"].Text := "前进 " Config.GetCustom("FrameSkip16msDelay") "ms"
+        try this.FrameSkipLabels["33ms"].Text := "前进 " Config.GetCustom("FrameSkip33msDelay") "ms"
+        try this.FrameSkipLabels["166ms"].Text := "前进 " Config.GetCustom("FrameSkip166msDelay") "ms"
     }
 
     ; 内部：更新其他控件值（从配置）
     static _UpdateImportantControlsFromConfig() {
         for key, value in Config.AllImportant {
             try {
-                this.MainGui[key].Value := value
+                if (key = "Frame") {
+                    this.MainGui[key].Value := this._FrameTextToIndex(Config.GetImportant("Frame"))
+                } else {
+                    this.MainGui[key].Value := value
+                }
             }
         }
     }
@@ -600,6 +695,11 @@ class GuiManager {
         try {
             this._InitialValues["ClickDelay"] := this.MainGui["ClickDelay"].Value
         }
+        for key in this.FrameSkipDelayKeys {
+            try {
+                this._InitialValues[key] := this.MainGui[key].Value
+            }
+        }
     }
 
     ; 跟踪控件变更——与初始快照对比，决定按钮启用/禁用
@@ -630,6 +730,12 @@ class GuiManager {
             try {
                 if (this.MainGui["ClickDelay"].Value != this._InitialValues["ClickDelay"])
                     return
+            }
+            for key in this.FrameSkipDelayKeys {
+                try {
+                    if (this.MainGui[key].Value != this._InitialValues[key])
+                        return
+                }
             }
             ; 全部一致
             this.SetIsModifiedFalse()
@@ -669,21 +775,16 @@ class GuiManager {
                 try ctrl.Visible := false
             }
         }
-        for ctrl in this.LaunchControls {
-            if (IsObject(ctrl)) {
-                try ctrl.Visible := false
-            }
+        this._HideOtherCategories()
+    }
+
+    ; 帧率文本值→下拉框索引
+    static _FrameTextToIndex(frameText) {
+        for i, opt in Constants.FrameOptions {
+            if (opt = frameText)
+                return i
         }
-        for ctrl in this.UpdateControls {
-            if (IsObject(ctrl)) {
-                try ctrl.Visible := false
-            }
-        }
-        for ctrl in this.CustomControls {
-            if (IsObject(ctrl)) {
-                try ctrl.Visible := false
-            }
-        }
+        return 3  ; 默认"90"
     }
 
     ; 内部：显示指定控件组
@@ -691,6 +792,17 @@ class GuiManager {
         for ctrl in controls {
             if (IsObject(ctrl)) {
                 try ctrl.Visible := true
+            }
+        }
+    }
+
+    ; 内部：隐藏所有其他设置分类控件
+    static _HideOtherCategories() {
+        for _, info in this.OtherCategories {
+            for ctrl in info[1] {
+                if (IsObject(ctrl)) {
+                    try ctrl.Visible := false
+                }
             }
         }
     }
@@ -801,34 +913,14 @@ class GuiManager {
         this._ShowControls(this.OtherSettingsControls)
 
         ; 隐藏所有分类控件
-        for ctrl in this.LaunchControls {
-            try ctrl.Visible := false
-        }
-        for ctrl in this.UpdateControls {
-            try ctrl.Visible := false
-        }
-        for ctrl in this.CustomControls {
-            try ctrl.Visible := false
-        }
+        this._HideOtherCategories()
 
         ; 显示目标分类控件
-        switch categoryName {
-        case "Launch":
-            for ctrl in this.LaunchControls {
-                try ctrl.Visible := true
-            }
-            targetIndex := 1
-        case "Update":
-            for ctrl in this.UpdateControls {
-                try ctrl.Visible := true
-            }
-            targetIndex := 2
-        case "Custom":
-            for ctrl in this.CustomControls {
-                try ctrl.Visible := true
-            }
-            targetIndex := 3
+        info := this.OtherCategories[categoryName]
+        for ctrl in info[1] {
+            try ctrl.Visible := true
         }
+        targetIndex := info[2]
 
         ; 更新导航项样式
         for i, navItem in this.NavItems {
@@ -892,6 +984,21 @@ class GuiManager {
         ; 将修改状态改回未修改，并刷新快照
         this.SetIsModifiedFalse()
         this.CaptureInitialSnapshot()
+    }
+
+    static _ShowChangelog() {
+        configDir := A_AppData "\ArknightsFrameAssistant\PC"
+        changelogFile := configDir "\changelog.json"
+        if (!FileExist(changelogFile)) {
+            MessageBox.Info("暂无更新公告，请先连接网络检查更新。", "提示")
+            return
+        }
+        ChangelogChecker.ChangelogFile := changelogFile
+        body := ChangelogChecker._ReadAndBuildBody()
+        if (body != "")
+            ChangelogUI.Show(Version.Get(), body)
+        else
+            MessageBox.Info("暂无更新公告。", "提示")
     }
 }
 

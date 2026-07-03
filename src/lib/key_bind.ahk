@@ -264,8 +264,16 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             if (KeyBinder.ControlObj.Gui.Hwnd != GuiManager.MainGui.Hwnd)
                 return
         }
-        ; 排除非按键绑定输入框
-        if (KeyBinder.ControlObj.Name == "GitHubToken" || KeyBinder.ControlObj.Name == "GamePath" || KeyBinder.ControlObj.Name == "ClickDelay") {
+        ; 排除非按键绑定输入框（使用Set查找，新增时只需加一行）
+        static nonKeybindEdits := Map(
+            "GitHubToken", 1,
+            "GamePath", 1,
+            "ClickDelay", 1,
+            "FrameSkip16msDelay", 1,
+            "FrameSkip33msDelay", 1,
+            "FrameSkip166msDelay", 1
+        )
+        if nonKeybindEdits.Has(KeyBinder.ControlObj.Name) {
             return
         }
         ; 若为首次点击Edit控件

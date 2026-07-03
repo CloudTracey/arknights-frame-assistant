@@ -31,6 +31,7 @@
 - [常见问题](#常见问题)
 - [贡献指南](#贡献指南)
 - [声明](#声明)
+- [鸣谢](#-鸣谢)
 
 <br>
 
@@ -225,3 +226,11 @@ A: 右键点击托盘区图标，选择"退出"即可。如果开启了**随游�
 - 本程序使用 [GNU General Public License v3.0 only](https://spdx.org/licenses/GPL-3.0-only.html) 开源
 - 从 [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights) 偷学了一点 README 格式和 GUI 样式，感谢巨人的肩膀
 - 本工具仅供学习交流使用，请勿用于商业用途
+- This project is maintained by Li Zida.
+
+## 🙏 鸣谢
+
+本项目图标由 **[文件名错误EXE](https://www.mihuashi.com/profiles/8282001?role=painter)** 精心绘制，特此鸣谢
+
+- 🎨 画师主页：https://www.mihuashi.com/profiles/8282001?role=painter
+- 📜 图标版权归原作者所有，本项目已获授权使用（仅限本开源项目）。

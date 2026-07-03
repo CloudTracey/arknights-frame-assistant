@@ -26,6 +26,27 @@ ActionGameSpeed(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
+; 前进16ms
+Action16ms(ThisHotkey) {
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !IsMouseInClient() {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    delay := Integer(Config.GetCustom("FrameSkip16msDelay"))
+    Send "{ESC Down}"
+    USleep(delay)
+    Send "{Space Down}"
+    USleep(50)
+    Send "{ESC Up}"
+    Send "{Space Up}"
+    if InStr(ThisHotkey, "Wheel") {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
+    PureKeyWait(ThisHotkey)
+    try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+}
 ; 前进33ms，由于波动，过帧间隔设置为30ms，避免一次过两帧
 Action33ms(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
@@ -33,8 +54,9 @@ Action33ms(ThisHotkey) {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    delay := Integer(Config.GetCustom("FrameSkip33msDelay"))
     Send "{ESC Down}"
-    USleep(30)
+    USleep(delay)
     Send "{Space Down}"
     USleep(50)
     Send "{ESC Up}"
@@ -53,8 +75,9 @@ Action166ms(ThisHotkey) {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    delay := Integer(Config.GetCustom("FrameSkip166msDelay"))
     Send "{ESC Down}"
-    USleep(165)
+    USleep(delay)
     Send "{Space Down}"
     USleep(50)
     Send "{ESC Up}"
@@ -237,7 +260,7 @@ ActionBeginPause() {
             ;ToolTip("已严肃暂停")  ; 调试代码
             State.BlackScreenDetected := false
             State.ReadyForPause := false
-            SetTimer CheckGameStatus, 1000
+            SetTimer CheckGameStatus, 800
             break
         }
     }

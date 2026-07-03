@@ -61,7 +61,7 @@ class Saver {
     static _CheckKeyConflicts(SavedObj) {
         ; 定义按键分组
         battleKeys := ["PressPause", "ReleasePause", "GameSpeed", "PauseSelect",
-                       "Skill", "Retreat", "33ms", "166ms", "OneClickSkill",
+                       "Skill", "Retreat", "16ms", "33ms", "166ms", "OneClickSkill",
                        "OneClickRetreat", "PauseSkill", "PauseRetreat",
                        "LButtonClick", "CeaseOperations", "Skip", "Back",
                        "Harvest", "CollectCollectibles", "SwitchView", "BeginPause"]
