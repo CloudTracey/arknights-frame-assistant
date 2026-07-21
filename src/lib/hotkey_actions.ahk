@@ -618,7 +618,7 @@ IsMouseInClient() {
 AbandonButtonPosition() {
     WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
     PButtonLX := ww * 0.0474
-    PButtonRX := ww * 0.0734
+    PButtonRX := ww * 0.1369
     PButtonUY := wh * 0.0444
     PButtonDY := wh * 0.0694
     return {PBLX: PButtonLX, PBUY: PButtonUY, PBRX: PButtonRX, PBDY: PButtonDY}
@@ -627,6 +627,9 @@ AbandonButtonPosition() {
 IsInLevel() {
     AbdC := AbandonButtonPosition()
     if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0x8c8c8c, 0) {
+        return true
+    }
+    if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0xd8d769, 0) {
         return true
     }
     return false
