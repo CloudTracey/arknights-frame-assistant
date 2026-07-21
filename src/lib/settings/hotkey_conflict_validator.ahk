@@ -2,23 +2,6 @@
 
 ; 统一提供设置界面实时提示和保存阶段最终校验使用的冲突规则。
 class HotkeyConflictValidator {
-    ; 常规作战、快捷操作和切换热键互相检测
-    static BattleKeys := [
-        "PressPause", "ReleasePause", "GameSpeed", "PauseSelect",
-        "Skill", "Retreat", "16ms", "33ms", "166ms", "OneClickSkill",
-        "OneClickRetreat", "PauseSkill", "PauseRetreat", "LButtonClick",
-        "CeaseOperations", "Skip", "Back", "Harvest", "CollectCollectibles",
-        "SwitchView", "BeginPause", "AutoBeginPauseSwitch", "SwitchHotkey"
-    ]
-
-    ; 卫戍协议和切换热键互相检测
-    static StrongholdKeys := [
-        "CheckEnemies", "DispatchCenter", "Freeze", "Refresh", "Upgrade",
-        "Sell", "Ready", "StrongHoldProtocolLButtonClick",
-        "StrongHoldProtocolRetreat", "StrongHoldProtocolOneClickRetreat",
-        "OneClickSell", "OneClickPurchase", "SwitchHotkey"
-    ]
-
     ; 检查当前内存中的按键设置，返回全部冲突。
     ; 返回：{HasConflicts, Items, ByControl}
     static FindAll(hotkeys, customSettings) {
@@ -30,8 +13,18 @@ class HotkeyConflictValidator {
         conflicts := []
         byControl := Map()
 
-        this._FindGroupConflicts(this.BattleKeys, bindings, conflicts, byControl)
-        this._FindGroupConflicts(this.StrongholdKeys, bindings, conflicts, byControl)
+        this._FindGroupConflicts(
+            [Constants.CombatHotkeys, Constants.QuickHotkeys],
+            bindings,
+            conflicts,
+            byControl
+        )
+        this._FindGroupConflicts(
+            [Constants.StrongHoldHotkeys],
+            bindings,
+            conflicts,
+            byControl
+        )
 
         return {
             HasConflicts: conflicts.Length > 0,
@@ -40,32 +33,39 @@ class HotkeyConflictValidator {
         }
     }
 
-    ; 在单个冲突组内查找重复按键。
-    static _FindGroupConflicts(controlNames, bindings, conflicts, byControl) {
+    ; 在同时启用的热键组及切换热键中查找重复按键。
+    static _FindGroupConflicts(hotkeyGroups, bindings, conflicts, byControl) {
         usedKeys := Map()
 
-        for controlName in controlNames {
-            if !bindings.Has(controlName)
-                continue
+        for hotkeyGroup in hotkeyGroups {
+            for controlName, _ in hotkeyGroup
+                this._CheckControlConflict(controlName, bindings, usedKeys, conflicts, byControl)
+        }
+        this._CheckControlConflict("SwitchHotkey", bindings, usedKeys, conflicts, byControl)
+    }
 
-            displayKey := bindings[controlName]
-            normalizedKey := StrLower(Trim(displayKey))
-            if (normalizedKey = "")
-                continue
+    ; 检查单个控件，并记录与组内已有按键的冲突关系。
+    static _CheckControlConflict(controlName, bindings, usedKeys, conflicts, byControl) {
+        if !bindings.Has(controlName)
+            return
 
-            if usedKeys.Has(normalizedKey) {
-                firstControl := usedKeys[normalizedKey]
-                conflict := {
-                    Key: displayKey,
-                    FirstControl: firstControl,
-                    SecondControl: controlName
-                }
-                conflicts.Push(conflict)
-                this._AddControlConflict(byControl, firstControl, conflict)
-                this._AddControlConflict(byControl, controlName, conflict)
-            } else {
-                usedKeys[normalizedKey] := controlName
+        displayKey := bindings[controlName]
+        normalizedKey := StrLower(Trim(displayKey))
+        if (normalizedKey = "")
+            return
+
+        if usedKeys.Has(normalizedKey) {
+            firstControl := usedKeys[normalizedKey]
+            conflict := {
+                Key: displayKey,
+                FirstControl: firstControl,
+                SecondControl: controlName
             }
+            conflicts.Push(conflict)
+            this._AddControlConflict(byControl, firstControl, conflict)
+            this._AddControlConflict(byControl, controlName, conflict)
+        } else {
+            usedKeys[normalizedKey] := controlName
         }
     }
 
