@@ -16,7 +16,7 @@ class GuiManager {
     static IsModified := false
     static HasHotkeyConflicts := false
     static _InitialValues := Map()  ; 初始值快照，用于脏值对比
-    static HintUnsaved := ""       ; "修改尚未保存或应用！"提示文字
+    static HintUnsaved := ""       ; 提示文字
     static IsOnStrongHoldProtocol := false
     static DefaultTab := ""
     
@@ -547,7 +547,7 @@ class GuiManager {
         this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
         this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
         this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
-        this.HintUnsaved := this.MainGui.Add("Text", "x" (BtnX_Save - 145) " yp+8 w140 h24 Right cFF0000 Hidden", "修改尚未保存或应用！")
+        this.HintUnsaved := this.MainGui.Add("Text", "x" (BtnX_Save - 155) " yp+8 w140 h24 Right cFF0000 Hidden", "修改尚未保存或应用！")
 
         ; 空白占位
         this.MainGui.Add("Text", "xm y+15 w1 h1")
@@ -738,7 +738,7 @@ class GuiManager {
                 this.HintUnsaved.Text := "存在按键冲突"
                 this.HintUnsaved.Visible := true
             } else {
-                this.HintUnsaved.Text := "修改尚未保存或应用！"
+                this.HintUnsaved.Text := "修改尚未保存或应用"
                 this.HintUnsaved.Visible := this.IsModified
             }
         }
