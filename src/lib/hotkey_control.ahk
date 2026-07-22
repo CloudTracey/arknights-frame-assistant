@@ -55,50 +55,6 @@ class HotkeyController {
         "OneClickPurchase", ActionOneClickPurchase
     )
 
-    ; 热键分组定义
-    static CombatHotkeys := Map(
-        "PressPause", true,
-        "ReleasePause", true,
-        "GameSpeed", true,
-        "PauseSelect", true,
-        "Skill", true,
-        "Retreat", true,
-        "16ms", true,
-        "33ms", true,
-        "166ms", true,
-        "OneClickSkill", true,
-        "OneClickRetreat", true,
-        "PauseSkill", true,
-        "PauseRetreat", true,
-        "SwitchView", true,
-        "BeginPause", true,
-        "AutoBeginPauseSwitch", true
-    )
-
-    static QuickHotkeys := Map(
-        "LButtonClick", true,
-        "CeaseOperations", true,
-        "Skip", true,
-        "Back", true,
-        "Harvest", true,
-        "CollectCollectibles", true
-    )
-
-    static StrongHoldHotkeys := Map(
-        "CheckEnemies", true,
-        "DispatchCenter", true,
-        "Freeze", true,
-        "Refresh", true,
-        "Upgrade", true,
-        "Sell", true,
-        "Ready", true,
-        "StrongHoldProtocolLButtonClick", true,
-        "StrongHoldProtocolRetreat", true,
-        "StrongHoldProtocolOneClickRetreat", true,
-        "OneClickSell", true,
-        "OneClickPurchase", true
-    )
-
     ; 已激活热键映射表
     static ActiveHotkeys := Map()
 
@@ -196,11 +152,11 @@ class HotkeyController {
     static EnableByTab(tabName) {
         this.HotkeyOff()  ; 先禁用所有热键
         if (tabName = "keyBind" || tabName = "quick") {
-            this.EnableGroup(this.CombatHotkeys)
-            this.EnableGroup(this.QuickHotkeys)
+            this.EnableGroup(Constants.CombatHotkeys)
+            this.EnableGroup(Constants.QuickHotkeys)
         }
         else if (tabName = "strongHoldProtocol") {
-            this.EnableGroup(this.StrongHoldHotkeys)
+            this.EnableGroup(Constants.StrongHoldHotkeys)
         }
     }
 

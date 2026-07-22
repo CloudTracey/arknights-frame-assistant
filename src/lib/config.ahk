@@ -58,6 +58,50 @@ class Constants {
         "OneClickSell", "一键出售",
         "OneClickPurchase", "一键购买"
     )
+
+    ; 热键启用分组，同时作为冲突检测的唯一分组数据源
+    static CombatHotkeys := Map(
+        "PressPause", true,
+        "ReleasePause", true,
+        "GameSpeed", true,
+        "PauseSelect", true,
+        "Skill", true,
+        "Retreat", true,
+        "16ms", true,
+        "33ms", true,
+        "166ms", true,
+        "OneClickSkill", true,
+        "OneClickRetreat", true,
+        "PauseSkill", true,
+        "PauseRetreat", true,
+        "SwitchView", true,
+        "BeginPause", true,
+        "AutoBeginPauseSwitch", true
+    )
+
+    static QuickHotkeys := Map(
+        "LButtonClick", true,
+        "CeaseOperations", true,
+        "Skip", true,
+        "Back", true,
+        "Harvest", true,
+        "CollectCollectibles", true
+    )
+
+    static StrongHoldHotkeys := Map(
+        "CheckEnemies", true,
+        "DispatchCenter", true,
+        "Freeze", true,
+        "Refresh", true,
+        "Upgrade", true,
+        "Sell", true,
+        "Ready", true,
+        "StrongHoldProtocolLButtonClick", true,
+        "StrongHoldProtocolRetreat", true,
+        "StrongHoldProtocolOneClickRetreat", true,
+        "OneClickSell", true,
+        "OneClickPurchase", true
+    )
     
     ; 重要设置名称映射
     static ImportantNames := Map(
