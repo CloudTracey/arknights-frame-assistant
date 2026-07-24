@@ -33,6 +33,8 @@ class SelfReplacer {
             backupName := "AFA_" A_Now "_backup.exe"
             backupPath := tempDir "\" backupName
         }
+
+        updateLogFile := Logger.GetLogDirectory() "\update-" A_Now "-" Random(1000, 9999) ".log"
         
         ; 扫描并收集所有残留的备份文件（供清理）
         oldBackups := []
@@ -48,7 +50,9 @@ class SelfReplacer {
             currentExePath: currentExePath,
             backupPath: backupPath,
             batchFile: batchFile,
-            oldBackups: oldBackups
+            oldBackups: oldBackups,
+            logDirectory: Logger.GetLogDirectory(),
+            logFile: updateLogFile
         })
         
         ; 写入批处理文件（使用UTF-8编码）
@@ -103,6 +107,8 @@ class SelfReplacer {
         backupPath := params.backupPath
         batchFile := params.batchFile
         oldBackups := params.HasProp("oldBackups") ? params.oldBackups : []
+        logDirectory := params.HasProp("logDirectory") ? params.logDirectory : (A_AppData "\ArknightsFrameAssistant\PC\logs")
+        logFile := params.HasProp("logFile") ? params.logFile : (logDirectory "\update-" A_Now ".log")
         
         ; 使用文本块方式构建批处理脚本
         lines := []
@@ -111,9 +117,9 @@ class SelfReplacer {
         lines.Push("chcp 65001 >nul")
         lines.Push("title AFA更新中...")
         ; 设置日志文件路径
-        lines.Push("set `"LOG_FILE=%Temp%\ArknightsFrameAssistant\log\update.log`"")
+        lines.Push("set `"LOG_FILE=" logFile `"")
         ; 创建日志目录（如果不存在）
-        lines.Push("if not exist `"%Temp%\ArknightsFrameAssistant\log`" mkdir `"%Temp%\ArknightsFrameAssistant\log`"")
+        lines.Push("if not exist `"" logDirectory `"" mkdir `"" logDirectory `"")
         
         ; 获取当前exe文件名
         SplitPath(currentExePath, &currentExeName)
@@ -227,7 +233,7 @@ class SelfReplacer {
         lines.Push("echo 正在清理临时文件...")
         
         ; 先关闭日志文件句柄（通过复制到新日志然后切换）
-        lines.Push("set final_log=%Temp%\ArknightsFrameAssistant\log\update_final.log")
+        lines.Push("set final_log=%LOG_FILE%.final")
         lines.Push("copy /Y `"%LOG_FILE%`" `"%final_log%`" >nul 2>&1")
         
         ; 删除更新文件
@@ -272,8 +278,6 @@ class SelfReplacer {
         lines.Push("    move /Y `"%final_log%`" `"%LOG_FILE%`" >nul 2>&1")
         lines.Push(")")
         
-        ; 尝试删除日志目录（现在应该为空了）
-        lines.Push("rmdir `"%Temp%\ArknightsFrameAssistant\log`" 2>nul")
         ; 尝试删除临时目录（如果为空）
         lines.Push("rmdir `"%Temp%\ArknightsFrameAssistant`" 2>nul")
         

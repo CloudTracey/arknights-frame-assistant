@@ -39,6 +39,7 @@ class Updater {
 
     ; 内部：执行版本检查
     static _DoCheck(isManual) {
+        Logger.Info("Updater", "开始检查更新 manual=" isManual)
         ; 自动检查时，检查是否开启了自动更新
         if (!isManual && Config.GetImportant("AutoUpdate") != "1") {
             return
@@ -47,6 +48,7 @@ class Updater {
         ; 执行版本检查
         EventBus.Publish("CheckUpdateStart")
         checkResult := VersionChecker.Check()
+        Logger.Info("Updater", "版本检查结果 status=" checkResult.status)
 
         ; 处理检查结果
         switch checkResult.status {
@@ -62,7 +64,7 @@ class Updater {
                     if (!saveResult.success) {
                         ; 保存失败时恢复内存值，避免配置文件与当前状态不一致。
                         Config.SetImportant("LastDismissedVersion", dismissedVersion)
-                        OutputDebug("[Updater] 清除已忽略版本记录失败：" saveResult.message)
+                        Logger.Warn("Updater", "清除已忽略版本记录失败：" saveResult.message)
                         MessageBox.Warning("当前版本已是最新，但忽略版本记录未能清除：`n" saveResult.message, "配置未保存")
                     }
                 }
@@ -166,6 +168,7 @@ class Updater {
 
     ; 下载错误处理——重试或降级
     static HandleDownloadRetryOrFallback(error, params, triedFallback, retryCount) {
+        Logger.Warn("Updater", "下载失败 retry=" retryCount " fallback=" triedFallback " message=" error.message)
         if (error.HasProp("cancelled") && error.cancelled) {
             return
         }
@@ -215,6 +218,7 @@ class Updater {
 
     ; 下载成功处理
     static HandleDownloadSuccess(result) {
+        Logger.Info("Updater", "更新下载完成，准备执行自替换")
         ; 关闭下载对话框
         UpdateUI.CloseDownloadingDialog()
         UpdateUI.ShowDownloadCompleteDialog()
@@ -230,6 +234,7 @@ class Updater {
 
     ; 处理下载取消完成
     static HandleDownloadCancelComplete() {
+        Logger.Info("Updater", "用户取消更新下载")
         ; 关闭下载对话框
         UpdateUI.CloseDownloadingDialog()
         ; 显示取消提示

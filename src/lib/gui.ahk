@@ -40,12 +40,14 @@ class GuiManager {
     static UpdateControls := []        ; "更新"设置控件组
     static CustomControls := []        ; "自定义"设置控件组
     static AboutControls := []         ; "关于"页面控件组
+    static LogControls := []           ; "日志"页面控件组
     ; 其他设置分类映射：分类名 → [控件组, 导航索引]
     static OtherCategories := Map(
         "Launch", [this.LaunchControls, 1],
         "Update", [this.UpdateControls, 2],
         "Custom", [this.CustomControls, 3],
-        "About", [this.AboutControls, 4]
+        "About", [this.AboutControls, 4],
+        "Log", [this.LogControls, 5]
     )
     static NotOtherControls := [] ; 仅非其他设置相关控件
     static TxtKeybind := ""           ; "常规作战"标签文本
@@ -334,6 +336,14 @@ class GuiManager {
         this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
         this.OtherSettingsControls.Push(this.NavIndicators[4])
 
+        ; 导航项"日志"（未选中态）
+        navLog := this.MainGui.Add("Text", "xs y+m w130 Center", "日志")
+        navLog.OnEvent("Click", (*) => this._SwitchOtherCategory("Log"))
+        this.NavItems.Push(navLog)
+        this.OtherSettingsControls.Push(navLog)
+        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.OtherSettingsControls.Push(this.NavIndicators[5])
+
         ; 其他设置 - 右侧内容区
         ; 分类"启动与退出"
         sepLaunch := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
@@ -522,6 +532,21 @@ class GuiManager {
         this.AboutControls.Push(aboutArtist)
 
         this.MainGui.SetFont("s9 cDefault norm", "Microsoft YaHei UI")
+
+        ; 分类"日志"
+        sepLog := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
+        sepLogTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", "  日志设置  ")
+        this.LogControls.Push(sepLog)
+        this.LogControls.Push(sepLogTxt)
+
+        logButtonX := 160 + (530 - 160) // 2
+        btnCreateLogArchive := this.MainGui.Add("Button", "x" logButtonX " y+16 w160 h28", "生成日志压缩包")
+        btnCreateLogArchive.OnEvent("Click", (*) => LogExporter.CreateArchiveInteractive())
+        this.LogControls.Push(btnCreateLogArchive)
+
+        btnOpenLogDirectory := this.MainGui.Add("Button", "x" logButtonX " y+8 w160 h28", "打开日志文件夹")
+        btnOpenLogDirectory.OnEvent("Click", (*) => LogExporter.OpenLogDirectory())
+        this.LogControls.Push(btnOpenLogDirectory)
 
         ; 隐藏非默认分类的控件
         this._HideOtherCategories()

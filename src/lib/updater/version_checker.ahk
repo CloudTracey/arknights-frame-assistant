@@ -73,7 +73,7 @@ class VersionChecker {
     ; 内部：输出调试日志
     static _Log(message) {
         if (this.DebugMode) {
-            OutputDebug("[VersionChecker] " message)
+            Logger.Debug("VersionChecker", message)
         }
     }
     
@@ -111,14 +111,8 @@ class VersionChecker {
         this._Log("========== " type " ==========")
         this._Log("Timestamp: " this._Timestamp())
         this._Log("Status: " statusCode " " statusText)
-        this._Log("Headers:")
-        if (headers != "") {
-            Loop Parse headers, "`n" {
-                this._Log("  " A_LoopField)
-            }
-        }
-        this._Log("Body (first 500 chars):")
-        this._Log(SubStr(body, 1, 500))
+        this._Log("Response headers omitted from persistent diagnostics")
+        this._Log("Response body length=" StrLen(body))
     }
     
     ; 内部：格式化时间戳
@@ -226,7 +220,7 @@ class VersionChecker {
             if (resp.statusCode = 200) {
                 username := this._ExtractJsonValue(resp.body, "login")
                 this.TokenValidated := true
-                this._Log("Token验证成功，用户: " username)
+                this._Log("Token验证成功")
                 return {valid: true, message: "Token有效", username: username, rateLimit: rateInfo.remaining "/" rateInfo.limit}
             } else if (resp.statusCode = 401) {
                 this.TokenValidated := false
@@ -873,8 +867,8 @@ class VersionChecker {
                 FileDelete(this.CacheFile)
             FileAppend(json, this.CacheFile, "UTF-8")
         } catch Error as err {
-            ; 缓存失败不影响主流程，但输出调试信息
-            OutputDebug("保存缓存失败: " err.Message)
+            ; 缓存失败不影响主流程，但记录警告
+            Logger.Warn("VersionChecker", "保存缓存失败：" err.Message)
         }
     }
 
@@ -922,7 +916,7 @@ class VersionChecker {
                 FileDelete(changelogFile)
             FileAppend(json, changelogFile, "UTF-8")
         } catch Error as err {
-            OutputDebug("保存 changelog 缓存失败: " err.Message)
+            Logger.Warn("VersionChecker", "保存 changelog 缓存失败：" err.Message)
         }
     }
 

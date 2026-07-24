@@ -72,10 +72,10 @@ class GameAutoStartManager {
 
         try {
             this.RegisterTask(gamePath)
-            OutputDebug("[GameAutoStart] 计划任务已注册：" gamePath)
+            Logger.Info("GameAutoStart", "计划任务已注册：" gamePath)
             return {success: true, message: "随游戏自动启动已启用。"}
         } catch Error as e {
-            OutputDebug("[GameAutoStart] 计划任务注册失败：" e.Message)
+            Logger.Error("GameAutoStart", "计划任务注册失败：" e.Message)
             return {success: false, message: "计划任务注册失败：`n" e.Message}
         }
     }
@@ -93,10 +93,10 @@ class GameAutoStartManager {
                 return {success: true, message: "随游戏自动启动已关闭。"}
             }
             rootFolder.DeleteTask(taskName, 0)
-            OutputDebug("[GameAutoStart] 计划任务已删除")
+            Logger.Info("GameAutoStart", "计划任务已删除")
             return {success: true, message: "随游戏自动启动已关闭。"}
         } catch Error as e {
-            OutputDebug("[GameAutoStart] 计划任务删除失败：" e.Message)
+            Logger.Error("GameAutoStart", "计划任务删除失败：" e.Message)
             return {success: false, message: "计划任务删除失败：`n" e.Message}
         }
     }

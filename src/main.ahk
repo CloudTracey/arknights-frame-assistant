@@ -12,7 +12,17 @@ SetDefaultMouseSpeed 0
 SetTitleMatchMode 3
 CoordMode "Mouse", "Client"
 DllCall("winmm\timeBeginPeriod", "UInt", 1)
-OnExit (*) => DllCall("winmm\timeEndPeriod", "UInt", 1)
+
+; 统一日志和版本定义需要在提权前可用，便于后续启动流程记录。
+#Include ./lib/logger.ahk
+#Include ./lib/version.ahk
+
+HandleAfaExit(exitReason, exitCode) {
+    Logger.HandleExit(exitReason, exitCode)
+    DllCall("winmm\timeEndPeriod", "UInt", 1)
+}
+
+OnExit HandleAfaExit
 
 ; 判断是否由游戏启动事件触发
 HasLaunchArgument(argument) {
@@ -38,8 +48,10 @@ if not A_IsAdmin
     }
     ExitApp
 }
-; 包含版本号
-#Include ./lib/version.ahk
+
+; 管理员进程开始记录持久化日志。
+Logger.Init()
+Logger.Info("Startup", "管理员进程启动，脚本=" A_ScriptName)
 
 ; 包含统一消息框
 #Include ./lib/message_box.ahk
@@ -49,6 +61,9 @@ if not A_IsAdmin
 
 ; 包含配置管理
 #Include ./lib/config.ahk
+
+; 包含日志压缩包导出
+#Include ./lib/log_exporter.ahk
 
 ; 包含随游戏自动启动模块
 #Include ./lib/game_auto_start.ahk
@@ -85,12 +100,16 @@ if not A_IsAdmin
 
 ; 加载设置
 Loader.LoadSettings()
+Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
+Logger.RegisterSecret(Config.GetImportant("GamePath"))
+Logger.RegisterSecret(A_ScriptFullPath)
+Logger.Info("Startup", "配置加载完成，版本=" Version.Get())
 
 ; 写入启动来源状态，并校准随游戏自动启动的 Windows 审核和计划任务
 State.StartedByGameAutoStart := startedByGameAutoStart
 autoStartResult := GameAutoStartManager.Reconcile()
 if (!autoStartResult.success) {
-    OutputDebug("[GameAutoStart] 启动时校准失败：" autoStartResult.message)
+    Logger.Error("GameAutoStart", "启动时校准失败：" autoStartResult.message)
     if (!State.StartedByGameAutoStart && Config.GetImportant("AutoStartWithGame") = "1")
         MessageBox.Warning(autoStartResult.message, "随游戏自动启动校准失败")
 }
