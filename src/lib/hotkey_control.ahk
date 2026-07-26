@@ -65,7 +65,7 @@ class HotkeyController {
     static HotkeyOn(*) {
         HotIfWinActive("ahk_exe Arknights.exe")
         for keyVar, _ in Constants.KeyNames {
-            hotkeyValue := Config.GetHotkey(keyVar)
+            hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
                 if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
@@ -109,7 +109,7 @@ class HotkeyController {
     static EnableGroup(groupMap) {
         HotIfWinActive("ahk_exe Arknights.exe")
         for keyVar, _ in groupMap {
-            hotkeyValue := Config.GetHotkey(keyVar)
+            hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
                 if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
@@ -140,7 +140,7 @@ class HotkeyController {
     static DisableGroup(groupMap) {
         HotIfWinActive("ahk_exe Arknights.exe")
         for keyVar, _ in groupMap {
-            hotkeyValue := Config.GetHotkey(keyVar)
+            hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "") {
                 try Hotkey(hotkeyValue, , "Off")
                 try Hotkey("~" hotkeyValue, , "Off")
@@ -193,7 +193,7 @@ class HotkeyController {
     ; 设置热键启用/禁用快捷键
     static SetSwitchKey() {
         HotIfWinActive("ahk_exe Arknights.exe")
-        switchKey := Config.GetCustom("SwitchHotkey")
+        switchKey := Config.ReadCustomFromIni("SwitchHotkey")
         if (switchKey != "") {
             Hotkey(switchKey, this.SwitchHotkey, "On")
             this.ActiveSwitchHotkey := switchKey

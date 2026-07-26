@@ -29,7 +29,7 @@ Action16ms(ThisHotkey) {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    delay := Integer(Config.GetCustom("FrameSkip16msDelay"))
+    delay := Integer(Config.ReadCustomFromIni("FrameSkip16msDelay"))
     Send "{ESC Down}"
     USleep(delay)
     GameKeys.SendDown("pauseBattle")
@@ -50,7 +50,7 @@ Action33ms(ThisHotkey) {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    delay := Integer(Config.GetCustom("FrameSkip33msDelay"))
+    delay := Integer(Config.ReadCustomFromIni("FrameSkip33msDelay"))
     Send "{ESC Down}"
     USleep(delay)
     GameKeys.SendDown("pauseBattle")
@@ -71,7 +71,7 @@ Action166ms(ThisHotkey) {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    delay := Integer(Config.GetCustom("FrameSkip166msDelay"))
+    delay := Integer(Config.ReadCustomFromIni("FrameSkip166msDelay"))
     Send "{ESC Down}"
     USleep(delay)
     GameKeys.SendDown("pauseBattle")
