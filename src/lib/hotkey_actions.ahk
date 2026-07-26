@@ -293,6 +293,7 @@ ActionBeginPause() {
                 State.BlackScreenDetected := false
                 State.ReadyForPause := false
                 SetTimer CheckGameStatus, 400
+                try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
                 return
             }
             Send "{ESC Down}"
