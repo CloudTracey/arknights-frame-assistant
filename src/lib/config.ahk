@@ -226,70 +226,88 @@ class Config {
         this.IniFile := configDir "\Settings.ini"
     }
     
-    ; 获取按键设置
+    ; 获取按键设置（从内存工作副本，供 GUI 和冲突检测使用）
     static GetHotkey(key) {
         if !this._IsLoaded
             this.LoadFromIni()
-        else {
-            for keyVar, defaultVal in this._DefaultHotkeys {
-                this._HotkeySettings[keyVar] := IniRead(this.IniFile, "Hotkeys", keyVar, defaultVal)
-            }
-        }
         return this._HotkeySettings.Has(key) ? this._HotkeySettings[key] : ""
     }
-    
-    ; 设置按键
+
+    ; 直接从 INI 读取按键设置（不触碰内存工作副本，供热键注册使用）
+    static ReadHotkeyFromIni(key) {
+        if this.IniFile = ""
+            this.InitPath()
+        defaultVal := this._DefaultHotkeys.Has(key) ? this._DefaultHotkeys[key] : ""
+        return IniRead(this.IniFile, "Hotkeys", key, defaultVal)
+    }
+
+    ; 设置按键（仅写内存工作副本）
     static SetHotkey(key, value) {
         this._HotkeySettings[key] := value
     }
     
-    ; 获取重要设置
+    ; 获取重要设置（从内存工作副本，供 GUI 使用）
     static GetImportant(key) {
         if !this._IsLoaded
             this.LoadFromIni()
-        else {
-            for keyVar, defaultVal in this._DefaultImportant {
-                if (keyVar = "GitHubToken") {
-                    tokenValue := this._ReadGitHubToken()
-                    this._ImportantSettings[keyVar] := tokenValue
-                } else {
-                    this._ImportantSettings[keyVar] := IniRead(this.IniFile, "Main", keyVar, defaultVal)
-                }
-            }
-        }
-        ; Frame键的特殊处理：优先内存中Frame155（未持久化的值），回退INI，再回退旧序号
         if (key = "Frame") {
             frame155 := this._ImportantSettings.Has("Frame155") && this._ImportantSettings["Frame155"] != ""
                 ? this._ImportantSettings["Frame155"]
                 : IniRead(this.IniFile, "Main", "Frame155", "")
-            if (frame155 != "")
-                return frame155
-            frameIndex := this._ImportantSettings.Has(key) ? this._ImportantSettings[key] : ""
-            if Constants.FrameOldIndexToText.Has(frameIndex)
-                return Constants.FrameOldIndexToText[frameIndex]
-            return this._DefaultImportant["Frame"]
+            frameIndex := this._ImportantSettings.Has("Frame") ? this._ImportantSettings["Frame"] : ""
+            return this._ResolveFrame(frame155, frameIndex)
         }
         return this._ImportantSettings.Has(key) ? this._ImportantSettings[key] : ""
     }
 
-    ; 设置重要设置
-    static SetImportant(key, value) {
-        this._ImportantSettings[key] := value
+    ; 直接从 INI 读取重要设置（不触碰内存工作副本，供运行时使用）
+    static ReadImportantFromIni(key) {
+        if this.IniFile = ""
+            this.InitPath()
+        if (key = "GitHubToken") {
+            return this._ReadGitHubToken()
+        }
+        if (key = "Frame") {
+            frame155 := IniRead(this.IniFile, "Main", "Frame155", "")
+            frameIndex := IniRead(this.IniFile, "Main", "Frame", this._DefaultImportant["Frame"])
+            return this._ResolveFrame(frame155, frameIndex)
+        }
+        defaultVal := this._DefaultImportant.Has(key) ? this._DefaultImportant[key] : ""
+        return IniRead(this.IniFile, "Main", key, defaultVal)
     }
 
-    ; 获取自定义设置
+    ; 内部：解析 Frame 值（Frame155 优先，回退旧序号，再回退默认值）
+    static _ResolveFrame(frame155, frameIndex) {
+        if (frame155 != "")
+            return frame155
+        if Constants.FrameOldIndexToText.Has(frameIndex)
+            return Constants.FrameOldIndexToText[frameIndex]
+        return this._DefaultImportant["Frame"]
+    }
+
+    ; 设置重要设置（Frame 自动同步 Frame155）
+    static SetImportant(key, value) {
+        this._ImportantSettings[key] := value
+        if (key = "Frame")
+            this._ImportantSettings["Frame155"] := value
+    }
+
+    ; 获取自定义设置（从内存工作副本，供 GUI 和冲突检测使用）
     static GetCustom(key) {
         if !this._IsLoaded
             this.LoadFromIni()
-        else {
-            for keyVar, defaultVal in this._DefaultCustom {
-                this._CustomSettings[keyVar] := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
-            }
-        }
         return this._CustomSettings.Has(key) ? this._CustomSettings[key] : ""
     }
-    
-    ; 设置自定义设置
+
+    ; 直接从 INI 读取自定义设置（不触碰内存工作副本，供运行时使用）
+    static ReadCustomFromIni(key) {
+        if this.IniFile = ""
+            this.InitPath()
+        defaultVal := this._DefaultCustom.Has(key) ? this._DefaultCustom[key] : ""
+        return IniRead(this.IniFile, "Custom", key, defaultVal)
+    }
+
+    ; 设置自定义设置（仅写内存工作副本）
     static SetCustom(key, value) {
         this._CustomSettings[key] := value
     }
@@ -742,7 +760,7 @@ class State {
 
     ; 根据设置更新技能与撤退点击延迟
     static UpdateClickDelay() {
-        this.ClickDelay := Config.GetCustom("ClickDelay")
+        this.ClickDelay := Config.ReadCustomFromIni("ClickDelay")
     }
 }
 
