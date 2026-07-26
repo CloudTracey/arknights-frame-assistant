@@ -15,6 +15,7 @@ class GuiManager {
     static SwitchHotkey := ""
     static IsModified := false
     static HasHotkeyConflicts := false
+    static _PrevConflictedControls := Map()  ; 上次冲突控件集合，用于增量字体更新
     static _InitialValues := Map()  ; 初始值快照，用于脏值对比
     static HintUnsaved := ""       ; 提示文字
     static IsOnStrongHoldProtocol := false
@@ -769,22 +770,31 @@ class GuiManager {
         }
     }
 
-    ; 重新计算冲突并标红所有冲突输入框。
+    ; 重新计算冲突并增量标红冲突输入框，避免全量控件闪烁。
     static RefreshHotkeyConflicts() {
         result := HotkeyConflictValidator.FindAll(
             Config.AllHotkeys,
             Config.AllCustom
         )
 
-        for controlName, _ in Config.AllHotkeys {
-            try this.MainGui[controlName].SetFont("cDefault")
-        }
-        try this.MainGui["SwitchHotkey"].SetFont("cDefault")
+        ; 构建本次冲突控件集合
+        newConflicted := Map()
+        for controlName, _ in result.ByControl
+            newConflicted[controlName] := true
 
-        for controlName, _ in result.ByControl {
-            try this.MainGui[controlName].SetFont("cD93025")
+        ; 仅恢复不再冲突的控件颜色
+        for controlName, _ in this._PrevConflictedControls {
+            if !newConflicted.Has(controlName)
+                try this.MainGui[controlName].SetFont("cDefault")
         }
 
+        ; 仅标红新增的冲突控件
+        for controlName, _ in newConflicted {
+            if !this._PrevConflictedControls.Has(controlName)
+                try this.MainGui[controlName].SetFont("cD93025")
+        }
+
+        this._PrevConflictedControls := newConflicted
         this.HasHotkeyConflicts := result.HasConflicts
         this.UpdateSaveButtonState()
     }
@@ -1065,20 +1075,28 @@ class GuiManager {
             result := MessageBox.Confirm("  修改尚未保存，确定离开此页面吗 ？","保存提示")
             if (result == "No")
                 return
+            ; 用户选择放弃修改，从 INI 重新加载以丢弃内存中所有未保存的值
+            Config.LoadFromIni()
         }
         this.CurrentTab := tabName
-        
+
         ; 记录最后选中的标签页（排除"其他设置"）
         if (tabName != "other") {
             this.LastActiveTab := tabName
         }
-        
+
+        ; 提前重置修改与冲突状态，确保 _UpdateTabUI 中 RefreshHotkeyConflicts
+        ; 触发时 IsModified 已为 false，避免提示文字闪现
+        this.SetIsModifiedFalse()
+        this.HasHotkeyConflicts := false
+
         ; 如果当前处于热键禁用状态，只更新UI，不切换热键
         if (!HotkeyController.HotkeyState) {
             this._UpdateTabUI(tabName)
+            this.CaptureInitialSnapshot()
             return
         }
-        
+
         ; 根据标签页切换热键组
         if (tabName = "keyBind" || tabName = "quick") {
             HotkeyController.EnableByTab("keyBind")
@@ -1097,12 +1115,9 @@ class GuiManager {
             }
         }
         ; "other"标签页不改变热键
-        
+
         ; 更新UI
         this._UpdateTabUI(tabName)
-
-        ; 将修改状态改回未修改，并刷新快照
-        this.SetIsModifiedFalse()
         this.CaptureInitialSnapshot()
     }
 
