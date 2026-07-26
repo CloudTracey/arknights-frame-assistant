@@ -316,7 +316,7 @@ class Config {
                 IniWrite(Constants.FrameOldIndexToText[frameValue], this.IniFile, "Main", "Frame155")
                 ; 保留原Frame值给旧版本使用
             } catch Error as e {
-                OutputDebug("[Config] 帧率迁移写入失败：" e.Message)
+                Logger.Warn("Config", "帧率迁移写入失败：" e.Message)
             }
         }
     }
@@ -575,6 +575,7 @@ class Config {
             tempIniFile := ""
             return {success: true, message: ""}
         } catch Error as e {
+            Logger.Error("Config", "配置文件写入失败：" e.Message)
             return {success: false, message: "配置文件写入失败：" e.Message}
         } finally {
             this.IniFile := targetIniFile
@@ -639,6 +640,7 @@ class Config {
             tempIniFile := ""
             return {success: true, message: ""}
         } catch Error as e {
+            Logger.Error("Config", "配置文件保存失败：" e.Message)
             return {success: false, message: "配置文件写入失败：" e.Message}
         } finally {
             this.IniFile := targetIniFile

@@ -11,6 +11,7 @@ CheckGameStatus() {
         }
         else {
             if (State.GameHasStarted == true) {
+                Logger.Info("GameMonitor", "检测到游戏进程已退出，自动退出 AFA")
                 ExitApp
             }
         }
@@ -33,6 +34,7 @@ CheckGameStatus() {
             }
             if (missCount <= 1) {
                 State.BlackScreenDetected := true
+                Logger.Debug("GameMonitor", "检测到开局黑屏，开始识别 Loading 状态")
                 SetTimer StopSearchLoading, -8000
                 SetTimer CheckGameStatus, 200
             }

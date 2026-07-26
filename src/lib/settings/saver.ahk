@@ -4,6 +4,12 @@ class Saver {
     static SettingsIniWrite() {
         EventBus.Publish("SettingsWillSave")
         SavedObj := GuiManager.Submit()
+
+        ; 先登记本次会话中新输入的敏感值，覆盖后续验证、外部设置和保存流程的日志。
+        if (SavedObj.HasProp("GitHubToken"))
+            Logger.RegisterSecret(SavedObj.GitHubToken)
+        if (SavedObj.HasProp("GamePath"))
+            Logger.RegisterSecret(SavedObj.GamePath)
         
         ; 检查按键冲突
         if (!this._CheckKeyConflicts()) {
@@ -85,6 +91,7 @@ class Saver {
             }
             ; 保存规范化后的绝对路径，确保后续启动校准使用同一事件过滤条件。
             SavedObj.GamePath := validation.path
+            Logger.RegisterSecret(SavedObj.GamePath)
             GuiManager.SetControlValue("GamePath", validation.path)
             appliedGamePath := validation.path
 

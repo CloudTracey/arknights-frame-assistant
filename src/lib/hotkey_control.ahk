@@ -90,16 +90,19 @@ class HotkeyController {
             }
         }
         HotIf
+        Logger.Info("Hotkey", "热键已启用，数量=" this.ActiveHotkeys.Count)
     }
 
     ; 禁用热键
-    static HotkeyOff(*) {
+    static HotkeyOff(silent := false, *) {
         HotIfWinActive("ahk_exe Arknights.exe")
         for _ , hotkeyValue in HotkeyController.ActiveHotkeys {
             Hotkey(hotkeyValue, , "Off")
         }
         HotkeyController.ActiveHotkeys := Map()
         HotIf
+        if !silent
+            Logger.Info("Hotkey", "热键已禁用")
     }
 
     ; 启用指定组的热键
@@ -150,7 +153,7 @@ class HotkeyController {
 
     ; 根据标签页启用对应热键组
     static EnableByTab(tabName) {
-        this.HotkeyOff()  ; 先禁用所有热键
+        this.HotkeyOff(true)  ; 先静默禁用所有热键，重建完成后记录最终状态
         if (tabName = "keyBind" || tabName = "quick") {
             this.EnableGroup(Constants.CombatHotkeys)
             this.EnableGroup(Constants.QuickHotkeys)
@@ -158,6 +161,7 @@ class HotkeyController {
         else if (tabName = "strongHoldProtocol") {
             this.EnableGroup(Constants.StrongHoldHotkeys)
         }
+        Logger.Info("Hotkey", "热键已重建，数量=" this.ActiveHotkeys.Count)
     }
 
     ; 切换热键启用/禁用
@@ -168,6 +172,7 @@ class HotkeyController {
             GuiManager.IsOnStrongHoldProtocol := false
             TrayTip
             TrayTip("热键已禁用", "AFA")
+            Logger.Info("Hotkey", "用户禁用热键")
             A_IconTip := "AFA`n热键已禁用"
             return
         }
@@ -179,6 +184,7 @@ class HotkeyController {
                 GuiManager.IsOnStrongHoldProtocol := true
             TrayTip
             TrayTip("热键已启用", "AFA")
+            Logger.Info("Hotkey", "用户启用热键")
             A_IconTip := "AFA`n热键已启用"
             return
         }

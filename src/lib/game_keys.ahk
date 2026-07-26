@@ -275,18 +275,18 @@ class GameKeys {
                 {
                     if (InStr(A_LoopRegName, "KEYBOARD_SETTING_V") = 1) {
                         targetValueName := A_LoopRegName
-                        OutputDebug("[GameKeys] 找到键值：" targetValueName)
+                        Logger.Debug("GameKeys", "找到键值：" targetValueName)
                         break
                     }
                 }
             } catch Error as loopErr {
                 if (targetValueName = "")
-                    OutputDebug("[GameKeys] 注册表枚举异常：" loopErr.Message)
+                    Logger.Warn("GameKeys", "注册表枚举异常：" loopErr.Message)
             }
 
             ; 如果枚举没找到，尝试已知键名
             if (targetValueName = "") {
-                OutputDebug("[GameKeys] 枚举未找到，尝试已知键名")
+                Logger.Debug("GameKeys", "枚举未找到，尝试已知键名")
                 knownKeys := ["KEYBOARD_SETTING_V2_h476498874"]
                 for keyName in knownKeys {
                     try {
@@ -302,26 +302,26 @@ class GameKeys {
             }
 
             if (targetValueName = "") {
-                OutputDebug("[GameKeys] 未找到任何 KEYBOARD_SETTING_V* 键值")
+                Logger.Warn("GameKeys", "未找到任何 KEYBOARD_SETTING_V* 键值")
                 return Map()
             }
 
-            OutputDebug("[GameKeys] 选用键值：" targetValueName)
+            Logger.Debug("GameKeys", "选用键值：" targetValueName)
 
             ; RegRead 对于 REG_BINARY 返回 hex 字符串
             try {
                 hexStr := RegRead("HKCU\Software\HyperGryph\Arknights", targetValueName)
             } catch Error as readErr {
-                OutputDebug("[GameKeys] RegRead 调用失败：" readErr.Message)
+                Logger.Warn("GameKeys", "RegRead 调用失败：" readErr.Message)
                 return Map()
             }
 
             if (hexStr = "") {
-                OutputDebug("[GameKeys] RegRead 返回空字符串")
+                Logger.Warn("GameKeys", "RegRead 返回空字符串")
                 return Map()
             }
 
-            OutputDebug("[GameKeys] 读取成功，hex 长度：" StrLen(hexStr))
+            Logger.Debug("GameKeys", "读取成功，hex 长度：" StrLen(hexStr))
             this._LastHex := hexStr
 
             ; hex 字符串 → UTF-8 文本
@@ -335,17 +335,17 @@ class GameKeys {
             jsonStr := StrGet(buf, bufSize, "UTF-8")
 
             if (jsonStr = "") {
-                OutputDebug("[GameKeys] hex→文本转换为空")
+                Logger.Warn("GameKeys", "hex→文本转换为空")
                 return Map()
             }
 
-            OutputDebug("[GameKeys] JSON 前 120 字符：" SubStr(jsonStr, 1, 120))
+            Logger.Debug("GameKeys", "JSON 前 120 字符：" SubStr(jsonStr, 1, 120))
 
             result := this._ParseJson(jsonStr)
-            OutputDebug("[GameKeys] 解析完成，共 " result.Count " 个映射")
+            Logger.Debug("GameKeys", "解析完成，共 " result.Count " 个映射")
             return result
         } catch Error as e {
-            OutputDebug("[GameKeys] 整体异常：" e.Message "，行号：" e.Line)
+            Logger.Error("GameKeys", "整体异常：" e.Message "，行号：" e.Line)
             return Map()
         }
     }
@@ -366,14 +366,14 @@ class GameKeys {
             if (ahkKey != "") {
                 result[funcName] := ahkKey
             } else {
-                OutputDebug("[GameKeys] 未知 keyId：" keyId "（功能：" funcName "），使用默认值")
+                Logger.Warn("GameKeys", "未知 keyId：" keyId "（功能：" funcName "），使用默认值")
             }
 
             pos += match.Len[0]
         }
 
         if (result.Count = 0) {
-            OutputDebug("[GameKeys] JSON 解析结果为空，原始内容前80字符：" SubStr(jsonStr, 1, 80))
+            Logger.Warn("GameKeys", "JSON 解析结果为空，原始内容前80字符：" SubStr(jsonStr, 1, 80))
         }
 
         return result
@@ -430,7 +430,7 @@ class GameKeys {
         if (StrLen(keyId) = 1)
             return keyId
 
-        OutputDebug("[GameKeys] 未知 keyId：" keyId)
+        Logger.Warn("GameKeys", "未知 keyId：" keyId)
         return ""
     }
 
@@ -486,14 +486,14 @@ class GameKeys {
             }
             jsonStr := StrGet(buf, bufSize, "UTF-8")
             if (jsonStr = "") {
-                OutputDebug("[GameKeys] 轮询：hex→文本转换失败")
+                Logger.Warn("GameKeys", "轮询：hex→文本转换失败")
                 this._LastHex := hexStr  ; 标记已处理，避免重复解析
                 return
             }
 
             newBindings := this._ParseJson(jsonStr)
             if (newBindings.Count = 0) {
-                OutputDebug("[GameKeys] 轮询：JSON 解析结果为空")
+                Logger.Warn("GameKeys", "轮询：JSON 解析结果为空")
                 this._LastHex := hexStr  ; 标记已处理，避免重复解析
                 return
             }
@@ -505,17 +505,17 @@ class GameKeys {
             ; 如果之前是失败状态，现在恢复了
             if (!this._LastReadSuccess) {
                 this._LastReadSuccess := true
-                OutputDebug("[GameKeys] 注册表读取已恢复")
+                Logger.Info("GameKeys", "注册表读取已恢复")
             }
 
             ; 重建热键（按当前标签页重新注册，新拦截正则生效）
-            OutputDebug("[GameKeys] 检测到按键变更，重建热键")
+            Logger.Info("GameKeys", "检测到按键变更，重建热键")
             HotkeyController.HotkeyOff()
             HotkeyController.EnableByTab(GuiManager.LastActiveTab)
             ; 重新设置切换键
             EventBus.Publish("SetSwitchKey")
         } catch Error as e {
-            OutputDebug("[GameKeys] 轮询异常：" e.Message)
+            Logger.Error("GameKeys", "轮询异常：" e.Message)
         }
     }
 

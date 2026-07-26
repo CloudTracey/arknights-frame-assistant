@@ -127,7 +127,8 @@ class TouchInjector {
 }
 
 ; == 初始化 ==
-TouchInjector.Init(3, 1)
+if !TouchInjector.Init(3, 1)
+    Logger.Error("TouchInjector", "触控注入初始化失败，错误码=" TouchInjector.LastError)
 MouseGetPos &xpos, &ypos
 TouchInjector.Move(xpos, ypos)
 MouseMove xpos, ypos
