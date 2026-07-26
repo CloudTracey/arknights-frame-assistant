@@ -326,6 +326,9 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             ; 释放可能存在的Hook
             KeyBinder.StopHook()
         }
+        ; 点击非Edit区域时聚焦取消按钮，取消普通Edit控件的选中状态
+        if (hwnd = GuiManager.MainGui.Hwnd)
+            GuiManager.FocusCancelButton()
         return
     }
     ; 无事发生
