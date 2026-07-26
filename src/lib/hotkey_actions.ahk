@@ -94,6 +94,10 @@ ActionPauseSelect(ThisHotkey) {
     }
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
+    if !PosL || !PosR {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
     MouseGetPos &xpos, &ypos
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
@@ -167,6 +171,10 @@ ActionPauseSkill(ThisHotkey) {
     }
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
+    if !PosL || !PosR {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
     MouseGetPos &xpos, &ypos
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
@@ -194,6 +202,10 @@ ActionPauseRetreat(ThisHotkey) {
     }
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
+    if !PosL || !PosR {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
     MouseGetPos &xpos, &ypos
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
@@ -222,6 +234,10 @@ ActionSwitchView(ThisHotkey) {
     }
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
+    if !PosL || !PosR {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
     MouseGetPos &xpos, &ypos
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
@@ -265,6 +281,10 @@ ActionBeginPauseSwitch(ThisHotkey) {
 ActionBeginPause() {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     PosC := SpeedButtonPositionColor()
+    if !PosC {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
     while(true) {
         ; ToolTip("正在识别按钮！")  ; 调试代码
         if PixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBCUY, PosC.PBCLX, PosC.PBCDY, 0xffffff, 10)
@@ -282,6 +302,12 @@ ActionBeginPause() {
             ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
             isProxy := false
             TobC := TakeOverButtonPositions()
+            if !TobC {
+                State.BlackScreenDetected := false
+                State.ReadyForPause := false
+                SetTimer CheckGameStatus, 400
+                break
+            }
             ; 接管代理按钮右侧边缘
             if ImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver1Path) or ImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver2Path) { ; 0 帧暂停接管按钮半透明导致至少需要 90 容错
                 isProxy := true
@@ -346,6 +372,10 @@ ActionSkip(ThisHotkey) {
         return
     }
     Pos := SkipButtonPosition()
+    if !Pos {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
     MouseMove Pos.PBX, Pos.PBY
@@ -451,6 +481,10 @@ ActionHarvest(ThisHotkey) {
         return
     }
     Pos := HarvestButtonPosition()
+    if !Pos {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
     MouseMove Pos.PBX, Pos.PBY
@@ -475,6 +509,10 @@ ActionCollectCollectibles(ThisHotkey) {
         return
     }
     Pos := CollectButtonPosition()
+    if !Pos {
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        return
+    }
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
     MouseMove Pos.PBX, Pos.PBY
@@ -620,7 +658,11 @@ IsMouseInClient() {
 }
 ; 获取放弃按钮位置
 AbandonButtonPosition() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    } catch TargetError {
+        return false
+    }
     PButtonLX := ww * 0.0474
     PButtonRX := ww * 0.1369
     PButtonUY := wh * 0.0444
@@ -630,6 +672,8 @@ AbandonButtonPosition() {
 ; 关卡界面检测
 IsInLevel() {
     AbdC := AbandonButtonPosition()
+    if !AbdC
+        return false
     if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0x8c8c8c, 0) {
         return true
     }
@@ -640,28 +684,44 @@ IsInLevel() {
 }
 ; 获取暂停按钮位置
 PauseButtonPosition() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    } catch TargetError {
+        return false
+    }
     PButtonX := ww * 0.9525
     PButtonY := wh * 0.0700
     return {PBX: PButtonX, PBY: PButtonY}
 }
 ; 获取暂停按钮左半部分位置
 PauseButtonPositionLeft() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    } catch TargetError {
+        return false
+    }
     PButtonLX := ww * 0.9400
     PButtonLY := wh * 0.0700
     return {PBLX: PButtonLX, PBLY: PButtonLY}
 }
 ; 获取暂停按钮右半部分位置
 PauseButtonPositionRight() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    } catch TargetError {
+        return false
+    }
     PButtonRX := ww * 0.9650
     PButtonRY := wh * 0.0700
     return {PBRX: PButtonRX, PBRY: PButtonRY}
 }
 ; 获取自动暂停倍速按钮识别位置
 SpeedButtonPositionColor() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    } catch TargetError {
+        return false
+    }
     PButtonCLX := ww * 0.8450
     PButtonCRX := ww * 0.8807
     PButtonCUY := wh * 0.0713
@@ -670,14 +730,22 @@ SpeedButtonPositionColor() {
 }
 ; 获取基建收取按钮位置
 HarvestButtonPosition() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    } catch TargetError {
+        return false
+    }
     PButtonX := ww * 0.1297
     PButtonY := wh * 0.9527
     return {PBX: PButtonX, PBY: PButtonY}
 }
 ; 获取代理接管作战按钮识别位置（线点识别 + 图像识别）
 TakeOverButtonPositions() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    } catch TargetError {
+        return false
+    }
     ; === ImageSearch 搜索区域 ===
     ImageRegion := {
         ; 按钮右侧边缘
@@ -691,14 +759,22 @@ TakeOverButtonPositions() {
 }
 ; 获取“收下”按钮位置
 CollectButtonPosition() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    } catch TargetError {
+        return false
+    }
     PButtonX := ww * 0.1104
     PButtonY := wh * 0.7250
     return {PBX: PButtonX, PBY: PButtonY}
 }
 ; 获取跳过按钮位置
 SkipButtonPosition() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    } catch TargetError {
+        return false
+    }
     PButtonX := ww * 0.959765
     PButtonY := wh * 0.091666
     return {PBX: PButtonX, PBY: PButtonY}
