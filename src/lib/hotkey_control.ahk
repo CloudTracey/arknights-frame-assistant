@@ -171,7 +171,9 @@ class HotkeyController {
             HotkeyController.HotkeyState := false
             GuiManager.IsOnStrongHoldProtocol := false
             TrayTip
+            SetTimer HideTrayTip, 0
             TrayTip("热键已禁用", "AFA")
+            SetTimer HideTrayTip, -4000
             Logger.Info("Hotkey", "用户禁用热键")
             A_IconTip := "AFA`n热键已禁用"
             return
@@ -183,7 +185,9 @@ class HotkeyController {
             if (GuiManager.LastActiveTab == "strongHoldProtocol")
                 GuiManager.IsOnStrongHoldProtocol := true
             TrayTip
+            SetTimer HideTrayTip, 0
             TrayTip("热键已启用", "AFA")
+            SetTimer HideTrayTip, -4000
             Logger.Info("Hotkey", "用户启用热键")
             A_IconTip := "AFA`n热键已启用"
             return

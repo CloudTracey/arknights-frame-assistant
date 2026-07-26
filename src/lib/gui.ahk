@@ -1101,7 +1101,9 @@ class GuiManager {
             if (this.IsOnStrongHoldProtocol == true) {
                 this.IsOnStrongHoldProtocol := false
                 TrayTip
+                SetTimer HideTrayTip, 0
                 TrayTip("已退出卫戍协议方案", "AFA")
+                SetTimer HideTrayTip, -4000
             }
         }
         else if (tabName = "strongHoldProtocol") {
@@ -1109,7 +1111,9 @@ class GuiManager {
             if (this.IsOnStrongHoldProtocol == false) {
                 this.IsOnStrongHoldProtocol := true
                 TrayTip
+                SetTimer HideTrayTip, 0
                 TrayTip("已启用卫戍协议方案", "AFA")
+                SetTimer HideTrayTip, -4000
             }
         }
         ; "other"标签页不改变热键
@@ -1137,6 +1141,11 @@ class GuiManager {
 ; 处理GUI隐藏时停止Hook的事件
 HandleGuiHideStopHook(*) {
     KeyBinder.StopHook()
+}
+
+; 隐藏TrayTip
+HideTrayTip() {
+    TrayTip
 }
 
 ; 初始化GUI
