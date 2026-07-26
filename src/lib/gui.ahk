@@ -838,10 +838,8 @@ class GuiManager {
         ; 将当前值同步到 Config 内存，确保切换标签页后编辑不丢失
         ; 热键控件和 SwitchHotkey 已由 KeyBinder.EndChange 提前写入，此处仅处理其余控件
         if (Config.AllImportant.Has(controlName)) {
-            if (controlName = "Frame") {
+            if (controlName = "Frame")
                 Config.SetImportant("Frame", Constants.FrameOptions[currentValue])
-                Config.SetImportant("Frame155", Constants.FrameOptions[currentValue])
-            }
             else
                 Config.SetImportant(controlName, currentValue)
         }
@@ -1145,6 +1143,7 @@ HandleGuiHideStopHook(*) {
 GuiManager.Init()
 
 ; Alt+F4 始终退出 AFA（与"关闭窗口时退出"设置独立）
-#HotIf WinActive(GuiManager.WindowName)
+; 使用 ahk_id 精确限定范围，避免同名窗口的潜在冲突
+#HotIf WinActive("ahk_id" GuiManager.MainGui.Hwnd)
 !F4::ExitApp()
 #HotIf

@@ -250,17 +250,12 @@ class Config {
     static GetImportant(key) {
         if !this._IsLoaded
             this.LoadFromIni()
-        ; Frame键的特殊处理：优先内存中Frame155（未持久化的值），回退INI，再回退旧序号
         if (key = "Frame") {
             frame155 := this._ImportantSettings.Has("Frame155") && this._ImportantSettings["Frame155"] != ""
                 ? this._ImportantSettings["Frame155"]
                 : IniRead(this.IniFile, "Main", "Frame155", "")
-            if (frame155 != "")
-                return frame155
-            frameIndex := this._ImportantSettings.Has(key) ? this._ImportantSettings[key] : ""
-            if Constants.FrameOldIndexToText.Has(frameIndex)
-                return Constants.FrameOldIndexToText[frameIndex]
-            return this._DefaultImportant["Frame"]
+            frameIndex := this._ImportantSettings.Has("Frame") ? this._ImportantSettings["Frame"] : ""
+            return this._ResolveFrame(frame155, frameIndex)
         }
         return this._ImportantSettings.Has(key) ? this._ImportantSettings[key] : ""
     }
@@ -274,20 +269,27 @@ class Config {
         }
         if (key = "Frame") {
             frame155 := IniRead(this.IniFile, "Main", "Frame155", "")
-            if (frame155 != "")
-                return frame155
             frameIndex := IniRead(this.IniFile, "Main", "Frame", this._DefaultImportant["Frame"])
-            if Constants.FrameOldIndexToText.Has(frameIndex)
-                return Constants.FrameOldIndexToText[frameIndex]
-            return this._DefaultImportant["Frame"]
+            return this._ResolveFrame(frame155, frameIndex)
         }
         defaultVal := this._DefaultImportant.Has(key) ? this._DefaultImportant[key] : ""
         return IniRead(this.IniFile, "Main", key, defaultVal)
     }
 
-    ; 设置重要设置
+    ; 内部：解析 Frame 值（Frame155 优先，回退旧序号，再回退默认值）
+    static _ResolveFrame(frame155, frameIndex) {
+        if (frame155 != "")
+            return frame155
+        if Constants.FrameOldIndexToText.Has(frameIndex)
+            return Constants.FrameOldIndexToText[frameIndex]
+        return this._DefaultImportant["Frame"]
+    }
+
+    ; 设置重要设置（Frame 自动同步 Frame155）
     static SetImportant(key, value) {
         this._ImportantSettings[key] := value
+        if (key = "Frame")
+            this._ImportantSettings["Frame155"] := value
     }
 
     ; 获取自定义设置（从内存工作副本，供 GUI 和冲突检测使用）
