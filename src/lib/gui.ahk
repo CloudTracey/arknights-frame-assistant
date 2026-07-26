@@ -591,9 +591,9 @@ class GuiManager {
     }
 
     static _UpdateFrameSkipLabels() {
-        try this.FrameSkipLabels["16ms"].Text := "前进 " Config.GetCustom("FrameSkip16msDelay") "ms"
-        try this.FrameSkipLabels["33ms"].Text := "前进 " Config.GetCustom("FrameSkip33msDelay") "ms"
-        try this.FrameSkipLabels["166ms"].Text := "前进 " Config.GetCustom("FrameSkip166msDelay") "ms"
+        try this.FrameSkipLabels["16ms"].Text := "前进 " this.MainGui["FrameSkip16msDelay"].Value "ms"
+        try this.FrameSkipLabels["33ms"].Text := "前进 " this.MainGui["FrameSkip33msDelay"].Value "ms"
+        try this.FrameSkipLabels["166ms"].Text := "前进 " this.MainGui["FrameSkip166msDelay"].Value "ms"
     }
 
     ; 内部：更新其他控件值（从配置）
@@ -835,6 +835,19 @@ class GuiManager {
         } catch {
             return
         }
+        ; 将当前值同步到 Config 内存，确保切换标签页后编辑不丢失
+        ; 热键控件和 SwitchHotkey 已由 KeyBinder.EndChange 提前写入，此处仅处理其余控件
+        if (Config.AllImportant.Has(controlName)) {
+            if (controlName = "Frame") {
+                Config.SetImportant("Frame", Constants.FrameOptions[currentValue])
+                Config.SetImportant("Frame155", Constants.FrameOptions[currentValue])
+            }
+            else
+                Config.SetImportant(controlName, currentValue)
+        }
+        else if (Config.AllCustom.Has(controlName) && controlName != "SwitchHotkey") {
+            Config.SetCustom(controlName, currentValue)
+        }
         if (this._InitialValues.Has(controlName) && currentValue == this._InitialValues[controlName]) {
             ; 该控件值已恢复初始——检查所有控件是否全部一致
             for key in Config.AllHotkeys {
@@ -1071,13 +1084,6 @@ class GuiManager {
     static SwitchTab(tabName) {
         if (tabName = this.CurrentTab)
             return
-        if (this.IsModified == true) {
-            result := MessageBox.Confirm("  修改尚未保存，确定离开此页面吗 ？","保存提示")
-            if (result == "No")
-                return
-            ; 用户选择放弃修改，从 INI 重新加载以丢弃内存中所有未保存的值
-            Config.LoadFromIni()
-        }
         this.CurrentTab := tabName
 
         ; 记录最后选中的标签页（排除"其他设置"）
@@ -1085,15 +1091,9 @@ class GuiManager {
             this.LastActiveTab := tabName
         }
 
-        ; 提前重置修改与冲突状态，确保 _UpdateTabUI 中 RefreshHotkeyConflicts
-        ; 触发时 IsModified 已为 false，避免提示文字闪现
-        this.SetIsModifiedFalse()
-        this.HasHotkeyConflicts := false
-
         ; 如果当前处于热键禁用状态，只更新UI，不切换热键
         if (!HotkeyController.HotkeyState) {
             this._UpdateTabUI(tabName)
-            this.CaptureInitialSnapshot()
             return
         }
 
@@ -1118,7 +1118,6 @@ class GuiManager {
 
         ; 更新UI
         this._UpdateTabUI(tabName)
-        this.CaptureInitialSnapshot()
     }
 
     static _ShowChangelog() {
