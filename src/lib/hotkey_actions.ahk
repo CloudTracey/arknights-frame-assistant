@@ -658,11 +658,8 @@ IsMouseInClient() {
 }
 ; 获取放弃按钮位置
 AbandonButtonPosition() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     PButtonLX := ww * 0.0474
     PButtonRX := ww * 0.1369
     PButtonUY := wh * 0.0444
@@ -684,44 +681,32 @@ IsInLevel() {
 }
 ; 获取暂停按钮位置
 PauseButtonPosition() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     PButtonX := ww * 0.9525
     PButtonY := wh * 0.0700
     return {PBX: PButtonX, PBY: PButtonY}
 }
 ; 获取暂停按钮左半部分位置
 PauseButtonPositionLeft() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     PButtonLX := ww * 0.9400
     PButtonLY := wh * 0.0700
     return {PBLX: PButtonLX, PBLY: PButtonLY}
 }
 ; 获取暂停按钮右半部分位置
 PauseButtonPositionRight() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     PButtonRX := ww * 0.9650
     PButtonRY := wh * 0.0700
     return {PBRX: PButtonRX, PBRY: PButtonRY}
 }
 ; 获取自动暂停倍速按钮识别位置
 SpeedButtonPositionColor() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     PButtonCLX := ww * 0.8450
     PButtonCRX := ww * 0.8807
     PButtonCUY := wh * 0.0713
@@ -730,22 +715,16 @@ SpeedButtonPositionColor() {
 }
 ; 获取基建收取按钮位置
 HarvestButtonPosition() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     PButtonX := ww * 0.1297
     PButtonY := wh * 0.9527
     return {PBX: PButtonX, PBY: PButtonY}
 }
 ; 获取代理接管作战按钮识别位置（线点识别 + 图像识别）
 TakeOverButtonPositions() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     ; === ImageSearch 搜索区域 ===
     ImageRegion := {
         ; 按钮右侧边缘
@@ -759,26 +738,29 @@ TakeOverButtonPositions() {
 }
 ; 获取“收下”按钮位置
 CollectButtonPosition() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     PButtonX := ww * 0.1104
     PButtonY := wh * 0.7250
     return {PBX: PButtonX, PBY: PButtonY}
 }
 ; 获取跳过按钮位置
 SkipButtonPosition() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     PButtonX := ww * 0.959765
     PButtonY := wh * 0.091666
     return {PBX: PButtonX, PBY: PButtonY}
 }
 
 ; == 工具类 ==
+; 安全获取明日方舟窗口 Client 区域尺寸，窗口不存在时返回 false 而非抛出 TargetError
+SafeWinGetClientPos(&ww, &wh) {
+    try {
+        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+        return true
+    } catch TargetError {
+        return false
+    }
+}
 #Include ./touch_injection.ahk

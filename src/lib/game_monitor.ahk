@@ -84,11 +84,8 @@ CheckGameStatus() {
 ; ==工具函数==
 ; 获取Loading...颜色识别位置（三条水平扫描线）
 LoadingPosition() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     ; 第一条：右下 Loading... 文字
     L1LX := ww * 0.835156, L1RX := ww * 0.976953, L1Y := wh * 0.953472
     ; 第二条：底部中央
@@ -103,11 +100,8 @@ LoadingPosition() {
 }
 ; 获取全屏 17 点黑屏采样位置（覆盖四角、四边、内部、中心）
 BlackScreenPoints() {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-    } catch TargetError {
+    if !SafeWinGetClientPos(&ww, &wh)
         return false
-    }
     x5 := ww * 0.05, x25 := ww * 0.25, x50 := ww * 0.5, x75 := ww * 0.75, x95 := ww * 0.95
     y5 := wh * 0.05, y25 := wh * 0.25, y50 := wh * 0.5, y75 := wh * 0.75, y95 := wh * 0.95
     return [
