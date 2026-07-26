@@ -117,9 +117,9 @@ class SelfReplacer {
         lines.Push("chcp 65001 >nul")
         lines.Push("title AFA更新中...")
         ; 设置日志文件路径
-        lines.Push("set `"LOG_FILE=" logFile `"")
+        lines.Push("set `"LOG_FILE=" logFile "`"")
         ; 创建日志目录（如果不存在）
-        lines.Push("if not exist `"" logDirectory `"" mkdir `"" logDirectory `"")
+        lines.Push("if not exist `"" logDirectory "`" mkdir `"" logDirectory "`"")
         
         ; 获取当前exe文件名
         SplitPath(currentExePath, &currentExeName)
