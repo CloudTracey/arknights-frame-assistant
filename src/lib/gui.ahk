@@ -1143,3 +1143,8 @@ HandleGuiHideStopHook(*) {
 
 ; 初始化GUI
 GuiManager.Init()
+
+; Alt+F4 始终退出 AFA（与"关闭窗口时退出"设置独立）
+#HotIf WinActive(GuiManager.WindowName)
+!F4::ExitApp()
+#HotIf
