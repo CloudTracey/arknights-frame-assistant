@@ -754,7 +754,6 @@ SkipButtonPosition() {
     return {PBX: PButtonX, PBY: PButtonY}
 }
 
-; == 工具类 ==
 ; 安全获取明日方舟窗口 Client 区域尺寸，窗口不存在时返回 false 而非抛出 TargetError
 SafeWinGetClientPos(&ww, &wh) {
     try {
