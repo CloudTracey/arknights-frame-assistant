@@ -55,50 +55,6 @@ class HotkeyController {
         "OneClickPurchase", ActionOneClickPurchase
     )
 
-    ; 热键分组定义
-    static CombatHotkeys := Map(
-        "PressPause", true,
-        "ReleasePause", true,
-        "GameSpeed", true,
-        "PauseSelect", true,
-        "Skill", true,
-        "Retreat", true,
-        "16ms", true,
-        "33ms", true,
-        "166ms", true,
-        "OneClickSkill", true,
-        "OneClickRetreat", true,
-        "PauseSkill", true,
-        "PauseRetreat", true,
-        "SwitchView", true,
-        "BeginPause", true,
-        "AutoBeginPauseSwitch", true
-    )
-
-    static QuickHotkeys := Map(
-        "LButtonClick", true,
-        "CeaseOperations", true,
-        "Skip", true,
-        "Back", true,
-        "Harvest", true,
-        "CollectCollectibles", true
-    )
-
-    static StrongHoldHotkeys := Map(
-        "CheckEnemies", true,
-        "DispatchCenter", true,
-        "Freeze", true,
-        "Refresh", true,
-        "Upgrade", true,
-        "Sell", true,
-        "Ready", true,
-        "StrongHoldProtocolLButtonClick", true,
-        "StrongHoldProtocolRetreat", true,
-        "StrongHoldProtocolOneClickRetreat", true,
-        "OneClickSell", true,
-        "OneClickPurchase", true
-    )
-
     ; 已激活热键映射表
     static ActiveHotkeys := Map()
 
@@ -109,7 +65,7 @@ class HotkeyController {
     static HotkeyOn(*) {
         HotIfWinActive("ahk_exe Arknights.exe")
         for keyVar, _ in Constants.KeyNames {
-            hotkeyValue := Config.GetHotkey(keyVar)
+            hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
                 if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
@@ -134,23 +90,26 @@ class HotkeyController {
             }
         }
         HotIf
+        Logger.Info("Hotkey", "热键已启用，数量=" this.ActiveHotkeys.Count)
     }
 
     ; 禁用热键
-    static HotkeyOff(*) {
+    static HotkeyOff(silent := false, *) {
         HotIfWinActive("ahk_exe Arknights.exe")
         for _ , hotkeyValue in HotkeyController.ActiveHotkeys {
             Hotkey(hotkeyValue, , "Off")
         }
         HotkeyController.ActiveHotkeys := Map()
         HotIf
+        if !silent
+            Logger.Info("Hotkey", "热键已禁用")
     }
 
     ; 启用指定组的热键
     static EnableGroup(groupMap) {
         HotIfWinActive("ahk_exe Arknights.exe")
         for keyVar, _ in groupMap {
-            hotkeyValue := Config.GetHotkey(keyVar)
+            hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
                 if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
@@ -181,7 +140,7 @@ class HotkeyController {
     static DisableGroup(groupMap) {
         HotIfWinActive("ahk_exe Arknights.exe")
         for keyVar, _ in groupMap {
-            hotkeyValue := Config.GetHotkey(keyVar)
+            hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "") {
                 try Hotkey(hotkeyValue, , "Off")
                 try Hotkey("~" hotkeyValue, , "Off")
@@ -194,14 +153,15 @@ class HotkeyController {
 
     ; 根据标签页启用对应热键组
     static EnableByTab(tabName) {
-        this.HotkeyOff()  ; 先禁用所有热键
+        this.HotkeyOff(true)  ; 先静默禁用所有热键，重建完成后记录最终状态
         if (tabName = "keyBind" || tabName = "quick") {
-            this.EnableGroup(this.CombatHotkeys)
-            this.EnableGroup(this.QuickHotkeys)
+            this.EnableGroup(Constants.CombatHotkeys)
+            this.EnableGroup(Constants.QuickHotkeys)
         }
         else if (tabName = "strongHoldProtocol") {
-            this.EnableGroup(this.StrongHoldHotkeys)
+            this.EnableGroup(Constants.StrongHoldHotkeys)
         }
+        Logger.Info("Hotkey", "热键已重建，数量=" this.ActiveHotkeys.Count)
     }
 
     ; 切换热键启用/禁用
@@ -211,7 +171,10 @@ class HotkeyController {
             HotkeyController.HotkeyState := false
             GuiManager.IsOnStrongHoldProtocol := false
             TrayTip
+            SetTimer HideTrayTip, 0
             TrayTip("热键已禁用", "AFA")
+            SetTimer HideTrayTip, -4000
+            Logger.Info("Hotkey", "用户禁用热键")
             A_IconTip := "AFA`n热键已禁用"
             return
         }
@@ -222,7 +185,10 @@ class HotkeyController {
             if (GuiManager.LastActiveTab == "strongHoldProtocol")
                 GuiManager.IsOnStrongHoldProtocol := true
             TrayTip
+            SetTimer HideTrayTip, 0
             TrayTip("热键已启用", "AFA")
+            SetTimer HideTrayTip, -4000
+            Logger.Info("Hotkey", "用户启用热键")
             A_IconTip := "AFA`n热键已启用"
             return
         }
@@ -231,7 +197,7 @@ class HotkeyController {
     ; 设置热键启用/禁用快捷键
     static SetSwitchKey() {
         HotIfWinActive("ahk_exe Arknights.exe")
-        switchKey := Config.GetCustom("SwitchHotkey")
+        switchKey := Config.ReadCustomFromIni("SwitchHotkey")
         if (switchKey != "") {
             Hotkey(switchKey, this.SwitchHotkey, "On")
             this.ActiveSwitchHotkey := switchKey

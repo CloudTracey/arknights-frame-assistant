@@ -11,6 +11,7 @@ CheckGameStatus() {
         }
         else {
             if (State.GameHasStarted == true) {
+                Logger.Info("GameMonitor", "检测到游戏进程已退出，自动退出 AFA")
                 ExitApp
             }
         }
@@ -20,9 +21,12 @@ CheckGameStatus() {
     if (Config.GetImportant("AutoBeginPause") == "1" && WinActive("ahk_exe Arknights.exe")) {
         ; 寻找黑屏：遍历 17 个全屏采样点，允许 1 个点被游戏鼠标遮挡
         if (State.BlackScreenDetected == false) {
+            points := BlackScreenPoints()
+            if !points
+                return
             try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
             missCount := 0
-            for point in BlackScreenPoints() {
+            for point in points {
                 if !PixelSearch(&FoundX, &FoundY, point.x, point.y, point.x, point.y, 0x000000, 10) {
                     missCount++
                     if (missCount > 1) {
@@ -33,6 +37,7 @@ CheckGameStatus() {
             }
             if (missCount <= 1) {
                 State.BlackScreenDetected := true
+                Logger.Debug("GameMonitor", "检测到开局黑屏，开始识别 Loading 状态")
                 SetTimer StopSearchLoading, -8000
                 SetTimer CheckGameStatus, 200
             }
@@ -43,6 +48,10 @@ CheckGameStatus() {
             try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
             ; ToolTip("黑屏了，可能在进关卡？")
             scanLines := LoadingPosition()
+            if !scanLines {
+                try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+                return
+            }
             line1 := scanLines[1]
             if PixelSearch(&FoundX, &FoundY, line1.lx, line1.y, line1.rx, line1.y, 0xA60000, 50) {
                 ; ToolTip("怎么是进入关卡的红色？")
@@ -75,7 +84,8 @@ CheckGameStatus() {
 ; ==工具函数==
 ; 获取Loading...颜色识别位置（三条水平扫描线）
 LoadingPosition() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    if !SafeWinGetClientPos(&ww, &wh)
+        return false
     ; 第一条：右下 Loading... 文字
     L1LX := ww * 0.835156, L1RX := ww * 0.976953, L1Y := wh * 0.953472
     ; 第二条：底部中央
@@ -90,7 +100,8 @@ LoadingPosition() {
 }
 ; 获取全屏 17 点黑屏采样位置（覆盖四角、四边、内部、中心）
 BlackScreenPoints() {
-    WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
+    if !SafeWinGetClientPos(&ww, &wh)
+        return false
     x5 := ww * 0.05, x25 := ww * 0.25, x50 := ww * 0.5, x75 := ww * 0.75, x95 := ww * 0.95
     y5 := wh * 0.05, y25 := wh * 0.25, y50 := wh * 0.5, y75 := wh * 0.75, y95 := wh * 0.95
     return [

@@ -69,7 +69,7 @@ class KeyBinder {
                     Config.SetCustom(KeyBinder.ControlObj.Name, "")
                 else
                     Config.SetHotkey(KeyBinder.ControlObj.Name, "")
-                GuiManager.TrackChange(KeyBinder.ControlObj.Name)
+                KeyBinder.NotifyBindingChanged(KeyBinder.ControlObj.Name)
             }
             else if(pureNewkey == "LWin" OR pureNewkey == "RWin") {
                 KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
@@ -80,7 +80,7 @@ class KeyBinder {
                     Config.SetCustom(KeyBinder.ControlObj.Name, realNewkey)
                 else 
                     Config.SetHotkey(KeyBinder.ControlObj.Name, realNewkey) ; 把人不能读也不该读的东西丢给内存
-                GuiManager.TrackChange(KeyBinder.ControlObj.Name)
+                KeyBinder.NotifyBindingChanged(KeyBinder.ControlObj.Name)
             }
         }
         KeyBinder.LastEditObject := ""
@@ -88,6 +88,12 @@ class KeyBinder {
         KeyBinder.ReleaseKey :=  ""
         KeyBinder.StopHook()
         EventBus.Publish("KeyBindFocusCancel")
+    }
+
+    ; 通知 GUI 重新计算热键冲突，并更新修改状态。
+    static NotifyBindingChanged(controlName) {
+        GuiManager.TrackChange(controlName)
+        EventBus.Publish("HotkeyBindingsChanged")
     }
 
     ; 格式化显示键值
@@ -320,6 +326,9 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             ; 释放可能存在的Hook
             KeyBinder.StopHook()
         }
+        ; 点击非Edit区域时聚焦取消按钮，取消普通Edit控件的选中状态
+        if (hwnd = GuiManager.MainGui.Hwnd)
+            GuiManager.FocusCancelButton()
         return
     }
     ; 无事发生

@@ -14,8 +14,10 @@ class GuiManager {
     static ClickDelay := ""
     static SwitchHotkey := ""
     static IsModified := false
+    static HasHotkeyConflicts := false
+    static _PrevConflictedControls := Map()  ; 上次冲突控件集合，用于增量字体更新
     static _InitialValues := Map()  ; 初始值快照，用于脏值对比
-    static HintUnsaved := ""       ; "修改尚未保存或应用！"提示文字
+    static HintUnsaved := ""       ; 提示文字
     static IsOnStrongHoldProtocol := false
     static DefaultTab := ""
     
@@ -39,12 +41,14 @@ class GuiManager {
     static UpdateControls := []        ; "更新"设置控件组
     static CustomControls := []        ; "自定义"设置控件组
     static AboutControls := []         ; "关于"页面控件组
+    static LogControls := []           ; "日志"页面控件组
     ; 其他设置分类映射：分类名 → [控件组, 导航索引]
     static OtherCategories := Map(
         "Launch", [this.LaunchControls, 1],
         "Update", [this.UpdateControls, 2],
         "Custom", [this.CustomControls, 3],
-        "About", [this.AboutControls, 4]
+        "Log", [this.LogControls, 4],
+        "About", [this.AboutControls, 5]
     )
     static NotOtherControls := [] ; 仅非其他设置相关控件
     static TxtKeybind := ""           ; "常规作战"标签文本
@@ -73,7 +77,8 @@ class GuiManager {
         WinSetTransColor("ffa8a8", this.MainGui)
         this.MainGui.SetFont("s9", "Microsoft YaHei UI")
         hWnd := this.MainGui.Hwnd
-        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
+        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 20, "int*", false, "int", 4)
+        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 35, "uint*", 0x00FFFFFF, "int", 4)
         this.MainGui.OnEvent("Close", (*) => this._HandleWindowClose())
         
         ; 创建控件
@@ -243,7 +248,7 @@ class GuiManager {
 
         ; 快捷操作提示语
         this.MainGui.SetFont("s9 c1994d2")
-        hintQuick1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的按键为默认设置，点击输入框修改按键，使用【BACKSPACE/DELETE】清除按键")
+        hintQuick1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "点击输入框修改按键，使用【BACKSPACE/DELETE】清除按键")
         ; hintQuick2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "“放弃行动”为模拟按下 ESC 和 V 的功能；“返回上级菜单”为模拟左键点击返回按钮的功能，兼容肉鸽编队等 ESC 键不便捷的界面")
         this.MainGui.SetFont("s9 c1994d2 bold")
         hintQuick3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "为避免冲突，切换到此页面时“卫戍协议”按键将被禁用")
@@ -281,7 +286,7 @@ class GuiManager {
 
         ; 卫戍协议提示语
         this.MainGui.SetFont("s9 c1994d2")
-        hintStrongHoldProtocol1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "请确保游戏内的卫戍协议按键为默认设置，点击输入框修改按键，使用【BACKSPACE/DELETE】清除按键")
+        hintStrongHoldProtocol1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center", "点击输入框修改按键，使用【BACKSPACE/DELETE】清除按键")
         this.MainGui.SetFont("s9 c1994d2 bold")
         hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "为避免冲突，切换到此页面时“常规作战”、“快捷操作”按键将被禁用")
         this.MainGui.SetFont("s9 cDefault Norm")
@@ -325,13 +330,21 @@ class GuiManager {
         this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
         this.OtherSettingsControls.Push(this.NavIndicators[3])
 
+        ; 导航项"日志"（未选中态）
+        navLog := this.MainGui.Add("Text", "xs y+m w130 Center", "日志")
+        navLog.OnEvent("Click", (*) => this._SwitchOtherCategory("Log"))
+        this.NavItems.Push(navLog)
+        this.OtherSettingsControls.Push(navLog)
+        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.OtherSettingsControls.Push(this.NavIndicators[4])
+
         ; 导航项"关于"（未选中态）
         navAbout := this.MainGui.Add("Text", "xs y+m w130 Center", "关于")
         navAbout.OnEvent("Click", (*) => this._SwitchOtherCategory("About"))
         this.NavItems.Push(navAbout)
         this.OtherSettingsControls.Push(navAbout)
         this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
-        this.OtherSettingsControls.Push(this.NavIndicators[4])
+        this.OtherSettingsControls.Push(this.NavIndicators[5])
 
         ; 其他设置 - 右侧内容区
         ; 分类"启动与退出"
@@ -486,11 +499,26 @@ class GuiManager {
         this.CustomControls.Push(txtFrameSkip3)
         this.CustomControls.Push(editFrameSkip3)
         
+        ; 分类"日志"
+        sepLog := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
+        sepLogTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", "  日志设置  ")
+        this.LogControls.Push(sepLog)
+        this.LogControls.Push(sepLogTxt)
+
+        logButtonX := 160 + (530 - 160) // 2
+        btnCreateLogArchive := this.MainGui.Add("Button", "x" logButtonX " y+16 w160 h28", "生成日志压缩包")
+        btnCreateLogArchive.OnEvent("Click", (*) => LogExporter.CreateArchiveInteractive())
+        this.LogControls.Push(btnCreateLogArchive)
+
+        btnOpenLogDirectory := this.MainGui.Add("Button", "x" logButtonX " y+8 w160 h28", "打开日志文件夹")
+        btnOpenLogDirectory.OnEvent("Click", (*) => LogExporter.OpenLogDirectory())
+        this.LogControls.Push(btnOpenLogDirectory)
+
         ; 分类"关于"
         logoPath := FileExtractor.LogoPath
 
         this.MainGui.Add("Text", "x160 y48 w0 h0 Section")
-        logoSize := 256
+        logoSize := 192
         logoX := 160 + (530 - logoSize) / 2
         aboutLogo := this.MainGui.Add("Picture", "x" logoX " y48 w" logoSize " h" logoSize, logoPath)
         this.AboutControls.Push(aboutLogo)
@@ -546,7 +574,7 @@ class GuiManager {
         this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
         this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
         this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
-        this.HintUnsaved := this.MainGui.Add("Text", "x" (BtnX_Save - 145) " yp+8 w140 h24 Right cFF0000 Hidden", "修改尚未保存或应用！")
+        this.HintUnsaved := this.MainGui.Add("Text", "x" (BtnX_Save - 155) " yp+8 w140 h24 Right cFF0000 Hidden", "修改尚未保存或应用！")
 
         ; 空白占位
         this.MainGui.Add("Text", "xm y+15 w1 h1")
@@ -564,9 +592,9 @@ class GuiManager {
     }
 
     static _UpdateFrameSkipLabels() {
-        try this.FrameSkipLabels["16ms"].Text := "前进 " Config.GetCustom("FrameSkip16msDelay") "ms"
-        try this.FrameSkipLabels["33ms"].Text := "前进 " Config.GetCustom("FrameSkip33msDelay") "ms"
-        try this.FrameSkipLabels["166ms"].Text := "前进 " Config.GetCustom("FrameSkip166msDelay") "ms"
+        try this.FrameSkipLabels["16ms"].Text := "前进 " this.MainGui["FrameSkip16msDelay"].Value "ms"
+        try this.FrameSkipLabels["33ms"].Text := "前进 " this.MainGui["FrameSkip33msDelay"].Value "ms"
+        try this.FrameSkipLabels["166ms"].Text := "前进 " this.MainGui["FrameSkip166msDelay"].Value "ms"
     }
 
     ; 内部：更新其他控件值（从配置）
@@ -607,6 +635,7 @@ class GuiManager {
                 this.MainGui[key].Value := value
             }
         }
+        this.RefreshHotkeyConflicts()
     }
     
     ; 内部：订阅事件总线
@@ -614,6 +643,7 @@ class GuiManager {
         EventBus.Subscribe("GuiUpdateHotkeyControls", (*) => this._UpdateHotkeyControlsFromConfig())
         EventBus.Subscribe("GuiUpdateImportantControls", (*) => this._UpdateImportantControlsFromConfig())
         EventBus.Subscribe("GuiUpdateCustomControls", (*) => this._UpdateCustomControlsFromConfig())
+        EventBus.Subscribe("HotkeyBindingsChanged", (*) => this.RefreshHotkeyConflicts())
         EventBus.Subscribe("GuiHide", (*) => this.Hide())
         EventBus.Subscribe("KeyBindFocusCancel", (*) => this.FocusCancelButton())
         EventBus.Subscribe("GuiHideStopHook", HandleGuiHideStopHook)
@@ -646,6 +676,7 @@ class GuiManager {
     static Show() {
         this.MainGui.Show()
         this.CaptureInitialSnapshot()
+        this.RefreshHotkeyConflicts()
         this.SetIsModifiedFalse()  ; 确保按钮为禁用状态
         this.BtnSave.Focus()
         if (IsSet(WatchActiveWindow)) {
@@ -713,22 +744,60 @@ class GuiManager {
 
     ; 将修改状态改为已修改
     static SetIsModifiedTrue() {
-        if (this.IsModified == true)
-            return
         this.IsModified := true
-        try this.HintUnsaved.Visible := true
-        try this.BtnSave.Opt("-Disabled")
-        try this.BtnApply.Opt("-Disabled")
+        this.UpdateSaveButtonState()
     }
 
     ; 将修改状态改为未修改
     static SetIsModifiedFalse() {
-        if (this.IsModified == false)
-            return
         this.IsModified := false
-        try this.HintUnsaved.Visible := false
-        try this.BtnSave.Opt("+Disabled")
-        try this.BtnApply.Opt("+Disabled")
+        this.UpdateSaveButtonState()
+    }
+
+    ; 根据修改状态和冲突状态更新提示与保存按钮。
+    static UpdateSaveButtonState() {
+        canSave := this.IsModified && !this.HasHotkeyConflicts
+        try this.BtnSave.Enabled := canSave
+        try this.BtnApply.Enabled := canSave
+
+        try {
+            if this.HasHotkeyConflicts {
+                this.HintUnsaved.Text := "存在按键冲突"
+                this.HintUnsaved.Visible := true
+            } else {
+                this.HintUnsaved.Text := "修改尚未保存或应用"
+                this.HintUnsaved.Visible := this.IsModified
+            }
+        }
+    }
+
+    ; 重新计算冲突并增量标红冲突输入框，避免全量控件闪烁。
+    static RefreshHotkeyConflicts() {
+        result := HotkeyConflictValidator.FindAll(
+            Config.AllHotkeys,
+            Config.AllCustom
+        )
+
+        ; 构建本次冲突控件集合
+        newConflicted := Map()
+        for controlName, _ in result.ByControl
+            newConflicted[controlName] := true
+
+        ; 仅恢复不再冲突的控件颜色
+        for controlName, _ in this._PrevConflictedControls {
+            if !newConflicted.Has(controlName)
+                try this.MainGui[controlName].SetFont("cDefault")
+        }
+
+        ; 仅标红新增的冲突控件
+        for controlName, _ in newConflicted {
+            if !this._PrevConflictedControls.Has(controlName)
+                try this.MainGui[controlName].SetFont("cD93025")
+        }
+
+        this._PrevConflictedControls := newConflicted
+        this.HasHotkeyConflicts := result.HasConflicts
+        this.UpdateSaveButtonState()
     }
 
     ; 捕获初始值快照（从当前 GUI 控件值读取）
@@ -766,6 +835,17 @@ class GuiManager {
             currentValue := this.MainGui[controlName].Value
         } catch {
             return
+        }
+        ; 将当前值同步到 Config 内存，确保切换标签页后编辑不丢失
+        ; 热键控件和 SwitchHotkey 已由 KeyBinder.EndChange 提前写入，此处仅处理其余控件
+        if (Config.AllImportant.Has(controlName)) {
+            if (controlName = "Frame")
+                Config.SetImportant("Frame", Constants.FrameOptions[currentValue])
+            else
+                Config.SetImportant(controlName, currentValue)
+        }
+        else if (Config.AllCustom.Has(controlName) && controlName != "SwitchHotkey") {
+            Config.SetCustom(controlName, currentValue)
         }
         if (this._InitialValues.Has(controlName) && currentValue == this._InitialValues[controlName]) {
             ; 该控件值已恢复初始——检查所有控件是否全部一致
@@ -1003,31 +1083,28 @@ class GuiManager {
     static SwitchTab(tabName) {
         if (tabName = this.CurrentTab)
             return
-        if (this.IsModified == true) {
-            result := MessageBox.Confirm("  修改尚未保存，确定离开此页面吗 ？","保存提示")
-            if (result == "No")
-                return
-        }
         this.CurrentTab := tabName
-        
+
         ; 记录最后选中的标签页（排除"其他设置"）
         if (tabName != "other") {
             this.LastActiveTab := tabName
         }
-        
+
         ; 如果当前处于热键禁用状态，只更新UI，不切换热键
         if (!HotkeyController.HotkeyState) {
             this._UpdateTabUI(tabName)
             return
         }
-        
+
         ; 根据标签页切换热键组
         if (tabName = "keyBind" || tabName = "quick") {
             HotkeyController.EnableByTab("keyBind")
             if (this.IsOnStrongHoldProtocol == true) {
                 this.IsOnStrongHoldProtocol := false
                 TrayTip
+                SetTimer HideTrayTip, 0
                 TrayTip("已退出卫戍协议方案", "AFA")
+                SetTimer HideTrayTip, -4000
             }
         }
         else if (tabName = "strongHoldProtocol") {
@@ -1035,17 +1112,15 @@ class GuiManager {
             if (this.IsOnStrongHoldProtocol == false) {
                 this.IsOnStrongHoldProtocol := true
                 TrayTip
+                SetTimer HideTrayTip, 0
                 TrayTip("已启用卫戍协议方案", "AFA")
+                SetTimer HideTrayTip, -4000
             }
         }
         ; "other"标签页不改变热键
-        
+
         ; 更新UI
         this._UpdateTabUI(tabName)
-
-        ; 将修改状态改回未修改，并刷新快照
-        this.SetIsModifiedFalse()
-        this.CaptureInitialSnapshot()
     }
 
     static _ShowChangelog() {
@@ -1069,5 +1144,16 @@ HandleGuiHideStopHook(*) {
     KeyBinder.StopHook()
 }
 
+; 隐藏TrayTip
+HideTrayTip() {
+    TrayTip
+}
+
 ; 初始化GUI
 GuiManager.Init()
+
+; Alt+F4 始终退出 AFA（与"关闭窗口时退出"设置独立）
+; 使用 ahk_id 精确限定范围，避免同名窗口的潜在冲突
+#HotIf WinActive("ahk_id" GuiManager.MainGui.Hwnd)
+!F4::ExitApp()
+#HotIf

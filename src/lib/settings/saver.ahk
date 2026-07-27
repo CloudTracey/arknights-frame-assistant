@@ -4,9 +4,15 @@ class Saver {
     static SettingsIniWrite() {
         EventBus.Publish("SettingsWillSave")
         SavedObj := GuiManager.Submit()
+
+        ; 先登记本次会话中新输入的敏感值，覆盖后续验证、外部设置和保存流程的日志。
+        if (SavedObj.HasProp("GitHubToken"))
+            Logger.RegisterSecret(SavedObj.GitHubToken)
+        if (SavedObj.HasProp("GamePath"))
+            Logger.RegisterSecret(SavedObj.GamePath)
         
         ; 检查按键冲突
-        if (!this._CheckKeyConflicts(SavedObj)) {
+        if (!this._CheckKeyConflicts()) {
             Exit
         }
         
@@ -85,6 +91,7 @@ class Saver {
             }
             ; 保存规范化后的绝对路径，确保后续启动校准使用同一事件过滤条件。
             SavedObj.GamePath := validation.path
+            Logger.RegisterSecret(SavedObj.GamePath)
             GuiManager.SetControlValue("GamePath", validation.path)
             appliedGamePath := validation.path
 
@@ -111,68 +118,22 @@ class Saver {
     ; 1. 常规作战 + 快捷操作 + SwitchHotkey 互相检测
     ; 2. 卫戍协议按键 + SwitchHotkey 互相检测
     ; 3. 卫戍协议按键不与作战/快捷操作检测冲突
-    static _CheckKeyConflicts(SavedObj) {
-        ; 定义按键分组
-        battleKeys := ["PressPause", "ReleasePause", "GameSpeed", "PauseSelect",
-                       "Skill", "Retreat", "16ms", "33ms", "166ms", "OneClickSkill",
-                       "OneClickRetreat", "PauseSkill", "PauseRetreat",
-                       "LButtonClick", "CeaseOperations", "Skip", "Back",
-                       "Harvest", "CollectCollectibles", "SwitchView", "BeginPause",
-                       "AutoBeginPauseSwitch"]
+    static _CheckKeyConflicts() {
+        result := HotkeyConflictValidator.FindAll(
+            Config.AllHotkeys,
+            Config.AllCustom
+        )
 
-        strongholdKeys := ["CheckEnemies", "DispatchCenter", "Freeze", "Refresh",
-                          "Upgrade", "Sell", "Ready", "StrongHoldProtocolLButtonClick",
-                          "StrongHoldProtocolRetreat", "StrongHoldProtocolOneClickRetreat",
-                          "OneClickSell", "OneClickPurchase"]
+        if !result.HasConflicts
+            return true
 
-        ; 获取SwitchHotkey值
-        switchHotkey := SavedObj.HasProp("SwitchHotkey") ? SavedObj.SwitchHotkey : ""
-
-        ; 检测组A：作战+快捷
-        battleUsed := Map()
-        for keyVar in battleKeys {
-            if (!SavedObj.HasProp(keyVar))
-                continue
-            currentKey := SavedObj.%keyVar%
-            if (currentKey != "") {
-                if (battleUsed.Has(currentKey)) {
-                    this._ShowConflictError(currentKey, battleUsed[currentKey], Constants.KeyNames[keyVar])
-                    return false
-                }
-                battleUsed[currentKey] := Constants.KeyNames[keyVar]
-            }
-        }
-        ; 将SwitchHotkey加入组A检测
-        if (switchHotkey != "") {
-            if (battleUsed.Has(switchHotkey)) {
-                this._ShowConflictError(switchHotkey, battleUsed[switchHotkey], "启用/禁用热键")
-                return false
-            }
-        }
-
-        ; 检测组B：卫戍协议
-        strongholdUsed := Map()
-        for keyVar in strongholdKeys {
-            if (!SavedObj.HasProp(keyVar))
-                continue
-            currentKey := SavedObj.%keyVar%
-            if (currentKey != "") {
-                if (strongholdUsed.Has(currentKey)) {
-                    this._ShowConflictError(currentKey, strongholdUsed[currentKey], Constants.KeyNames[keyVar])
-                    return false
-                }
-                strongholdUsed[currentKey] := Constants.KeyNames[keyVar]
-            }
-        }
-        ; 将SwitchHotkey加入组B检测
-        if (switchHotkey != "") {
-            if (strongholdUsed.Has(switchHotkey)) {
-                this._ShowConflictError(switchHotkey, strongholdUsed[switchHotkey], "启用/禁用热键")
-                return false
-            }
-        }
-
-        return true
+        conflict := result.Items[1]
+        this._ShowConflictError(
+            conflict.Key,
+            HotkeyConflictValidator.GetDisplayName(conflict.FirstControl),
+            HotkeyConflictValidator.GetDisplayName(conflict.SecondControl)
+        )
+        return false
     }
 
     ; 内部：显示冲突错误
