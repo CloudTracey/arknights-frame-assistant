@@ -77,7 +77,8 @@ class GuiManager {
         WinSetTransColor("ffa8a8", this.MainGui)
         this.MainGui.SetFont("s9", "Microsoft YaHei UI")
         hWnd := this.MainGui.Hwnd
-        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
+        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 20, "int*", false, "int", 4)
+        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 35, "uint*", 0x00FFFFFF, "int", 4)
         this.MainGui.OnEvent("Close", (*) => this._HandleWindowClose())
         
         ; 创建控件
