@@ -14,13 +14,32 @@ class GameLauncher {
         }
     }
 
-    ; 获取游戏路径
+    ; 获取游戏路径（ProcessGetPath 失败时降级到 WMI 查询）
     static CheckGamePath() {
         if(ProcessExist("Arknights.exe")) {
             pid := ProcessExist("Arknights.exe")
-            arknightsGamePath := ProcessGetPath(pid)
-            GuiManager.SetControlValue("GamePath", arknightsGamePath)
-            GuiManager.TrackChange("GamePath")
+            path := ""
+            try {
+                path := ProcessGetPath(pid)
+            } catch Error as e {
+                Logger.Warn("GameLauncher", "ProcessGetPath 异常 (pid=" pid "): " e.Message)
+            }
+            if (path != "") {
+                GuiManager.SetControlValue("GamePath", path)
+                GuiManager.TrackChange("GamePath")
+                return
+            }
+            ; 主路径失败，降级到 WMI 查询
+            Logger.Warn("GameLauncher", "ProcessGetPath 失败，降级到 WMI 查询 (pid=" pid ")")
+            path := GameLauncher._GetProcessPathByWmi(pid)
+            if (path != "") {
+                GuiManager.SetControlValue("GamePath", path)
+                GuiManager.TrackChange("GamePath")
+                Logger.Info("GameLauncher", "WMI 降级查询成功: " path)
+                return
+            }
+            Logger.Error("GameLauncher", "WMI 降级查询也失败 (pid=" pid ")")
+            MessageBox.Warning("未检测到游戏进程，请先启动游戏再进行识别", "识别失败")
         } else {
             MessageBox.Warning("未检测到游戏进程，请先启动游戏再进行识别", "识别失败")
         }
@@ -58,7 +77,24 @@ class GameLauncher {
             return { success: false, message: "启动失败：" e.Message }
         }
     }
-    
+
+    ; 通过 WMI 查询进程路径，用作 ProcessGetPath 失败时的降级方案
+    static _GetProcessPathByWmi(pid) {
+        try {
+            wmi := ComObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2")
+            query := "SELECT ExecutablePath FROM Win32_Process WHERE ProcessId = " pid
+            for process in wmi.ExecQuery(query) {
+                path := Trim(process.ExecutablePath)
+                if (path != "")
+                    return path
+            }
+            return ""
+        } catch Error as e {
+            Logger.Error("GameLauncher", "WMI 查询失败: " e.Message)
+            return ""
+        }
+    }
+
     ; 等待游戏启动完成（可选）
     static WaitForGame(timeout := 60000) {
         startTime := A_TickCount
