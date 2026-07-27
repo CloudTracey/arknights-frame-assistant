@@ -120,7 +120,7 @@ class MessageBox {
         
         ; 添加消息文本
         dialog.SetFont("s9", "Microsoft YaHei UI")
-        textCtrl := dialog.Add("Text", "x" textX " y" textY " w" textW, message)
+        textCtrl := dialog.Add("Text", "x" textX " y" textY " w" textW, this._WrapMessage(message))
         textCtrl.Opt("Center")
         textCtrl.GetPos(, , , &textH)
         
@@ -198,6 +198,37 @@ class MessageBox {
         }
     }
     
+    ; 内部：对长消息强制按字符换行，避免无空格的长字符串（如文件路径）溢出窗口
+    ; textW=280px, s9 字体下约可容纳 36 个半角字符/行
+    static _WrapMessage(message, maxChars := 36) {
+        lines := StrSplit(message, "`n", "`r")
+        result := ""
+        for line in lines {
+            if (result != "")
+                result .= "`n"
+            ; 如果行内有空格，说明可以自然换行，不做干预
+            if (InStr(line, " ") || StrLen(line) <= maxChars) {
+                result .= line
+                continue
+            }
+            ; 无空格的长字符串：优先在路径分隔符处换行，否则硬截断
+            while (StrLen(line) > maxChars) {
+                ; 尝试在 maxChars 范围内找最后一个反斜杠作为换行点
+                chunk := SubStr(line, 1, maxChars)
+                breakPos := InStr(chunk, "\", , -1)
+                if (breakPos && breakPos > maxChars * 0.5) {
+                    result .= SubStr(line, 1, breakPos) "`n"
+                    line := SubStr(line, breakPos + 1)
+                } else {
+                    result .= chunk "`n"
+                    line := SubStr(line, maxChars + 1)
+                }
+            }
+            result .= line
+        }
+        return result
+    }
+
     ; 内部：创建按钮
     static _CreateButtons(dialog, btnType, btnW, btnH, btnY) {
         buttons := {}
