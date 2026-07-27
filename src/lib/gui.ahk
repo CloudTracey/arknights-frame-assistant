@@ -502,7 +502,7 @@ class GuiManager {
         logoPath := FileExtractor.LogoPath
 
         this.MainGui.Add("Text", "x160 y48 w0 h0 Section")
-        logoSize := 256
+        logoSize := 192
         logoX := 160 + (530 - logoSize) / 2
         aboutLogo := this.MainGui.Add("Picture", "x" logoX " y48 w" logoSize " h" logoSize, logoPath)
         this.AboutControls.Push(aboutLogo)
