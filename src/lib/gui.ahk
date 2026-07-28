@@ -211,8 +211,8 @@ class GuiManager {
         checkboxAutoBeginPause.OnEvent("Click", (*) => this.TrackChange("AutoBeginPause"))
         this.MainGui["AutoBeginPause"].Value := Config.GetImportant("AutoBeginPause")
         this.NotOtherControls.Push(checkboxAutoBeginPause)
-        edit := this.MainGui.Add("Edit", "x+15 yp-4 w140 Center -TabStop Uppercase v" "AutoBeginPauseSwitch", Config.GetHotkey("AutoBeginPauseSwitch"))
-        this.NotOtherControls.Push(edit)
+        editAutoBeginPauseSwitch := this.MainGui.Add("Edit", "x+15 yp-4 w140 Center -TabStop Uppercase v" "AutoBeginPauseSwitch", Config.GetHotkey("AutoBeginPauseSwitch"))
+        this.NotOtherControls.Push(editAutoBeginPauseSwitch)
 
         ; 帧数设置提示语
         this.MainGui.SetFont("s9 c1994d2")
