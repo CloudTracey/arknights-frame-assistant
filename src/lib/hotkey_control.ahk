@@ -68,36 +68,42 @@ class HotkeyController {
             hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
-                if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
-                    if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                        Hotkey(hotkeyValue " Up", callback, "On")
-                        HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
+                try {
+                    if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
+                        if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
+                            Hotkey(hotkeyValue " Up", callback, "On")
+                            HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
+                        }
+                        else {
+                            Hotkey("~" hotkeyValue " Up", callback, "On")
+                            HotkeyController.ActiveHotkeys.Set("~" hotkeyValue " Up", "~" hotkeyValue " Up")
+                        }
+                    } else {
+                        if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
+                            Hotkey(hotkeyValue, callback, "On")
+                            HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
+                        }
+                        else {
+                            Hotkey("~" hotkeyValue, callback, "On")
+                            HotkeyController.ActiveHotkeys.Set("~" hotkeyValue, "~" hotkeyValue)
+                        }
                     }
-                    else {
-                        Hotkey("~" hotkeyValue " Up", callback, "On")
-                        HotkeyController.ActiveHotkeys.Set("~" hotkeyValue " Up", "~" hotkeyValue " Up")
-                    }
-                } else {
-                    if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                        Hotkey(hotkeyValue, callback, "On")
-                        HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
-                    }
-                    else {
-                        Hotkey("~" hotkeyValue, callback, "On")
-                        HotkeyController.ActiveHotkeys.Set("~" hotkeyValue, "~" hotkeyValue)
-                    }
+                } catch Error as e {
+                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", callback=" callback.Name ", error=" e.Message)
                 }
             }
         }
         HotIf
-        Logger.Info("Hotkey", "热键已启用，数量=" this.ActiveHotkeys.Count)
+        Logger.Info("Hotkey", "热键已启用，数量=" this.ActiveHotkeys.Count ", 明细: " this._BuildDetailList(Constants.KeyNames))
     }
 
     ; 禁用热键
     static HotkeyOff(silent := false, *) {
         HotIfWinActive("ahk_exe Arknights.exe")
         for _ , hotkeyValue in HotkeyController.ActiveHotkeys {
-            Hotkey(hotkeyValue, , "Off")
+            try Hotkey(hotkeyValue, , "Off")
+            catch Error as e
+                Logger.Error("Hotkey", "关闭热键失败：" hotkeyValue " - " e.Message)
         }
         HotkeyController.ActiveHotkeys := Map()
         HotIf
@@ -112,24 +118,28 @@ class HotkeyController {
             hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 callback := this.ActionCallbacks[keyVar]
-                if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
-                    if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                        Hotkey(hotkeyValue " Up", callback, "On")
-                        HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
+                try {
+                    if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
+                        if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
+                            Hotkey(hotkeyValue " Up", callback, "On")
+                            HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
+                        }
+                        else {
+                            Hotkey("~" hotkeyValue " Up", callback, "On")
+                            HotkeyController.ActiveHotkeys.Set("~" hotkeyValue " Up", "~" hotkeyValue " Up")
+                        }
+                    } else {
+                        if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
+                            Hotkey(hotkeyValue, callback, "On")
+                            HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
+                        }
+                        else {
+                            Hotkey("~" hotkeyValue, callback, "On")
+                            HotkeyController.ActiveHotkeys.Set("~" hotkeyValue, "~" hotkeyValue)
+                        }
                     }
-                    else {
-                        Hotkey("~" hotkeyValue " Up", callback, "On")
-                        HotkeyController.ActiveHotkeys.Set("~" hotkeyValue " Up", "~" hotkeyValue " Up")
-                    }
-                } else {
-                    if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                        Hotkey(hotkeyValue, callback, "On")
-                        HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
-                    }
-                    else {
-                        Hotkey("~" hotkeyValue, callback, "On")
-                        HotkeyController.ActiveHotkeys.Set("~" hotkeyValue, "~" hotkeyValue)
-                    }
+                } catch Error as e {
+                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", callback=" callback.Name ", error=" e.Message)
                 }
             }
         }
@@ -151,6 +161,28 @@ class HotkeyController {
         HotIf
     }
 
+    ; 构建热键明细列表（用于日志）
+    static _BuildDetailList(keyMap) {
+        list := ""
+        for keyVar, _ in keyMap {
+            hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
+            if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar))
+                list .= keyVar "=" hotkeyValue ", "
+        }
+        if (list != "")
+            return SubStr(list, 1, -2)
+        return "(无)"
+    }
+
+    ; 构建当前活跃标签页的热键明细列表（用于日志）
+    static _BuildDetailForActiveTab(tabName) {
+        if (tabName = "keyBind" || tabName = "quick")
+            return "战斗=" this._BuildDetailList(Constants.CombatHotkeys) " | 快捷=" this._BuildDetailList(Constants.QuickHotkeys)
+        else if (tabName = "strongHoldProtocol")
+            return "卫戍=" this._BuildDetailList(Constants.StrongHoldHotkeys)
+        return ""
+    }
+
     ; 根据标签页启用对应热键组
     static EnableByTab(tabName) {
         this.HotkeyOff(true)  ; 先静默禁用所有热键，重建完成后记录最终状态
@@ -161,7 +193,7 @@ class HotkeyController {
         else if (tabName = "strongHoldProtocol") {
             this.EnableGroup(Constants.StrongHoldHotkeys)
         }
-        Logger.Info("Hotkey", "热键已重建，数量=" this.ActiveHotkeys.Count)
+        Logger.Info("Hotkey", "热键已重建，数量=" this.ActiveHotkeys.Count ", 标签页=" tabName ", 明细: " this._BuildDetailForActiveTab(tabName))
     }
 
     ; 切换热键启用/禁用
@@ -199,21 +231,30 @@ class HotkeyController {
         HotIfWinActive("ahk_exe Arknights.exe")
         switchKey := Config.ReadCustomFromIni("SwitchHotkey")
         if (switchKey != "") {
-            Hotkey(switchKey, this.SwitchHotkey, "On")
-            this.ActiveSwitchHotkey := switchKey
+            try {
+                Hotkey(switchKey, this.SwitchHotkey, "On")
+                this.ActiveSwitchHotkey := switchKey
+            } catch Error as e {
+                Logger.Error("Hotkey", "注册SwitchKey失败：key=" switchKey ", callback=" this.SwitchHotkey.Name ", error=" e.Message)
+            }
         }
+        HotIf
         if (switchKey == "") {
             A_TrayMenu.Rename("2&", "启用/禁用热键")
             return
         }
         A_TrayMenu.Rename("2&", "启用/禁用热键(" KeyBinder.VirtualNewkeyFormat(switchKey) ")")
-        HotIf
     }
     ; 解除设置热键启用/禁用快捷键
     static UnsetSwitchKey() {
         switchKey := this.ActiveSwitchHotkey
-        if (switchKey != "")
-            Hotkey(switchKey, this.SwitchHotkey, "Off")
+        if (switchKey != "") {
+            HotIfWinActive("ahk_exe Arknights.exe")
+            try Hotkey(switchKey, this.SwitchHotkey, "Off")
+            catch Error as e
+                Logger.Error("Hotkey", "关闭SwitchKey失败：" switchKey " - " e.Message)
+            HotIf
+        }
         A_TrayMenu.Rename("2&", "启用/禁用热键")
     }
 }
