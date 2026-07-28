@@ -40,7 +40,7 @@ class HotkeyController {
         "Harvest", ActionHarvest,
         "CollectCollectibles", ActionCollectCollectibles,
         "SwitchView", ActionSwitchView,
-        "BeginPause", ActionBeginPause,
+        "BeginPause", ActionBeginPauseSwitch,
         "CheckEnemies", ActionCheckEnemies,
         "DispatchCenter", ActionDispatchCenter,
         "Freeze", ActionFreeze,
