@@ -2,12 +2,14 @@
 
 ; -- 常量定义 --
 class Constants {
+    static DEFAULT_TAB_ORDER := "keyBind,quick,strongHoldProtocol,other"
+
     ; 延迟常量
     static Delay30 := 34      ; 30帧
-    static Delay60 := 17      ; 60帧  
+    static Delay60 := 17      ; 60帧
     static Delay90 := 12      ; 90帧
     static Delay120 := 9      ; 120帧
-    static Delay144 := 8      ; 144帧  
+    static Delay144 := 8      ; 144帧
     static Delay165 := 7      ; 165帧
     static Delay180 := 6      ; 180帧
     static Delay240 := 5      ; 240帧
@@ -15,9 +17,10 @@ class Constants {
     ; 帧率选项（下拉框显示文本→下拉框索引，1-based）
     static FrameOptions := ["30", "60", "90", "120", "144", "165", "180", "240+"]
     ; 帧率文本→旧版序号（用于Frame双写兼容）
-    static FrameTextToOldIndex := Map("30","1", "60","2", "90","3", "120","4", "144","5", "165","6", "180","6", "240+","7")
+    static FrameTextToOldIndex := Map("30", "1", "60", "2", "90", "3", "120", "4", "144", "5", "165", "6", "180", "6",
+        "240+", "7")
     ; 旧版序号→帧率文本（用于迁移和回退）
-    static FrameOldIndexToText := Map("1","30", "2","60", "3","90", "4","120", "5","144", "6","165", "7","240+")
+    static FrameOldIndexToText := Map("1", "30", "2", "60", "3", "90", "4", "120", "5", "144", "6", "165", "7", "240+")
 
     ; 按键名称映射
     static KeyNames := Map(
@@ -102,7 +105,7 @@ class Constants {
         "OneClickSell", true,
         "OneClickPurchase", true
     )
-    
+
     ; 重要设置名称映射
     static ImportantNames := Map(
         "AutoExit", "自动退出",
@@ -121,6 +124,8 @@ class Constants {
         "AutoStartWithGame", "随明日方舟自动启动小助手",
         "DismissedChangelogVersion", "已忽略公告版本",
         "DefaultStrongHoldProtocol", "默认启动卫戍协议方案",
+        "TabOrder", "标签页顺序",
+        "HiddenTabs", "隐藏的标签页",
         "AutoBeginPause", "开局自动暂停"
     )
 
@@ -183,7 +188,7 @@ class Config {
         "OneClickSell", "",
         "OneClickPurchase", ""
     )
-    
+
     ; 内部：默认重要设置
     static _DefaultImportant := Map(
         "AutoExit", "1",
@@ -203,6 +208,8 @@ class Config {
         "LastLaunchedVersion", "",
         "DismissedChangelogVersion", "",
         "DefaultStrongHoldProtocol", "0",
+        "TabOrder", Constants.DEFAULT_TAB_ORDER,
+        "HiddenTabs", "",
         "AutoBeginPause", "0"
     )
 
@@ -214,10 +221,10 @@ class Config {
         "FrameSkip33msDelay", "30",
         "FrameSkip166msDelay", "165"
     )
-    
+
     ; 配置文件路径
     static IniFile := ""
-    
+
     ; 初始化配置文件路径
     static InitPath() {
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
@@ -225,7 +232,7 @@ class Config {
             DirCreate(configDir)
         this.IniFile := configDir "\Settings.ini"
     }
-    
+
     ; 获取按键设置（从内存工作副本，供 GUI 和冲突检测使用）
     static GetHotkey(key) {
         if !this._IsLoaded
@@ -245,7 +252,7 @@ class Config {
     static SetHotkey(key, value) {
         this._HotkeySettings[key] := value
     }
-    
+
     ; 获取重要设置（从内存工作副本，供 GUI 使用）
     static GetImportant(key) {
         if !this._IsLoaded
@@ -311,7 +318,7 @@ class Config {
     static SetCustom(key, value) {
         this._CustomSettings[key] := value
     }
-    
+
     ; 帧率设置数据迁移：从旧版Frame序号迁移到Frame155文本值
     static MigrateFrameRate() {
         if this.IniFile = ""
@@ -426,7 +433,7 @@ class Config {
     static PrepareGitHubTokenForStorage(plainToken) {
         ; 解密失败时禁止在外部设置变更前用空值覆盖仍可能可恢复的原加密配置。
         if (this.TokenStorageStatus = "decrypt_failed" && plainToken = "")
-            return {success: false, message: "GitHub Token 无法解密。为避免覆盖原加密配置，请重新输入 Token 后再保存。"}
+            return { success: false, message: "GitHub Token 无法解密。为避免覆盖原加密配置，请重新输入 Token 后再保存。" }
         return TokenProtector.Protect(plainToken)
     }
 
@@ -452,15 +459,15 @@ class Config {
     static LoadFromIni() {
         if this.IniFile = ""
             this.InitPath()
-        
+
         ; 检查配置文件是否存在
         fileExists := FileExist(this.IniFile)
-        
+
         ; 加载按键设置
         for keyVar, defaultVal in this._DefaultHotkeys {
             this._HotkeySettings[keyVar] := IniRead(this.IniFile, "Hotkeys", keyVar, defaultVal)
         }
-        
+
         ; 加载重要设置
         for keyVar, defaultVal in this._DefaultImportant {
             if (keyVar = "GitHubToken") {
@@ -475,29 +482,29 @@ class Config {
         for keyVar, defaultVal in this._DefaultCustom {
             this._CustomSettings[keyVar] := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
         }
-        
+
         ; 如果配置文件不存在，创建并写入默认值
         if (!fileExists) {
             this._EnsureConfigFileExists()
         }
-        
+
         this._IsLoaded := true
     }
-    
+
     ; 确保配置文件存在并包含所有配置项
     static _EnsureConfigFileExists() {
         ; 确保目录存在
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
         if !DirExist(configDir)
             DirCreate(configDir)
-        
+
         ; 写入所有默认重要设置
         for keyVar, defaultVal in this._DefaultImportant {
             if (keyVar = "GitHubToken")
                 continue
             IniWrite(defaultVal, this.IniFile, "Main", keyVar)
         }
-        
+
         ; 写入所有默认按键设置
         for keyVar, defaultVal in this._DefaultHotkeys {
             IniWrite(defaultVal, this.IniFile, "Hotkeys", keyVar)
@@ -508,7 +515,7 @@ class Config {
             IniWrite(defaultVal, this.IniFile, "Custom", keyVar)
         }
     }
-    
+
     ; 保存到配置文件
     static SaveToIni(settingsMap, tokenStorage := "") {
         if this.IniFile = ""
@@ -521,7 +528,7 @@ class Config {
             requestedToken := settingsMap.HasProp("GitHubToken") ? settingsMap.GitHubToken : ""
             ; 解密失败时禁止用空值覆盖仍可能可恢复的原加密配置。
             if (this.TokenStorageStatus = "decrypt_failed" && requestedToken = "")
-                return {success: false, message: "GitHub Token 无法解密。为避免覆盖原加密配置，请重新输入 Token 后再保存。"}
+                return { success: false, message: "GitHub Token 无法解密。为避免覆盖原加密配置，请重新输入 Token 后再保存。" }
 
             if !IsObject(tokenStorage)
                 tokenStorage := this.PrepareGitHubTokenForStorage(requestedToken)
@@ -569,7 +576,8 @@ class Config {
             ; Frame双写兼容：Frame155存文本值，Frame存旧版索引
             if this._ImportantSettings.Has("Frame") {
                 frameText := this._ImportantSettings["Frame"]
-                frameIndex := Constants.FrameTextToOldIndex.Has(frameText) ? Constants.FrameTextToOldIndex[frameText] : "3"
+                frameIndex := Constants.FrameTextToOldIndex.Has(frameText) ? Constants.FrameTextToOldIndex[frameText] :
+                    "3"
                 IniWrite(frameText, this.IniFile, "Main", "Frame155")
                 IniWrite(frameIndex, this.IniFile, "Main", "Frame")
             }
@@ -591,10 +599,10 @@ class Config {
             this.IniFile := targetIniFile
             this._CommitIniTemp(tempIniFile, targetIniFile)
             tempIniFile := ""
-            return {success: true, message: ""}
+            return { success: true, message: "" }
         } catch Error as e {
             Logger.Error("Config", "配置文件写入失败：" e.Message)
-            return {success: false, message: "配置文件写入失败：" e.Message}
+            return { success: false, message: "配置文件写入失败：" e.Message }
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
@@ -602,7 +610,7 @@ class Config {
             Critical "Off"
         }
     }
-    
+
     ; 保存所有内存中的配置到配置文件（用于非GUI场景）
     static SaveAllToIni() {
         if this.IniFile = ""
@@ -613,10 +621,12 @@ class Config {
         Critical "On"
         try {
             ; 非 GUI 保存同样不能在解密失败时用空值覆盖原加密配置。
-            if (this.TokenStorageStatus = "decrypt_failed" && this._ImportantSettings.Has("GitHubToken") && this._ImportantSettings["GitHubToken"] = "")
-                return {success: false, message: "GitHub Token 无法解密，已保留原加密配置。请重新输入 Token 后保存。"}
+            if (this.TokenStorageStatus = "decrypt_failed" && this._ImportantSettings.Has("GitHubToken") && this._ImportantSettings[
+                "GitHubToken"] = "")
+                return { success: false, message: "GitHub Token 无法解密，已保留原加密配置。请重新输入 Token 后保存。" }
 
-            tokenStorage := this.PrepareGitHubTokenForStorage(this._ImportantSettings.Has("GitHubToken") ? this._ImportantSettings["GitHubToken"] : "")
+            tokenStorage := this.PrepareGitHubTokenForStorage(this._ImportantSettings.Has("GitHubToken") ? this._ImportantSettings[
+                "GitHubToken"] : "")
             if !tokenStorage.success
                 return tokenStorage
 
@@ -656,10 +666,10 @@ class Config {
             this.IniFile := targetIniFile
             this._CommitIniTemp(tempIniFile, targetIniFile)
             tempIniFile := ""
-            return {success: true, message: ""}
+            return { success: true, message: "" }
         } catch Error as e {
             Logger.Error("Config", "配置文件保存失败：" e.Message)
-            return {success: false, message: "配置文件写入失败：" e.Message}
+            return { success: false, message: "配置文件写入失败：" e.Message }
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
@@ -687,7 +697,7 @@ class Config {
             throw Error("配置文件替换失败，错误码：" errorCode)
         }
     }
-    
+
     ; 加载默认值
     static LoadDefaults() {
         this._HotkeySettings := this._DefaultHotkeys.Clone()
@@ -695,22 +705,22 @@ class Config {
         this._CustomSettings := this._DefaultCustom.Clone()
         this._IsLoaded := true
     }
-    
+
     ; 恢复按键默认设置
     static ResetHotkeyToDefaults() {
         this._HotkeySettings := this._DefaultHotkeys.Clone()
         this._CustomSettings.Set("SwitchHotkey", this._DefaultCustom["SwitchHotkey"])
     }
-    
+
     ; 获取所有按键设置（用于遍历）
     static AllHotkeys => this._HotkeySettings
-    
+
     ; 获取所有重要设置（用于遍历）
     static AllImportant => this._ImportantSettings
 
     ; 获取所有自定义设置（用于遍历）
     static AllCustom => this._CustomSettings
-    
+
 }
 
 ; -- 状态管理 --
@@ -720,13 +730,13 @@ class State {
 
     ; 是否由游戏进程创建事件触发启动
     static StartedByGameAutoStart := false
-    
+
     ; 当前延迟值
     static CurrentDelay := 11.3  ; 默认120帧
 
     ; 点击延迟
     static ClickDelay := 50  ; 默认50ms
-    
+
     ; GUI窗口名称
     static GuiWindowName := ""
 

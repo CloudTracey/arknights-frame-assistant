@@ -34,6 +34,7 @@ HandleSettingsSave(*) {
     EventBus.Publish("UnsetSwitchKey")
     Saver.SettingsIniWrite()
     Loader.LoadSettings()
+    GuiManager.CommitTabSettings()
     Logger.Info("Settings", "设置已保存并关闭")
     if(HotkeyController.HotkeyState == true) {
         HotkeyController.EnableByTab(GuiManager.LastActiveTab)
@@ -53,6 +54,7 @@ HandleSettingsApply(*) {
     EventBus.Publish("UnsetSwitchKey")
     Saver.SettingsIniWrite()
     Loader.LoadSettings()
+    GuiManager.CommitTabSettings()
     Logger.Info("Settings", "设置已应用")
     if(HotkeyController.HotkeyState == true) {
         HotkeyController.EnableByTab(GuiManager.LastActiveTab)
