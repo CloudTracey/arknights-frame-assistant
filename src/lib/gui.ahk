@@ -61,10 +61,12 @@ class GuiManager {
     static TabOther := ""             ; "其他设置"标签点击区域
     static TabItems := []              ; 标签描述，数组顺序为管理器中的待保存顺序
     static AppliedTabSettings := {Order: [], Visibility: Map()} ; 已保存或应用的顶部标签状态
-    static TabManagerX := 460
-    static TabManagerRowStartY := 108
-    static TabManagerRowWidth := 210
-    static TabManagerRowHeight := 30
+    ; 标签管理器（"自定义"页右列）几何布局
+    static TabManagerX := 460          ; 管理器列左边缘
+    static TabManagerTitleY := 0       ; "顶部标签页"标题的 y（动态对齐左列第一项）
+    static TabManagerRowStartY := 108  ; 第一行的上边缘
+    static TabManagerRowWidth := 210   ; 行宽
+    static TabManagerRowHeight := 30   ; 行高（含间距）
     static TabDragIndex := 0
     static TabDragStartY := 0
     static TabDragMoved := false
@@ -145,9 +147,8 @@ class GuiManager {
         ; 辅助函数：添加绑定行
         AddBindRow(LabelText, KeyVar) {
             controls := []
-            txt := this.MainGui.Add("Text", "xs+15 y+16 w120 Right +0x200", LabelText)
-            edit := this.MainGui.Add("Edit", "x+20 yp-4 w140 Center -TabStop Uppercase v" KeyVar, Config.GetHotkey(
-                KeyVar))
+            txt := this.MainGui.Add("Text", "xs+15 y+16 w120 Right +0x200", LabelText) 
+            edit := this.MainGui.Add("Edit", "x+20 yp-4 w140 Center -TabStop Uppercase v" KeyVar, Config.GetHotkey(KeyVar))
             controls.Push(txt)
             controls.Push(edit)
             return controls
@@ -527,16 +528,21 @@ class GuiManager {
         this.UpdateControls.Push(editGithubToken)
         this.UpdateControls.Push(this.HintGithubToken)
 
+        ; 标签页设置（Hidden 表单变量，供标签管理器读写；置于布局链之前避免破坏"自定义"左列 y 定位）
+        this.MainGui.Add("Edit", "Hidden vTabOrder", Config.GetImportant("TabOrder"))
+        this.MainGui.Add("Edit", "Hidden vHiddenTabs", Config.GetImportant("HiddenTabs"))
+
         ; 分类"自定义"
         sepCustom := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
         sepCustomTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", "  自定义设置  ")
         this.CustomControls.Push(sepCustom)
         this.CustomControls.Push(sepCustomTxt)
-        this.MainGui.Add("Edit", "Hidden vTabOrder", Config.GetImportant("TabOrder"))
-        this.MainGui.Add("Edit", "Hidden vHiddenTabs", Config.GetImportant("HiddenTabs"))
 
         ; 点击延迟设置
         txtClickDelay := this.MainGui.Add("Text", "xs y+10 Section", "点击延迟")
+        ; 记录左列第一项的实际 y，供右列"顶部标签页"标题对齐（避免绝对坐标估算误差）
+        txtClickDelay.GetPos(, &tabManagerFirstY)
+        this.TabManagerTitleY := tabManagerFirstY
         this.ClickDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vClickDelay Number", Config.GetCustom(
             "ClickDelay"))
         this.ClickDelay.OnEvent("Change", (*) => this.TrackChange("ClickDelay"))
@@ -579,26 +585,33 @@ class GuiManager {
         this.CustomControls.Push(txtFrameSkip3)
         this.CustomControls.Push(editFrameSkip3)
 
-        ; 标签页可见性与顺序
-        tabManagerTitle := this.MainGui.Add("Text", "x" this.TabManagerX " y72 w" this.TabManagerRowWidth
+        ; 标签页可见性与顺序（右列标题动态对齐左列第一项）
+        tabManagerTitle := this.MainGui.Add("Text", "x" this.TabManagerX " y" this.TabManagerTitleY " w" this.TabManagerRowWidth
             " h20 c333333", "顶部标签页")
         tabManagerTitle.SetFont("bold")
-        tabManagerHint := this.MainGui.Add("Text", "xp y92 w" this.TabManagerRowWidth
+        tabManagerHint := this.MainGui.Add("Text", "xp y" (this.TabManagerTitleY + 20) " w" this.TabManagerRowWidth
             " h16 c8a8a8a", "拖动排序 · 点击眼睛切换显示")
+        ; 首行 y 与标题保持固定间距（标题→提示 20px，提示→首行 16px + 行高 30px = 43px）
+        this.TabManagerRowStartY := this.TabManagerTitleY + 43
         this.CustomControls.Push(tabManagerTitle)
         this.CustomControls.Push(tabManagerHint)
         for index, tabItem in this.TabItems {
             rowY := this.TabManagerRowStartY + (index - 1) * this.TabManagerRowHeight
             tabItem.RowBackground := this.MainGui.Add("Text", "x" this.TabManagerX " y" rowY
                 " w" this.TabManagerRowWidth " h26 BackgroundF5F7FA +0x100")
+            ; 高亮层：与背景层同位置叠放，通过 Visible 切换（AHK 对 Text 控件运行时改背景色不可靠，故用双控件）
+            tabItem.RowHighlight := this.MainGui.Add("Text", "x" this.TabManagerX " y" rowY
+                " w" this.TabManagerRowWidth " h26 BackgroundEAF2FB +0x100")
+            tabItem.RowHighlight.Visible := false
             tabItem.DragControl := this.MainGui.Add("Text", "x" (this.TabManagerX + 9) " y" (rowY + 4)
                 " w24 h18 Center cA8ADB5 +0x100", "⋮⋮")
-            tabItem.ManagerLabel := this.MainGui.Add("Text", "x" (this.TabManagerX + 40) " y" (rowY + 5)
+            tabItem.ManagerLabel := this.MainGui.Add("Text", "x" (this.TabManagerX + 40) " y" (rowY + 4)
                 " w125 h18 +0x100", tabItem.Label)
-            tabItem.EyeControl := this.MainGui.Add("Text", "x" (this.TabManagerX + 171) " y" (rowY + 3)
-                " w30 h20 Center +0x100", Chr(0xE890))
-            tabItem.EyeControl.SetFont("s12 c1994d2", "Segoe MDL2 Assets")
+            tabItem.EyeControl := this.MainGui.Add("Text", "x" (this.TabManagerX + 171) " y" (rowY + 4)
+                " w24 h18 Center +0x100", Chr(0xE890))
+            tabItem.EyeControl.SetFont("s11 c1994d2", "Segoe MDL2 Assets")
             this.CustomControls.Push(tabItem.RowBackground)
+            this.CustomControls.Push(tabItem.RowHighlight)
             this.CustomControls.Push(tabItem.DragControl)
             this.CustomControls.Push(tabItem.ManagerLabel)
             this.CustomControls.Push(tabItem.EyeControl)
@@ -1008,7 +1021,7 @@ class GuiManager {
                 if (IsObject(ctrl)) {
                     try ctrl.Visible := false
                 }
-            }
+            }   
             return
         }
         for ctrl in this.KeybindControls {
@@ -1052,15 +1065,15 @@ class GuiManager {
         }
     }
 
-    ; 从配置恢复标签顺序与可见性；未知项会被忽略，新增项自动追加。
-    static LoadTabSettingsFromConfig() {
+    ; 按 id 数组构建标签顺序：按给定顺序去重取已有项，再追加未出现的项（未来新增标签自动落尾）。
+    static _BuildOrderedTabsFromIds(idList) {
         tabById := Map()
         for tabItem in this.TabItems
             tabById[tabItem.Id] := tabItem
 
         orderedTabs := []
         addedIds := Map()
-        for tabId in StrSplit(Config.GetImportant("TabOrder"), ",") {
+        for tabId in idList {
             tabId := Trim(tabId)
             if (tabId != "" && tabById.Has(tabId) && !addedIds.Has(tabId)) {
                 orderedTabs.Push(tabById[tabId])
@@ -1071,6 +1084,12 @@ class GuiManager {
             if !addedIds.Has(tabItem.Id)
                 orderedTabs.Push(tabItem)
         }
+        return orderedTabs
+    }
+
+    ; 从配置恢复标签顺序与可见性；未知项会被忽略，新增项自动追加。
+    static LoadTabSettingsFromConfig() {
+        orderedTabs := this._BuildOrderedTabsFromIds(StrSplit(Config.GetImportant("TabOrder"), ","))
 
         hiddenIds := Map()
         for tabId in StrSplit(Config.GetImportant("HiddenTabs"), ",") {
@@ -1135,23 +1154,7 @@ class GuiManager {
 
     ; 按已应用顺序返回标签对象，并为未来新增标签提供自动追加兜底。
     static GetTabsInAppliedOrder() {
-        tabById := Map()
-        for tabItem in this.TabItems
-            tabById[tabItem.Id] := tabItem
-
-        appliedTabs := []
-        addedIds := Map()
-        for tabId in this.AppliedTabSettings.Order {
-            if (tabById.Has(tabId) && !addedIds.Has(tabId)) {
-                appliedTabs.Push(tabById[tabId])
-                addedIds[tabId] := true
-            }
-        }
-        for tabItem in this.TabItems {
-            if !addedIds.Has(tabItem.Id)
-                appliedTabs.Push(tabItem)
-        }
-        return appliedTabs
+        return this._BuildOrderedTabsFromIds(this.AppliedTabSettings.Order)
     }
 
     ; 获取排序最靠前的可见标签；功能标签不包含“其他设置”。
@@ -1164,7 +1167,7 @@ class GuiManager {
     }
 
     ; 根据可见标签数组等分并排列顶部标签。
-    static LayoutTabs() {
+    static LayoutTopTabs() {
         visibleTabs := []
         for tabItem in this.GetTabsInAppliedOrder() {
             isVisible := this.IsTabVisible(tabItem.Id)
@@ -1189,19 +1192,35 @@ class GuiManager {
         this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
     }
 
+    ; 解析回退标签：优先功能标签（排除"其他设置"），仅剩"其他设置"时返回它。
+    static _ResolveFallbackTab() {
+        fallbackTab := this.GetFirstVisibleTab(true)
+        if (fallbackTab = "")
+            fallbackTab := this.GetFirstVisibleTab()
+        return fallbackTab
+    }
+
+    ; 统计当前可见的功能标签数量（排除"其他设置"）。
+    ; 直接读 tabItem.Visible（工作态），而非 IsTabVisible（读已应用快照），确保未应用时保护也生效。
+    static _CountVisibleFunctionalTabs() {
+        count := 0
+        for tabItem in this.TabItems {
+            if (tabItem.Id != "other" && tabItem.Visible)
+                count++
+        }
+        return count
+    }
+
     ; 应用标签管理器状态；当前页被隐藏时切到排序最靠前的可见页。
     static ApplyTabSettings() {
         this.RenderTabManager()
         if (this.CurrentTab != "" && !this.IsTabVisible(this.CurrentTab)) {
-            fallbackTab := this.GetFirstVisibleTab(true)
-            if (fallbackTab = "")
-                fallbackTab := this.GetFirstVisibleTab()
-            this.SwitchTab(fallbackTab)
+            this.SwitchTab(this._ResolveFallbackTab())
             return
         }
 
         if !this.IsTabVisible(this.LastActiveTab) {
-            fallbackTab := this.GetFirstVisibleTab(true)
+            fallbackTab := this._ResolveFallbackTab()
             if (fallbackTab != "") {
                 this.LastActiveTab := fallbackTab
                 this.IsOnStrongHoldProtocol := fallbackTab = "strongHoldProtocol"
@@ -1213,29 +1232,28 @@ class GuiManager {
         if (this.CurrentTab != "")
             this._UpdateTabUI(this.CurrentTab)
         else
-            this.LayoutTabs()
+            this.LayoutTopTabs()
     }
 
     ; 刷新“自定义”页中的标签管理器行。
     static RenderTabManager() {
         for index, tabItem in this.TabItems {
             rowY := this.TabManagerRowStartY + (index - 1) * this.TabManagerRowHeight
-            backgroundColor := index = this.TabDragIndex ? "EAF2FB" : "F5F7FA"
-            tabItem.RowBackground.Opt("Background" backgroundColor)
+            ; 背景层固定 F5F7FA；高亮层通过 Visible 切换，避免 Opt 改色对 Text 控件不可靠的问题
             tabItem.RowBackground.Move(this.TabManagerX, rowY, this.TabManagerRowWidth, 26)
+            tabItem.RowHighlight.Move(this.TabManagerX, rowY, this.TabManagerRowWidth, 26)
+            tabItem.RowHighlight.Visible := index = this.TabDragIndex
+            ; 行内控件相对行左边缘的偏移：拖动手柄 +9、标签 +40、眼睛图标 +171
             tabItem.DragControl.Move(this.TabManagerX + 9, rowY + 4, 24, 18)
-            tabItem.ManagerLabel.Move(this.TabManagerX + 40, rowY + 5, 125, 18)
-            tabItem.EyeControl.Move(this.TabManagerX + 171, rowY + 3, 30, 20)
+            tabItem.ManagerLabel.Move(this.TabManagerX + 40, rowY + 4, 125, 18)
+            tabItem.EyeControl.Move(this.TabManagerX + 171, rowY + 4, 24, 18)
 
-            tabItem.ManagerLabel.Text := tabItem.Label (tabItem.CanHide ? "" : "（固定）")
+            tabItem.ManagerLabel.Text := tabItem.Label (tabItem.CanHide ? "" : "（无法隐藏）")
             tabItem.ManagerLabel.SetFont(tabItem.Visible ? "c333333" : "cA0A0A0")
-            if tabItem.Visible {
-                tabItem.EyeControl.Text := Chr(0xE890)
-                tabItem.EyeControl.SetFont("s12 c1994d2", "Segoe MDL2 Assets")
-            } else {
-                tabItem.EyeControl.Text := Chr(0xE8F4)
-                tabItem.EyeControl.SetFont("s12 cA0A0A0", "Segoe MDL2 Assets")
-            }
+            ; 眼睛图标统一用 U+E890（睁眼，MDL2 中确定存在），用颜色区分状态：蓝=显示，灰=隐藏。
+            ; （不依赖"闭眼"字形——MDL2 无此字形，E9CE/E8F4 等均不可靠，可能显示为问号。）
+            tabItem.EyeControl.Text := Chr(0xE890)
+            tabItem.EyeControl.SetFont(tabItem.Visible ? "s11 c1994d2" : "s11 cA0A0A0", "Segoe MDL2 Assets")
         }
     }
 
@@ -1253,6 +1271,7 @@ class GuiManager {
             if (controlHwnd = tabItem.EyeControl.Hwnd)
                 return {Index: index, IsEye: true}
             if (controlHwnd = tabItem.RowBackground.Hwnd
+                || controlHwnd = tabItem.RowHighlight.Hwnd
                 || controlHwnd = tabItem.DragControl.Hwnd
                 || controlHwnd = tabItem.ManagerLabel.Hwnd)
                 return {Index: index, IsEye: false}
@@ -1260,8 +1279,15 @@ class GuiManager {
         return ""
     }
 
+    ; MouseGetPos 返回物理像素，而 TabManagerRowStartY/RowHeight 为逻辑像素（Gui 默认 DPI 缩放）。
+    ; 统一换算为逻辑像素，避免 150% 等系统缩放下拖拽位置偏移。
+    static GetTabManagerLogicalY() {
+        MouseGetPos(, &mouseY)
+        return mouseY * 96 / A_ScreenDPI
+    }
+
     static HandleTabManagerMouseDown(wParam, lParam, msg, hwnd) {
-        MouseGetPos(, &mouseY, , &controlHwnd, 2)
+        MouseGetPos(, , , &controlHwnd, 2)
         hit := this.GetTabManagerHit(controlHwnd)
         if !IsObject(hit)
             return
@@ -1269,15 +1295,20 @@ class GuiManager {
         tabItem := this.TabItems[hit.Index]
         if hit.IsEye {
             if tabItem.CanHide {
-                tabItem.Visible := !tabItem.Visible
-                this.SyncTabSettings()
-                this.RenderTabManager()
+                ; 边界保护：禁止隐藏最后一个可见功能标签，避免"仅剩其他设置"导致热键方案绑定到不可达标签。
+                if tabItem.Visible && this._CountVisibleFunctionalTabs() <= 1 {
+                    MessageBox.Info("至少保留一个功能标签页，不能隐藏全部功能标签。", "提示")
+                } else {
+                    tabItem.Visible := !tabItem.Visible
+                    this.SyncTabSettings()
+                    this.RenderTabManager()
+                }
             }
             return
         }
 
         this.TabDragIndex := hit.Index
-        this.TabDragStartY := mouseY
+        this.TabDragStartY := this.GetTabManagerLogicalY()
         this.TabDragMoved := false
         this.RenderTabManager()
         DllCall("SetCapture", "Ptr", this.MainGui.Hwnd)
@@ -1287,7 +1318,7 @@ class GuiManager {
         if (this.TabDragIndex = 0)
             return
 
-        MouseGetPos(, &mouseY)
+        mouseY := this.GetTabManagerLogicalY()
         if (!this.TabDragMoved && Abs(mouseY - this.TabDragStartY) < 4)
             return
         this.TabDragMoved := true
@@ -1327,7 +1358,7 @@ class GuiManager {
                 if (IsObject(ctrl)) {
                     try ctrl.Visible := false
                 }
-            }
+            }   
         }
     }
 
@@ -1336,7 +1367,7 @@ class GuiManager {
         ; 首先隐藏所有标签页的控件
         this._HideAllControls()
         showModeStatus := this.IsTabVisible("strongHoldProtocol")
-        this.LayoutTabs()
+        this.LayoutTopTabs()
 
         ; 切换到常规作战页
         if (tabName = "keyBind") {
@@ -1465,6 +1496,10 @@ class GuiManager {
         for ctrl in info[1] {
             try ctrl.Visible := true
         }
+        ; 上面遍历会把 CustomControls 内所有控件设为可见（含 RowHighlight 高亮层），
+        ; 重绘管理器将其恢复为 TabDragIndex 决定的正确状态，避免启动后全部标签误高亮。
+        if (categoryName = "Custom")
+            this.RenderTabManager()
         ; 切换到更新分类时，同步 Token 行状态
         if (categoryName = "Update") {
             this._OnUpdateSourceChange()
@@ -1490,9 +1525,7 @@ class GuiManager {
     static SwitchTab(tabName) {
         isInitialSwitch := this.CurrentTab = ""
         if !this.IsTabVisible(tabName) {
-            tabName := this.GetFirstVisibleTab(true)
-            if (tabName = "")
-                tabName := this.GetFirstVisibleTab()
+            tabName := this._ResolveFallbackTab()
         }
         if (tabName = this.CurrentTab)
             return

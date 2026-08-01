@@ -1,0 +1,25 @@
+# Git 行尾与换行规范
+# 目标：让"检出 CRLF、提交 LF"成为显式约定，不再依赖个人机器的 core.autocrlf 设置。
+# 这样无论谁用什么系统/编辑器，git 都会按此规范归一化，避免 PR 中因行尾/空白差异产生的噪音。
+
+# 所有文本文件默认按 autocrlf 规范化
+* text=auto
+
+# 二进制文件：不做任何行尾转换
+*.png binary
+*.ico binary
+
+# AutoHotkey 源码：Windows 平台，工作区 CRLF，提交时归一化为 LF
+*.ahk text eol=crlf
+
+# 项目文档
+*.md text eol=crlf
+*.txt text eol=crlf
+LICENSE text eol=crlf
+.gitignore text eol=crlf
+CODEOWNERS text eol=crlf
+
+# GitHub 配置（workflow/issue 模板/脚本）：跨平台，保持 LF 以避免 shell 环境问题
+.github/**/*.yml text eol=lf
+.github/**/*.py text eol=lf
+.github/**/requirements.txt text eol=lf
