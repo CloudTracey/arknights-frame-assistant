@@ -49,9 +49,9 @@ class KeyForward {
 ; -- 常规作战 --
 ; 按下暂停
 ActionPressPause(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionPressPause", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionPressPause", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Send "{ESC Down}"
     USleep(50)
     Send "{ESC Up}"
@@ -64,17 +64,17 @@ ActionPressPause(ThisHotkey) {
 }
 ; 松开暂停
 ActionReleasePause(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionReleasePause", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionReleasePause", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     GameKeys.Tap("pauseBattle")
     try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
 ; 切换倍速
 ActionGameSpeed(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionGameSpeed", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionGameSpeed", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     GameKeys.SendDown("changeSpeed")
     USleep(50)
     GameKeys.SendUp("changeSpeed")
@@ -87,9 +87,9 @@ ActionGameSpeed(ThisHotkey) {
 }
 ; 前进16ms
 Action16ms(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("Action16ms", ThisHotkey, oldCtx)
+    if !GuardInLevel("Action16ms", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -110,9 +110,9 @@ Action16ms(ThisHotkey) {
 }
 ; 前进33ms，由于波动，过帧间隔设置为30ms，避免一次过两帧
 Action33ms(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("Action33ms", ThisHotkey, oldCtx)
+    if !GuardInLevel("Action33ms", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -133,9 +133,9 @@ Action33ms(ThisHotkey) {
 }
 ; 前进166ms
 Action166ms(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("Action166ms", ThisHotkey, oldCtx)
+    if !GuardInLevel("Action166ms", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -156,9 +156,9 @@ Action166ms(ThisHotkey) {
 }
 ; 暂停选中
 ActionPauseSelect(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionPauseSelect", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionPauseSelect", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -185,9 +185,9 @@ ActionPauseSelect(ThisHotkey) {
 }
 ; 发送技能键
 ActionSkill(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionSkill", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionSkill", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     GameKeys.Tap("releaseSkill")
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -198,9 +198,9 @@ ActionSkill(ThisHotkey) {
 }
 ; 发送撤退键
 ActionRetreat(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionRetreat", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionRetreat", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     GameKeys.Tap("retreatChar")
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -211,9 +211,9 @@ ActionRetreat(ThisHotkey) {
 }
 ; 一键技能
 ActionOneClickSkill(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionOneClickSkill", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionOneClickSkill", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -231,9 +231,9 @@ ActionOneClickSkill(ThisHotkey) {
 }
 ; 一键撤退
 ActionOneClickRetreat(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionOneClickRetreat", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionOneClickRetreat", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -251,9 +251,9 @@ ActionOneClickRetreat(ThisHotkey) {
 }
 ; 暂停技能
 ActionPauseSkill(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionPauseSkill", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionPauseSkill", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -284,9 +284,9 @@ ActionPauseSkill(ThisHotkey) {
 }
 ; 暂停撤退
 ActionPauseRetreat(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionPauseRetreat", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionPauseRetreat", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -318,9 +318,9 @@ ActionPauseRetreat(ThisHotkey) {
 
 ; 视角切换
 ActionSwitchView(ThisHotkey) {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !GuardInLevel("ActionSwitchView", ThisHotkey, oldCtx)
+    if !GuardInLevel("ActionSwitchView", ThisHotkey)
         return
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -738,14 +738,17 @@ PureKeyWait(ThisHotkey) {
         return
     KeyWait(KeyForward.PureKeyName(ThisHotkey))
 }
-; 关卡守卫：在关卡内返回 true；拦截时先透传原键（避免日志 IO 拖慢透传）、再记录日志并恢复 DPI，返回 false
+; 关卡守卫：在关卡内返回 true；拦截时透传原键并记录日志，返回 false
+; DPI 上下文自包含：检测期间临时切换 per-monitor 并在返回前恢复，调用方无需关心（也无需传 oldCtx）
 ; 拦截是预期行为（非异常），用 Info 级别避免刷 critical 轨（WARN/ERROR 5 MiB 留给真正的问题）
-GuardInLevel(actionName, ThisHotkey, oldCtx) {
-    if IsInLevel()
+GuardInLevel(actionName, ThisHotkey) {
+    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    inLevel := IsInLevel()
+    try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+    if inLevel
         return true
     KeyForward.ForwardOriginalKey(ThisHotkey)
     Logger.Info("HotkeyActions", actionName " 被关卡检测拦截（不在关卡界面）")
-    try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
     return false
 }
 ; 判断鼠标是否在Client区域内

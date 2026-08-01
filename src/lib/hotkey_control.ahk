@@ -140,15 +140,17 @@ class HotkeyController {
             if (hotkeyValue != "") {
                 try Hotkey(hotkeyValue, , "Off")
                 try Hotkey("~" hotkeyValue, , "Off")
-                ; 仅注销实际注册过的 Up 变体（与 _RegisterOne 同规则派生，避免对未注册变体盲目注销）
+                ; 仅注销并删除实际注册过的 Up 变体（与 _RegisterOne 同规则派生，保持 ActiveHotkeys 与实际注册一致）
                 if (this.ActionCallbacks.Has(keyVar)) {
                     profile := this.ActionCallbacks[keyVar]
-                    if ((profile.HasOwnProp("OnUp") || profile.HasOwnProp("Guarded")) && !InStr(hotkeyValue, "Wheel") && hotkeyValue ~= pattern)
+                    if ((profile.HasOwnProp("OnUp") || profile.HasOwnProp("Guarded")) && !InStr(hotkeyValue, "Wheel") && hotkeyValue ~= pattern) {
                         try Hotkey(hotkeyValue " Up", , "Off")
+                        this.ActiveHotkeys.Delete(hotkeyValue " Up")
+                    }
                 }
                 this.ActiveHotkeys.Delete(hotkeyValue)
                 this.ActiveHotkeys.Delete("~" hotkeyValue)
-                this.ActiveHotkeys.Delete(hotkeyValue " Up")
+                this.ActiveHotkeys.Delete("~" hotkeyValue " Up")
             }
         }
         HotIf
