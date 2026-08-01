@@ -165,6 +165,23 @@
 
 ---
 
+## 追加测试：KeyForward 封装回归（2026-08-01）
+
+> 对应更改：透传状态与行为封装为 `KeyForward` 类（`InterceptedKeys` 静态成员 + `PureKeyName`/`ForwardOriginalKey`/`ActionUpForward` 静态方法），消除裸全局变量与自由函数耦合；调用点改为 `KeyForward.` 前缀（`GuardInLevel`/`PureKeyWait`/`hotkey_control._RegisterOne`）。行为零变化，纯封装重构
+
+### KeyForward 封装回归
+
+- [x] 验证：AFA 启动正常（`KeyForward` 类定义无语法错误，热键全部注册成功）
+- [x] 验证：关卡内按热键 → 功能正常（守卫放行路径不受封装影响）
+- [x] 验证：关卡外按热键 → 拦截 + 透传正常（down 补发、松开 up 补发——`KeyForward.InterceptedKeys` 标志读写正常）
+- [x] 验证：多键并发（按住 A 按 D → 松开 A → 再按 A → 松开 D）→ 状态流正确（标志生命周期正常）
+- [x] 验证：松开暂停（ReleasePause）关卡内松开触发、关卡外拦截透传（Up 变体注册引用 `KeyForward.ActionUpForward` 正常）
+- [x] 验证：注册失败日志恢复回调名——人为制造注册失败（如配置无效按键）时，日志形如 `注册热键失败：key=xxx, value=xxx, callback=ActionXxx, error=...`（Sourcery 审查建议：`profile.Fn.Name` 恢复回调标识）
+- [ ] 验证：拦截日志级别为 Info（用户反馈：关卡外拦截是预期行为，不应占用 critical 轨）——关卡外按热键拦截后，拦截记录出现在普通日志（`afa-*.log`），**不在**关键日志（`critical-*.log`）中；真正的 WARN/ERROR 仍正常进 critical
+- [ ] 验证：**鼠标在游戏窗口外**时按热键（如 W 绑暂停选中）→ 守卫仍先行拦截 + 透传原键（用户反馈场景：守卫移至 `IsMouseInClient` 之前，鼠标位置仅作为功能执行前置条件——窗口外拦截透传正常，窗口外且关卡内时功能不执行）
+
+---
+
 ## 测试结果
 
 - [ ] 全部通过
