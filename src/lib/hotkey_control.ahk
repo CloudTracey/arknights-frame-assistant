@@ -55,6 +55,15 @@ class HotkeyController {
         "OneClickPurchase", ActionOneClickPurchase
     )
 
+    ; 有关卡检测守卫的常规作战功能（守卫拦截时透传 key down/up：注册 Up 变体热键补发 key up）
+    ; 不含 ReleasePause（其功能本身即 Up 变体注册，走独立分支）
+    static LevelGuardedKeys := Map(
+        "PressPause", true, "GameSpeed", true, "16ms", true, "33ms", true, "166ms", true,
+        "PauseSelect", true, "Skill", true, "Retreat", true,
+        "OneClickSkill", true, "OneClickRetreat", true, "PauseSkill", true, "PauseRetreat", true,
+        "SwitchView", true
+    )
+
     ; 已激活热键映射表
     static ActiveHotkeys := Map()
 
@@ -78,6 +87,12 @@ class HotkeyController {
                             Hotkey("~" hotkeyValue " Up", callback, "On")
                             HotkeyController.ActiveHotkeys.Set("~" hotkeyValue " Up", "~" hotkeyValue " Up")
                         }
+                    } else if (this.LevelGuardedKeys.Has(keyVar) && !InStr(hotkeyValue, "Wheel") && hotkeyValue ~= GameKeys.GetInterceptPattern()) {
+                        ; 有守卫的常规作战功能（拦截键）：注册 down 热键 + Up 变体（Up 回调补发 key up，事件驱动透传）
+                        Hotkey(hotkeyValue, callback, "On")
+                        HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
+                        Hotkey(hotkeyValue " Up", ActionUpForward, "On")
+                        HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
                     } else {
                         if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
                             Hotkey(hotkeyValue, callback, "On")
@@ -128,6 +143,12 @@ class HotkeyController {
                             Hotkey("~" hotkeyValue " Up", callback, "On")
                             HotkeyController.ActiveHotkeys.Set("~" hotkeyValue " Up", "~" hotkeyValue " Up")
                         }
+                    } else if (this.LevelGuardedKeys.Has(keyVar) && !InStr(hotkeyValue, "Wheel") && hotkeyValue ~= GameKeys.GetInterceptPattern()) {
+                        ; 有守卫的常规作战功能（拦截键）：注册 down 热键 + Up 变体（Up 回调补发 key up，事件驱动透传）
+                        Hotkey(hotkeyValue, callback, "On")
+                        HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
+                        Hotkey(hotkeyValue " Up", ActionUpForward, "On")
+                        HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
                     } else {
                         if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
                             Hotkey(hotkeyValue, callback, "On")
@@ -154,8 +175,10 @@ class HotkeyController {
             if (hotkeyValue != "") {
                 try Hotkey(hotkeyValue, , "Off")
                 try Hotkey("~" hotkeyValue, , "Off")
+                try Hotkey(hotkeyValue " Up", , "Off")
                 this.ActiveHotkeys.Delete(hotkeyValue)
                 this.ActiveHotkeys.Delete("~" hotkeyValue)
+                this.ActiveHotkeys.Delete(hotkeyValue " Up")
             }
         }
         HotIf
