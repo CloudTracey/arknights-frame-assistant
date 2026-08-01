@@ -61,7 +61,7 @@ class UpdateDownloader {
             try this.CurrentHttp.Abort()
         }
     }
-    
+
     ; 重置状态
     static ResetCancel() {
         this.IsCancelled := false
@@ -85,14 +85,14 @@ class UpdateDownloader {
         this.LastChunkTime := 0
         this._InvalidateChunkHttp()
     }
-    
+
     ; 下载文件
     ; params: {downloadUrl, remoteVersion, onProgress, onComplete, onError, onCancel}
     static Download(params) {
         this.ResetCancel()
         this.StartTime := A_TickCount
         this.IsDownloading := true
-        
+
         this.DownloadUrl := params.downloadUrl
         this.RemoteVersion := params.remoteVersion
         if (params.HasProp("onProgress"))
@@ -103,16 +103,16 @@ class UpdateDownloader {
             this.OnError := params.onError
         if (params.HasProp("onCancel"))
             this.OnCancel := params.onCancel
-        
+
         ; 启动定期进度刷新（200ms间隔，速度实时更新）
         this._StartProgressTimer()
-        
+
         ; 生成临时文件路径
         tempDir := A_Temp "\ArknightsFrameAssistant"
         if !DirExist(tempDir)
             DirCreate(tempDir)
         this.TempFile := tempDir "\AFA_" this.RemoteVersion "_update.exe"
-        
+
         ; 第一步：异步HEAD请求获取文件大小
         try {
             http := ComObject("MSXML2.ServerXMLHTTP.6.0")
@@ -120,7 +120,7 @@ class UpdateDownloader {
             ApplySystemProxy(http)
             http.Open("HEAD", this.DownloadUrl, true)
             http.Send()
-            
+
             ; 轮询等待响应，基于无数据活动的停滞检测
             headStart := A_TickCount
             lastState := 0
@@ -151,13 +151,13 @@ class UpdateDownloader {
                 }
                 Sleep(25)
             }
-            
+
             if (this.IsCancelled) {
                 this._Cleanup()
                 this._FireCancel()
                 return
             }
-            
+
             if (http.Status = 200) {
                 try {
                     contentLengthStr := http.GetResponseHeader("Content-Length")
@@ -168,12 +168,12 @@ class UpdateDownloader {
         } catch {
             this.TotalBytes := 0
         }
-        
+
         ; 创建累积数据的流
         this.MasterStream := ComObject("ADODB.Stream")
         this.MasterStream.Type := 1
         this.MasterStream.Open()
-        
+
         if (this.TotalBytes > 0) {
             ; 分块下载
             ; 动态分块大小：目标约4次进度更新，最小256KB，最大10MB
@@ -191,7 +191,7 @@ class UpdateDownloader {
                 http.Open("GET", this.DownloadUrl, true)
                 http.SetRequestHeader("User-Agent", "ArknightsFrameAssistant/" Version.Get())
                 http.Send()
-                
+
                 ; 轮询等待完成，基于无数据活动的停滞检测
                 fullStart := A_TickCount
                 lastState := 0
@@ -219,17 +219,17 @@ class UpdateDownloader {
                     }
                     Sleep(25)
                 }
-                
+
                 if (this.IsCancelled) {
                     this._Cleanup()
                     this._FireCancel()
                     return
                 }
-                
+
                 if (http.Status != 200) {
                     throw Error("下载失败，HTTP状态: " http.Status)
                 }
-                
+
                 responseBody := http.ResponseBody
                 this.MasterStream.Write(responseBody)
                 this.LoadedBytes := this._GetBufferSize(responseBody)
@@ -249,7 +249,7 @@ class UpdateDownloader {
             }
         }
     }
-    
+
     ; 内部：下载下一个分块（由SetTimer调度）
     static _DownloadNextChunk() {
         if (this.IsCancelled) {
@@ -257,22 +257,22 @@ class UpdateDownloader {
             this._FireCancel()
             return
         }
-        
+
         if (this.ChunkIndex >= this.TotalChunks) {
             this._FinishDownload()
             return
         }
-        
+
         ; 分块间停滞检测：非首块时，若长时间无分块完成则判停滞
         if (this.ChunkIndex > 0 && this.LastChunkTime > 0 && A_TickCount - this.LastChunkTime > this.StallTimeout) {
             this._Cleanup()
             this._HandleErrorObj(Error("下载停滞：" (this.StallTimeout // 1000) "秒无新数据"))
             return
         }
-        
+
         rangeStart := this.ChunkIndex * this.ChunkSize
         rangeEnd := Min((this.ChunkIndex + 1) * this.ChunkSize - 1, this.TotalBytes - 1)
-        
+
         try {
             ; 复用COM对象，避免每块新建连接的开销
             if (this.ChunkHttp = "") {
@@ -331,7 +331,7 @@ class UpdateDownloader {
             }
 
             responseBody := http.ResponseBody
-            
+
             ; 从Content-Range响应头获取实际接收的字节数
             actualBytes := 0
             try {
@@ -346,18 +346,18 @@ class UpdateDownloader {
             }
             if (actualBytes = 0)
                 actualBytes := rangeEnd - rangeStart + 1
-            
+
             ; 解析完成后再写入流，避免重试时重复数据
             this.MasterStream.Write(responseBody)
-            
+
             this.LoadedBytes := rangeStart + actualBytes
             this.ChunkIndex += 1
             this.ChunkRetries := 0
             this.LastChunkTime := A_TickCount
             this._ReportProgress()
-            
+
             SetTimer(() => UpdateDownloader._DownloadNextChunk(), -10)
-            
+
         } catch Error as e {
             if (this.IsCancelled) {
                 this._Cleanup()
@@ -377,21 +377,21 @@ class UpdateDownloader {
             this._HandleErrorObj(e)
         }
     }
-    
+
     ; 内部：完成下载（保存文件）
     static _FinishDownload() {
         try {
             this.LoadedBytes := this.TotalBytes
             this._ReportProgress()
-            
+
             this.MasterStream.SaveToFile(this.TempFile, 2)
             this.MasterStream.Close()
             this.MasterStream := ""
-            
+
             if !FileExist(this.TempFile) {
                 throw Error("文件保存失败")
             }
-            
+
             this.IsDownloading := false
             this._StopProgressTimer()
             this._FireComplete()
@@ -400,7 +400,7 @@ class UpdateDownloader {
             this._HandleErrorObj(e)
         }
     }
-    
+
     ; 内部：获取Buffer或ComObj的字节大小
     static _GetBufferSize(data) {
         try {
@@ -409,12 +409,12 @@ class UpdateDownloader {
         }
         return 0
     }
-    
+
     ; 内部：报告进度
     static _ReportProgress() {
         if (this.OnProgress = "" || !(Type(this.OnProgress) = "Func" || Type(this.OnProgress) = "Closure"))
             return
-        
+
         elapsed := Max((A_TickCount - this.StartTime) / 1000, 0.001)
         speed := this.LoadedBytes / elapsed
         this.OnProgress.Call({
@@ -423,17 +423,17 @@ class UpdateDownloader {
             speed: speed
         })
     }
-    
+
     ; 启动进度刷新计时器（200ms间隔，独立于分块完成）
     static _StartProgressTimer() {
         SetTimer(this.ProgressTimer, 200)
     }
-    
+
     ; 停止进度刷新计时器
     static _StopProgressTimer() {
         SetTimer(this.ProgressTimer, 0)
     }
-    
+
     ; 内部：触发完成回调
     static _FireComplete() {
         result := {
@@ -445,7 +445,7 @@ class UpdateDownloader {
             this.OnComplete.Call(result)
         this._Cleanup()
     }
-    
+
     ; 内部：触发取消回调
     static _FireCancel() {
         this.IsDownloading := false
@@ -454,7 +454,7 @@ class UpdateDownloader {
             this.OnCancel.Call(cancelInfo)
         this._Cleanup()
     }
-    
+
     ; 内部：触发错误回调
     static _HandleErrorObj(err) {
         this.IsDownloading := false
@@ -467,7 +467,7 @@ class UpdateDownloader {
             this.OnError.Call(errorInfo)
         this._Cleanup()
     }
-    
+
     ; 内部：清理资源
     static _Cleanup() {
         this._StopProgressTimer()
@@ -477,18 +477,18 @@ class UpdateDownloader {
         }
         this._InvalidateChunkHttp()
         this.IsDownloading := false
-        
+
         if (this.IsCancelled && FileExist(this.TempFile)) {
             try FileDelete(this.TempFile)
         }
     }
-    
+
     ; 获取临时文件路径（用于检查之前的下载）
     static GetTempFilePath(version) {
         tempDir := A_Temp "\ArknightsFrameAssistant"
         return tempDir "\AFA_" version "_update.exe"
     }
-    
+
     ; 验证下载的文件是否完整
     static VerifyDownload(filePath) {
         if !FileExist(filePath) {

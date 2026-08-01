@@ -44,29 +44,29 @@ class GameLauncher {
             MessageBox.Warning("未检测到游戏进程，请先启动游戏再进行识别", "识别失败")
         }
     }
-    
+
     ; 启动游戏
     static Launch() {
         gamePath := Config.GetImportant("GamePath")
-        
+
         ; 检查是否已运行
         if ProcessExist("Arknights.exe") {
             Logger.Info("GameLauncher", "游戏已在运行，跳过启动")
             return { success: true, message: "游戏已在运行" }
         }
-        
+
         ; 检查游戏路径配置
         if (gamePath = "" || gamePath = "游戏路径") {
             Logger.Warn("GameLauncher", "游戏路径未配置")
             return { success: false, message: "游戏路径未配置，请在设置中指定" }
         }
-        
+
         ; 检查游戏文件是否存在
         if !FileExist(gamePath) {
             Logger.Warn("GameLauncher", "游戏文件不存在：" gamePath)
             return { success: false, message: "游戏文件不存在，请检查路径配置" }
         }
-        
+
         ; 启动游戏
         try {
             Run(gamePath)

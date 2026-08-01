@@ -10,12 +10,12 @@ class Saver {
             Logger.RegisterSecret(SavedObj.GitHubToken)
         if (SavedObj.HasProp("GamePath"))
             Logger.RegisterSecret(SavedObj.GamePath)
-        
+
         ; 检查按键冲突
         if (!this._CheckKeyConflicts()) {
             Exit
         }
-        
+
         ; 验证GitHub Token（如果输入了的话）
         if (SavedObj.HasProp("GitHubToken") && SavedObj.GitHubToken != "") {
             ; 如果Token与当前保存的不同，需要验证
@@ -43,7 +43,7 @@ class Saver {
             MessageBox.Error("GitHub Token 无法安全保存：`n" tokenStorage.message, "设置保存失败")
             Exit
         }
-        
+
         ; 验证游戏路径
         if (SavedObj.HasProp("GamePath") && SavedObj.GamePath != "") {
             if !FileExist(SavedObj.GamePath) {

@@ -36,8 +36,7 @@ HasLaunchArgument(argument) {
 startedByGameAutoStart := HasLaunchArgument("--game-autostart")
 
 ; 获取权限
-if not A_IsAdmin
-{
+if not A_IsAdmin {
     try
     {
         launchContextArgs := startedByGameAutoStart ? " --game-autostart" : ""

@@ -2,12 +2,14 @@
 
 ; -- 常量定义 --
 class Constants {
+    static DefaultTabOrder := "keyBind,quick,strongHoldProtocol,other"
+
     ; 延迟常量
     static Delay30 := 34      ; 30帧
-    static Delay60 := 17      ; 60帧  
+    static Delay60 := 17      ; 60帧
     static Delay90 := 12      ; 90帧
     static Delay120 := 9      ; 120帧
-    static Delay144 := 8      ; 144帧  
+    static Delay144 := 8      ; 144帧
     static Delay165 := 7      ; 165帧
     static Delay180 := 6      ; 180帧
     static Delay240 := 5      ; 240帧
@@ -102,7 +104,7 @@ class Constants {
         "OneClickSell", true,
         "OneClickPurchase", true
     )
-    
+
     ; 重要设置名称映射
     static ImportantNames := Map(
         "AutoExit", "自动退出",
@@ -121,6 +123,8 @@ class Constants {
         "AutoStartWithGame", "随明日方舟自动启动小助手",
         "DismissedChangelogVersion", "已忽略公告版本",
         "DefaultStrongHoldProtocol", "默认启动卫戍协议方案",
+        "TabOrder", "标签页顺序",
+        "HiddenTabs", "隐藏的标签页",
         "AutoBeginPause", "开局自动暂停"
     )
 
@@ -183,7 +187,7 @@ class Config {
         "OneClickSell", "",
         "OneClickPurchase", ""
     )
-    
+
     ; 内部：默认重要设置
     static _DefaultImportant := Map(
         "AutoExit", "1",
@@ -203,6 +207,8 @@ class Config {
         "LastLaunchedVersion", "",
         "DismissedChangelogVersion", "",
         "DefaultStrongHoldProtocol", "0",
+        "TabOrder", Constants.DefaultTabOrder,
+        "HiddenTabs", "",
         "AutoBeginPause", "0"
     )
 
@@ -214,10 +220,10 @@ class Config {
         "FrameSkip33msDelay", "30",
         "FrameSkip166msDelay", "165"
     )
-    
+
     ; 配置文件路径
     static IniFile := ""
-    
+
     ; 初始化配置文件路径
     static InitPath() {
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
@@ -225,7 +231,7 @@ class Config {
             DirCreate(configDir)
         this.IniFile := configDir "\Settings.ini"
     }
-    
+
     ; 获取按键设置（从内存工作副本，供 GUI 和冲突检测使用）
     static GetHotkey(key) {
         if !this._IsLoaded
@@ -245,7 +251,7 @@ class Config {
     static SetHotkey(key, value) {
         this._HotkeySettings[key] := value
     }
-    
+
     ; 获取重要设置（从内存工作副本，供 GUI 使用）
     static GetImportant(key) {
         if !this._IsLoaded
@@ -311,7 +317,7 @@ class Config {
     static SetCustom(key, value) {
         this._CustomSettings[key] := value
     }
-    
+
     ; 帧率设置数据迁移：从旧版Frame序号迁移到Frame155文本值
     static MigrateFrameRate() {
         if this.IniFile = ""
@@ -452,15 +458,15 @@ class Config {
     static LoadFromIni() {
         if this.IniFile = ""
             this.InitPath()
-        
+
         ; 检查配置文件是否存在
         fileExists := FileExist(this.IniFile)
-        
+
         ; 加载按键设置
         for keyVar, defaultVal in this._DefaultHotkeys {
             this._HotkeySettings[keyVar] := IniRead(this.IniFile, "Hotkeys", keyVar, defaultVal)
         }
-        
+
         ; 加载重要设置
         for keyVar, defaultVal in this._DefaultImportant {
             if (keyVar = "GitHubToken") {
@@ -475,29 +481,29 @@ class Config {
         for keyVar, defaultVal in this._DefaultCustom {
             this._CustomSettings[keyVar] := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
         }
-        
+
         ; 如果配置文件不存在，创建并写入默认值
         if (!fileExists) {
             this._EnsureConfigFileExists()
         }
-        
+
         this._IsLoaded := true
     }
-    
+
     ; 确保配置文件存在并包含所有配置项
     static _EnsureConfigFileExists() {
         ; 确保目录存在
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
         if !DirExist(configDir)
             DirCreate(configDir)
-        
+
         ; 写入所有默认重要设置
         for keyVar, defaultVal in this._DefaultImportant {
             if (keyVar = "GitHubToken")
                 continue
             IniWrite(defaultVal, this.IniFile, "Main", keyVar)
         }
-        
+
         ; 写入所有默认按键设置
         for keyVar, defaultVal in this._DefaultHotkeys {
             IniWrite(defaultVal, this.IniFile, "Hotkeys", keyVar)
@@ -508,7 +514,7 @@ class Config {
             IniWrite(defaultVal, this.IniFile, "Custom", keyVar)
         }
     }
-    
+
     ; 保存到配置文件
     static SaveToIni(settingsMap, tokenStorage := "") {
         if this.IniFile = ""
@@ -602,7 +608,7 @@ class Config {
             Critical "Off"
         }
     }
-    
+
     ; 保存所有内存中的配置到配置文件（用于非GUI场景）
     static SaveAllToIni() {
         if this.IniFile = ""
@@ -687,7 +693,7 @@ class Config {
             throw Error("配置文件替换失败，错误码：" errorCode)
         }
     }
-    
+
     ; 加载默认值
     static LoadDefaults() {
         this._HotkeySettings := this._DefaultHotkeys.Clone()
@@ -695,22 +701,22 @@ class Config {
         this._CustomSettings := this._DefaultCustom.Clone()
         this._IsLoaded := true
     }
-    
+
     ; 恢复按键默认设置
     static ResetHotkeyToDefaults() {
         this._HotkeySettings := this._DefaultHotkeys.Clone()
         this._CustomSettings.Set("SwitchHotkey", this._DefaultCustom["SwitchHotkey"])
     }
-    
+
     ; 获取所有按键设置（用于遍历）
     static AllHotkeys => this._HotkeySettings
-    
+
     ; 获取所有重要设置（用于遍历）
     static AllImportant => this._ImportantSettings
 
     ; 获取所有自定义设置（用于遍历）
     static AllCustom => this._CustomSettings
-    
+
 }
 
 ; -- 状态管理 --
@@ -720,13 +726,13 @@ class State {
 
     ; 是否由游戏进程创建事件触发启动
     static StartedByGameAutoStart := false
-    
+
     ; 当前延迟值
     static CurrentDelay := 11.3  ; 默认120帧
 
     ; 点击延迟
     static ClickDelay := 50  ; 默认50ms
-    
+
     ; GUI窗口名称
     static GuiWindowName := ""
 
