@@ -1,6 +1,49 @@
-; == 全局状态 ==
-; 已被守卫拦截并补发 key down 的键（Up 变体回调据此补发 key up）
-InterceptedKeys := Map()
+; == 按键透传（守卫拦截时还原原键输入） ==
+; 状态与行为内聚为类：InterceptedKeys 记录已补发 key down 的键，Up 变体回调据此补发 key up
+class KeyForward {
+    static InterceptedKeys := Map()
+
+    ; 提取纯键名（去除 ~*$ 前缀、修饰符与 Up 后缀）
+    static PureKeyName(ThisHotkey) {
+        pureKey := RegExReplace(ThisHotkey, "^[~*$!^+#&<>()]+")
+        return RegExReplace(pureKey, "i) Up$")
+    }
+    ; 透传原热键给游戏（守卫拦截时调用，只拦 AFA 功能不吞原键）
+    ; - 带 ~ 前缀的热键按键本就透传，无需补发，避免重复输入
+    ; - 按下型热键：按键被 AFA 吞掉，补发 key down 并记录标志；key up 由 Up 变体热键回调（ActionUpForward）补发，事件驱动无阻塞
+    ; - Up 型热键（松开暂停）：按下时 down 未被吞（游戏已收到），松开时只补发 key up
+    ; - 滚轮等无 down/up 状态的事件：直接发送完整事件（同 action 尾部 Wheel 处理）
+    static ForwardOriginalKey(ThisHotkey) {
+        if (ThisHotkey == "")
+            return
+        if InStr(ThisHotkey, "~")
+            return
+        isUp := InStr(ThisHotkey, " Up", false)
+        pureKey := this.PureKeyName(ThisHotkey)
+        if (pureKey == "")
+            return
+        ; 滚轮：无 down/up 状态，直接发送完整事件
+        if InStr(pureKey, "Wheel") {
+            Send "{" pureKey "}"
+            return
+        }
+        if isUp {
+            Send "{" pureKey " Up}"
+            return
+        }
+        this.InterceptedKeys[pureKey] := true
+        Send "{" pureKey " Down}"
+    }
+    ; Up 变体热键统一回调：按下时被守卫拦截补发过 key down 的键，松开时补发 key up
+    ; （标志驱动，无需重复关卡检测；补发后清除标志）
+    static ActionUpForward(ThisHotkey) {
+        pureKey := this.PureKeyName(ThisHotkey)
+        if (pureKey != "" && this.InterceptedKeys.Has(pureKey)) {
+            this.InterceptedKeys.Delete(pureKey)
+            Send "{" pureKey " Up}"
+        }
+    }
+}
 
 ; == 功能实现 ==
 ; -- 常规作战 --
@@ -45,12 +88,12 @@ ActionGameSpeed(ThisHotkey) {
 ; 前进16ms
 Action16ms(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !GuardInLevel("Action16ms", ThisHotkey, oldCtx)
+        return
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    if !GuardInLevel("Action16ms", ThisHotkey, oldCtx)
-        return
     delay := Integer(Config.ReadCustomFromIni("FrameSkip16msDelay"))
     Send "{ESC Down}"
     USleep(delay)
@@ -68,12 +111,12 @@ Action16ms(ThisHotkey) {
 ; 前进33ms，由于波动，过帧间隔设置为30ms，避免一次过两帧
 Action33ms(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !GuardInLevel("Action33ms", ThisHotkey, oldCtx)
+        return
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    if !GuardInLevel("Action33ms", ThisHotkey, oldCtx)
-        return
     delay := Integer(Config.ReadCustomFromIni("FrameSkip33msDelay"))
     Send "{ESC Down}"
     USleep(delay)
@@ -91,12 +134,12 @@ Action33ms(ThisHotkey) {
 ; 前进166ms
 Action166ms(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !GuardInLevel("Action166ms", ThisHotkey, oldCtx)
+        return
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    if !GuardInLevel("Action166ms", ThisHotkey, oldCtx)
-        return
     delay := Integer(Config.ReadCustomFromIni("FrameSkip166msDelay"))
     Send "{ESC Down}"
     USleep(delay)
@@ -114,12 +157,12 @@ Action166ms(ThisHotkey) {
 ; 暂停选中
 ActionPauseSelect(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !GuardInLevel("ActionPauseSelect", ThisHotkey, oldCtx)
+        return
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    if !GuardInLevel("ActionPauseSelect", ThisHotkey, oldCtx)
-        return
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
     if !PosL || !PosR {
@@ -169,12 +212,12 @@ ActionRetreat(ThisHotkey) {
 ; 一键技能
 ActionOneClickSkill(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !GuardInLevel("ActionOneClickSkill", ThisHotkey, oldCtx)
+        return
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    if !GuardInLevel("ActionOneClickSkill", ThisHotkey, oldCtx)
-        return
     Send "{LButton Down}"
     Send "{LButton Up}"
     USleep(State.ClickDelay)
@@ -189,12 +232,12 @@ ActionOneClickSkill(ThisHotkey) {
 ; 一键撤退
 ActionOneClickRetreat(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !GuardInLevel("ActionOneClickRetreat", ThisHotkey, oldCtx)
+        return
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    if !GuardInLevel("ActionOneClickRetreat", ThisHotkey, oldCtx)
-        return
     Send "{LButton Down}"
     Send "{LButton Up}"
     USleep(State.ClickDelay)
@@ -209,12 +252,12 @@ ActionOneClickRetreat(ThisHotkey) {
 ; 暂停技能
 ActionPauseSkill(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !GuardInLevel("ActionPauseSkill", ThisHotkey, oldCtx)
+        return
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    if !GuardInLevel("ActionPauseSkill", ThisHotkey, oldCtx)
-        return
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
     if !PosL || !PosR {
@@ -242,12 +285,12 @@ ActionPauseSkill(ThisHotkey) {
 ; 暂停撤退
 ActionPauseRetreat(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !GuardInLevel("ActionPauseRetreat", ThisHotkey, oldCtx)
+        return
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    if !GuardInLevel("ActionPauseRetreat", ThisHotkey, oldCtx)
-        return
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
     if !PosL || !PosR {
@@ -276,12 +319,12 @@ ActionPauseRetreat(ThisHotkey) {
 ; 视角切换
 ActionSwitchView(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    if !GuardInLevel("ActionSwitchView", ThisHotkey, oldCtx)
+        return
     if !IsMouseInClient() {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
-    if !GuardInLevel("ActionSwitchView", ThisHotkey, oldCtx)
-        return
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
     if !PosL || !PosR {
@@ -689,60 +732,19 @@ USleep(delay_ms) {
             DllCall("Sleep", "UInt", 1)
     }
 }
-; 提取纯键名（去除 ~*$ 前缀、修饰符与 Up 后缀）
-PureKeyName(ThisHotkey) {
-    pureKey := RegExReplace(ThisHotkey, "^[~*$!^+#&<>()]+")
-    return RegExReplace(pureKey, "i) Up$")
-}
 ; 去除修饰符前缀
 PureKeyWait(ThisHotkey) {
     if (ThisHotkey == "")
         return
-    KeyWait(PureKeyName(ThisHotkey))
-}
-; 透传原热键给游戏（守卫拦截时调用，只拦 AFA 功能不吞原键）
-; - 带 ~ 前缀的热键按键本就透传，无需补发，避免重复输入
-; - 按下型热键：按键被 AFA 吞掉，补发 key down 并记录标志；key up 由 Up 变体热键回调（ActionUpForward）补发，事件驱动无阻塞
-; - Up 型热键（松开暂停）：按下时 down 未被吞（游戏已收到），松开时只补发 key up
-; - 滚轮等无 down/up 状态的事件：直接发送完整事件（同 action 尾部 Wheel 处理）
-ForwardOriginalKey(ThisHotkey) {
-    global InterceptedKeys
-    if (ThisHotkey == "")
-        return
-    if InStr(ThisHotkey, "~")
-        return
-    isUp := InStr(ThisHotkey, " Up", false)
-    pureKey := PureKeyName(ThisHotkey)
-    if (pureKey == "")
-        return
-    ; 滚轮：无 down/up 状态，直接发送完整事件
-    if InStr(pureKey, "Wheel") {
-        Send "{" pureKey "}"
-        return
-    }
-    if isUp {
-        Send "{" pureKey " Up}"
-        return
-    }
-    InterceptedKeys[pureKey] := true
-    Send "{" pureKey " Down}"
-}
-; Up 变体热键统一回调：按下时被守卫拦截补发过 key down 的键，松开时补发 key up
-; （标志驱动，无需重复关卡检测；补发后清除标志）
-ActionUpForward(ThisHotkey) {
-    global InterceptedKeys
-    pureKey := PureKeyName(ThisHotkey)
-    if (pureKey != "" && InterceptedKeys.Has(pureKey)) {
-        InterceptedKeys.Delete(pureKey)
-        Send "{" pureKey " Up}"
-    }
+    KeyWait(KeyForward.PureKeyName(ThisHotkey))
 }
 ; 关卡守卫：在关卡内返回 true；拦截时先透传原键（避免日志 IO 拖慢透传）、再记录日志并恢复 DPI，返回 false
+; 拦截是预期行为（非异常），用 Info 级别避免刷 critical 轨（WARN/ERROR 5 MiB 留给真正的问题）
 GuardInLevel(actionName, ThisHotkey, oldCtx) {
     if IsInLevel()
         return true
-    ForwardOriginalKey(ThisHotkey)
-    Logger.Warn("HotkeyActions", actionName " 被关卡检测拦截（不在关卡界面）")
+    KeyForward.ForwardOriginalKey(ThisHotkey)
+    Logger.Info("HotkeyActions", actionName " 被关卡检测拦截（不在关卡界面）")
     try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
     return false
 }

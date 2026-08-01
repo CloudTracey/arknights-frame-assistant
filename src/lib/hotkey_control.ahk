@@ -78,9 +78,10 @@ class HotkeyController {
         reg := intercept ? hotkeyValue : "~" hotkeyValue
         Hotkey(reg, profile.Fn, "On")
         HotkeyController.ActiveHotkeys.Set(reg, reg)
-        ; 有守卫的拦截键（非滚轮）：注册 Up 变体，松开时由 ActionUpForward 补发 key up
+        ; 有守卫的拦截键（非滚轮）：注册 Up 变体，松开时由 KeyForward.ActionUpForward 补发 key up
+        ; 注意：类静态方法引用需 Bind(KeyForward)——方法的 MinParams 含 self，直接传引用 Hotkey 回调验证会失败（Invalid callback function）
         if (profile.HasOwnProp("Guarded") && intercept && !InStr(hotkeyValue, "Wheel")) {
-            Hotkey(hotkeyValue " Up", ActionUpForward, "On")
+            Hotkey(hotkeyValue " Up", KeyForward.ActionUpForward.Bind(KeyForward), "On")
             HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
         }
     }
@@ -94,7 +95,7 @@ class HotkeyController {
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 try this._RegisterOne(hotkeyValue, this.ActionCallbacks[keyVar], pattern)
                 catch Error as e
-                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", error=" e.Message)
+                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", callback=" this.ActionCallbacks[keyVar].Fn.Name ", error=" e.Message)
             }
         }
         HotIf
@@ -124,7 +125,7 @@ class HotkeyController {
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
                 try this._RegisterOne(hotkeyValue, this.ActionCallbacks[keyVar], pattern)
                 catch Error as e
-                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", error=" e.Message)
+                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", callback=" this.ActionCallbacks[keyVar].Fn.Name ", error=" e.Message)
             }
         }
         HotIf
