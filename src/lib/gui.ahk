@@ -1258,7 +1258,12 @@ class GuiManager {
     }
 
     static RegisterTabManagerMouseHandlers() {
+        ; 同时监听 WM_LBUTTONDOWN(0x0201) 和 WM_LBUTTONDBLCLK(0x0203)：
+        ; 窗口类带 CS_DBLCLKS 样式时，快速双击的第二次按下会发 0x0203 而非 0x0201，
+        ; 若只监听 0x0201，快速点击同一眼睛时会漏掉第二次点击。
         OnMessage(0x0201, (wParam, lParam, msg, hwnd) => this.HandleTabManagerMouseDown(
+            wParam, lParam, msg, hwnd))
+        OnMessage(0x0203, (wParam, lParam, msg, hwnd) => this.HandleTabManagerMouseDown(
             wParam, lParam, msg, hwnd))
         OnMessage(0x0200, (wParam, lParam, msg, hwnd) => this.HandleTabManagerMouseMove(
             wParam, lParam, msg, hwnd))
