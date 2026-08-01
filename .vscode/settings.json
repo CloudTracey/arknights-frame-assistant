@@ -1,0 +1,32 @@
+{
+  // 行尾与空白：防止 vscode 自动格式化产生 PR 噪音
+  // .gitattributes 已规范行尾（检出 CRLF / 提交 LF），这里配合其行为
+  "files.eol": "auto",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+
+  // 编码：项目文件为 UTF-8 无 BOM
+  "files.encoding": "utf8",
+  "files.autoGuessEncoding": false,
+
+  // 缩进：全仓库统一 4 空格（无 tab）
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+
+  // 保存/粘贴/输入时不自动格式化，避免长行折行、花括号空格等意外变更
+  "editor.formatOnSave": false,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
+
+  // AutoHotkey 语言关联与 AHK++ 扩展设置
+  "files.associations": {
+    "*.ahk": "ahk2"
+  },
+
+  "[ahk2]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+  }
+}
