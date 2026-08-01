@@ -17,51 +17,45 @@ class HotkeyController {
         EventBus.Subscribe("SwitchHotkey", (*) => this.SwitchHotkey())
     }
 
-    ; 热键回调函数映射表
+    ; 热键回调映射表（profile.Fn 回调；profile.Guarded 有关卡守卫——拦截键注册 Up 变体补发透传；profile.OnUp 功能在松开时触发）
     static ActionCallbacks := Map(
-        "PressPause", ActionPressPause,
-        "ReleasePause", ActionReleasePause,
-        "GameSpeed", ActionGameSpeed,
-        "16ms", Action16ms,
-        "33ms", Action33ms,
-        "166ms", Action166ms,
-        "PauseSelect", ActionPauseSelect,
-        "Skill", ActionSkill,
-        "Retreat", ActionRetreat,
-        "OneClickSkill", ActionOneClickSkill,
-        "OneClickRetreat", ActionOneClickRetreat,
-        "PauseSkill", ActionPauseSkill,
-        "PauseRetreat", ActionPauseRetreat,
-        "AutoBeginPauseSwitch", ActionBeginPauseSwitch,
-        "LButtonClick", ActionLButtonClick,
-        "CeaseOperations", ActionCeaseOperations,
-        "Skip", ActionSkip,
-        "Back", ActionBack,
-        "Harvest", ActionHarvest,
-        "CollectCollectibles", ActionCollectCollectibles,
-        "SwitchView", ActionSwitchView,
-        "BeginPause", ActionBeginPauseSwitch,
-        "CheckEnemies", ActionCheckEnemies,
-        "DispatchCenter", ActionDispatchCenter,
-        "Freeze", ActionFreeze,
-        "Refresh", ActionRefresh,
-        "Upgrade", ActionUpgrade,
-        "Sell", ActionSell,
-        "Ready", ActionReady,
-        "StrongHoldProtocolLButtonClick", ActionLButtonClick,
-        "StrongHoldProtocolRetreat", ActionRetreat,
-        "StrongHoldProtocolOneClickRetreat", ActionOneClickRetreat,
-        "OneClickSell", ActionOneClickSell,
-        "OneClickPurchase", ActionOneClickPurchase
-    )
-
-    ; 有关卡检测守卫的常规作战功能（守卫拦截时透传 key down/up：注册 Up 变体热键补发 key up）
-    ; 不含 ReleasePause（其功能本身即 Up 变体注册，走独立分支）
-    static LevelGuardedKeys := Map(
-        "PressPause", true, "GameSpeed", true, "16ms", true, "33ms", true, "166ms", true,
-        "PauseSelect", true, "Skill", true, "Retreat", true,
-        "OneClickSkill", true, "OneClickRetreat", true, "PauseSkill", true, "PauseRetreat", true,
-        "SwitchView", true
+        ; 常规作战（有守卫）
+        "PressPause", {Fn: ActionPressPause, Guarded: true},
+        "ReleasePause", {Fn: ActionReleasePause, OnUp: true},  ; 松开时触发（Up 变体注册）
+        "GameSpeed", {Fn: ActionGameSpeed, Guarded: true},
+        "16ms", {Fn: Action16ms, Guarded: true},
+        "33ms", {Fn: Action33ms, Guarded: true},
+        "166ms", {Fn: Action166ms, Guarded: true},
+        "PauseSelect", {Fn: ActionPauseSelect, Guarded: true},
+        "Skill", {Fn: ActionSkill, Guarded: true},
+        "Retreat", {Fn: ActionRetreat, Guarded: true},
+        "OneClickSkill", {Fn: ActionOneClickSkill, Guarded: true},
+        "OneClickRetreat", {Fn: ActionOneClickRetreat, Guarded: true},
+        "PauseSkill", {Fn: ActionPauseSkill, Guarded: true},
+        "PauseRetreat", {Fn: ActionPauseRetreat, Guarded: true},
+        "SwitchView", {Fn: ActionSwitchView, Guarded: true},
+        "BeginPause", {Fn: ActionBeginPauseSwitch},
+        "AutoBeginPauseSwitch", {Fn: ActionBeginPauseSwitch},
+        ; 快捷操作
+        "LButtonClick", {Fn: ActionLButtonClick},
+        "CeaseOperations", {Fn: ActionCeaseOperations},
+        "Skip", {Fn: ActionSkip},
+        "Back", {Fn: ActionBack},
+        "Harvest", {Fn: ActionHarvest},
+        "CollectCollectibles", {Fn: ActionCollectCollectibles},
+        ; 卫戍协议
+        "CheckEnemies", {Fn: ActionCheckEnemies},
+        "DispatchCenter", {Fn: ActionDispatchCenter},
+        "Freeze", {Fn: ActionFreeze},
+        "Refresh", {Fn: ActionRefresh},
+        "Upgrade", {Fn: ActionUpgrade},
+        "Sell", {Fn: ActionSell},
+        "Ready", {Fn: ActionReady},
+        "StrongHoldProtocolLButtonClick", {Fn: ActionLButtonClick},
+        "StrongHoldProtocolRetreat", {Fn: ActionRetreat},
+        "StrongHoldProtocolOneClickRetreat", {Fn: ActionOneClickRetreat},
+        "OneClickSell", {Fn: ActionOneClickSell},
+        "OneClickPurchase", {Fn: ActionOneClickPurchase}
     )
 
     ; 已激活热键映射表
@@ -70,42 +64,37 @@ class HotkeyController {
     ; 已激活启用/禁用热键快捷键
     static ActiveSwitchHotkey := ""
 
+    ; 注册单个热键（数据驱动：profile.OnUp=功能在松开时触发；profile.Guarded=拦截键注册 Up 变体补发透传）
+    ; 注意：属性访问用 HasOwnProp 判断——profile 无 OnUp/Guarded 属性时直接访问会抛 PropertyError
+    static _RegisterOne(hotkeyValue, profile, pattern) {
+        if (profile.HasOwnProp("OnUp") && !InStr(hotkeyValue, "Wheel")) {
+            ; 松开暂停：功能在松开时触发（Up 变体注册）
+            reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
+            Hotkey(reg, profile.Fn, "On")
+            HotkeyController.ActiveHotkeys.Set(reg, reg)
+            return
+        }
+        intercept := hotkeyValue ~= pattern
+        reg := intercept ? hotkeyValue : "~" hotkeyValue
+        Hotkey(reg, profile.Fn, "On")
+        HotkeyController.ActiveHotkeys.Set(reg, reg)
+        ; 有守卫的拦截键（非滚轮）：注册 Up 变体，松开时由 ActionUpForward 补发 key up
+        if (profile.HasOwnProp("Guarded") && intercept && !InStr(hotkeyValue, "Wheel")) {
+            Hotkey(hotkeyValue " Up", ActionUpForward, "On")
+            HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
+        }
+    }
+
     ; 启用热键
     static HotkeyOn(*) {
         HotIfWinActive("ahk_exe Arknights.exe")
+        pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in Constants.KeyNames {
             hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
-                callback := this.ActionCallbacks[keyVar]
-                try {
-                    if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
-                        if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                            Hotkey(hotkeyValue " Up", callback, "On")
-                            HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
-                        }
-                        else {
-                            Hotkey("~" hotkeyValue " Up", callback, "On")
-                            HotkeyController.ActiveHotkeys.Set("~" hotkeyValue " Up", "~" hotkeyValue " Up")
-                        }
-                    } else if (this.LevelGuardedKeys.Has(keyVar) && !InStr(hotkeyValue, "Wheel") && hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                        ; 有守卫的常规作战功能（拦截键）：注册 down 热键 + Up 变体（Up 回调补发 key up，事件驱动透传）
-                        Hotkey(hotkeyValue, callback, "On")
-                        HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
-                        Hotkey(hotkeyValue " Up", ActionUpForward, "On")
-                        HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
-                    } else {
-                        if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                            Hotkey(hotkeyValue, callback, "On")
-                            HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
-                        }
-                        else {
-                            Hotkey("~" hotkeyValue, callback, "On")
-                            HotkeyController.ActiveHotkeys.Set("~" hotkeyValue, "~" hotkeyValue)
-                        }
-                    }
-                } catch Error as e {
-                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", callback=" callback.Name ", error=" e.Message)
-                }
+                try this._RegisterOne(hotkeyValue, this.ActionCallbacks[keyVar], pattern)
+                catch Error as e
+                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", error=" e.Message)
             }
         }
         HotIf
@@ -129,39 +118,13 @@ class HotkeyController {
     ; 启用指定组的热键
     static EnableGroup(groupMap) {
         HotIfWinActive("ahk_exe Arknights.exe")
+        pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in groupMap {
             hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "" && this.ActionCallbacks.Has(keyVar)) {
-                callback := this.ActionCallbacks[keyVar]
-                try {
-                    if (keyVar == "ReleasePause" && !InStr(hotkeyValue, "Wheel")) {
-                        if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                            Hotkey(hotkeyValue " Up", callback, "On")
-                            HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
-                        }
-                        else {
-                            Hotkey("~" hotkeyValue " Up", callback, "On")
-                            HotkeyController.ActiveHotkeys.Set("~" hotkeyValue " Up", "~" hotkeyValue " Up")
-                        }
-                    } else if (this.LevelGuardedKeys.Has(keyVar) && !InStr(hotkeyValue, "Wheel") && hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                        ; 有守卫的常规作战功能（拦截键）：注册 down 热键 + Up 变体（Up 回调补发 key up，事件驱动透传）
-                        Hotkey(hotkeyValue, callback, "On")
-                        HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
-                        Hotkey(hotkeyValue " Up", ActionUpForward, "On")
-                        HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
-                    } else {
-                        if (hotkeyValue ~= GameKeys.GetInterceptPattern()) {
-                            Hotkey(hotkeyValue, callback, "On")
-                            HotkeyController.ActiveHotkeys.Set(hotkeyValue, hotkeyValue)
-                        }
-                        else {
-                            Hotkey("~" hotkeyValue, callback, "On")
-                            HotkeyController.ActiveHotkeys.Set("~" hotkeyValue, "~" hotkeyValue)
-                        }
-                    }
-                } catch Error as e {
-                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", callback=" callback.Name ", error=" e.Message)
-                }
+                try this._RegisterOne(hotkeyValue, this.ActionCallbacks[keyVar], pattern)
+                catch Error as e
+                    Logger.Error("Hotkey", "注册热键失败：key=" keyVar ", value=" hotkeyValue ", error=" e.Message)
             }
         }
         HotIf
@@ -170,12 +133,18 @@ class HotkeyController {
     ; 禁用指定组的热键
     static DisableGroup(groupMap) {
         HotIfWinActive("ahk_exe Arknights.exe")
+        pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in groupMap {
             hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
             if (hotkeyValue != "") {
                 try Hotkey(hotkeyValue, , "Off")
                 try Hotkey("~" hotkeyValue, , "Off")
-                try Hotkey(hotkeyValue " Up", , "Off")
+                ; 仅注销实际注册过的 Up 变体（与 _RegisterOne 同规则派生，避免对未注册变体盲目注销）
+                if (this.ActionCallbacks.Has(keyVar)) {
+                    profile := this.ActionCallbacks[keyVar]
+                    if ((profile.HasOwnProp("OnUp") || profile.HasOwnProp("Guarded")) && !InStr(hotkeyValue, "Wheel") && hotkeyValue ~= pattern)
+                        try Hotkey(hotkeyValue " Up", , "Off")
+                }
                 this.ActiveHotkeys.Delete(hotkeyValue)
                 this.ActiveHotkeys.Delete("~" hotkeyValue)
                 this.ActiveHotkeys.Delete(hotkeyValue " Up")
