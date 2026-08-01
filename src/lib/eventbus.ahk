@@ -3,7 +3,7 @@
 class EventBus {
     ; 存储所有事件监听器
     static Listeners := Map()
-    
+
     ; 订阅事件
     ; eventName: 事件名称
     ; callback: 回调函数
@@ -13,7 +13,7 @@ class EventBus {
         }
         this.Listeners[eventName].Push(callback)
     }
-    
+
     ; 发布事件
     ; eventName: 事件名称
     ; data: 传递给监听器的数据
@@ -25,7 +25,7 @@ class EventBus {
             callback(data)
         }
     }
-    
+
     ; 取消订阅（可选功能）
     static Unsubscribe(eventName, callback) {
         if (!this.Listeners.Has(eventName)) {

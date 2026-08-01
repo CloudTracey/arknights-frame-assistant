@@ -10,7 +10,7 @@ class UpdateUI {
     ; 更新对话框实例和参数
     static UpdateDialog := ""
     static UpdateDialogParams := ""
-    
+
     ; 下载对话框实例
     static DownloadingDialog := ""
     static DownloadingCancelBtn := ""
@@ -18,7 +18,7 @@ class UpdateUI {
     static DownloadingSpeedText := ""
     static DownloadingRemainingText := ""
     static DownloadingSizeText := ""
-    
+
     ; 显示更新提示对话框（支持忽略此版本）
     ; params: 包含以下字段的对象
     ;   - localVersion: 当前版本
@@ -79,12 +79,12 @@ class UpdateUI {
         btnIgnore.OnEvent("Click", (*) => this.OnUpdateIgnore())
 
         this.UpdateDialog.Show("w" dialogW " h" dialogH " Center")
-        
+
         btnYes.Focus
 
         DllCall("RedrawWindow", "ptr", hWnd, "ptr", 0, "ptr", 0, "uint", 0x0103)
     }
-    
+
     ; 点击"是"按钮
     static OnUpdateYes() {
         params := this.UpdateDialogParams
@@ -93,7 +93,7 @@ class UpdateUI {
         this.UpdateDialogParams := ""
         EventBus.Publish("UpdateConfirmed", params)
     }
-    
+
     ; 点击"否"按钮
     static OnUpdateNo() {
         params := this.UpdateDialogParams
@@ -102,7 +102,7 @@ class UpdateUI {
         this.UpdateDialogParams := ""
         EventBus.Publish("UpdateDismissed", params)
     }
-    
+
     ; 点击"忽略此版本"按钮
     static OnUpdateIgnore() {
         params := this.UpdateDialogParams
@@ -111,18 +111,18 @@ class UpdateUI {
         this.UpdateDialogParams := ""
         EventBus.Publish("UpdateIgnored", params)
     }
-    
+
     ; 显示已是最新版本的提示
     static ShowUpToDateDialog(version) {
         MessageBox.Info("当前版本 " version " 已是最新版本。", "无需更新")
     }
-    
+
     ; 显示更新检查失败的提示
     static ShowCheckFailedDialog(message := "", suggestToken := false) {
         if (message = "") {
             message := "检查更新失败，请检查网络连接后重试。"
         }
-        
+
         if (suggestToken) {
             ; 显示带有Token配置引导的对话框
             result := MessageBox.Confirm(message "`n`n是否现在配置GitHub Token？", "检查失败")
@@ -134,13 +134,13 @@ class UpdateUI {
             MessageBox.Error(message, "检查失败")
         }
     }
-    
+
     ; 显示正在下载的提示（带取消按钮和进度条）
     ; retryCount: 重试次数（0表示首次下载，1+表示重试）
     static ShowDownloadingDialog(retryCount := 0) {
         ; 关闭已存在的下载对话框
         this.CloseDownloadingDialog()
-        
+
         ; 创建非模态GUI窗口
         title := "下载中"
         this.DownloadingDialog := Gui(, title)
@@ -149,14 +149,14 @@ class UpdateUI {
         this.DownloadingDialog.SetFont("s9", "Microsoft YaHei UI")
         hWnd := this.DownloadingDialog.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
-        
+
         ; 根据重试次数显示不同消息
         if (retryCount = 0) {
             message := "正在下载更新，请稍候..."
         } else {
             message := "正在下载更新，请稍候...`n（第 " retryCount " 次重试，如多次下载失败请尝试手动下载）"
         }
-        
+
         ; 添加文本
         this.DownloadingDialog.Add("Text", "x20 y15 w300 Center vDownloadText", message)
         ; 进度条
@@ -173,7 +173,7 @@ class UpdateUI {
         manualBtnH := 26
         padding := 70
         cancelBtnX := 340 - padding - manualBtnW
-        
+
         manualBtn := this.DownloadingDialog.Add("Button", "x" padding " y+15 w" manualBtnW " h" manualBtnH, "手动下载(&M)")
         manualBtn.OnEvent("Click", (*) => EventBus.Publish("OnManualDownload"))
         this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " yp w" manualBtnW " h" manualBtnH, "取消下载(&C)")
@@ -183,7 +183,7 @@ class UpdateUI {
         ; 显示对话框（非模态，不阻塞）
         this.DownloadingDialog.Show("w340 h190 Center")
     }
-    
+
     ; 手动下载按钮点击事件
     static OnManualDownload() {
         ; 打开浏览器访问下载地址页面
@@ -204,7 +204,7 @@ class UpdateUI {
         ; 发布取消事件
         EventBus.Publish("UpdateDownloadCancelled")
     }
-    
+
     ; 关闭下载对话框
     static CloseDownloadingDialog() {
         if (this.DownloadingDialog != "") {
@@ -217,17 +217,17 @@ class UpdateUI {
             this.DownloadingSizeText := ""
         }
     }
-    
+
     ; 更新下载进度显示
     ; data: {total, loaded, speed} — total为0时表示未知大小
     static UpdateDownloadProgress(data) {
         if (this.DownloadingDialog = "")
             return
-        
+
         total := data.total
         loaded := data.loaded
         speedBytes := data.speed
-        
+
         ; 更新进度条 (Range0-1000，支持0.1%精度)
         try {
             if (total > 0) {
@@ -235,13 +235,13 @@ class UpdateUI {
                 this.DownloadingProgressBar.Value := Max(1, Min(percentage, 1000))
             }
         }
-        
+
         ; 更新速度文本
         try {
             speedText := "下载速度: " FormatSpeed(speedBytes)
             this.DownloadingSpeedText.Value := speedText
         }
-        
+
         ; 更新剩余时间
         try {
             if (total > 0 && loaded < total && speedBytes > 0) {
@@ -254,7 +254,7 @@ class UpdateUI {
             }
             this.DownloadingRemainingText.Value := remainingText
         }
-        
+
         ; 更新大小文本
         try {
             if (total > 0) {
@@ -265,12 +265,12 @@ class UpdateUI {
             this.DownloadingSizeText.Value := sizeText
         }
     }
-    
+
     ; 显示下载完成的提示
     static ShowDownloadCompleteDialog() {
         MessageBox.Info("下载完成！程序将在重启后应用更新。", "下载完成")
     }
-    
+
     ; 显示下载失败的提示
     static ShowDownloadFailedDialog(message := "") {
         if (message = "") {
@@ -278,12 +278,12 @@ class UpdateUI {
         }
         MessageBox.Error(message, "下载失败")
     }
-    
+
     ; 显示下载取消的提示
     static ShowDownloadCancelledDialog() {
         MessageBox.Info("下载已取消。", "下载取消")
     }
-    
+
     ; 显示自动更新已禁用的提示
     static ShowAutoUpdateDisabledDialog() {
         MessageBox.Info("自动检查更新已禁用。`n如需开启，请在配置文件中设置 AutoUpdate=1", "提示")

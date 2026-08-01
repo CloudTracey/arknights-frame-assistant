@@ -2,12 +2,12 @@
 class HotkeyController {
     ; 热键状态
     static HotkeyState := true
-    
+
     ; 初始化热键控制器
     static Init() {
         HotkeyController._SubscribeEvents()
     }
-    
+
     ; 内部：订阅热键事件
     static _SubscribeEvents() {
         EventBus.Subscribe("HotkeyOff", (*) => this.HotkeyOff())

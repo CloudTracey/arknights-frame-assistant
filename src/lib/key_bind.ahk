@@ -1,4 +1,4 @@
-; == 按键绑定 == 
+; == 按键绑定 ==
 class KeyBinder {
     ; 按键绑定状态
     static ModifyHook := InputHook("L0")
@@ -78,7 +78,7 @@ class KeyBinder {
                 KeyBinder.ControlObj.Value := virtualNewkey ; 让GUI显示人能读的东西
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, realNewkey)
-                else 
+                else
                     Config.SetHotkey(KeyBinder.ControlObj.Name, realNewkey) ; 把人不能读也不该读的东西丢给内存
                 KeyBinder.NotifyBindingChanged(KeyBinder.ControlObj.Name)
             }
@@ -103,12 +103,12 @@ class KeyBinder {
         ; 将<替换为L，>替换为R
         value := RegExReplace(value, "<", "L")
         value := RegExReplace(value, ">", "R")
-        
+
         ; 将修饰符!^+替换为完整名称
         value := RegExReplace(value, "!", "ALT")
         value := RegExReplace(value, "\^", "CTRL")
         value := RegExReplace(value, "\+", "SHIFT")
-        
+
         ; 提取CTRL、SHIFT、ALT修饰符
         hasLCTRL := false
         hasLSHIFT := false
@@ -118,7 +118,7 @@ class KeyBinder {
         hasRALT := false
         hasMainkey := false
         mainkey := ""
-        
+
         ; 检查是否包含各修饰符
         if RegExMatch(value, "i)LCTRL") {
             hasLCTRL := true
@@ -194,7 +194,7 @@ class KeyBinder {
         hasRALT := false
         hasMainkey := false
         mainkey := ""
-        
+
         ; 检查是否包含各修饰符
         if RegExMatch(value, "<\^") {
             hasLCTRL := true

@@ -641,7 +641,7 @@ USleep(delay_ms) {
 }
 ; 去除修饰符前缀
 PureKeyWait(ThisHotkey) {
-    if (ThisHotkey == "") 
+    if (ThisHotkey == "")
         return
     pureKey := RegExReplace(ThisHotkey, "^[~*$!^+#&<>()]+")
     KeyWait(pureKey)

@@ -20,7 +20,7 @@ class GuiManager {
     static HintUnsaved := ""       ; 提示文字
     static IsOnStrongHoldProtocol := false
     static DefaultTab := ""
-    
+
     ; 窗口尺寸常量
     static GuiWidth := 720
     static TabWidth := this.GuiWidth / 4
@@ -147,7 +147,7 @@ class GuiManager {
         ; 辅助函数：添加绑定行
         AddBindRow(LabelText, KeyVar) {
             controls := []
-            txt := this.MainGui.Add("Text", "xs+15 y+16 w120 Right +0x200", LabelText) 
+            txt := this.MainGui.Add("Text", "xs+15 y+16 w120 Right +0x200", LabelText)
             edit := this.MainGui.Add("Edit", "x+20 yp-4 w140 Center -TabStop Uppercase v" KeyVar, Config.GetHotkey(KeyVar))
             controls.Push(txt)
             controls.Push(edit)
@@ -1021,7 +1021,7 @@ class GuiManager {
                 if (IsObject(ctrl)) {
                     try ctrl.Visible := false
                 }
-            }   
+            }
             return
         }
         for ctrl in this.KeybindControls {
@@ -1358,7 +1358,7 @@ class GuiManager {
                 if (IsObject(ctrl)) {
                     try ctrl.Visible := false
                 }
-            }   
+            }
         }
     }
 
