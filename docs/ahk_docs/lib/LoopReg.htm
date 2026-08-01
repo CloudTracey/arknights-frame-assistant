@@ -1,0 +1,196 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Loop Reg - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Loop Reg statement retrieves the contents of the specified registry subkey, one item at a time." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Loop Reg</h1>
+
+<p>Retrieves the contents of the specified registry subkey, one item at a time.</p>
+
+<pre class="Syntax"><span class="func">Loop Reg</span> KeyName <span class="optional">, Mode</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>KeyName</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>The full name of the registry key, e.g. <code>"HKLM\Software\SomeApplication"</code>.</p>
+    <p>This must start with HKEY_LOCAL_MACHINE (or HKLM), HKEY_USERS (or HKU), HKEY_CURRENT_USER (or HKCU), HKEY_CLASSES_ROOT (or HKCR), or HKEY_CURRENT_CONFIG (or HKCC).</p>
+    <p>To access a <a href="#remote">remote registry</a>, prepend the computer name and a backslash, e.g. <code>"\\workstation01\HKLM"</code>.</p>
+  </dd>
+  
+  <dt>Mode</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, only values are included and subkeys are not recursed into. Otherwise, specify one or more of the following letters:</p>
+    <ul>
+      <li>K = Include keys.</li>
+      <li>V = Include values. Values are also included if both K and V are omitted.</li>
+      <li>R = Recurse into subkeys. If R is omitted, keys and values within subkeys of <em>KeyName</em> are not included.</li>
+    </ul>
+  </dd>
+
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>A registry loop is useful when you want to operate on a collection registry values or subkeys, one at a time. The values and subkeys are retrieved in reverse order (bottom to top) so that <a href="RegDelete.htm">RegDelete</a> and <a href="RegDeleteKey.htm">RegDeleteKey</a> can be used inside the loop without disrupting the loop.</p>
+<p id="vars">The following variables exist within any registry loop. If an inner registry loop is enclosed by an outer registry loop, the innermost loop's registry item will take precedence:</p>
+<table class="info">
+  <tr>
+    <th abbr="Var">Variable</th>
+    <th abbr="Descr">Description</th>
+  </tr>
+  <tr>
+    <td>A_LoopRegName</td>
+    <td>Name of the currently retrieved item, which can be either a value name or the name of a subkey. Value names displayed by Windows RegEdit as "(Default)" will be retrieved if a value has been assigned to them, but A_LoopRegName will be blank for them.</td>
+  </tr>
+  <tr>
+    <td>A_LoopRegType</td>
+    <td>The type of the currently retrieved item, which is one of the following words: KEY (i.e. the currently retrieved item is a subkey not a value), REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY, REG_LINK, REG_RESOURCE_LIST, REG_FULL_RESOURCE_DESCRIPTOR, REG_RESOURCE_REQUIREMENTS_LIST, REG_DWORD_BIG_ENDIAN (probably rare on most Windows hardware). It will be empty if the currently retrieved item is of an unknown type.</td>
+  </tr>
+  <tr>
+    <td>A_LoopRegKey</td>
+    <td>The full name of the key which contains the current loop item. For remote registry access, this value will <u>not</u> include the computer name.</td>
+  </tr>
+  <tr>
+    <td>A_LoopRegTimeModified</td>
+    <td>The time the current subkey or any of its values was last modified. Format <a href="FileSetTime.htm">YYYYMMDDHH24MISS</a>. This variable will be empty if the currently retrieved item is not a subkey (i.e. <em>A_LoopRegType</em> is not the word KEY).</td>
+  </tr>
+</table>
+<p>When used inside a registry loop, the following functions can be used in a simplified way to indicate that the currently retrieved item should be operated upon:</p>
+<table class="info">
+  <tr>
+    <th style="min-width: 11em;">Syntax</th>
+    <th abbr="Descr">Description</th>
+  </tr>
+  <tr>
+    <td><code>Value := <a href="RegRead.htm">RegRead</a>()</code></td>
+    <td>Reads the current item. If the current item is a key, an exception is thrown.</td>
+  </tr>
+  <tr>
+    <td><code><a href="RegWrite.htm">RegWrite</a> Value</code><br><code><a href="RegWrite.htm">RegWrite</a></code></td>
+    <td>Writes to the current item. If <em>Value</em> is omitted, the item will be made 0 or blank depending on its type. If the current item is a key, an exception is thrown and the registry is not modified.</td>
+  </tr>
+  <tr>
+    <td><code><a href="RegDelete.htm">RegDelete</a></code></td>
+    <td>Deletes the current item if it is a value. If the current item is a key, its default value will be deleted instead.</td>
+  </tr>
+  <tr>
+    <td><code><a href="RegDeleteKey.htm">RegDeleteKey</a></code></td>
+    <td>Deletes the current item if it is a key. If the current item is a value, the key which <em>contains</em> that value will be deleted, including all subkeys and values.</td>
+  </tr>
+  <tr>
+    <td><code>RegCreateKey</code></td>
+    <td>Targets a key as described above for RegDeleteKey. If the key is deleted during the loop, RegCreateKey can be used to recreate it. Otherwise, RegCreateKey merely verifies that the script has write access to the key.</td>
+  </tr>
+</table>
+<p id="remote">When accessing a remote registry (via the <em>KeyName</em> parameter described above), the following notes apply:</p>
+<ul>
+  <li>The target machine must be running the Remote Registry service.</li>
+  <li>Access to a remote registry may fail if the target computer is not in the same domain as yours or the local or remote username  lacks sufficient permissions (however, see below for possible workarounds).</li>
+  <li>Depending on your username's domain, workgroup, and/or permissions, you may have to connect to a shared device, such as by mapping a drive, prior to attempting remote registry access. Making such a connection -- using a remote username and password that has permission to access or edit the registry -- may as a side-effect enable remote registry access.</li>
+  <li>If you're already connected to the target computer as a different user (for example, a mapped drive via user Guest), you may have to terminate that connection to allow the remote registry feature to reconnect and re-authenticate you as your own currently logged-on username.</li>
+</ul>
+<p id="otb">The One True Brace (OTB) style may optionally be used, which allows the open-brace to appear on the same line rather than underneath. For example: <code>Loop Reg "HKLM\Software\AutoHotkey", "V" {</code>.</p>
+<p>See <a href="Loop.htm">Loop</a> for information about <a href="Block.htm">Blocks</a>, <a href="Break.htm">Break</a>, <a href="Continue.htm">Continue</a>, and the A_Index variable (which exists in every type of loop).</p>
+<p>The loop may optionally be followed by an <a href="Else.htm">Else</a> statement, which is executed if no registry items of the specified type were found (i.e. the loop had zero iterations).</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="Loop.htm">Loop</a>, <a href="Break.htm">Break</a>, <a href="Continue.htm">Continue</a>, <a href="Block.htm">Blocks</a>, <a href="RegRead.htm">RegRead</a>, <a href="RegWrite.htm">RegWrite</a>, <a href="RegDelete.htm">RegDelete</a>, <a href="RegDeleteKey.htm">RegDeleteKey</a>, <a href="SetRegView.htm">SetRegView</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Retrieves the contents of the specified registry subkey, one item at a time.</p>
+<pre>Loop Reg, "HKEY_LOCAL_MACHINE\Software\SomeApplication"
+    MsgBox A_LoopRegName</pre>
+</div>
+
+<div class="ex" id="ExRegDelete">
+<p><a class="ex_number" href="#ExRegDelete"></a> Deletes Internet Explorer's history of URLs typed by the user.</p>
+<pre>Loop Reg, "HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\TypedURLs"
+    RegDelete</pre>
+</div>
+
+<div class="ex" id="ExTest">
+<p><a class="ex_number" href="#ExTest"></a> A working test script.</p>
+<pre>Loop Reg, "HKCU\Software\Microsoft\Windows", "R KV"  <em>; Recursively retrieve keys and values.</em>
+{
+    if A_LoopRegType = "key"
+        value := ""
+    else
+    {
+        try
+            value := RegRead()
+        catch
+            value := "*error*"
+    }
+    Result := MsgBox(A_LoopRegName " = " value " (" A_LoopRegType ")`n`nContinue?",, "y/n")
+}
+Until Result = "No"</pre>
+</div>
+
+<div class="ex" id="ExRegSearch">
+<p><a class="ex_number" href="#ExRegSearch"></a> Recursively searches the entire registry for particular value(s).</p>
+<pre>
+RegSearch("Notepad")
+
+RegSearch(Target)
+{
+    Loop Reg, "HKEY_LOCAL_MACHINE", "KVR"
+    {
+        if !CheckThisRegItem()  <em>; It told us to stop.</em>
+            return
+    }
+    Loop Reg, "HKEY_USERS", "KVR"
+    {
+        if !CheckThisRegItem()  <em>; It told us to stop.</em>
+            return
+    }
+    Loop Reg, "HKEY_CURRENT_CONFIG", "KVR"
+    {
+        if !CheckThisRegItem()  <em>; It told us to stop.</em>
+            return
+    }
+    <em>; Note: I believe HKEY_CURRENT_USER does not need to be searched if
+    ; HKEY_USERS is being searched. Similarly, HKEY_CLASSES_ROOT provides a
+    ; combined view of keys from HKEY_LOCAL_MACHINE and HKEY_CURRENT_USER, so
+    ; searching all three isn't necessary.</em>
+
+    CheckThisRegItem()
+    {
+        if A_LoopRegType = "KEY"  <em>; Remove these two lines if you want to check key names too.</em>
+            return true
+        try
+            RegValue := RegRead()
+        catch
+            return true
+        if InStr(RegValue, Target)
+        {
+            Result := MsgBox(
+            (
+            "The following match was found:
+            " A_LoopRegKey "\" A_LoopRegName "
+            Value = " RegValue "
+            
+            Continue?"
+            ),, "y/n")
+            if Result = "No"
+                return false  <em>; Tell our caller to stop searching.</em>
+        }
+        return true
+    }
+}
+</pre>
+</div>
+
+</body>
+</html>

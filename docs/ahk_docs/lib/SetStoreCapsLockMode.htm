@@ -1,0 +1,51 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>SetStoreCapsLockMode - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The SetStoreCapsLockMode function determines whether to restore the state of the CapsLock key after sending simulated keystrokes." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>SetStoreCapsLockMode</h1>
+
+<p>Whether to restore the state of the CapsLock key after sending simulated keystrokes.</p>
+
+<pre class="Syntax">PrevSetting := <span class="func">SetStoreCapsLockMode</span>(Setting)</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Setting</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#boolean">Boolean</a></p>
+    <p>If <strong>true</strong>, CapsLock state restoration is enabled, meaning the CapsLock key will be restored to its former state if key-sending functions such as <a href="Send.htm">Send</a> or <a href="ControlSend.htm">ControlSend</a> needed to change it temporarily for its operation.</p>
+    <p>If <strong>false</strong>, CapsLock state restoration is disabled, meaning the state of the CapsLock key is not changed at all. As a result, key-sending functions will invert the case of the characters if the CapsLock key happens to be on during the operation.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="../Concepts.htm#boolean">Integer (boolean)</a></p>
+<p>This function returns the previous setting; either 0 (false) for disabled or 1 (true) for enabled.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p>By default, CapsLock state restoration is enabled. However, this does not guarantee that the CapsLock key will be turned off before sending keystrokes, nor that its previous state will be restored afterward.</p>
+<p>SetStoreCapsLockMode is rarely used because the default behavior is best in most cases.</p>
+<p>SetStoreCapsLockMode is ignored by <a href="Send.htm#blind">Blind mode</a> and <a href="Send.htm#SendText">Text mode</a>; that is, the state of the CapsLock key is not changed in those cases.</p>
+<p>The built-in variable <a href="../Variables.htm#StoreCapsLockMode">A_StoreCapsLockMode</a> contains the current setting and can also be assigned a new value instead of calling SetStoreCapsLockMode.</p>
+<p>Every newly launched <a href="../misc/Threads.htm">thread</a> (such as a <a href="../Hotkeys.htm">hotkey</a>, <a href="Menu.htm">custom menu item</a>, or <a href="SetTimer.htm">timed</a> subroutine) starts off fresh with the default setting for this function. That default may be changed by using this function during <a href="../Scripts.htm#auto">script startup</a>.</p>
+<h2 id="Related">Related</h2>
+<p><a href="SetNumScrollCapsLockState.htm">SetCaps/Num/ScrollLockState</a>, <a href="Send.htm">Send</a>, <a href="ControlSend.htm">ControlSend</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Causes the state of the CapsLock key not to be changed at all.</p>
+<pre>SetStoreCapsLockMode False</pre>
+</div>
+
+</body>
+</html>

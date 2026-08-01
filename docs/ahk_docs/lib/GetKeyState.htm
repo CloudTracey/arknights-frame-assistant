@@ -1,0 +1,125 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>GetKeyState - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The GetKeyState function returns 1 (true) or 0 (false) depending on whether the specified keyboard key or mouse/controller button is down or up. Also retrieves controller status." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>GetKeyState</h1>
+
+<p>Returns 1 (true) or 0 (false) depending on whether the specified keyboard key or mouse/controller button is down or up. Also retrieves controller status.</p>
+
+<pre class="Syntax">IsDown := <span class="func">GetKeyState</span>(KeyName <span class="optional">, Mode</span>)</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>KeyName</dt>
+  <dd>
+      <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+      <p>This can be just about any single character from the keyboard or one of the key names from the <a href="../KeyList.htm">key list</a>, such as a mouse/controller button. Examples: B, 5, LWin, RControl, Alt, Enter, Escape, LButton, MButton, Joy1.</p>
+      <p>Alternatively, an explicit virtual key code such as vkFF may be specified. This is useful in the rare case where a key has no name. The code of such a key can be determined by following the steps at the bottom of the <a href="../KeyList.htm#SpecialKeys">key list page</a>. Note that this code must be in hexadecimal.</p>
+      <p><b>Known limitation:</b> This function cannot differentiate between two keys which share the same virtual key code, such as Left and NumpadLeft.</p>
+  </dd>
+
+  <dt>Mode</dt>
+  <dd>
+      <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+      <p>This parameter is ignored when retrieving controller status.</p>
+      <p>If omitted, it defaults to that which retrieves the logical state of the key. This is the state that the OS and the active window believe the key to be in, but is not necessarily the same as the physical state.</p>
+	  <p>Otherwise, specify one of the following letters:</p>
+      <p><strong>P:</strong> Retrieve the physical state (i.e. whether the user is physically holding it down). The physical state of a key or mouse button will usually be the same as the logical state unless the keyboard and/or mouse hooks are installed, in which case it will accurately reflect whether or not the user is physically holding down the key or button (as long as it was pressed down while the keyboard hook was installed). You can determine if your script is using the  hooks via the <a href="KeyHistory.htm">KeyHistory</a> function or menu item. You can force the hooks to be installed by calling <a href="InstallKeybdHook.htm">InstallKeybdHook</a> and/or <a href="InstallMouseHook.htm">InstallMouseHook</a>.</p>
+      <p><strong>T:</strong> Retrieve the toggle state. For keys other than <kbd>CapsLock</kbd>, <kbd>NumLock</kbd> and <kbd>ScrollLock</kbd>, the toggle state is generally 0 when the script starts and is not synchronized between processes.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="../Concepts.htm#boolean">Integer (boolean)</a>, <a href="../Concepts.htm#numbers">Float</a>, <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#nothing">String (empty)</a></p>
+<p>This function returns 1 (true) if the key is down (or toggled on) or 0 (false) if it is up (or toggled off).</p>
+<p>When <em>KeyName</em> is a stick axis such as JoyX, this function returns a floating-point number between 0 and 100 to indicate the stick's position as a percentage of that axis's range of motion. This <a href="../scripts/index.htm#ControllerTest">test script</a> can be used to analyze your controller(s).</p>
+<p>When <em>KeyName</em> is JoyPOV, this function returns an integer between 0 and 35900. The following approximate POV values are used by many controllers:</p>
+<ul>
+    <li>-1: no angle to report</li>
+    <li>0: forward POV</li>
+    <li>9000 (i.e. 90 degrees): right POV</li>
+    <li>27000 (i.e. 270 degrees): left POV</li>
+    <li>18000 (i.e. 180 degrees): backward POV</li>
+</ul>
+<p>When <em>KeyName</em> is JoyName, JoyButtons, JoyAxes or JoyInfo, the retrieved value will be the name, number of buttons, number of axes or capabilities of the controller. For details, see <a href="../KeyList.htm#Controller">Game Controller</a>.</p>
+<p>When <em>KeyName</em> is a button or control of a controller that could not be detected, this function returns an empty string.</p>
+
+<h2 id="Error_Handling">Error Handling</h2>
+<p>A <a href="Error.htm#ValueError">ValueError</a> is thrown if invalid parameters are detected, e.g. when <em>KeyName</em> does not exist on the current keyboard layout.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p>To wait for a key or mouse/controller button to achieve a new state, it is usually easier to use <a href="KeyWait.htm">KeyWait</a> instead of a GetKeyState loop.</p>
+<p>Systems with unusual keyboard drivers might be slow to update the state of their keys, especially the toggle-state of keys like <kbd>CapsLock</kbd>. A script that checks the state of such a key immediately after it changed may use <a href="Sleep.htm">Sleep</a> beforehand to give the system time to update the key state.</p>
+<p>For examples of using GetKeyState with a controller, see the <a href="../misc/RemapController.htm">controller remapping page</a> and the <a href="../scripts/index.htm#ControllerMouse">Controller-To-Mouse script</a>.</p>
+<h2 id="Related">Related</h2>
+<p><a href="GetKeyVK.htm">GetKeyVK</a>, <a href="GetKeySC.htm">GetKeySC</a>, <a href="GetKeyName.htm">GetKeyName</a>, <a href="KeyWait.htm">KeyWait</a>, <a href="../KeyList.htm">Key List</a>, <a href="../misc/RemapController.htm">Controller remapping</a>, <a href="KeyHistory.htm">KeyHistory</a>, <a href="InstallKeybdHook.htm">InstallKeybdHook</a>, <a href="InstallMouseHook.htm">InstallMouseHook</a></p>
+
+<h2 id="Examples">Examples</h2>
+
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Retrieves the current state of the right mouse button.</p>
+<pre>state := GetKeyState("RButton")</pre>
+</div>
+
+<div class="ex" id="ExBasic2">
+<p><a class="ex_number" href="#ExBasic2"></a> Retrieves the current state of the first controller's second button.</p>
+<pre>state := GetKeyState("Joy2")</pre>
+</div>
+
+<div class="ex" id="ExIfElse">
+<p><a class="ex_number" href="#ExIfElse"></a> Checks if at least one <kbd>Shift</kbd> is down.</p>
+<pre>if GetKeyState("Shift")
+    MsgBox "At least one Shift key is down."
+else
+    MsgBox "Neither Shift key is down."</pre>
+</div>
+
+<div class="ex" id="ExToggle">
+<p><a class="ex_number" href="#ExToggle"></a> Retrieves the current toggle state of <kbd>CapsLock</kbd>.</p>
+<pre>state := GetKeyState("CapsLock", "T")</pre>
+</div>
+
+<div class="ex" id="ExRemap">
+<p><a class="ex_number" href="#ExRemap"></a> Remapping. (This example is only for illustration because it would be easier to use the <a href="../misc/Remap.htm">built-in remapping feature</a>.) In the following hotkey, the mouse button is kept held down while NumpadAdd is down, which effectively transforms NumpadAdd into a mouse button. This method can also be used to repeat an action while the user is holding down a key or button.</p>
+<pre>*NumpadAdd::
+{
+    MouseClick "left",,, 1, 0, "D"  <em>; Hold down the left mouse button.</em>
+    Loop
+    {
+        Sleep 10
+        if !GetKeyState("NumpadAdd", "P")  <em>; The key has been released, so break out of the loop.</em>
+            break
+        <em>; ... insert here any other actions you want repeated.</em>
+    }
+    MouseClick "left",,, 1, 0, "U"  <em>; Release the mouse button.</em>
+}</pre>
+</div>
+
+<div class="ex" id="ExController">
+<p><a class="ex_number" href="#ExController"></a> Makes controller button behavior depend on stick axis position.</p>
+<pre>joy2::
+{
+    JoyX := GetKeyState("JoyX")
+    if JoyX &gt; 75
+        MsgBox "Action #1 (button pressed while stick was pushed to the right)."
+    else if JoyX &lt; 25
+        MsgBox "Action #2 (button pressed while stick was pushed to the left)."
+    else
+        MsgBox "Action #3 (button pressed while stick was centered horizontally)."
+}</pre>
+</div>
+
+<p>See the <a href="../misc/RemapController.htm">controller remapping page</a> and the <a href="../scripts/index.htm#ControllerMouse">Controller-To-Mouse script</a> for other examples.</p>
+
+</body>
+</html>

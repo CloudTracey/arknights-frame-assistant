@@ -1,0 +1,66 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>WinGetList - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The WinGetList function returns an array of unique IDs (HWNDs) for all existing windows that match the specified criteria." />
+<meta name="ahk:equiv-v1" content="lib/WinGet.htm#List" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>WinGetList</h1>
+
+<p>Returns an array of unique IDs (HWNDs) for all existing windows that match the specified criteria.</p>
+
+<pre class="Syntax">HWNDs := <span class="func">WinGetList</span>(<span class="optional">WinTitle, WinText, ExcludeTitle, ExcludeText</span>)</pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+    <dt>WinTitle, WinText, ExcludeTitle, ExcludeText</dt>
+    <dd>
+        <p>Type: <a href="../Concepts.htm#strings">String</a>, <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#objects">Object</a></p>
+        <p>If each of these is blank or omitted, all windows on the entire system will be retrieved. Otherwise, specify for <em>WinTitle</em> a <a href="../misc/WinTitle.htm">window title or other criteria</a> to identify the target window and/or for <em>WinText</em> a substring from a single text element of the target window (as revealed by the included <a href="../Program.htm#Window_Spy">Window Spy</a> utility).</p>
+        <p><em>ExcludeTitle</em> and <em>ExcludeText</em> can be used to exclude one or more windows by their title or text. Their specification is similar to <em>WinTitle</em> and <em>WinText</em>, except that <em>ExcludeTitle</em> does not recognize any criteria other than the window title.</p>
+        <p>Window titles and text are case-sensitive. By default, hidden windows are not detected and hidden text elements are detected, unless changed with <a href="DetectHiddenWindows.htm">DetectHiddenWindows</a> and <a href="DetectHiddenText.htm">DetectHiddenText</a>. When using <a href="../misc/WinTitle.htm#ahk_id">pure HWNDs</a>, hidden windows are always detected. By default, a window title can contain <em>WinTitle</em> or <em>ExcludeTitle</em> anywhere inside it to be a match, unless changed with <a href="SetTitleMatchMode.htm">SetTitleMatchMode</a>.</p>
+    </dd>
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="Array.htm">Array</a></p>
+<p>This function returns an array of <a href="../misc/WinTitle.htm#ahk_id">unique IDs (HWNDs)</a> for all existing windows that match the specified criteria. If there is no matching window, an empty array is returned.</p>
+<p>For example, if the return value is assigned to a variable named <code>HWNDs</code> and two matching windows are discovered, <code>HWNDs[1]</code> contains the HWND of the first window, <code>HWNDs[2]</code> contains the HWND of the second window, and <code>HWNDs.<a href="Array.htm#Length">Length</a></code> returns the number 2.</p>
+<p>Windows are retrieved in order from topmost to bottommost (according to how they are stacked on the desktop).</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="WinGetCount.htm">WinGetCount</a>, <a href="Win.htm">Win functions</a>, <a href="Control.htm">Control functions</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Visits all windows on the entire system and displays info about each of them.</p>
+<pre>ids := WinGetList(,, "Program Manager")
+for this_id in ids
+{
+    WinActivate this_id
+    this_class := WinGetClass(this_id)
+    this_title := WinGetTitle(this_id)
+    Result := MsgBox(
+    (
+        "Visiting All Windows
+        " A_Index " of " ids.Length "
+        ahk_id " this_id "
+        ahk_class " this_class "
+        " this_title "
+
+        Continue?"
+    ),, 4)
+    if (Result = "No")
+        break
+}</pre>
+</div>
+
+</body>
+</html>

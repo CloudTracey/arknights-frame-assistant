@@ -1,0 +1,112 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>MouseClick - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The MouseClick function clicks or holds down a mouse button, or turns the mouse wheel." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>MouseClick</h1>
+
+<p>Clicks or holds down a mouse button, or turns the mouse wheel. Note: The <a href="Click.htm">Click</a> function is generally more flexible and easier to use.</p>
+
+<pre class="Syntax"><span class="func">MouseClick</span> <span class="optional">WhichButton, X, Y, ClickCount, Speed, DownOrUp, Relative</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>WhichButton</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, it defaults to Left (the left mouse button). Otherwise, specify the button to click or the rotate/push direction of the mouse wheel.</p>
+    <p><strong>Button:</strong> Left, Right, Middle (or just the first letter of each of these); or X1 (fourth button) or X2 (fifth button). For example: <code>MouseClick "X1"</code>.</p>
+    <p>Left and Right correspond to the primary button and secondary button. If the user swaps the buttons via system settings, the physical positions of the buttons are swapped but the effect stays the same.</p>
+    <p><strong>Mouse wheel:</strong> Specify WheelUp or WU to turn the wheel upward (away from you); specify WheelDown or WD to turn the wheel downward (toward you). Specify WheelLeft (or WL) or WheelRight (or WR) to push the wheel left or right, respectively. <em>ClickCount</em> is the number of notches to turn the wheel.</p>
+  </dd>
+
+  <dt>X, Y</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, the cursor's current position is used. Otherwise, specify the X and Y coordinates to which the mouse cursor is moved prior to clicking. Coordinates are relative to the active window's client area unless <a href="CoordMode.htm">CoordMode</a> was used to change that.</p>
+  </dd>
+
+  <dt>ClickCount</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, it defaults to 1. Otherwise, specify the number of times to click the mouse button or turn the mouse wheel.</p>
+  </dd>
+
+  <dt>Speed</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, the default speed (as set by <a href="SetDefaultMouseSpeed.htm">SetDefaultMouseSpeed</a> or 2 otherwise) will be used. Otherwise, specify the speed to move the mouse in the range 0 (fastest) to 100 (slowest). A speed of 0 will move the mouse instantly.</p>
+    <p><em>Speed</em> is ignored for the modes <a href="SendMode.htm#Input">SendInput</a> and <a href="SendMode.htm#Play">SendPlay</a>; they move the mouse instantaneously (though <a href="SetMouseDelay.htm">SetMouseDelay</a> has a mode that applies to SendPlay). To visually move the mouse more slowly -- such as a script that performs a demonstration for an audience -- use <code><a href="Send.htm#Click">SendEvent "{Click 100 200}"</a></code> or <code><a href="SendMode.htm">SendMode</a> "Event"</code> (optionally in conjuction with <a href="BlockInput.htm">BlockInput</a>).</p>
+  </dd>
+
+  <dt>DownOrUp</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, each click consists of a down-event followed by an up-event. Otherwise, specify one of the following letters:</p>
+    <p><strong>D:</strong> Press the mouse button down but do not release it (i.e. generate a down-event).</p>
+    <p><strong>U:</strong> Release the mouse button (i.e. generate an up-event).</p>
+  </dd>
+
+  <dt>Relative</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, the X and Y coordinates will be used for absolute positioning. Otherwise, specify the following letter:</p>
+    <p><strong>R:</strong> The X and Y coordinates will be treated as offsets from the current mouse position. In other words, the cursor will be moved from its current position by X pixels to the right (left if negative) and Y pixels down (up if negative).</p>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>This function uses the sending method set by <a href="SendMode.htm">SendMode</a>.</p>
+<p>The <a href="Click.htm">Click</a> function is recommended over MouseClick because it is generally easier to use. However, MouseClick supports the <em>Speed</em> parameter, whereas adjusting the speed of movement by Click requires the use of <a href="SetDefaultMouseSpeed.htm">SetDefaultMouseSpeed</a>.</p>
+<p>To perform a shift-click or control-click, use the <a href="Send.htm">Send</a> function before and after the operation as shown in these examples:</p>
+<pre><em>; Example #1: </em>
+Send "{Control down}"
+MouseClick "left", 55, 233
+Send "{Control up}"</pre>
+<pre>
+<em>; Example #2:</em>
+Send "{Shift down}"
+MouseClick "left", 55, 233
+Send "{Shift up}"</pre>
+<p>The <a href="SendMode.htm#Play">SendPlay mode</a> is able to successfully generate mouse events in a broader variety of games than the other modes. In addition, some applications and games may have trouble tracking the mouse if it moves too quickly. The <em>Speed</em> parameter or <a href="SetDefaultMouseSpeed.htm">SetDefaultMouseSpeed</a> can be used to reduce the speed (in <a href="SendMode.htm#Event">SendEvent mode</a> only).</p>
+<p>Some applications do not obey a <em>ClickCount</em> higher than 1 for the mouse wheel. For them, use a <a href="Loop.htm">Loop</a> such as the following:</p>
+<pre>Loop 5
+    MouseClick "WheelUp"</pre>
+<p>The <a href="BlockInput.htm">BlockInput</a> function can be used to prevent any physical mouse activity by the user from disrupting the simulated mouse events produced by the mouse functions. However, this is generally not needed for the modes <a href="SendMode.htm#Input">SendInput</a> and <a href="SendMode.htm#Play">SendPlay</a> because they automatically postpone the user's physical mouse activity until afterward.</p>
+<p>There is an automatic delay after every click-down and click-up of the mouse (except for <a href="SendMode.htm#Input">SendInput mode</a> and for turning the mouse wheel). Use <a href="SetMouseDelay.htm">SetMouseDelay</a> to change the length of the delay.</p>
+<h2 id="Related">Related</h2>
+<p><a href="CoordMode.htm">CoordMode</a>, <a href="SendMode.htm">SendMode</a>, <a href="SetDefaultMouseSpeed.htm">SetDefaultMouseSpeed</a>, <a href="SetMouseDelay.htm">SetMouseDelay</a>, <a href="Click.htm">Click</a>, <a href="MouseClickDrag.htm">MouseClickDrag</a>, <a href="MouseGetPos.htm">MouseGetPos</a>, <a href="MouseMove.htm">MouseMove</a>, <a href="ControlClick.htm">ControlClick</a>, <a href="BlockInput.htm">BlockInput</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExDoubleClick">
+<p><a class="ex_number" href="#ExDoubleClick"></a> Double-clicks at the current mouse position.</p>
+<pre>MouseClick "left"
+MouseClick "left"</pre>
+</div>
+
+<div class="ex" id="ExDoubleClick2">
+<p><a class="ex_number" href="#ExDoubleClick2"></a> Same as above.</p>
+<pre>MouseClick "left",,, 2</pre>
+</div>
+
+<div class="ex" id="ExMove">
+<p><a class="ex_number" href="#ExMove"></a> Moves the mouse cursor to a specific position, then right-clicks once.</p>
+<pre>MouseClick "right", 200, 300</pre>
+</div>
+
+<div class="ex" id="ExWheel">
+<p><a class="ex_number" href="#ExWheel"></a> Simulates the turning of the mouse wheel.</p>
+<pre>#up::MouseClick "WheelUp",,, 2  <em>; Turn it by two notches.</em>
+#down::MouseClick "WheelDown",,, 2</pre>
+</div>
+
+</body>
+</html>

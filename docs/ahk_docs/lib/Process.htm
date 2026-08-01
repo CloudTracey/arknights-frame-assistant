@@ -1,0 +1,102 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>List of Process Functions | AutoHotkey v2</title>
+<meta name="description" content="This page lists functions for retrieving information about a process or for performing various operations on a process." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Process Functions</h1>
+
+<p>Functions for retrieving information about a process or for performing various operations on a process. Click on a function name for details.</p>
+<table class="info">
+    <tr>
+        <th>Function</th>
+        <th abbr="Descr">Description</th>
+    </tr>
+    <tr>
+        <td><a href="ProcessClose.htm">ProcessClose</a></td>
+        <td>Forces the first matching process to close.</td>
+    </tr>
+    <tr>
+        <td><a href="ProcessExist.htm">ProcessExist</a></td>
+        <td>Checks if the specified process exists.</td>
+    </tr>
+    <tr>
+        <td><a href="ProcessGetName.htm">ProcessGetName</a></td>
+        <td>Returns the name of the specified process.</td>
+    </tr>
+    <tr>
+        <td><a href="ProcessGetParent.htm">ProcessGetParent</a></td>
+        <td>Returns the process ID (PID) of the process which created the specified process.</td>
+    </tr>
+    <tr>
+        <td><a href="ProcessGetName.htm">ProcessGetPath</a></td>
+        <td>Returns the path of the specified process.</td>
+    </tr>
+    <tr>
+        <td><a href="ProcessSetPriority.htm">ProcessSetPriority</a></td>
+        <td>Changes the priority level of the first matching process.</td>
+    </tr>
+    <tr>
+        <td><a href="ProcessWait.htm">ProcessWait</a></td>
+        <td>Waits for the specified process to exist.</td>
+    </tr>
+    <tr>
+        <td><a href="ProcessWaitClose.htm">ProcessWaitClose</a></td>
+        <td>Waits for all matching processes to close.</td>
+    </tr>
+</table>
+
+<h2 id="Remarks">Remarks</h2>
+<p><strong>Process list:</strong> Although there is no <em>ProcessList</em> function, <a href="#ExList">example #1</a> and <a href="#ExListCOM">example #2</a> demonstrate how to retrieve a list of processes via <a href="DllCall.htm">DllCall</a> or COM.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="Run.htm">Run</a>, <a href="WinClose.htm">WinClose</a>, <a href="WinKill.htm">WinKill</a>, <a href="WinWait.htm">WinWait</a>, <a href="WinWaitClose.htm">WinWaitClose</a>, <a href="WinExist.htm">WinExist</a>, <a href="Win.htm">Win functions</a></p>
+
+<h2 id="Examples">Examples</h2>
+
+<div class="ex" id="ExList">
+<p><a class="ex_number" href="#ExList"></a> Shows a list of running processes retrieved via <a href="DllCall.htm">DllCall</a> and <a href="https://learn.microsoft.com/windows/win32/api/psapi/nf-psapi-enumprocesses">EnumProcesses</a>.</p>
+<pre>MyGui := Gui()
+LV := MyGui.Add("ListView", "w1300 r25", ["#", "PID", "Name", "Path"])
+for Index, Proc in GetProcessList()
+    LV.Add("", Index, Proc.PID, Proc.Name, Proc.Path)
+LV.ModifyCol()
+MyGui.Title := LV.GetCount() " Processes"
+MyGui.Show()
+
+GetProcessList(MaxProcs := 1024) {
+    Arr := []  <em>; array to store the process information</em>
+    DllCall("Psapi.dll\EnumProcesses"
+        , "Ptr", Buf := Buffer(MaxProcs * 4)  <em>; buffer to store all PIDs</em>
+        , "UInt", Buf.Size
+        , "UIntP", &amp;ByteCnt := 0)  <em>; number of bytes returned by DllCall</em>
+    Loop (ByteCnt // 4) {
+        PID := NumGet(Buf, (A_Index - 1) * 4, "UInt")
+        try Arr.Push({
+            Name: ProcessGetName(PID),
+            Path: ProcessGetPath(PID),
+            PID: PID
+        })
+    }
+    return Arr
+}</pre>
+</div>
+
+<div class="ex" id="ExListCOM">
+<p><a class="ex_number" href="#ExListCOM"></a> Shows a list of running processes retrieved via COM and <a href="https://learn.microsoft.com/windows/win32/cimwin32prov/win32-process">Win32_Process</a>.</p>
+<pre>MyGui := Gui(, "Process List")
+LV := MyGui.Add("ListView", "x2 y0 w400 h500", ["Process Name", "Command Line"])
+for process in ComObjGet("winmgmts:").ExecQuery("Select * from Win32_Process")
+    LV.Add("", process.Name, process.CommandLine)
+MyGui.Show()</pre>
+</div>
+
+</body>
+</html>

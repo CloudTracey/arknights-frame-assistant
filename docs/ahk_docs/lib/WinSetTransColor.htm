@@ -1,0 +1,58 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>WinSetTransColor - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The WinSetTransColor function makes all pixels of the chosen color invisible inside the specified window." />
+<meta name="ahk:equiv-v1" content="lib/WinSet.htm#TransColor" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>WinSetTransColor</h1>
+
+<p>Makes all pixels of the chosen color invisible inside the specified window.</p>
+
+<pre class="Syntax"><span class="func">WinSetTransColor</span> Color <span class="optional">, WinTitle, WinText, ExcludeTitle, ExcludeText</span></pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+    <dt>Color</dt>
+    <dd>
+        <p>Type: <a href="../Concepts.htm#strings">String</a> or <a href="../Concepts.htm#numbers">Integer</a></p>
+        <p>Specify a color name or RGB value (see the <a href="../misc/Colors.htm">color chart</a> for guidance, or use <a href="PixelGetColor.htm">PixelGetColor</a> in its RGB mode). To additionally make the visible part of the window partially transparent, append a space (not a comma) followed by the transparency level (0-255). For example: <code>WinSetTransColor "EEAA99 150"</code>.</p>
+        <p>If the value is a string, any numeric color value must be in hexadecimal format. The color value can be omitted; for example, <code>WinSetTransColor " 150"</code> (with the leading space) is equivalent to <code>WinSetTransparent 150</code>.</p>
+        <p><code>"Off"</code> (case-insensitive) or an empty string may be specified to completely turn off transparency for a window. This is functionally identical to <code><a href="WinSetTransparent.htm">WinSetTransparent</a> "Off"</code>. Specifying Off is different than specifying 255 because it may improve performance and reduce usage of system resources (but probably only when desktop composition is disabled).</p>
+    </dd>
+    <dt>WinTitle, WinText, ExcludeTitle, ExcludeText</dt>
+    <dd>
+        <p>Type: <a href="../Concepts.htm#strings">String</a>, <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#objects">Object</a></p>
+        <p>If each of these is blank or omitted, the <a href="../misc/WinTitle.htm#LastFoundWindow">Last Found Window</a> will be used. Otherwise, specify for <em>WinTitle</em> a <a href="../misc/WinTitle.htm">window title or other criteria</a> to identify the target window and/or for <em>WinText</em> a substring from a single text element of the target window (as revealed by the included <a href="../Program.htm#Window_Spy">Window Spy</a> utility).</p>
+        <p><em>ExcludeTitle</em> and <em>ExcludeText</em> can be used to exclude one or more windows by their title or text. Their specification is similar to <em>WinTitle</em> and <em>WinText</em>, except that <em>ExcludeTitle</em> does not recognize any criteria other than the window title.</p>
+        <p>Window titles and text are case-sensitive. By default, hidden windows are not detected and hidden text elements are detected, unless changed with <a href="DetectHiddenWindows.htm">DetectHiddenWindows</a> and <a href="DetectHiddenText.htm">DetectHiddenText</a>. When using <a href="../misc/WinTitle.htm#ahk_id">pure HWNDs</a>, hidden windows are always detected. By default, a window title can contain <em>WinTitle</em> or <em>ExcludeTitle</em> anywhere inside it to be a match, unless changed with <a href="SetTitleMatchMode.htm">SetTitleMatchMode</a>.</p>
+    </dd>
+</dl>
+
+<h2 id="Error_Handling">Error Handling</h2>
+<p>A <a href="Error.htm#TargetError">TargetError</a> is thrown if the window could not be found.</p>
+<p>An <a href="Error.htm#OSError">OSError</a> is thrown if the change could not be applied.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p>This allows the contents of the window behind it to show through. If the user clicks on an invisible pixel, the click will "fall through" to the window behind it.</p>
+<p>To change a window's existing TransColor, it may be necessary to turn off transparency before making the change.</p>
+<p>This function is often used to create on-screen displays and other visual effects. There is an example of an on-screen display <a href="Gui.htm#ExOSD">at the bottom of the Gui object page</a>. For a simple demonstration via hotkeys, see <a href="WinSetTransparent.htm#ExTransHotkey">WinSetTransparent example #4</a>.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="WinSetTransparent.htm">WinSetTransparent</a>, <a href="Win.htm">Win functions</a>, <a href="Control.htm">Control functions</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Makes all white pixels in Notepad invisible. This example may not work well with the new Notepad on Windows 11 or later.</p>
+<pre>WinSetTransColor "White", "Untitled - Notepad"</pre>
+</div>
+
+</body>
+</html>

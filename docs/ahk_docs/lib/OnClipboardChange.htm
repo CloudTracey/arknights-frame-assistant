@@ -1,0 +1,70 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>OnClipboardChange - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The OnClipboardChange function registers a function to be called automatically whenever the clipboard's content changes." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>OnClipboardChange</h1>
+<p>Registers a <a href="../Functions.htm">function</a> to be called automatically whenever the clipboard's content changes.</p>
+
+<pre class="Syntax"><span class="func">OnClipboardChange</span> Callback <span class="optional">, AddRemove</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Callback</dt>
+  <dd>
+    <p>Type: <a href="../misc/Functor.htm">Function Object</a></p>
+    <p>The function to call.</p>
+    <p>The callback accepts one parameter and can be <a href="../Functions.htm#intro">defined</a> as follows:</p>
+    <pre class="NoIndent">MyCallback(DataType) { ...</pre>
+    <p>Although the name you give the parameter does not matter, it is assigned one of the following numbers:</p>
+    <ul>
+      <li>0 = Clipboard is now empty.</li>
+      <li>1 = Clipboard contains something that can be expressed as text (this includes <a href="A_Clipboard.htm#CopiedFiles">files copied</a> from an Explorer window).</li>
+      <li>2 = Clipboard contains something entirely non-text such as a picture.</li>
+    </ul>
+    <p>You can omit the callback's parameter if the corresponding information is not needed, but in this case an asterisk must be specified, e.g. <code>MyCallback(*)</code>.</p>
+    <p>If this is the last or only callback, the return value is ignored. Otherwise, it can return a non-zero integer to prevent subsequent callbacks from being called.</p>
+  </dd>
+  
+  <dt>AddRemove</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, it defaults to 1. Otherwise, specify one of the following numbers:</p>
+    <ul>
+      <li>1 = Call the callback after any previously registered callbacks.</li>
+      <li>-1 = Call the callback before any previously registered callbacks.</li>
+      <li>0 = Do not call the callback.</li>
+    </ul>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>If the clipboard changes while a callback is already running, that notification event is lost. If this is undesirable, use <a href="Critical.htm">Critical</a>. However, this will also buffer/defer other <a href="../misc/Threads.htm">threads</a> (such as the press of a hotkey) that occur while the OnClipboardChange thread is running.</p>
+<p>If the script itself changes the clipboard, the callbacks are typically not executed immediately; that is, statements immediately below the statement that changed the clipboard are likely to execute beforehand. To force the callbacks to execute immediately, use a short delay such as <code><a href="Sleep.htm">Sleep</a> 20</code> after changing the clipboard.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="A_Clipboard.htm">A_Clipboard</a>, <a href="OnExit.htm">OnExit</a>, <a href="OnMessage.htm">OnMessage</a>, <a href="CallbackCreate.htm">CallbackCreate</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Briefly displays a tooltip for each clipboard change.</p>
+<pre>OnClipboardChange ClipChanged
+
+ClipChanged(DataType) {
+    ToolTip "Clipboard data type: " DataType
+    Sleep 1000
+    ToolTip  <em>; Turn off the tip.</em>
+}</pre>
+</div>
+
+</body>
+</html>

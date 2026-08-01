@@ -1,0 +1,435 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Functions - Definition &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="Learn details about functions in general, parameters, returning values, built-in functions, variadic functions, etc." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="static/theme.css" rel="stylesheet" type="text/css" />
+<link href="static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="static/content.js" type="text/javascript"></script>
+</head>
+
+<body>
+<h1>Functions</h1>
+
+<h2 id="toc">Table of Contents</h2>
+<ul>
+  <li><a href="#intro">Introduction and Simple Examples</a></li>
+  <li><a href="#param">Parameters</a></li>
+  <li><a href="#ByRef">ByRef Parameters</a></li>
+  <li><a href="#optional">Optional Parameters</a>
+    <ul>
+      <li><a href="#unset">Unset Parameters</a></li>
+    </ul>
+  </li>
+  <li><a href="#return">Returning Values to Caller</a></li>
+  <li><a href="#Variadic">Variadic Functions</a>
+    <ul>
+      <li><a href="#VariadicCall">Variadic Function Calls</a></li>
+    </ul>
+  </li>
+  <li><a href="#Locals">Local and Global Variables</a>
+    <ul>
+  <li><a href="#Local">Local Variables</a></li>
+      <li><a href="#Global">Global Variables</a></li>
+      <li><a href="#static">Static Variables</a></li>
+      <li><a href="#More_about_locals_and_globals">More About Locals and Globals</a></li>
+    </ul>
+  </li>
+  <li><a href="#DynCall">Dynamically Calling a Function</a></li>
+  <li><a href="#ShortCircuit">Short-circuit Boolean Evaluation</a></li>
+  <li><a href="#nested">Nested Functions</a>
+    <ul>
+      <li><a href="#static-functions">Static Functions</a></li>
+      <li><a href="#closures">Closures</a></li>
+    </ul>
+  </li>
+  <li><a href="#remarks">Return, Exit, and General Remarks</a></li>
+  <li><a href="#Style_and_Naming_Conventions">Style and Naming Conventions</a></li>
+  <li><a href="#include">Using #Include to Share Functions Among Multiple Scripts</a></li>
+  <li><a href="#BuiltIn">Built-in Functions</a></li>
+</ul>
+<h2 id="intro">Introduction and Simple Examples</h2>
+<p id="define">A function is a reusable block of code that can be executed by <em>calling</em> it. A function can optionally accept parameters (inputs) and return a value (output). Consider the following simple function that accepts two numbers and returns their sum:</p>
+<pre>Add(x, y)
+{
+    <a href="lib/Return.htm">return</a> x + y
+}</pre>
+<p>The above is known as a function <em>definition</em> because it creates a function named "Add" (not case-sensitive) and establishes that anyone who calls it must provide exactly two parameters (x and y). To call the function, assign its result to a variable with the <a href="Variables.htm#AssignOp"><code>:=</code> operator</a>. For example:</p>
+<pre>Var := Add(2, 3)  <em>; The number 5 will be stored in Var.</em></pre>
+<p>Also, a function may be called without storing its return value:</p>
+<pre>Add(2, 3)
+Add 2, 3  <em>; Parentheses can be omitted if used at the start of a line.</em></pre>
+<p>But in this case, any value returned by the function is discarded; so unless the function produces some effect other than its return value, the call would serve no purpose.</p>
+<p>Within an expression, a function call "evaluates to" the return value of the function. The return value can be assigned to a variable as shown above, or it can be used directly as shown below:</p>
+<pre>if <a href="lib/InStr.htm">InStr</a>(MyVar, "fox")
+    MsgBox "The variable MyVar contains the word fox."</pre>
+
+<h2 id="param">Parameters</h2>
+<p>When a function is defined, its parameters are listed in parentheses next to its name (there must be no spaces between its name and the open-parenthesis). If a function does not accept any parameters, leave the parentheses empty; for example: <code>GetCurrentTimestamp()</code>.</p>
+<p>Known limitation:</p>
+<ul>
+  <li>If a parameter in a function-call resolves to a variable (e.g. <code>Var</code> or <code>++Var</code> or <code>Var*=2</code>), other parameters to its left or right can alter that variable before it is passed to the function. For example, <code>MyFunc(Var, Var++)</code> would unexpectedly pass 1 and 0 when <em>Var</em> is initially 0, because the first <em>Var</em> is not dereferenced until the function call is executed. Since this behavior is counterintuitive, it might change in a future release.</li>
+</ul>
+
+<h2 id="ByRef">ByRef Parameters</h2>
+<p>From the function's point of view, parameters are essentially the same as <a href="#Local">local variables</a> unless they are marked as <em>ByRef</em> as in this example:</p>
+<pre>a := 1, b := 2
+Swap(&amp;a, &amp;b)
+MsgBox a ',' b
+
+Swap(&amp;Left, &amp;Right)
+{
+    temp := Left
+    Left := Right
+    Right := temp
+}</pre>
+<p>In the example above, the use of <code>&amp;</code> requires the caller to pass a <a href="Concepts.htm#variable-references">VarRef</a>, which usually corresponds to one of the caller's variables. Each parameter becomes an alias for the variable represented by the VarRef. In other words, the parameter and the caller's variable both refer to the same contents in memory. This allows the Swap function to alter the caller's variables by moving <em>Left</em>'s contents into <em>Right</em> and vice versa.</p>
+<p>By contrast, if <em>ByRef</em> were not used in the example above, <em>Left</em> and <em>Right</em> would be copies of the caller's variables and thus the Swap function would have no external effect. However, the function could instead be changed to explicitly <a href="Variables.htm#deref">dereference</a> each VarRef. For example:</p>
+<pre>Swap(Left, Right)
+{
+    temp := %Left%
+    %Left% := %Right%
+    %Right% := temp
+}</pre>
+<p>Since <a href="lib/Return.htm">return</a> can send back only one value to a function's caller, VarRefs can be used to send back extra results. This is achieved by having the caller pass in a reference to a variable (usually empty) in which the function stores a value.</p>
+<p>When passing large strings to a function, <em>ByRef</em> enhances performance and conserves memory by avoiding the need to make a copy of the string. Similarly, using <em>ByRef</em> to send a long string back to the caller usually performs better than something like <code>Return HugeString</code>. However, what the function receives is not a reference to the string, but a reference to the <em>variable</em>. Future improvements might supersede the use of ByRef for these purposes.</p>
+<p>Known limitations:</p>
+<ul>
+  <li>It is not possible to construct a VarRef for a property of an object (such as <code>foo.bar</code>), <a href="lib/A_Clipboard.htm">A_Clipboard</a> or any other <a href="Variables.htm#BuiltIn">built-in variable</a>, so those cannot be passed <em>ByRef</em>.</li>
+  <li id="NoIsByRef">If the parameter is optional, it is not possible to determine whether the variable referenced by the parameter is a newly created local variable or one supplied by the caller. One alternative is to use a non-ByRef parameter, but pass it a <a href="Concepts.htm#variable-references">VarRef</a> anyway, and have the function <a href="Variables.htm#deref">explicitly dereference it</a> or pass it to another function's ByRef parameter (without using the <code>&amp;</code> operator).</li>
+</ul>
+
+<h2 id="optional">Optional Parameters</h2>
+<p>When defining a function, one or more of its parameters can be marked as optional.</p>
+<p>Append <code>:=</code> followed by a literal number, quoted/literal string such as "fox" or "", or an expression that should be evaluated each time the parameter needs to be initialized with its default value. For example, <code>X:=[]</code> would create a new Array each time.</p>
+<p>Append <code>?</code> or <code>:= unset</code> to define a parameter which is <a href="#unset">unset by default</a>.</p>
+<p>The following function has its Z parameter marked optional:</p>
+<pre>Add(X, Y, Z := 0) {
+    return X + Y + Z
+}</pre>
+<p>When the caller passes <strong>three</strong> parameters to the function above, Z's default value is ignored. But when the caller passes only <strong>two</strong> parameters, Z automatically receives the value 0.</p>
+<p id="missing">It is not possible to have optional parameters isolated in the middle of the parameter list. In other words, all parameters that lie to the right of the first optional parameter must also be marked optional. However, optional parameters may be omitted from the middle of the parameter list when calling the function, as shown below:</p>
+<pre>MyFunc(1,, 3)
+MyFunc(X, Y:=2, Z:=0) {  <em>; Note that Z must still be optional in this case.</em>
+    MsgBox X ", " Y ", " Z
+}</pre>
+<p id="OptionalByRef"><a href="#ByRef">ByRef parameters</a> also support default values; for example: <code>MyFunc(&amp;p1 := "") {</code>. Whenever the caller omits such a parameter, the function creates a local variable to contain the default value; in other words, the function behaves as though the symbol "&amp;" is absent.</p>
+
+<h3 id="unset">Unset Parameters</h3>
+<p>To mark a parameter as optional without supplying a default value, use the keyword <code>unset</code> or the <code>?</code> suffix. In that case, whenever the parameter is omitted, the corresponding variable will have no value. Use <a href="lib/IsSet.htm">IsSet</a> to determine whether the parameter has been given a value, as shown below:</p>
+<pre>
+MyFunc(p?) {  <em>; Equivalent to MyFunc(p := unset)</em>
+    if IsSet(p)
+        MsgBox "Caller passed " p
+    else
+        MsgBox "Caller did not pass anything"
+}
+
+MyFunc(42)
+MyFunc
+</pre>
+<p>Attempting to read the parameter's value when it has none is considered an error, the same as for any <a href="Concepts.htm#uninitialized-variables">uninitialized variable</a>. To pass an optional parameter through to another function even when the parameter has no value, use the <a href="Variables.htm#maybe">maybe operator (<em>var</em><strong>?</strong>)</a>. For example:</p>
+<pre>
+Greet(title?) {
+    MsgBox("Hello!", title?)
+}
+
+Greet "Greeting"  <em>; Title is "Greeting"</em>
+Greet             <em>; Title is A_ScriptName</em>
+</pre>
+
+<h2 id="return">Returning Values to Caller</h2>
+<p>As described in <a href="#intro">introduction</a>, a function may optionally <a href="lib/Return.htm">return</a> a value to its caller.</p>
+<pre>
+MsgBox returnTest()
+
+returnTest() {
+    return 123
+}
+</pre>
+<p>If you want to return extra results from a function, you may also use <a href="#ByRef">ByRef (&amp;)</a>:</p>
+<pre>
+returnByRef(&amp;A,&amp;B,&amp;C)
+MsgBox A "," B "," C
+
+returnByRef(&amp;val1, &amp;val2, val3)
+{
+    val1 := "A"
+    val2 := 100
+    %val3% := 1.1  <em>; % is used because &amp; was omitted.</em>
+    return
+}
+</pre>
+<p>Objects and Arrays can be used to return multiple values or even named values:</p>
+<pre>
+Test1 := returnArray1()
+MsgBox Test1[1] "," Test1[2]
+
+Test2 := returnArray2()
+MsgBox Test2[1] "," Test2[2]
+
+Test3 := returnObject()
+MsgBox Test3.id "," Test3.val
+
+returnArray1() {
+    Test := [123,"ABC"]
+    return Test
+}
+
+returnArray2() {
+    x := 456
+    y := "EFG"
+    return [x, y]
+}
+
+returnObject() {
+    Test := {id: 789, val: "HIJ"}
+    return Test
+}
+</pre>
+<h2 id="Variadic">Variadic Functions</h2>
+<p>When defining a function, write an asterisk after the final parameter to mark the function as variadic, allowing it to receive a variable number of parameters:</p>
+<pre>Join(sep, <b class="blue">params*</b>) {
+    for index,param in params
+        str .= param . sep
+    return SubStr(str, 1, -StrLen(sep))
+}
+MsgBox Join("`n", "one", "two", "three")</pre>
+<p>When a variadic function is called, surplus parameters can be accessed via an object which is stored in the function's final parameter. The first surplus parameter is at <code>params[1]</code>, the second at <code>params[2]</code> and so on. As it is an <a href="lib/Array.htm">array</a>, <code>params.<a href="lib/Array.htm#Length">Length</a></code> can be used to determine the number of parameters.</p>
+<p>Attempting to call a non-variadic function with more parameters than it accepts is considered an error. To permit a function to accept any number of parameters <em>without</em> creating an array to store the surplus parameters, write <code>*</code> as the final parameter (without a parameter name).</p>
+<p class="warning"><strong>Note:</strong> The "variadic" parameter can only appear at the end of the formal parameter list.</p>
+
+<h3 id="VariadicCall">Variadic Function Calls</h3>
+<p>While variadic functions can <i>accept</i> a variable number of parameters, an array of parameters can be passed to <i>any</i> function by applying the same syntax to a function-call:</p>
+<pre>substrings := ["one", "two", "three"]
+MsgBox Join("`n", <b class="blue">substrings*</b>)</pre>
+<p>Notes:</p>
+<ul>
+  <li>The object can be an <a href="lib/Array.htm">Array</a> or any other kind of enumerable object (any object with an <a href="Objects.htm#__Enum">__Enum</a> method) or an <a href="lib/Enumerator.htm">enumerator</a>. If the object is not an Array, __Enum is called with a count of 1 and the enumerator is called with only one parameter at a time.</li>
+  <li><a href="lib/Array.htm">Array</a> elements with no value (such as the first element in <code>[,2]</code>) are equivalent to omitting the parameter; that is, the parameter's default value is used if it is optional, otherwise an exception is thrown.</li>
+  <li>This syntax can also be used when calling methods or setting or retrieving properties of objects; for example, <code>Object.Property[Params*]</code>.</li>
+</ul>
+<p>Known limitations:</p>
+<ul>
+  <li>Only the right-most parameter can be expanded this way. For example, <code>MyFunc(x, y*)</code> is supported but <code>MyFunc(x*, y)</code> is not.</li>
+  <li>There must not be any non-whitespace characters between the asterisk (<code>*</code>) and the symbol which ends the parameter list.</li>
+  <li><a href="Language.htm#function-call-statements">Function call statements</a> cannot be variadic; that is, the parameter list must be enclosed in parentheses (or brackets for a property).</li>
+</ul>
+<h2 id="Locals">Local and Global Variables</h2>
+<h3 id="Local">Local Variables</h3>
+<p>Local variables are specific to a single function and are visible only inside that function. Consequently, a local variable may have the same name as a global variable but have separate contents. Separate functions may also safely use the same variable names.</p>
+<p>All local variables which are not <a href="#static">static</a> are automatically freed (made empty) when the function returns, with the exception of variables which are bound to a <a href="#closures">closure</a> or <a href="Concepts.htm#variable-references">VarRef</a> (such variables are freed at the same time as the closure or VarRef).</p>
+<p>Built-in variables such as <a href="lib/A_Clipboard.htm">A_Clipboard</a> and <a href="Variables.htm#TimeIdle">A_TimeIdle</a> are never local (they can be accessed from anywhere), and cannot be redeclared. (This does not apply to built-in classes such as <a href="lib/Object.htm">Object</a>; they are predefined as <a href="#Global">global</a> variables.)</p>
+<p id="AssumeLocal">Functions are <strong>assume-local</strong> by default. Variables accessed or created inside an assume-local function are local by default, with the following exceptions:</p>
+<ul>
+  <li><a href="#Global">Global</a> variables which are only read by the function, not assigned or used with the <a href="Variables.htm#ref">reference operator (&amp;)</a>.</li>
+  <li><a href="#nested">Nested functions</a> may refer to local and static variables created by an enclosing function.</li>
+</ul>
+<p>The default may also be overridden by declaring the variable using the <code>local</code> keyword, or by changing the mode of the function (as shown below).</p>
+
+<h3 id="Global">Global Variables</h3>
+<p id="AssignLocal">Any variable reference in an <a href="#AssumeLocal">assume-local</a> function may resolve to a global variable if it is only read. However, if a variable is used in an assignment or with the <a href="Variables.htm#ref">reference operator (&amp;)</a>, it is automatically local by default. This allows functions to read global variables or call global or built-in functions without declaring them inside the function, while protecting the script from unintended side-effects when the name of a local variable being assigned coincides with a global variable. For example:</p>
+<pre>LogToFile(TextToLog)
+{
+    <em>; LogFileName was previously given a value somewhere outside this function.
+    ; FileAppend is a predefined global variable containing a built-in function.</em>
+    FileAppend TextToLog "`n", LogFileName
+}</pre>
+<p>Otherwise, to refer to an existing global variable inside a function (or create a new one), declare the variable as global prior to using it. For example:</p>
+<pre>SetDataDir(Dir)
+{
+    global LogFileName
+    LogFileName := Dir . "\My.log"
+    global DataDir := Dir  <em>; Declaration combined with assignment, described <a href="#DeclareInit">below</a>.</em>
+}
+</pre>
+<p id="AssumeGlobal"><strong>Assume-global mode:</strong> If a function needs to access or create a large number of global variables, it can be defined to assume that all its variables are global (except its parameters) by making its first line the word "global". For example:</p>
+<pre>SetDefaults()
+{
+    global
+    MyGlobal := 33  <em>; Assigns 33 to a global variable, first creating the variable if necessary.</em>
+    local x, y:=0, z  <em>; Local variables must be declared in this mode, otherwise they would be assumed global.</em>
+}</pre>
+
+<h3 id="static">Static Variables</h3>
+<p>Static variables are always implicitly local, but differ from locals because their values are remembered between calls. For example:</p>
+<pre>LogToFile(TextToLog)
+{
+    static LoggedLines := 0
+    LoggedLines += 1  <em>; Maintain a tally locally (its value is remembered between calls).</em>
+    global LogFileName
+    FileAppend LoggedLines ": " TextToLog "`n", LogFileName
+}</pre>
+<p id="InitStatic">A static variable may be initialized on the same line as its declaration by following it with <code>:=</code> and any <a href="Variables.htm#Expressions">expression</a>. For example: <code>static X:=0, Y:="fox"</code>. Static declarations are evaluated the same as <a href="#Local">local</a> declarations, except that after a static initializer (or group of combined initializers) is successfully evaluated, it is effectively removed from the flow of control and will not execute a second time.</p>
+<p>Nested functions can be <a href="#static-functions">declared static</a> to prevent them from capturing non-static local variables of the outer function.</p>
+<p id="AssumeStatic"><strong>Assume-static mode:</strong> A function may be defined to assume that all its undeclared local variables are static (except its parameters) by making its first line the word "static". For example:</p>
+<pre>GetFromStaticArray(WhichItemNumber)
+{
+    static
+    static FirstCallToUs := true  <em>; Each static declaration's initializer still runs only once.</em>
+    if FirstCallToUs  <em>; Create a static array during the first call, but not on subsequent calls.</em>
+    {
+        FirstCallToUs := false
+        StaticArray := []
+        Loop 10
+            StaticArray.Push("Value #" . A_Index)
+    }
+    return StaticArray[WhichItemNumber]
+}</pre>
+<p>In assume-static mode, any variable that should not be static must be declared as local or global (with the same exceptions as for <a href="#AssumeLocal">assume-local mode</a>).</p>
+
+<h3 id="More_about_locals_and_globals">More About Locals and Globals</h3>
+<p>Multiple variables may be declared on the same line by separating them with commas as in these examples:</p>
+<pre>global LogFileName, MaxRetries := 5
+static TotalAttempts := 0, PrevResult</pre>
+<p id="DeclareInit">A variable may be initialized on the same line as its declaration by following it with an assignment. Unlike <a href="#InitStatic">static initializers</a>, the initializers of locals and globals execute every time the function is called. In other words, a line like <code>local x := 0</code> has the same effect as writing two separate lines: <code>local x</code> followed by <code>x := 0</code>. Any <a href="Variables.htm#AssignOp">assignment operator</a> can be used, but a compound assignment such as <code>global HitCount += 1</code> would require that the variable has previously been assigned a value.</p>
+<p>Because the words <em>local</em>, <em>global</em>, and <em>static</em> are processed immediately when the script launches, a variable cannot be conditionally declared by means of an <a href="lib/If.htm">IF statement</a>. In other words, a declaration inside an IF's or ELSE's <a href="lib/Block.htm">block</a> takes effect unconditionally for the entire function (but any initializers included in the declaration are still conditional). A dynamic declaration such as <code>global MyArray%i%</code> is not possible, since all non-dynamic references to variables such as <code>MyArray1</code> or <code>MyArray99</code> would have already been resolved to addresses.</p>
+
+<h2 id="DynCall">Dynamically Calling a Function</h2>
+<p>Although a function call expression usually begins with a literal function name, the target of the call can be any expression which produces a <a href="misc/Functor.htm">function object</a>. In the expression <code>GetKeyState("Shift")</code>, <em>GetKeyState</em> is actually a variable reference, although it usually refers to a read-only variable containing a built-in function.</p>
+<p>A function call is said to be <em>dynamic</em> if the target of the call is determined while the script is running, instead of before the script starts. The same syntax is used as for normal function calls; the only apparent difference is that certain error-checking is performed at load time for non-dynamic calls but only at run time for dynamic calls.</p>
+<p>For example, <code>MyFunc()</code> would call the <a href="misc/Functor.htm">function object</a> contained by <em>MyFunc</em>, which could be either the actual name of a function, or just a variable which has been assigned a function.</p>
+<p>Other expressions can be used as the target of a function call, including <a href="Variables.htm#deref">double-derefs</a>. For example, <code>MyArray[1]()</code> would call the function contained by the first element of MyArray, while <code>%MyVar%()</code> would call the function contained by the <em>variable</em> whose <em>name</em> is contained by MyVar. In other words, the expression preceding the parameter list is first evaluated to get a <a href="misc/Functor.htm">function object</a>, then that object is called.</p>
+<p>If the target value cannot be called due to one of the reasons below, an <a href="lib/Error.htm">Error</a> is thrown:</p>
+<ul>
+  <li>If the target value is not of a type that can be called, a <a href="lib/Error.htm#MethodError">MethodError</a> is thrown. Any value with a Call method can be called, so <code>HasMethod(value, "Call")</code> or <code>HasMethod(value)</code> can be used to avoid this error.</li>
+  <li>Passing too few or too many parameters, which can often be avoided by checking the function's <a href="lib/Func.htm#MinParams">MinParams</a>, <a href="lib/Func.htm#MaxParams">MaxParams</a> and <a href="lib/Func.htm#IsVariadic">IsVariadic</a> properties, either directly or by calling <code>HasMethod(value,, N)</code>, where <em>N</em> is the number of parameters that will be passed to the function.</li>
+  <li>Passing something other than a <a href="Concepts.htm#variable-references">variable reference (VarRef)</a> to a <a href="#ByRef">ByRef</a> or OutputVar parameter, which could be avoided through the use of the <a href="lib/Func.htm#IsByRef">IsByRef method</a>.</li>
+</ul>
+<p>The caller of a function should generally know what each parameter means and how many there are before calling the function. However, for dynamic calls, the function is often written to suit the function call, and in such cases failure might be caused by a mistake in the function definition rather than incorrect parameter values.</p>
+
+<h2 id="ShortCircuit">Short-circuit Boolean Evaluation</h2>
+<p>When <em>AND, OR</em>, and the <a href="Variables.htm#ternary">ternary operator</a> are used within an <a href="Variables.htm#Expressions">expression</a>, they short-circuit to enhance performance (regardless of whether any function calls are present). Short-circuiting operates by refusing to evaluate parts of an expression that cannot possibly affect its final result. To illustrate the concept, consider this example:</p>
+<pre>if (ColorName != "" AND not FindColor(ColorName))
+    MsgBox ColorName " could not be found."</pre>
+<p>In the example above, the FindColor() function never gets called if the <em>ColorName</em> variable is empty. This is because the left side of the <em>AND</em> would be <em>false</em>, and thus its right side would be incapable of making the final outcome <em>true</em>.</p>
+<p>Because of this behavior, it's important to realize that any side-effects produced by a function (such as altering a global variable's contents) might never occur if that function is called on the right side of an <em>AND</em> or <em>OR</em>.</p>
+<p>It should also be noted that short-circuit evaluation cascades into nested <em>AND</em>s and <em>OR</em>s. For example, in the following expression, only the leftmost comparison occurs whenever <em>ColorName</em> is blank. This is because the left side would then be enough to determine the final answer with certainty:</p>
+<pre>if (ColorName = "" OR FindColor(ColorName, Region1) OR FindColor(ColorName, Region2))
+    break   <em>; Nothing to search for, or a match was found.</em></pre>
+<p>As shown by the examples above, any expensive (time-consuming) functions should generally be called on the right side of an <em>AND</em> or <em>OR</em> to enhance performance. This technique can also be used to prevent a function from being called when one of its parameters would be passed a value it considers inappropriate, such as an empty string.</p>
+<p>The <a href="Variables.htm#ternary">ternary conditional operator (?:)</a> also short-circuits by not evaluating the losing branch.</p>
+
+<h2 id="nested">Nested Functions</h2>
+<p>A <em>nested</em> function is one defined inside another function. For example:</p>
+<pre>
+outer(x) {
+    inner(y) {
+        MsgBox(y, x)
+    }
+    inner("one")
+    inner("two")
+}
+outer("title")
+</pre>
+<p>A nested function is not accessible by name outside of the function which immediately encloses it, but is accessible anywhere inside that function, including inside other nested functions (with exceptions).</p>
+<p>By default, a nested function may access any <a href="#static">static</a> variable of any function which encloses it, even dynamically. However, a non-dynamic assignment inside a nested function typically resolves to a local variable if the outer function has neither a declaration nor a non-dynamic assignment for that variable.</p>
+<p id="capture-var">By default, a nested function automatically "captures" a non-static local variable of an outer function when the following requirements are met:</p>
+<ol>
+  <li>The outer function must refer to the variable in at least one of the following ways:
+    <ol type="a">
+      <li>By declaring it with <code>local</code>, or as a parameter or nested function.</li>
+      <li>As the non-dynamic target of an assignment or the <a href="Variables.htm#ref">reference operator (&amp;)</a>.</li>
+    </ol>
+  </li>
+  <li>The inner function (or a function nested inside it) must refer to the variable non-dynamically.</li>
+</ol>
+<p>A nested function which has captured variables is known as a <a href="#closures">closure</a>.</p>
+<p>Non-static local variables of the outer function cannot be <a href="Language.htm#dynamic-variables">accessed dynamically</a> unless they have been captured.</p>
+<p>Explicit declarations always take precedence over local variables of the function which encloses them. For example, <code>local x</code> declares a variable local to the current function, independent of any <code>x</code> in the outer function. <a href="#Global">Global</a> declarations in the outer function also affect nested functions, except where overridden by an explicit declaration.</p>
+<p>If a function is declared <a href="#AssumeGlobal">assume-global</a>, any local or static variables created <em>outside</em> that function are not directly accessible to the function itself or any of its nested functions. By contrast, a nested function which is assume-static can still refer to variables from the outer function, unless the function itself is <a href="#static-functions">declared static</a>.</p>
+<p>Functions are <a href="#AssumeLocal">assume-local</a> by default, and this is true even for nested functions, even those inside an <a href="#AssumeStatic">assume-static</a> function. However, if the outer function is <a href="#AssumeGlobal">assume-global</a>, nested functions behave as though assume-global by default, except that they can refer to local and static variables of the outer function.</p>
+<p>Each function definition creates a read-only variable containing the function itself; that is, a <a href="lib/Func.htm">Func</a> or <a href="#closures">Closure</a> object. See below for examples of how this might be used.</p>
+
+<h3 id="static-functions">Static Functions</h3>
+<p>Any nested function which does not capture variables is automatically static; that is, every call to the outer function references the same <a href="lib/Func.htm">Func</a>. The keyword <code>static</code> can be used to explicitly declare a nested function as static, in which case any non-static local variables of the outer function are ignored. For example:</p>
+<pre>outer() {
+    x := "outer value"
+    static inner() {
+        x := "inner value"  <em>; Creates a variable local to inner</em>
+        MsgBox type(inner)  <em>; Displays "Func"</em>
+    }
+    inner()
+    MsgBox x  <em>; Displays "outer value"</em>
+}
+outer()</pre>
+<p>A static function cannot refer to other nested functions outside its own body unless they are explicitly declared static. Note that even if the function is <a href="#AssumeStatic">assume-static</a>, a non-static nested function may become a closure if it references a function parameter.</p>
+
+<h3 id="closures">Closures</h3>
+<p>A <em>closure</em> is a nested function bound to a set of <em id="free-vars">free variables</em>. Free variables are local variables of the outer function which are also used by nested functions. Closures allow one or more nested functions to share variables with the outer function even after the outer function returns.</p>
+<p>To create a closure, simply define a nested function which refers to variables of the outer function. For example:</p>
+<pre>
+make_greeter(f)
+{
+    greet(subject)  <em>; This will be a closure due to f.</em>
+    {
+        MsgBox Format(f, subject)
+    }
+    return greet  <em>; Return the closure.</em>
+}
+
+g := make_greeter("Hello, {}!")
+g(A_UserName)
+g("World")
+</pre>
+<p>Closures may also be used with built-in functions, such as <a href="lib/SetTimer.htm">SetTimer</a> or <a href="lib/Hotkey.htm">Hotkey</a>. For example:</p>
+<pre>
+app_hotkey(keyname, app_title, app_path)
+{
+    activate(keyname)  <em>; This will be a closure due to app_title and app_path.</em>
+    {
+        if WinExist(app_title)
+            WinActivate
+        else
+            Run app_path
+    }
+    Hotkey keyname, activate
+}
+<em>; Win+N activates or launches Notepad.</em>
+app_hotkey "#n", "ahk_class Notepad", "notepad.exe"
+<em>; Win+W activates or launches WordPad.</em>
+app_hotkey "#w", "ahk_class WordPadClass", "wordpad.exe"
+</pre>
+<p>A nested function is automatically a closure if it captures any non-static local variables of the outer function. The variable corresponding to the closure itself (such as <code>activate</code>) is also a non-static local variable, so any nested functions which refer to a closure are automatically closures.</p>
+<p>Each call to the outer function creates new closures, distinct from any previous calls.</p>
+<p id="circular-closure">It is best not to store a reference to a closure in any of the outer function's free variables, since that creates a <a href="Objects.htm#refs-problems">reference cycle</a> which must be broken (such as by clearing the variable) before the closure can be freed. However, a closure may safely refer to itself and other closures by their original variables without creating a problematic reference cycle. For example:</p>
+<pre>
+timertest() {
+    x := "tock!"
+    tick() {
+        MsgBox x           <em>; x causes this to become a closure.</em>
+        SetTimer tick, 0   <em>; Using the closure's original var is safe.</em>
+        ; SetTimer t, 0    <em>; Capturing t would create a reference cycle.</em>
+    }
+    t := tick              <em>; This is okay because t isn't captured above.</em>
+    SetTimer t, 1000
+}
+timertest()
+</pre>
+<p>Each time the outer function is called, all of its <a href="#free-vars">free variables</a> are allocated as a set. This one set of free variables is linked to all of the function's closures. If the closure's original variable (<code>tick</code> in the example above) is captured by another closure within the same function, its lifetime is bound to the set. The set is deleted only when no references exist to any of its closures, except those in the original variables. This allows closures to refer to each other without causing a <a href="Objects.htm#refs-problems">problematic reference cycle</a>.</p>
+<p>Closures which are not captured by other closures can be deleted before the set. All of the free variables within the set, including captured closures, cannot be deleted while such a closure exists.</p>
+
+<h2 id="remarks">Return, Exit, and General Remarks</h2>
+<p>If the flow of execution within a function reaches the function's closing brace prior to encountering a <a href="lib/Return.htm">Return</a>, the function ends and returns a blank value (empty string) to its caller. A blank value is also returned whenever the function explicitly omits <a href="lib/Return.htm">Return</a>'s parameter.</p>
+<p>When a function uses <a href="lib/Exit.htm">Exit</a> to terminate the <a href="misc/Threads.htm">current thread</a>, its caller does not receive a return value at all. For example, the statement <code>Var := Add(2, 3)</code> would leave <code>Var</code> unchanged if <code>Add()</code> exits. The same thing happens if the function is exited because of <a href="lib/Throw.htm">Throw</a> or a runtime error (such as <a href="lib/Run.htm">running</a> a nonexistent file).</p>
+<p>To call a function with one or more blank values (empty strings), use an empty pair of quotes as in this example: <code>FindColor(ColorName, "")</code>.</p>
+<p>Since calling a function does not start a new <a href="misc/Threads.htm">thread</a>, any changes made by a function to settings such as <a href="lib/SendMode.htm">SendMode</a> and <a href="lib/SetTitleMatchMode.htm">SetTitleMatchMode</a> will go into effect for its caller too.</p>
+<p>When used inside a function, <a href="lib/ListVars.htm">ListVars</a> displays a function's <a href="#Local">local variables</a> along with their contents. This can help <a href="Scripts.htm#debug">debug a script</a>.</p>
+<h2 id="Style_and_Naming_Conventions">Style and Naming Conventions</h2>
+<p>You might find that complex functions are more readable and maintainable if their special variables are given a distinct prefix. For example, naming each parameter in a function's parameter list with a leading "p" or "p_" makes their special nature easy to discern at a glance, especially when a function has several dozen <a href="#Local">local variables</a> competing for your attention. Similarly, the prefix "r" or "r_" could be used for <a href="#ByRef">ByRef parameters</a>, and "s" or "s_" could be used for <a href="#static">static variables</a>.</p>
+<p>The <a href="lib/Block.htm#otb">One True Brace (OTB) style</a> may optionally be used to define functions. For example:</p>
+<pre>Add(x, y) {
+    return x + y
+}</pre>
+
+<h2 id="include">Using #Include to Share Functions Among Multiple Scripts</h2>
+<p>The <a href="lib/_Include.htm">#Include</a> directive may be used to load functions from an external file.</p>
+
+<h2 id="BuiltIn">Built-in Functions</h2>
+<p>A built-in function is overridden if the script defines its own function of the same name. For example, a script could have its own custom WinExist function that is called instead of the standard one. However, the script would then have no way to call the original function.</p>
+<p>External functions that reside in DLL files may be called with <a href="lib/DllCall.htm">DllCall</a>.</p>
+<p>To get a list of all built-in functions, see <a href="lib/index.htm">Alphabetical Function Index</a>.</p>
+</body>
+</html>

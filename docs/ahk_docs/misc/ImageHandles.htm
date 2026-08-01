@@ -1,0 +1,67 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Image Handles - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="Image handles can be used in place of image filenames to use a bitmap or icon located in the memory." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+
+<body>
+<h1>Image Handles</h1>
+
+<p>To use an icon or bitmap handle in place of an image filename, use the following syntax:</p>
+<pre class="Syntax">HBITMAP:<i>BitmapHandle</i>
+HICON:<i>IconHandle</i></pre>
+<p>Replace <em>BitmapHandle</em> or <em>IconHandle</em> with the actual handle value. For example, <code>"hicon:" handle</code>, where <em>handle</em> is a variable containing an icon handle.</p>
+<p>The following things support this syntax:</p>
+<ul>
+  <li><a href="../lib/GuiControls.htm#Picture">Gui.AddPicture</a> (and <a href="../lib/GuiControl.htm#Value">GuiControl.Value</a> when setting a Picture control's content).</li>
+  <li><a href="../lib/ListView.htm#IL_Add">IL_Add</a></li>
+  <li><a href="../lib/LoadPicture.htm">LoadPicture</a></li>
+  <li><a href="../lib/GuiControls.htm#SB_SetIcon">SB.SetIcon</a></li>
+  <li><a href="../lib/ImageSearch.htm">ImageSearch</a></li>
+  <li><a href="../lib/TraySetIcon.htm">TraySetIcon</a> or <a href="../lib/Menu.htm#SetIcon">Menu.SetIcon</a></li>
+</ul>
+<p>A bitmap or icon handle is a numeric value which identifies a bitmap or icon in memory. The majority of scripts never need to deal with handles, as in most cases AutoHotkey takes care of loading the image from file and freeing it when it is no longer needed. The syntax shown above is intended for use when the script obtains an icon or bitmap handle from another source, such as by sending the WM_GETICON message to a window. It can also be used in combination with <a href="../lib/LoadPicture.htm">LoadPicture</a> to avoid loading an image from file multiple times.</p>
+<p>By default, AutoHotkey treats the handle as though it loaded the image from file - for example, a bitmap used on a Picture control is deleted when the GUI is destroyed, and an image will generally be deleted immediately if it needs to be resized. To avoid this, put an asterisk between the colon and handle. For example: <code>"hbitmap:*" handle</code>. With the exception of ImageSearch, this forces the function to take a copy of the image.</p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExHICON">
+<p><a class="ex_number" href="#ExHICON"></a> Shows a menu of the first <em>n</em> files matching a pattern, and their icons.</p>
+<pre>pattern := A_ScriptDir "\*"
+n := 15
+
+<em>; Create a menu.</em>
+Fmenu := Menu()
+
+<em>; Allocate memory for a SHFILEINFOW struct.</em>
+fileinfo := Buffer(fisize := A_PtrSize + 688)
+
+Loop Files, pattern, "FD"
+{
+    <em>; Add a menu item for each file.</em>
+    Fmenu.Add(A_LoopFileName, (*) =&gt; "") <em>; Do nothing.</em>
+    
+    <em>; Get the file's icon.</em>
+    if DllCall("shell32\SHGetFileInfoW", "WStr", A_LoopFileFullPath
+        , "UInt", 0, "Ptr", fileinfo, "UInt", fisize, "UInt", 0x100)
+    {
+        hicon := NumGet(fileinfo, 0, "Ptr")
+        <em>; Set the menu item's icon.</em>
+        Fmenu.SetIcon(A_Index "&amp;", "HICON:" hicon)
+        <em>; Because we used ":" and not ":*", the icon will be automatically
+        ; freed when the program exits or if the menu or item is deleted.</em>
+    }
+}
+until A_Index = n
+Fmenu.Show()
+</pre>
+</div>
+<p>See also <a href="../lib/LoadPicture.htm#ExSlideShow">LoadPicture example #1</a>.</p>
+
+</body>
+</html>

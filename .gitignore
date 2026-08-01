@@ -1,13 +1,8 @@
 *.exe
 nul
 backup/
-ahk_docs/
 other/
 .worktrees/
-.claude/
-CLAUDE.md
 .superpowers/
 docs/superpowers
-win_docs/
-RELEASE_TEMPLATE.md
 logs/

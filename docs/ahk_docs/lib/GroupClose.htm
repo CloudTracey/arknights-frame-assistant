@@ -1,0 +1,52 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>GroupClose - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The GroupClose function closes the active window if it was just activated by the GroupActivate or GroupDeactivate function." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>GroupClose</h1>
+
+<p>Closes the active window if it was just activated by <a href="GroupActivate.htm">GroupActivate</a> or <a href="GroupDeactivate.htm">GroupDeactivate</a>. It then activates the next window in the series. It can also close all windows in a group.</p>
+
+<pre class="Syntax"><span class="func">GroupClose</span> GroupName <span class="optional">, Mode</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>GroupName</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>The name of the group as originally defined by <a href="GroupAdd.htm">GroupAdd</a>.</p>
+  </dd>
+
+  <dt>Mode</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, the function closes the active window and activates the oldest window in the series. Otherwise, specify one of the following letters:</p>
+    <p><strong>R:</strong> The newest window (the one most recently active) is activated, but only if no members of the group are active when the function is given. "R" is useful in cases where you temporarily switch to working on an unrelated task. When you return to the group via <a href="GroupActivate.htm">GroupActivate</a>, <a href="GroupDeactivate.htm">GroupDeactivate</a>, or GroupClose, the  window you were most recently working with is activated rather than the oldest window.</p>
+    <p><strong>A:</strong> All members of the group will be closed. This is the same effect as <code><a href="WinClose.htm">WinClose</a> "ahk_group GroupName"</code>.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>When the <em>Mode</em> parameter is not "A", the behavior of this function is determined by whether the previous action on <em>GroupName</em> was <a href="GroupActivate.htm">GroupActivate</a> or <a href="GroupDeactivate.htm">GroupDeactivate</a>.  If it was <a href="GroupDeactivate.htm">GroupDeactivate</a>, this function will close the active window only if it is <u>not</u> a member of the group (otherwise it will do nothing). If it was <a href="GroupActivate.htm">GroupActivate</a> or nothing, this function will close the active window only if it <u>is</u> a member of the group (otherwise it will do nothing). This behavior allows GroupClose to be assigned to a hotkey as a companion to <em>GroupName</em>'s <a href="GroupActivate.htm">GroupActivate</a> or <a href="GroupDeactivate.htm">GroupDeactivate</a> hotkey.</p>
+<p>When the active window closes, the system typically activates the next most recently active window. If the newly active window is a match for the same window specification as the window that was just closed, it is left active even though the default <em>Mode</em> would normally dictate that the <u>oldest</u> window should be activated next. If the newly active window is a match for <u>any</u> of the group's window specifications, it is left active.</p>
+<p>See <a href="GroupAdd.htm">GroupAdd</a> for more details about window groups.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="GroupAdd.htm">GroupAdd</a>, <a href="GroupActivate.htm">GroupActivate</a>, <a href="GroupDeactivate.htm">GroupDeactivate</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Closes the active window activated by <a href="GroupActivate.htm">GroupActivate</a> or <a href="GroupDeactivate.htm">GroupDeactivate</a> and activates the newest window (the one most recently active) in a window group.</p>
+<pre>GroupClose "MyGroup", "R"</pre>
+</div>
+
+</body>
+</html>
