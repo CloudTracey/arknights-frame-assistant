@@ -1,0 +1,117 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Switch - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Switch statement compares a value with multiple cases and executes the statements of the first match." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Switch</h1>
+
+<p>Compares a value with multiple cases and executes the <a href="../Concepts.htm#statement">statements</a> of the first match.</p>
+
+<pre class="Syntax"><span class="func">Switch</span> <span class="optional">SwitchValue, CaseSense</span>
+{
+<span class="func">Case</span> CaseValue1:
+    <i>Statements1</i>
+<span class="func">Case</span> CaseValue2a, CaseValue2b:
+    <i>Statements2</i>
+<span class="func">Default</span>:
+    <i>Statements3</i>
+}</pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>SwitchValue</dt>
+  <dd>
+    <p>If this and <em>CaseSense</em> are omitted, the first case which evaluates to <a href="../Concepts.htm#boolean">true</a> (non-zero and non-empty) is executed. Otherwise, <em>SwitchValue</em> is evaluated once and compared to each case value until a match is found, and then that case is executed.</p>
+    <p>If there is no matching case and <em>Default</em> is present, it is executed.</p>
+  </dd>
+
+  <dt>CaseSense</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a> or <a href="../Concepts.htm#boolean">Integer (boolean)</a></p>
+    <p>If omitted, it defaults to <em>On</em>. Otherwise, specify one of the following values, which forces all values to be compared as strings:</p>
+    <p><strong>On</strong> or <strong>1</strong> (true): Each comparison is case-sensitive.</p>
+    <p><strong>Off</strong> or <strong>0</strong> (false): Each comparison is not case-sensitive, i.e. the letters A-Z are considered identical to their lowercase counterparts.</p>
+    <p id="Locale"><strong>Locale:</strong> Each comparison is not case-sensitive according to the rules of the current user's locale. For example, most English and Western European locales treat not only the letters A-Z as identical to their lowercase counterparts, but also non-ASCII letters like &Auml; and &Uuml; as identical to theirs. <em>Locale</em> is 1 to 8 times slower than <em>Off</em> depending on the nature of the strings being compared.</p>
+  </dd>
+  <dt>CaseValueN</dt>
+  <dd>
+    <p>The value to check or compare depending on whether <em>SwitchValue</em> is present.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>As with the <code>=</code> and <code>==</code> operators, when <em>CaseSense</em> is omitted, numeric comparison is performed if <em>SwitchValue</em> and the case value are both pure numbers, or if one is a pure number and the other is a numeric string. Each case value is considered separately and does not affect the type of comparison used for other case values.</p>
+<p>If the <em>CaseSense</em> parameter is present, all values are compared as strings, not as numbers, and a <a href="Error.htm#TypeError">TypeError</a> is thrown if <em>SwitchValue</em> or a <em>CaseValue</em> evaluates to an object.</p>
+<p>If the <em>CaseSense</em> parameter is omitted, string comparisons are case-sensitive by default.</p>
+<p>Each case may list up to 20 values. Each value must be an <a href="../Language.htm#expressions">expression</a>, but can be a simple one such as a literal number, quoted string or variable. <em>Case</em> and <em>Default</em> must be terminated with a colon.</p>
+<p>The first statement of each case may be below <em>Case</em> or on the same line, following the colon. Each case implicitly ends at the next <em>Case</em>/<em>Default</em> or the closing brace. Unlike the switch statement found in some other languages, there is no implicit fall-through and <a href="Break.htm">Break</a> is not used (except to break out of an enclosing loop).</p>
+<p>As all cases are enclosed in the same block, a label defined in one case can be the target of <a href="Goto.htm">Goto</a> from another case. However, if a label is placed immediately above <em>Case</em> or <em>Default</em>, it targets the end of the previous case, not the beginning of the next one.</p>
+<p><em>Default</em> is not required to be listed last.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="If.htm">If</a>, <a href="Else.htm">Else</a>, <a href="Block.htm">Blocks</a></p>
+
+<h2 id="examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Compares a number with multiple cases and shows the message box of the first match.</p>
+<pre>switch 2
+{
+case 1: MsgBox "no match"
+case 2: MsgBox "match"
+case 3: MsgBox "no match"
+}</pre>
+</div>
+
+<div class="ex" id="ExBasicOmitted">
+<p><a class="ex_number" href="#ExBasicOmitted"></a> The <em>SwitchValue</em> parameter can be omitted to execute the first case which evaluates to true.</p>
+<pre>str := "The quick brown fox jumps over the lazy dog"
+switch
+{
+case InStr(str, "blue"): MsgBox "false"
+case InStr(str, "brown"): MsgBox "true"
+case InStr(str, "green"): MsgBox "false"
+}</pre>
+</div>
+
+<div class="ex" id="ExInput">
+<p><a class="ex_number" href="#ExInput"></a> To test this example, type <kbd>[</kbd> followed by one of the abbreviations listed below, any other 5 characters, or Enter/Esc/Tab/<kbd>.</kbd>; or wait for 4 seconds.</p>
+<pre>~[::
+{
+    ih := InputHook("V T5 L4 C", "{enter}.{esc}{tab}", "btw,otoh,fl,ahk,ca")
+    ih.Start()
+    ih.Wait()
+    switch ih.EndReason
+    {
+    case "Max":
+        MsgBox 'You entered "' ih.Input '", which is the maximum length of text'
+    case "Timeout":
+        MsgBox 'You entered "' ih.Input '" at which time the input timed out'
+    case "EndKey":
+        MsgBox 'You entered "' ih.Input '" and terminated it with ' ih.EndKey
+    default:  <em>; Match</em>
+        switch ih.Input
+        {
+        case "btw":   Send "{backspace 3}by the way"
+        case "otoh":  Send "{backspace 4}on the other hand"
+        case "fl":    Send "{backspace 2}Florida"
+        case "ca":    Send "{backspace 2}California"
+        case "ahk":
+            Send "{backspace 3}"
+            Run "https://www.autohotkey.com"
+        }
+    }
+}</pre>
+</div>
+
+</body>
+</html>

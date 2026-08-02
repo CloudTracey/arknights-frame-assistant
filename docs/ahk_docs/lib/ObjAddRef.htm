@@ -1,0 +1,41 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>ObjAddRef / ObjRelease - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The ObjAddRef and ObjRelease functions increment or decrement an object's reference count." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+
+<h1>ObjAddRef / ObjRelease</h1>
+
+<p>Increments or decrements an object's <a href="../Objects.htm#Reference_Counting">reference count</a>.</p>
+
+<pre class="Syntax">NewRefCount := <span class="func">ObjAddRef</span>(Ptr)
+NewRefCount := <span class="func">ObjRelease</span>(Ptr)</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Ptr</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>An unmanaged object pointer or COM interface pointer.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+<p>These functions return the new reference count. This value should be used <b>only</b> for debugging purposes.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="../Objects.htm#Reference_Counting">Reference Counting</a></p>
+<p>Although the following articles discuss reference counting as it applies to COM, they cover some important concepts and rules which generally also apply to AutoHotkey objects: <a href="https://learn.microsoft.com/windows/win32/api/unknwn/nf-unknwn-iunknown-addref">IUnknown::AddRef</a>, <a href="https://learn.microsoft.com/windows/win32/api/unknwn/nf-unknwn-iunknown-release">IUnknown::Release</a>, <a href="https://learn.microsoft.com/windows/win32/com/rules-for-managing-reference-counts">Reference Counting Rules</a>.</p>
+
+</body>
+</html>

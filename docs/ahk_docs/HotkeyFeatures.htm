@@ -1,0 +1,101 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Advanced Hotkey Features | AutoHotkey v2</title>
+<meta name="description" content="Learn advanced hotkey features such as using any keys as modifiers or automating game actions on the screen." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="static/theme.css" rel="stylesheet" type="text/css" />
+<link href="static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="static/content.js" type="text/javascript"></script>
+</head>
+
+<body>
+<h1>Advanced Hotkey Features</h1>
+
+
+<h2 id="toc">Table of Contents</h2>
+<ul>
+  <li><a href="#general">General</a>
+    <ul>
+      <li><a href="#easy-to-reach">Remap easy to reach but rarely used keys</a></li>
+      <li><a href="#keys-as-modifiers">Use any keys as modifiers</a></li>
+      <li><a href="#AltTab">Make the mouse wheel perform alt-tabbing</a></li>
+      <li><a href="#keyboard-to-mouse">Make a keyboard key become a mouse button</a></li>
+      <li><a href="#context-sensitive">Make your hotkeys context-sensitive</a></li>
+      <li><a href="#hotstrings">Define abbreviations that expand as you type them</a></li>
+    </ul>
+  </li>
+  <li><a href="#gaming">Gaming</a>
+    <ul>
+      <li><a href="#wear-and-tear">Reduce wear and tear on your fingers</a></li>
+      <li><a href="#mouse-hotkeys">Create mouse hotkeys</a></li>
+      <li><a href="#pass-through">Create "pass-through" hotkeys</a></li>
+      <li><a href="#game-actions">Automate game actions on the screen</a></li>
+      <li><a href="#keyboard-hook">Use the keyboard hook</a></li>
+    </ul>
+  </li>
+  <li><a href="#related">Related Topics</a></li>
+</ul>
+
+<h2 id="general">General</h2>
+
+<h3 id="easy-to-reach">Remap easy to reach but rarely used keys</h3>
+<p>Some of the easiest keys to reach on the keyboard are also the least frequently used. Make these keys do something useful! For example, if you rarely use the right <kbd>Alt</kbd>, make it perform the action you do most often:</p>
+<pre>RAlt::MsgBox "You pressed the right ALT key."</pre>
+<p>You can even do the above without losing the native function of the right <kbd>Alt</kbd> by assigning the right <kbd>Alt</kbd> to be a "prefix" for at least one other hotkey. In the below example, the right <kbd>Alt</kbd> has become a prefix, which automatically allows it to modify <strong>all</strong> other keys as it normally would. But if you press and release the right <kbd>Alt</kbd> without having used it to modify another key, its hotkey action (above) will take effect immediately:</p>
+<pre>RAlt &amp; j::AltTab</pre>
+
+<h3 id="keys-as-modifiers">Use any keys as modifiers</h3>
+<p>Don't be limited to using only <kbd>Ctrl</kbd>, <kbd>Alt</kbd>, <kbd>Shift</kbd>, and <kbd>Win</kbd> as modifiers; you can combine <strong>any</strong> two keys or mouse buttons to form a custom hotkey. For example: Hold down Numpad0 and press Numpad1 to launch a hotkey (<code>Numpad0 &amp; Numpad1::</code>); hold down <kbd>CapsLock</kbd> and press another key, or click a mouse button (<code>CapsLock &amp; RButton::</code>). In this case, <kbd>CapsLock</kbd>'s state (on or off) is not changed when it is used to launch the hotkey. For details, see <a href="Hotkeys.htm#combo">custom combinations of keys</a>.</p>
+
+<h3 id="AltTab">Make the mouse wheel perform alt-tabbing</h3>
+<p>Convert the mouse wheel (or any other keys of your choice) into a complete substitute for Alt-Tab. Click the wheel to show or hide the menu, and turn it to navigate through the menu. The wheel will still function normally whenever the Alt-Tab menu isn't visible. Syntax:</p>
+<pre>MButton::AltTabMenu
+WheelDown::AltTab
+WheelUp::ShiftAltTab</pre>
+
+<h3 id="keyboard-to-mouse">Make a keyboard key become a mouse button</h3>
+<p>Make a keyboard key <strong>become</strong> a mouse button, or have an action repeated continuously while you're holding down a key or mouse button. See the <a href="misc/Remap.htm#RemapMouse">remapping page</a> for examples.</p>
+
+<h3 id="context-sensitive">Make your hotkeys context-sensitive</h3>
+<p>Have your easiest-to-reach hotkeys perform an action appropriate to the type of window you're working with. In the following example, the right <kbd>Ctrl</kbd> performs a different action depending on whether Notepad or Calculator is the active window:</p>
+<pre>#HotIf WinActive("ahk_class Notepad")
+RControl::Send "^s"  <em>; Save the current file in Notepad.</em>
+
+#HotIf WinActive("Calculator")
+RControl::Send "^c!{tab}^v"  <em>; Copy the Calculator's result into the previously active window.</em></pre>
+<p>See <a href="lib/_HotIf.htm">#HotIf</a> for details.</p>
+
+<h3 id="hotstrings">Define abbreviations that expand as you type them</h3>
+<p>Also known as <a href="Hotstrings.htm">hotstrings</a>. No special training or scripting experience is needed.  For example, a script containing the following lines would expand ceo, cfo, and btw wherever you type them:</p>
+<pre>::ceo::Chief Executive Officer
+::cfo::Chief Financial Officer
+::btw::by the way</pre>
+
+<h2 id="gaming">Gaming</h2>
+
+<h3 id="wear-and-tear">Reduce wear and tear on your fingers</h3>
+<p>Reduce wear and tear on your fingers by using virtually <a href="KeyList.htm">any key</a> as a hotkey, including single letters, arrow keys, Numpad keys, and even the modifier keys themselves (Ctrl, Alt, Win, and Shift).</p>
+
+<h3 id="mouse-hotkeys">Create mouse hotkeys</h3>
+<p>Create mouse hotkeys, including the mouse wheel button (MButton) and the turning of the wheel up/down or left/right (WheelUp, WheelDown, WheelLeft, and WheelRight). You can also combine a keyboard key with a mouse button. For example, control-right-button would be expressed as <code>^RButton::</code>.</p>
+
+<h3 id="pass-through">Create "pass-through" hotkeys</h3>
+<p>For example, the left mouse button can trigger a hotkey action even while the click itself is being sent  into the game normally (syntax: <code>~LButton::</code>).</p>
+
+<h3 id="game-actions">Automate game actions on the screen</h3>
+<p>Use functions such as <a href="lib/PixelSearch.htm">PixelSearch</a>, <a href="lib/PixelGetColor.htm">PixelGetColor</a>, and <a href="lib/ImageSearch.htm">ImageSearch</a> to automate game actions.</p>
+
+<h3 id="keyboard-hook">Use the keyboard hook</h3>
+<p>Have the option of using the <a href="lib/_UseHook.htm">keyboard hook</a> to implement hotkeys, which might be more responsive than other hotkey methods while the CPU is under load in a game. The hook might also be able to override any restrictions a game may have about which keys can be "mapped" to game actions.</p>
+
+<h2 id="related">Related Topics</h2>
+<ul>
+  <li><a href="Hotkeys.htm">Hotkeys</a></li>
+  <li><a href="Hotstrings.htm">Hotstrings</a></li>
+  <li><a href="misc/Remap.htm">Remapping Keys</a></li>
+</ul>
+
+</body>
+</html>

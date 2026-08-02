@@ -1,0 +1,78 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>BlockInput - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The BlockInput function disables or enables the user's ability to interact with the computer via keyboard and mouse." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>BlockInput</h1>
+
+<p>Disables or enables the user's ability to interact with the computer via keyboard and mouse.</p>
+
+<pre class="Syntax"><span class="func">BlockInput</span> OnOff
+<span class="func">BlockInput</span> SendMouse
+<span class="func">BlockInput</span> MouseMove</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>OnOff</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a> or <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>This mode blocks all user inputs unconditionally. Specify one of the following values:</p>
+    <p><strong>On</strong> or <strong>1</strong> (<a href="../Variables.htm#True">true</a>): The user is prevented from interacting with the computer (mouse and keyboard input has no effect).</p>
+    <p><strong>Off</strong> or <strong>0</strong> (<a href="../Variables.htm#False">false</a>): Input is re-enabled.</p>
+  </dd>
+  <dt>SendMouse</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>This mode only blocks user inputs while specific send and/or mouse functions are in progress. Specify one of the following words:</p>
+    <p><strong>Send:</strong> The user's keyboard and mouse input is ignored while a <a href="Send.htm">SendEvent</a> is in progress (including <a href="Send.htm">Send</a> and <a href="Send.htm">SendText</a> if the traditional <a href="SendMode.htm#Event">SendEvent mode</a> is in effect). This prevents the user's keystrokes from disrupting the flow of simulated keystrokes. When the Send finishes, input is re-enabled (unless still blocked by a previous use of <code>BlockInput "On"</code>).</p>
+    <p><strong>Mouse:</strong> The user's keyboard and mouse input is ignored while a <a href="Click.htm">Click</a>, <a href="MouseMove.htm">MouseMove</a>, <a href="MouseClick.htm">MouseClick</a>, or <a href="MouseClickDrag.htm">MouseClickDrag</a> is in progress (the traditional <a href="SendMode.htm#Event">SendEvent mode</a> only). This prevents the user's mouse movements and clicks from disrupting the simulated mouse events. When the mouse action finishes, input is re-enabled (unless still blocked by a previous use of <code>BlockInput "On"</code>).</p>
+    <p><strong>SendAndMouse:</strong> A combination of the above two modes.</p>
+    <p><strong>Default:</strong> Turns off both the <em>Send</em> and the <em>Mouse</em> modes, but does not change the current state of input blocking. For example, if <code>BlockInput "On"</code> is currently in effect, using <code>BlockInput "Default"</code> will not turn it off.</p>
+  </dd>
+  <dt id="MouseMove">MouseMove</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>This mode only blocks the mouse cursor movement. Specify one of the following words:</p>
+    <p><strong>MouseMove:</strong> The mouse cursor will not move in response to the user's physical movement of the mouse (DirectInput applications are a possible exception). When a script first uses this function, the <a href="InstallMouseHook.htm">mouse hook</a> is installed (if it is not already). The mouse hook will stay installed until the next use of the <a href="Suspend.htm">Suspend</a> or <a href="Hotkey.htm">Hotkey</a> function, at which time it is removed if not required by any hotkeys or hotstrings (see <a href="_Hotstring.htm">#Hotstring NoMouse</a>).</p>
+    <p><strong>MouseMoveOff:</strong> Allows the user to move the mouse cursor.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>All three BlockInput modes (<em>OnOff</em>, <em>SendMouse</em> and <em>MouseMove</em>) operate independently of each other. For example, <code>BlockInput "On"</code> will continue to block input until <code>BlockInput "Off"</code> is used, even if one of the words from <em>SendMouse</em> is also in effect. Another example is, if <code>BlockInput "On"</code> and <code>BlockInput "MouseMove"</code> are both in effect, mouse movement will be blocked until both are turned off.</p>
+<p class="note"><strong>Note:</strong> The <em>OnOff</em> and <em>SendMouse</em> modes might have no effect if UAC is enabled or the script has not been run as administrator. For more information, refer to the <a href="../FAQ.htm#uac">FAQ</a>.</p>
+<p>In preference to BlockInput, it is often better to use the sending modes <a href="SendMode.htm#Input">SendInput</a> or <a href="SendMode.htm#Play">SendPlay</a> so that keystrokes and mouse clicks become uninterruptible. This is because unlike BlockInput, those modes do not discard what the user types during the send; instead, those keystrokes are buffered and sent afterward. Avoiding BlockInput also avoids the need to work around sticking keys as described in the next paragraph.</p>
+<p>If BlockInput becomes active while the user is holding down keys, it might cause those keys to become "stuck down". This can be avoided by waiting for the keys to be released prior to turning BlockInput on, as in this example:</p>
+<pre>^!p::
+{
+    KeyWait "Control"  <em>; Wait for the key to be released.  Use one KeyWait for each of the hotkey's modifiers.</em>
+    KeyWait "Alt"
+    BlockInput true
+    <em>; ... send keystrokes and mouse clicks ...</em>
+    BlockInput false
+}</pre>
+<p>When BlockInput is in effect, user input is blocked but AutoHotkey can simulate keystrokes and mouse clicks. However, pressing <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Del</kbd> will re-enable input due to a Windows API feature.</p>
+<p>Certain types of <a href="_UseHook.htm">hook hotkeys</a> can still be triggered when BlockInput is on. Examples include <code class="no-highlight">MButton</code> (mouse hook) and <code class="no-highlight">LWin &amp; Space</code> (keyboard hook with explicit prefix rather than modifiers <code class="no-highlight">$#</code>).</p>
+<p>Input is automatically re-enabled when the script closes.</p>
+<h2 id="Related">Related</h2>
+<p><a href="SendMode.htm">SendMode</a>, <a href="Send.htm">Send</a>, <a href="Click.htm">Click</a>, <a href="MouseMove.htm">MouseMove</a>, <a href="MouseClick.htm">MouseClick</a>, <a href="MouseClickDrag.htm">MouseClickDrag</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Opens Notepad and pastes time/date by sending F5 while BlockInput is turned on. Note that BlockInput may only work if the script has been run as administrator.</p>
+<pre>BlockInput true
+Run "notepad"
+WinWaitActive "ahk_class Notepad"
+Send "{F5}" <em>; pastes time and date</em>
+BlockInput false</pre>
+</div>
+</body>
+</html>

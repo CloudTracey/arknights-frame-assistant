@@ -1,0 +1,213 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Remapping a Controller to Keyboard or Mouse | AutoHotkey v2</title>
+<meta name="description" content="Learn how to make controller buttons or other controls send keystrokes or mouse clicks." />
+<meta name="keywords" content="keyboard,keys,key,keystrokes,clicks,mouse,buttons,button,controller,gamepad,joystick,hotkeys,hotkey,macro">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Remapping a Controller to Keyboard or Mouse</h1>
+
+<h2 id="toc">Table of Contents</h2>
+<ul>
+  <li><a href="#imp">Important Notes</a></li>
+  <li><a href="#button">Making a Controller Button Send Keystrokes or Mouse Clicks</a>
+  <ul>
+      <li><a href="#different-approaches">Different Approaches</a></li>
+      <li><a href="#auto-repeating-controller-buttons">Auto-repeating a Keystroke</a></li>
+      <li><a href="#context-sensitive-controller-buttons">Context-sensitive Controller Buttons</a></li>
+      <li><a href="#using-a-controller-as-a-mouse">Using a Controller as a Mouse</a></li>
+  </ul></li>
+  <li><a href="#axis">Making Other Controller Controls Send Keystrokes or Mouse Clicks</a>
+  <ul>
+      <li><a href="#controller-axes">Controller Axes</a></li>
+      <li><a href="#controller-pov-hat">Controller POV Hat</a></li>
+      <li><a href="#auto-repeating-other">Auto-repeating a Keystroke</a></li>
+  </ul></li>
+  <li><a href="#Remarks">Remarks</a></li>
+  <li><a href="#related">Related Topics</a></li>
+</ul>
+
+<h2 id="imp">Important Notes</h2>
+<ul>
+  <li>For historical reasons, the following button and control names begin with <code class="no-highlight">Joy</code>, which stands for joystick. However, they usually also work for other game controllers such as gamepads or steering wheels.</li>
+  <li>Although a controller button or axis can be remapped to become a key or mouse button, it cannot be remapped to some other controller button or axis. That would be possible only with the help of a controller emulator such as <a href="https://sourceforge.net/projects/vjoystick/">vJoy</a>.</li>
+  <li>AutoHotkey identifies each button on a controller with a unique number between 1 and 32. To determine these numbers, use the <a href="../scripts/index.htm#ControllerTest">controller test script</a>.</li>
+  <li>For Xbox controller 2013 and newer (anything newer than the Xbox 360 controller), Joy1 to Joy32 hotkeys will only work if a window owned by the script is active, such as a <a href="../lib/MsgBox.htm">message box</a>, <a href="../lib/Gui.htm">GUI</a>, or the <a href="../Program.htm#main-window">script's main window</a>. This limitation also applies to <a href="../lib/GetKeyState.htm">GetKeyState</a> for Joy1 to Joy32 and JoyX, JoyY, JoyZ, JoyR, JoyU, JoyPOV (and possibly JoyV), but not for JoyName, JoyButtons, JoyAxes and JoyInfo. To detect those controller inputs for other active windows, use the <a href="https://www.autohotkey.com/boards/viewtopic.php?f=83&t=106254">XInput.ahk library</a>.</li>
+</ul>
+
+<h2 id="button">Making a Controller Button Send Keystrokes or Mouse Clicks</h2>
+
+<h3 id="different-approaches">Different Approaches</h3>
+<p>Below are three approaches, starting at the simplest and ending with the most complex. The most complex method works in the broadest variety of circumstances (such as games that require a key or mouse button to be held down).</p>
+
+<h4 id="Method_1">Method #1</h4>
+<p>This method sends simple keystrokes and mouse clicks. For example:</p>
+<pre>Joy1::<a href="../lib/Send.htm">Send</a> "{Left}"  <em>; Have button #1 send a left-arrow keystroke.</em>
+Joy2::<a href="../lib/Click.htm">Click</a>  <em>; Have button #2 send a click of left mouse button.</em>
+Joy3::Send "a{Esc}{Space}{Enter}"  <em>; Have button #3 send the letter "a" followed by Escape, Space, and Enter.</em>
+Joy4::Send "Sincerely,{Enter}John Smith"  <em>; Have button #4 send a two-line signature.</em></pre>
+<p>To have a button perform more than one line, put them <em>beneath</em> the button name and enclose them in braces. For example:</p>
+<pre>Joy5::
+{
+    Run "notepad"
+    WinWait "Untitled - Notepad"
+    WinActivate
+    Send "This is the text that will appear in Notepad.{Enter}"
+}</pre>
+<p>For details, see <a href="../howto/WriteHotkeys.htm">How to Write Hotkeys</a>.</p>
+<p>See the <a href="../KeyList.htm">Key List</a> for the complete list of keys and mouse/controller buttons.</p>
+
+<h4 id="Method_2">Method #2</h4>
+<p>This method is necessary in cases where a key or mouse button must be held down for the entire time that you're holding down a controller button. The following example makes the controller's second button become the left-arrow key:</p>
+<pre>Joy2::
+{
+    Send "{Left down}"  <em>; Hold down the left-arrow key.</em>
+    <a href="../lib/KeyWait.htm">KeyWait</a> "Joy2"  <em>; Wait for the user to release the controller button.</em>
+    Send "{Left up}"  <em>; Release the left-arrow key.</em>
+}</pre>
+
+<h4 id="Method_3">Method #3</h4>
+<p>This method is necessary in cases where you have more than one controller hotkey of the type described in Method #2, and you sometimes press and release such hotkeys simultaneously. The following example makes the controller's third button become the left mouse button:</p>
+<pre>Joy3::
+{
+    Send "{LButton down}"   <em>; Hold down the left mouse button.</em>
+    SetTimer WaitForButtonUp3, 10
+}
+
+WaitForButtonUp3()
+{
+    if <a href="../lib/GetKeyState.htm">GetKeyState</a>("Joy3")  <em>; The button is still, down, so keep waiting.</em>
+        return
+    <em>; Otherwise, the button has been released.</em>
+    Send "{LButton up}"  <em>; Release the left mouse button.</em>
+    SetTimer , 0
+}
+</pre>
+
+<h3 id="auto-repeating-controller-buttons">Auto-repeating a Keystroke</h3>
+<p>Some programs or games might require a key to be sent repeatedly (as though you are holding it down on the keyboard). The following example achieves this by sending spacebar keystrokes repeatedly while you hold down the controller's second button:</p>
+<pre>Joy2::
+{
+    Send "{Space down}"   <em>; Press the spacebar down.</em>
+    SetTimer WaitForJoy2, 30  <em>; Reduce the number 30 to 20 or 10 to send keys faster. Increase it to send slower.</em>
+}
+
+WaitForJoy2()
+{
+    if not GetKeyState("Joy2")  <em>; The button has been released.</em>
+    {
+        Send "{Space up}"  <em>; Release the spacebar.</em>
+        SetTimer , 0  <em>; Stop monitoring the button.</em>
+        return
+    }
+    <em>; Since above didn't "return", the button is still being held down.</em>
+    Send "{Space down}"  <em>; Send another Spacebar keystroke.</em>
+}</pre>
+
+<h3 id="context-sensitive-controller-buttons">Context-sensitive Controller Buttons</h3>
+<p>The <a href="../lib/_HotIf.htm">#HotIf</a> directive can be used to make selected controller buttons perform a different action (or none at all) depending on any condition, such as the type of window that is active.</p>
+
+<h3 id="using-a-controller-as-a-mouse">Using a Controller as a Mouse</h3>
+<p>The <a href="../scripts/index.htm#ControllerMouse">Controller-To-Mouse script</a> converts a controller into a mouse by remapping its buttons and axis control.</p>
+
+<h2 id="axis">Making Other Controller Controls Send Keystrokes or Mouse Clicks</h2>
+<p>To have a script respond to movement of a stick's axis or POV hat, use <a href="../lib/SetTimer.htm">SetTimer</a> and <a href="../lib/GetKeyState.htm">GetKeyState</a>.</p>
+
+<h3 id="controller-axes">Controller Axes</h3>
+<p>The following example makes the stick's X and Y axes behave like the arrow key cluster on a keyboard (left, right, up, and down):</p>
+<pre><a href="../lib/SetTimer.htm">SetTimer</a> WatchAxis, 5
+
+WatchAxis()
+{
+    static KeyToHoldDown := ""
+    JoyX := <a href="../lib/GetKeyState.htm">GetKeyState</a>("JoyX")  <em>; Get position of X axis.</em>
+    JoyY := GetKeyState("JoyY")  <em>; Get position of Y axis.</em>
+    KeyToHoldDownPrev := KeyToHoldDown  <em>; Prev now holds the key that was down before (if any).</em>
+
+    if JoyX &gt; 70
+        KeyToHoldDown := "Right"
+    else if JoyX &lt; 30
+        KeyToHoldDown := "Left"
+    else if JoyY &gt; 70
+        KeyToHoldDown := "Down"
+    else if JoyY &lt; 30
+        KeyToHoldDown := "Up"
+    else
+        KeyToHoldDown := ""
+
+    if KeyToHoldDown = KeyToHoldDownPrev  <em>; The correct key is already down (or no key is needed).</em>
+        return  <em>; Do nothing.</em>
+
+    <em>; Otherwise, release the previous key and press down the new key:</em>
+    SetKeyDelay -1  <em>; Avoid delays between keystrokes.</em>
+    if KeyToHoldDownPrev   <em>; There is a previous key to release.</em>
+        Send "{" KeyToHoldDownPrev " up}"  <em>; Release it.</em>
+    if KeyToHoldDown   <em>; There is a key to press down.</em>
+        Send "{" KeyToHoldDown " down}"  <em>; Press it down.</em>
+}</pre>
+
+<h3 id="controller-pov-hat">Controller POV Hat</h3>
+<p>The following example makes the controller's POV hat behave like the arrow key cluster on a keyboard; that is, the POV hat will send arrow keystrokes (left, right, up, and down):</p>
+<pre>SetTimer WatchPOV, 5
+
+WatchPOV()
+{
+    static KeyToHoldDown := ""
+    POV := GetKeyState("JoyPOV")  <em>; Get position of the POV control.</em>
+    KeyToHoldDownPrev := KeyToHoldDown  <em>; Prev now holds the key that was down before (if any).</em>
+
+<em>; Some controllers might have a smooth/continous POV rather than one in fixed increments.
+    ; To support them all, use a range:</em>
+    if POV &lt; 0   <em>; No angle to report</em>
+        KeyToHoldDown := ""
+    else if POV &gt; 31500                <em>; 315 to 360 degrees: Forward</em>
+        KeyToHoldDown := "Up"
+    else if POV &gt;= 0 and POV &lt;= 4500      <em>; 0 to 45 degrees: Forward</em>
+        KeyToHoldDown := "Up"
+    else if POV &gt;= 4501 and POV &lt;= 13500  <em>; 45 to 135 degrees: Right</em>
+        KeyToHoldDown := "Right"
+    else if POV &gt;= 13501 and POV &lt;= 22500 <em>; 135 to 225 degrees: Down</em>
+        KeyToHoldDown := "Down"
+    else                                  <em>; 225 to 315 degrees: Left</em>
+        KeyToHoldDown := "Left"
+
+    if KeyToHoldDown = KeyToHoldDownPrev  <em>; The correct key is already down (or no key is needed).</em>
+        return  <em>; Do nothing.</em>
+
+    <em>; Otherwise, release the previous key and press down the new key:</em>
+    SetKeyDelay -1  <em>; Avoid delays between keystrokes.</em>
+    if KeyToHoldDownPrev   <em>; There is a previous key to release.</em>
+        Send "{" KeyToHoldDownPrev " up}"  <em>; Release it.</em>
+    if KeyToHoldDown   <em>; There is a key to press down.</em>
+        Send "{" KeyToHoldDown " down}"  <em>; Press it down.</em>
+}</pre>
+
+<h3 id="auto-repeating-other">Auto-repeating a Keystroke</h3>
+<p>Both examples above can be modified to send the key repeatedly rather than merely holding it down (that is, they can mimic physically holding down a key on the keyboard). To do this, replace the following line:</p>
+<pre>return  <em>; Do nothing.</em></pre>
+<p>With the following:</p>
+<pre>{
+    if KeyToHoldDown
+        Send "{" KeyToHoldDown " down}"  <em>; Auto-repeat the keystroke.</em>
+    return
+}</pre>
+<h2 id="Remarks">Remarks</h2>
+<p>A controller other than first may be used by preceding the button or axis name with the number of the controller. For example, <code class="no-highlight">2Joy1</code> would be the second controller's first button.</p>
+<p>To find other useful controller scripts, visit the <a href="https://www.autohotkey.com/boards/">AutoHotkey forum</a>. A keyword search such as <em>Controller and GetKeyState and Send</em> is likely to produce topics of interest.</p>
+<h2 id="related">Related Topics</h2>
+<ul>
+    <li><a href="../scripts/index.htm#ControllerMouse">Controller-To-Mouse script (using a controller as a mouse)</a></li>
+    <li><a href="../KeyList.htm#Controller">List of controller buttons, axes, and controls</a></li>
+    <li><a href="../lib/GetKeyState.htm">GetKeyState</a></li>
+    <li><a href="Remap.htm">Remapping the keyboard and mouse</a></li>
+</ul>
+
+</body>
+</html>

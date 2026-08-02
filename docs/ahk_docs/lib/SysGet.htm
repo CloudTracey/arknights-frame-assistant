@@ -1,0 +1,287 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>SysGet - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The SysGet function retrieves dimensions of system objects, and other system properties." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>SysGet</h1>
+
+<p>Retrieves dimensions of system objects, and other system properties.</p>
+
+<pre class="Syntax">Value := <span class="func">SysGet</span>(Property)</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Property</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>Specify one of the numbers from the tables below to retrieve the corresponding value.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+<p>This function returns the value of the specified system property.</p>
+
+<h2 id="Commonly_Used">Commonly Used</h2>
+<table class="info">
+  <tr>
+    <th>Number</th>
+    <th abbr="Descr">Description</th>
+  </tr>
+  <tr>
+    <td>80</td>
+    <td>SM_CMONITORS: Number of display monitors on the desktop (not including "non-display pseudo-monitors").</td>
+  </tr>
+  <tr>
+    <td>43</td>
+    <td>SM_CMOUSEBUTTONS: Number of buttons on mouse (0 if no mouse is installed).</td>
+  </tr>
+  <tr>
+    <td>16, 17</td>
+    <td>SM_CXFULLSCREEN, SM_CYFULLSCREEN: Width and height of the client area for a full-screen window on the primary display monitor, in pixels.</td>
+  </tr>
+  <tr>
+    <td>61, 62</td>
+    <td>SM_CXMAXIMIZED, SM_CYMAXIMIZED: Default dimensions, in pixels, of a maximized top-level window on the primary display monitor.</td>
+  </tr>
+  <tr>
+    <td>59, 60</td>
+    <td>SM_CXMAXTRACK, SM_CYMAXTRACK: Default maximum dimensions of a window that has a caption and sizing borders, in pixels. This metric refers to the entire desktop. The user cannot drag the window frame to a size larger than these dimensions.</td>
+  </tr>
+  <tr>
+    <td>28, 29</td>
+    <td>SM_CXMIN, SM_CYMIN: Minimum width and height of a window, in pixels.</td>
+  </tr>
+  <tr>
+    <td>57, 58</td>
+    <td>SM_CXMINIMIZED, SM_CYMINIMIZED: Dimensions of a minimized window, in pixels.</td>
+  </tr>
+  <tr>
+    <td>34, 35</td>
+    <td>SM_CXMINTRACK, SM_CYMINTRACK: Minimum tracking width and height of a window, in pixels. The user cannot drag the window frame to a size smaller than these dimensions. A window can override these values by processing the WM_GETMINMAXINFO message.</td>
+  </tr>
+  <tr>
+    <td>0, 1</td>
+    <td>SM_CXSCREEN, SM_CYSCREEN: Width and height of the screen of the primary display monitor, in pixels. These are the same as the built-in variables <a href="../Variables.htm#Screen">A_ScreenWidth</a> and <a href="../Variables.htm#Screen">A_ScreenHeight</a>.</td>
+  </tr>
+  <tr>
+    <td>78, 79</td>
+    <td>SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN: Width and height of the virtual screen, in pixels. The virtual screen is the bounding rectangle of all display monitors. The SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN metrics are the coordinates of the top-left corner of the virtual screen.</td>
+  </tr>
+  <tr>
+    <td>19</td>
+    <td>SM_MOUSEPRESENT: Nonzero if a mouse is installed; zero otherwise.</td>
+  </tr>
+  <tr>
+    <td>75</td>
+    <td>SM_MOUSEWHEELPRESENT: Nonzero if a mouse with a wheel is installed; zero otherwise.</td>
+  </tr>
+  <tr>
+    <td>63</td>
+    <td>SM_NETWORK: Least significant bit is set if a network is present; otherwise, it is cleared. The other bits are reserved for future use.</td>
+  </tr>
+  <tr>
+    <td>8193</td>
+    <td>SM_REMOTECONTROL: This system metric is used in a Terminal Services environment. Its value is nonzero if the current session is remotely controlled; zero otherwise.</td>
+  </tr>
+  <tr>
+    <td>4096</td>
+    <td>SM_REMOTESESSION: This system metric is used in a Terminal Services environment. If the calling process is associated with a Terminal Services client session, the return value is nonzero. If the calling process is associated with the Terminal Server console session, the return value is zero. The console session is not necessarily the physical console.</td>
+  </tr>
+  <tr>
+    <td>70</td>
+    <td>SM_SHOWSOUNDS: Nonzero if the user requires an application to present information visually in situations where it would otherwise present the information only in audible form; zero otherwise.</td>
+  </tr>
+  <tr>
+    <td>8192</td>
+    <td>SM_SHUTTINGDOWN: Nonzero if the current session is shutting down; zero otherwise. <b>Windows 2000:</b> The retrieved value is always 0.</td>
+  </tr>
+  <tr>
+    <td>23</td>
+    <td>SM_SWAPBUTTON: Nonzero if the meanings of the left and right mouse buttons are swapped; zero otherwise.</td>
+  </tr>
+  <tr>
+    <td>76, 77</td>
+    <td>SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN: Coordinates for the left side and the top of the virtual screen. The virtual screen is the bounding rectangle of all display monitors. By contrast, the SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN metrics (further above) are the width and height of the virtual screen.</td>
+  </tr>
+</table>
+
+<h2 id="Not_Commonly_Used">Not Commonly Used</h2>
+<table class="info">
+  <tr>
+    <th>Number</th>
+    <th abbr="Descr">Description</th>
+  </tr>
+  <tr>
+    <td>56</td>
+    <td>SM_ARRANGE: Flags specifying how the system arranged minimized windows. See Microsoft Docs for more information.</td>
+  </tr>
+  <tr>
+    <td>67</td>
+    <td><p>SM_CLEANBOOT: Specifies how the system was started:</p>
+      <ul>
+        <li>0 = Normal boot</li>
+        <li>1 = Fail-safe boot</li>
+        <li>2 = Fail-safe with network boot</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>5, 6</td>
+    <td>SM_CXBORDER, SM_CYBORDER: Width and height of a window border, in pixels. This is equivalent to the SM_CXEDGE value for windows with the 3-D look.</td>
+  </tr>
+  <tr>
+    <td>13, 14</td>
+    <td>SM_CXCURSOR, SM_CYCURSOR: Width and height of a cursor, in pixels. The system cannot create cursors of other sizes.</td>
+  </tr>
+  <tr>
+    <td>36, 37</td>
+    <td>SM_CXDOUBLECLK, SM_CYDOUBLECLK: Width and height of the rectangle around the location of a first click in a double-click sequence, in pixels. The second click must occur within this rectangle for the system to consider the two clicks a double-click. (The two clicks must also occur within a specified time.)</td>
+  </tr>
+  <tr>
+    <td>68, 69</td>
+    <td>SM_CXDRAG, SM_CYDRAG: Width and height of a rectangle centered on a drag point to allow for limited movement of the mouse pointer before a drag operation begins. These values are in pixels. It allows the user to click and release the mouse button easily without unintentionally starting a drag operation.</td>
+  </tr>
+  <tr>
+    <td>45, 46</td>
+    <td>SM_CXEDGE, SM_CYEDGE: Dimensions of a 3-D border, in pixels. These are the 3-D counterparts of SM_CXBORDER and SM_CYBORDER.</td>
+  </tr>
+  <tr>
+    <td>7, 8</td>
+    <td>SM_CXFIXEDFRAME, SM_CYFIXEDFRAME (synonymous with SM_CXDLGFRAME, SM_CYDLGFRAME): Thickness of the frame around the perimeter of a window that has a caption but is not sizable, in pixels. SM_CXFIXEDFRAME is the height of the horizontal border and SM_CYFIXEDFRAME is the width of the vertical border.</td>
+  </tr>
+  <tr>
+    <td>83, 84</td>
+    <td>SM_CXFOCUSBORDER, SM_CYFOCUSBORDER: Width (in pixels) of the left and right edges and the height of the top and bottom edges of a control's focus rectangle. <b>Windows 2000:</b> The retrieved value is always 0.</td>
+  </tr>
+  <tr>
+    <td>21, 3</td>
+    <td>SM_CXHSCROLL, SM_CYHSCROLL: Width of the arrow bitmap on a horizontal scroll bar, in pixels; and height of a horizontal scroll bar, in pixels.</td>
+  </tr>
+  <tr>
+    <td>10</td>
+    <td>SM_CXHTHUMB: Width of the thumb box in a horizontal scroll bar, in pixels.</td>
+  </tr>
+  <tr>
+    <td>11, 12</td>
+    <td>SM_CXICON, SM_CYICON: Default width and height of an icon, in pixels.</td>
+  </tr>
+  <tr>
+    <td>38, 39</td>
+    <td>SM_CXICONSPACING, SM_CYICONSPACING: Dimensions of a grid cell for items in large icon view, in pixels. Each item fits into a rectangle of this size when arranged. These values are always greater than or equal to SM_CXICON and SM_CYICON.</td>
+  </tr>
+  <tr>
+    <td>71, 72</td>
+    <td>SM_CXMENUCHECK, SM_CYMENUCHECK: Dimensions of the default menu check-mark bitmap, in pixels.</td>
+  </tr>
+  <tr>
+    <td>54, 55</td>
+    <td>SM_CXMENUSIZE, SM_CYMENUSIZE: Dimensions of menu bar buttons, such as the child window close button used in the multiple document interface, in pixels.</td>
+  </tr>
+  <tr>
+    <td>47, 48</td>
+    <td>SM_CXMINSPACING, SM_CYMINSPACING: Dimensions of a grid cell for a minimized window, in pixels. Each minimized window fits into a rectangle this size when arranged. These values are always greater than or equal to SM_CXMINIMIZED and SM_CYMINIMIZED.</td>
+  </tr>
+  <tr>
+    <td>30, 31</td>
+    <td>SM_CXSIZE, SM_CYSIZE: Width and height of a button in a window's caption or title bar, in pixels.</td>
+  </tr>
+  <tr>
+    <td>32, 33</td>
+    <td>SM_CXSIZEFRAME, SM_CYSIZEFRAME: Thickness of the sizing border around the perimeter of a window that can be resized, in pixels. SM_CXSIZEFRAME is the width of the horizontal border, and SM_CYSIZEFRAME is the height of the vertical border. Synonymous with SM_CXFRAME and SM_CYFRAME.</td>
+  </tr>
+  <tr>
+    <td>49, 50</td>
+    <td>SM_CXSMICON, SM_CYSMICON: Recommended dimensions of a small icon, in pixels. Small icons typically appear in window captions and in small icon view.</td>
+  </tr>
+  <tr>
+    <td>52, 53</td>
+    <td>SM_CXSMSIZE SM_CYSMSIZE: Dimensions of small caption buttons, in pixels.</td>
+  </tr>
+  <tr>
+    <td>2, 20</td>
+    <td>SM_CXVSCROLL, SM_CYVSCROLL: Width of a vertical scroll bar, in pixels; and height of the arrow bitmap on a vertical scroll bar, in pixels.</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>SM_CYCAPTION: Height of a caption area, in pixels.</td>
+  </tr>
+  <tr>
+    <td>18</td>
+    <td>SM_CYKANJIWINDOW: For double byte character set versions of the system, this is the height of the Kanji window at the bottom of the screen, in pixels.</td>
+  </tr>
+  <tr>
+    <td>15</td>
+    <td>SM_CYMENU: Height of a single-line menu bar, in pixels.</td>
+  </tr>
+  <tr>
+    <td>51</td>
+    <td>SM_CYSMCAPTION: Height of a small caption, in pixels.</td>
+  </tr>
+  <tr>
+    <td>9</td>
+    <td>SM_CYVTHUMB: Height of the thumb box in a vertical scroll bar, in pixels.</td>
+  </tr>
+  <tr>
+    <td>42</td>
+    <td>SM_DBCSENABLED: Nonzero if User32.dll supports DBCS; zero otherwise.</td>
+  </tr>
+  <tr>
+    <td>22</td>
+    <td>SM_DEBUG: Nonzero if the debug version of User.exe is installed; zero otherwise.</td>
+  </tr>
+  <tr>
+    <td>82</td>
+    <td><p>SM_IMMENABLED: Nonzero if Input Method Manager/Input Method Editor features are enabled; zero otherwise.</p>
+        <p>SM_IMMENABLED indicates whether the system is ready to use a Unicode-based IME on a Unicode application. To ensure that a language-dependent IME works, check SM_DBCSENABLED and the system ANSI code page. Otherwise the ANSI-to-Unicode conversion may not be performed correctly, or some components like fonts or registry setting may not be present.</p></td>
+  </tr>
+  <tr>
+    <td>40</td>
+    <td>SM_MENUDROPALIGNMENT: Nonzero if drop-down menus are right-aligned with the corresponding menu-bar item; zero if the menus are left-aligned.</td>
+  </tr>
+  <tr>
+    <td>74</td>
+    <td>SM_MIDEASTENABLED: Nonzero if the system is enabled for Hebrew and Arabic languages, zero if not.</td>
+  </tr>
+  <tr>
+    <td>41</td>
+    <td>SM_PENWINDOWS: Nonzero if the Microsoft Windows for Pen computing extensions are installed; zero otherwise.</td>
+  </tr>
+  <tr>
+    <td>44</td>
+    <td>SM_SECURE: Nonzero if security is present; zero otherwise.</td>
+  </tr>
+  <tr>
+    <td>81</td>
+    <td>SM_SAMEDISPLAYFORMAT: Nonzero if all the display monitors have the same color format, zero otherwise. Note that two displays can have the same bit depth, but different color formats. For example, the red, green, and blue pixels can be encoded with different numbers of bits, or those bits can be located in different places in a pixel's color value.</td>
+  </tr>
+</table>
+<h2 id="Remarks">Remarks</h2>
+<p>SysGet simply calls the <a href="https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getsystemmetrics">GetSystemMetrics</a> function, which may support more system properties than are documented here.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="DllCall.htm">DllCall</a>, <a href="Win.htm">Win functions</a>, <a href="Monitor.htm">Monitor functions</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Retrieves the number of mouse buttons and stores it in <var>MouseButtonCount</var>.</p>
+<pre>MouseButtonCount := SysGet(43)</pre>
+</div>
+
+<div class="ex" id="ExVirtScreenWH">
+<p><a class="ex_number" href="#ExVirtScreenWH"></a> Retrieves the width and height of the virtual screen and stores them in <var>VirtualScreenWidth</var> and <var>VirtualScreenHeight</var>.</p>
+<pre>VirtualScreenWidth := SysGet(78)
+VirtualScreenHeight := SysGet(79)</pre>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>TraySetIcon - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The TraySetIcon function changes the script's tray icon (which is also used by GUI and dialog windows)." />
+<meta name="ahk:equiv-v1" content="lib/Menu.htm#Icon" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>TraySetIcon</h1>
+
+<p>Changes the script's <a href="../Program.htm#tray-icon">tray icon</a> (which is also used by <a href="Gui.htm">GUI</a> and dialog windows).</p>
+
+<pre class="Syntax"><span class="func">TraySetIcon</span> <span class="optional">FileName, IconNumber, Freeze</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>FileName</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If omitted, the <em>current</em> tray icon is used, which is only meaningful for <em>Freeze</em>. Otherwise, specify the path to an icon or image file, a <a href="../misc/ImageHandles.htm">bitmap or icon handle</a> such as <code>"HICON:" handle</code>, or an asterisk (*) to restore the script's default icon.</p>
+    <p>For a list of supported formats, see <a href="GuiControls.htm#Picture_ImageFile">Picture</a>.</p>
+  </dd>
+  
+  <dt>IconNumber</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, it defaults to 1 (the first icon group in the file). Otherwise, specify the number of the icon group to use. For example, <code>2</code> would load the default icon from the second icon group. If negative, the absolute value is assumed to be the resource ID of an icon within an executable file. If <em>FileName</em> is omitted, <em>IconNumber</em> is ignored.</p>
+  </dd>
+  
+  <dt>Freeze</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#boolean">Boolean</a></p>
+    <p>If omitted, the icon's frozen/unfrozen state remains unchanged.</p>
+    <p>If <strong>true</strong>, the icon is frozen, i.e. <a href="Pause.htm">Pause</a> and <a href="Suspend.htm">Suspend</a> will not change it.</p>
+    <p>If <strong>false</strong>, the icon is unfrozen.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>To freeze (or unfreeze) the <em>current</em> icon, use the function as follows: <code>TraySetIcon(,, true)</code>.</p>
+<p>Changing the tray icon also changes the icon displayed by <a href="InputBox.htm">InputBox</a> and subsequently-created <a href="Gui.htm">GUI</a> windows. <a href="../Scripts.htm#ahk2exe">Compiled scripts</a> are also affected even if a custom icon was specified at the time of compiling. Note: Changing the icon will not unhide the tray icon if it was previously hidden by means such as <a href="_NoTrayIcon.htm">#NoTrayIcon</a>; to do that, use <code><a href="../Variables.htm#IconHidden">A_IconHidden</a> := false</code>.</p>
+<p id="distort">Slight distortion may occur when loading tray icons from file types other than .ICO. This is especially true for 16x16 icons. To prevent this, store the desired tray icon inside a .ICO file.</p>
+<p>There are some icons built into the operating system's DLLs and CPLs that might be useful. For example: <code>TraySetIcon "Shell32.dll", 174</code>.</p>
+<p>The built-in variables <strong>A_IconNumber</strong> and <strong>A_IconFile</strong> contain the number and name (with full path) of the current icon (both are blank if the icon is the default).</p>
+<p>The tray icon's tooltip can be changed by assigning a value to <a href="../Variables.htm#IconTip">A_IconTip</a>.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="_NoTrayIcon.htm">#NoTrayIcon</a>, <a href="TrayTip.htm">TrayTip</a>, <a href="Menu.htm">Menu object</a></p>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+@import url('highlighter.css');
+
+.highlight {
+  color: #9cdcfe;
+}
+
+.highlight>.cfs,
+.highlight>.dir {
+  color: #c586c0;
+}
+
+.highlight>.str {
+  color: #ce9178;
+}
+
+.highlight .str>.esc {
+  color: #d7ba7d;
+}
+
+.highlight .hot>.esc {
+  color: #5fc5db;
+}
+
+.highlight .lab>.esc,
+.highlight .opt>.esc {
+  color: #d5f5d1;
+}
+
+.highlight>.biv,
+.highlight>.dec,
+.highlight>.hot {
+  color: #569cd6;
+}
+
+.highlight>.cls {
+  color: #4ec9b0;
+}
+
+.highlight>.cmd,
+.highlight>.fun,
+.highlight>.met {
+  color: #dcdcaa;
+}
+
+.highlight>.num {
+  color: #b5cea8;
+}
+
+.highlight>.opr,
+.highlight>.lab,
+.highlight>.opt {
+  color: #cccccc;
+}
+
+.highlight .cmt {
+  color: #6a9955;
+}
+
+.highlight.line-numbers .line-numbers-rows {
+  border-right-color: #999;
+}
+
+.highlight.line-numbers .line-numbers-rows>span:before {
+  color: #999;
+}

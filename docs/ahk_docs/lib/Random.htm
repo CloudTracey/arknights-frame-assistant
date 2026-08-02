@@ -1,0 +1,59 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Random - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Random function generates a pseudo-random number." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Random</h1>
+
+<p>Generates a pseudo-random number.</p>
+
+<pre class="Syntax">N := <span class="func">Random</span>(<span class="optional">A, B</span>)</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>A, B</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#numbers">Float</a></p>
+    <p>If both are omitted, the default is 0.0 to 1.0. If only one parameter is specified, the other parameter defaults to 0. Otherwise, specify the minimum and maximum number to be generated, in either order.</p>
+    <p>For integers, the minimum value and maximum value are both included in the set of possible numbers that may be returned. The full range of 64-bit integers is supported.</p>
+    <p>For floating point numbers, the maximum value is generally excluded.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#numbers">Float</a></p>
+<p>This function returns a pseudo-randomly generated number, which is a number that simulates a true random number but is really a number based on a complicated formula to make determination/guessing of the next number extremely difficult.</p>
+<p>If either <em>A</em> or <em>B</em> is a floating point number or both are omitted, the result will be a floating point number. Otherwise, the result will be an integer.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p>All numbers within the specified range have approximately the same probability of being generated.</p>
+<p>Although the specified maximum value is excluded by design when returning a floating point number, it may in theory be returned due to floating point rounding errors. This has not been confirmed, and might only be possible if the chosen bounds are larger than 2**53. Also note that since there may be up to 2**53 possible values (such as in the range 0.0 to 1.0), the probability of generating exactly the lower bound is generally very low.</p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Generates a random integer in the range 1 to 10 and stores it in <var>N</var>.</p>
+<pre>N := Random(1, 10)</pre>
+</div>
+
+<div class="ex" id="ExOne">
+<p><a class="ex_number" href="#ExOne"></a> Generates a random integer in the range 0 to 9 and stores it in <var>N</var>.</p>
+<pre>N := Random(9)</pre>
+</div>
+
+<div class="ex" id="ExFloat">
+<p><a class="ex_number" href="#ExFloat"></a> Generates a random floating point number in the range 0.0 to 1.0 and stores it in <var>fraction</var>.</p>
+<pre>fraction := Random(0.0, 1.0)
+fraction := Random()  <em>; Equivalent to the line above.</em></pre>
+</div>
+
+</body>
+</html>

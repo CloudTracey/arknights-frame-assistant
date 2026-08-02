@@ -1,0 +1,104 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>FileCreateShortcut - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The FileCreateShortcut function creates a shortcut (.lnk) file." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>FileCreateShortcut</h1>
+
+<p>Creates a shortcut (.lnk) file.</p>
+
+<pre class="Syntax"><span class="func">FileCreateShortcut</span> Target, LinkFile <span class="optional">, WorkingDir, Args, Description, IconFile, ShortcutKey, IconNumber, RunState</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Target</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>Name of the file that the shortcut refers to, which should include an absolute path unless the file is integrated with the system (e.g. Notepad.exe). The file does not have to exist at the time the shortcut is created; however, if it does not, some systems might <a href="https://devblogs.microsoft.com/oldnewthing/20180509-00/?p=98715">alter the path in unexpected ways</a>.</p>
+  </dd>
+
+  <dt>LinkFile</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>Name of the shortcut file to be created, which is assumed to be in <a href="../Variables.htm#WorkingDir">A_WorkingDir</a> if an absolute path isn't specified. Be sure to include the <strong>.lnk</strong> extension. The destination directory must already exist. If the file already exists, it will be overwritten.</p>
+  </dd>
+
+  <dt>WorkingDir</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, <em>LinkFile</em> will have a blank "Start in" field and the system will provide a default working directory when the shortcut is launched. Otherwise, specify the directory that will become <em>Target</em>'s current working directory when the shortcut is launched.</p>
+  </dd>
+
+  <dt>Args</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, <em>Target</em> will be launched without parameters. Otherwise, specify the parameters that will be passed to <em>Target</em> when it is launched. Separate parameters with spaces. If a parameter contains spaces, enclose it in double quotes.</p>
+  </dd>
+
+  <dt>Description</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, <em>LinkFile</em> will have no description. Otherwise, specify comments that describe the shortcut (used by the OS to display a tooltip, etc.)</p>
+  </dd>
+
+  <dt>IconFile</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, <em>LinkFile</em> will have <em>Target</em>'s icon. Otherwise, specify the full path and name of the icon to be displayed for <em>LinkFile</em>. It must either be an .ICO file or the very first icon of an EXE or DLL file.</p>
+  </dd>
+
+  <dt>ShortcutKey</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, <em>LinkFile</em> will have no shortcut key. Otherwise, specify a single letter, number, or the name of a single key from the <a href="../KeyList.htm">key list</a> (mouse buttons and other non-standard keys might not be supported). Do <u>not</u> include modifier symbols. Currently, all shortcut keys are created as <kbd>Ctrl</kbd>+<kbd>Alt</kbd> shortcuts. For example, if the letter B is specified for this parameter, the shortcut key will be <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>B</kbd>.</p>
+  </dd>
+
+  <dt>IconNumber</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, it defaults to 1. Otherwise, specify the number of the icon to be used in <em>IconFile</em>. For example, 2 is the second icon.</p>
+  </dd>
+
+  <dt>RunState</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, it defaults to 1. Otherwise, specify one of the following digits to launch <em>Target</em> minimized or maximized:</p>
+    <ul>
+      <li>1 = Normal</li>
+      <li>3 = Maximized</li>
+      <li>7 = Minimized</li>
+    </ul>
+  </dd>
+
+</dl>
+<h2 id="Error_Handling">Error Handling</h2>
+<p>An exception is thrown on failure.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p><em>Target</em> might not need to include a path if the target file resides in one of the folders listed in the system's PATH <a href="../Concepts.htm#environment-variables">environment variable</a>.</p>
+<p>The shortcut key (<em>ShortcutKey</em>) of a newly created shortcut will have no effect unless the shortcut file resides on the desktop or somewhere in the Start Menu. If the shortcut key you choose is already in use, your new shortcut takes precedence.</p>
+<p>An alternative way to create a shortcut to a URL is the following example, which creates a special URL shortcut. Change the first two parameters to suit your preferences:</p>
+<pre><a href="IniWrite.htm">IniWrite</a> "https://www.google.com", "C:\My Shortcut.url", "InternetShortcut", "URL"</pre>
+<p>The following may be optionally added to assign an icon to the above:</p>
+<pre><a href="IniWrite.htm">IniWrite</a> &lt;IconFile&gt;, "C:\My Shortcut.url", "InternetShortcut", "IconFile"
+<a href="IniWrite.htm">IniWrite</a> 0, "C:\My Shortcut.url", "InternetShortcut", "IconIndex"</pre>
+<p>In the above, replace <code>0</code> with the index of the icon (0 is used for the first icon) and replace <code class="no-highlight">&lt;IconFile&gt;</code> with a URL, EXE, DLL, or ICO file. Examples: <code>"C:\Icons.dll"</code>, <code>"C:\App.exe"</code>, <code>"https://www.somedomain.com/ShortcutIcon.ico"</code></p>
+<p>The operating system will treat a .URL file created by the above as a real shortcut even though it is a plain text file rather than a .LNK file.</p>
+<h2 id="Related">Related</h2>
+<p><a href="FileGetShortcut.htm">FileGetShortcut</a>, <a href="FileAppend.htm">FileAppend</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> The letter "i" in the last parameter makes the shortcut key be <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>I</kbd>.</p>
+<pre>FileCreateShortcut "Notepad.exe", A_Desktop "\My Shortcut.lnk", "C:\", A_ScriptFullPath, "My Description", "C:\My Icon.ico", "i"</pre>
+</div>
+
+</body>
+</html>

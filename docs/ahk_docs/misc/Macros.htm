@@ -1,0 +1,32 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Creating a Keyboard Macro or Mouse Macro | AutoHotkey v2</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="description" content="Record and play back a keyboard macro or mouse macro with this free macro program. Each macro may optionally be assigned to a hotkey.">
+<meta name="keywords" content="macro,macros,keyboard macro,mouse macro">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+
+<body>
+<h1>Creating a Keyboard Macro or Mouse Macro</h1>
+
+<p>A macro is a series of scripted actions that is "played" upon demand. The most common activity of a macro is to send <a href="../lib/Send.htm">simulated keystrokes</a> and <a href="../lib/Click.htm">mouse clicks</a> to one or more windows. Such windows respond to each keystroke and mouse click as though you had performed it manually, which allows repetitive tasks to be automated with high speed and reliability.</p>
+<p>One of the most convenient ways to play back a macro is to assign it to a <a href="../Hotkeys.htm">hotkey</a> or <a href="../Hotstrings.htm">hotstring</a>.  For example, the following hotkey would create an empty e-mail message and prepare it for a certain type recipient, allowing you to personalize it prior to sending:</p>
+<pre>^!s::  <em>; Control+Alt+S hotkey.</em>
+{
+    if not WinExist("Inbox - Microsoft Outlook")
+        return  <em>; Outlook isn't open to the right section, so do nothing.</em>
+    WinActivate  <em>; Activate the window found by the above function.</em>
+    Send "^n"  <em>; Create new/blank e-mail via Control+N.</em>
+    WinWaitActive "Untitled Message"
+    Send "{Tab 2}Product Recall for ACME Rocket Skates"  <em>; Set the subject line.</em>
+    Send "{Tab}Dear Sir or Madam,{Enter 2}We have recently discovered a minor defect ..."  <em>; etc.</em>
+} <em>; This brace marks the end of the hotkey.</em></pre>
+<p>Hotkey macros like the above are especially useful for tasks you perform several times per day. By contrast, macros used less often can each be kept in a separate script accessible by means of a shortcut in the Start Menu or on the desktop.</p>
+<p>To start creating your own macros and hotkeys right away, please read the <a href="../Tutorial.htm">Quick-start Tutorial</a>.</p>
+</body>
+</html>

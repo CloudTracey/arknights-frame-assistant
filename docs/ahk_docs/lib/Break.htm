@@ -1,0 +1,65 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Break - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Break statement exits (terminates) any type of loop statement." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Break</h1>
+<p>Exits (terminates) any type of <a href="../Language.htm#loop-statement">loop statement</a>.</p>
+<pre class="Syntax"><span class="func">Break</span> <span class="optional">LoopLabel</span></pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+  <dt>LoopLabel</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a> or <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted or 1, this statement applies to the innermost loop in which it is enclosed. Otherwise, specify which loop this statement should apply to; either by <a href="../misc/Labels.htm">label name</a> or numeric nesting level. If a <a href="../misc/Labels.htm">label</a> is specified, it must point directly at a <a href="../Language.htm#loop-statement">loop statement</a>.</p>
+    <p><em>LoopLabel</em> must be a constant value - variables and expressions are not supported, with the exception of a single literal number or quoted string enclosed in parentheses. For example: <code>break("outer")</code></p>
+  </dd>
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>The use of Break and <a href="Continue.htm">Continue</a> are encouraged over <a href="Goto.htm">Goto</a> since they usually make scripts more readable and maintainable.</p>
+<h2 id="Related">Related</h2>
+<p><a href="Continue.htm">Continue</a>, <a href="Loop.htm">Loop</a>, <a href="While.htm">While-loop</a>, <a href="For.htm">For-loop</a>, <a href="Block.htm">Blocks</a>, <a href="../misc/Labels.htm">Labels</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Breaks the loop if <var>var</var> is greater than 25.</p>
+<pre>Loop
+{
+    <em>; ...</em>
+    if (var &gt; 25)
+        break
+    <em>; ...</em>
+    if (var &lt;= 5)
+        continue
+}</pre>
+</div>
+
+<div class="ex" id="ExBreakOuter">
+<p><a class="ex_number" href="#ExBreakOuter"></a> Breaks the outer loop from within a nested loop.</p>
+<pre>outer:
+Loop 3
+{
+    x := A_Index
+    Loop 3
+    {
+        if (x*A_Index = 6)
+            break outer  <em>; Equivalent to <b>break 2</b> or <b>goto break_outer</b>.</em>
+        MsgBox x "," A_Index
+    }
+}
+break_outer: <em>; For goto.</em>
+</pre>
+</div>
+
+</body>
+</html>

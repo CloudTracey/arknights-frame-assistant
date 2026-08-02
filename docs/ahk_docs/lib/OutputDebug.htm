@@ -1,0 +1,43 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>OutputDebug - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The OutputDebug function sends a string to the debugger (if any) for display." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>OutputDebug</h1>
+
+<p>Sends a string to the debugger (if any) for display.</p>
+
+<pre class="Syntax"><span class="func">OutputDebug</span> Text</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Text</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>The text to send to the debugger for display. This text may include linefeed characters (`n) to start new lines. In addition, a single long line can be broken up into several shorter ones by means of a <a href="../Scripts.htm#continuation">continuation section</a>.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>If the script's process has no debugger, the system debugger displays the string. If the system debugger is not active, this function has no effect.</p>
+<p>One example of a debugger is DebugView, which is free and available at <a href="https://learn.microsoft.com/sysinternals/downloads/debugview">microsoft.com</a>.</p>
+<p>See also: <a href="../Scripts.htm#debug">other debugging methods</a></p>
+<h2 id="Related">Related</h2>
+<p><a href="FileAppend.htm">FileAppend</a>, <a href="../Scripts.htm#continuation">continuation sections</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Sends a string to the debugger (if any) for display.</p>
+<pre>OutputDebug A_Now ': Because the window "' TargetWindowTitle '" did not exist, the process was aborted.'</pre>
+</div>
+
+</body>
+</html>

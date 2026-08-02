@@ -1,0 +1,87 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>#Warn - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The #Warn directive enables or disables warnings for specific conditions which may indicate an error, such as a typo or missing &quot;global&quot; declaration." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>#Warn</h1>
+
+<p>Enables or disables warnings for specific conditions which may indicate an error, such as a typo or missing "global" declaration.</p>
+
+<pre class="Syntax"><span class="func">#Warn</span> <span class="optional">WarningType, WarningMode</span></pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>WarningType</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+
+    <p>If omitted, it defaults to <em>All</em>. Otherwise, specify the type of warning to enable or disable.</p>
+    <p id="VarUnset"><strong>VarUnset:</strong> Before the script starts to run, display a warning for the first reference to each variable which is never used in any of the following ways:</p>
+    <ul>
+      <li>As the target of a direct, non-dynamic assignment such as <code>MyVar := ""</code>.</li>
+      <li>Used with the <a href="../Variables.htm#ref">reference operator</a> (e.g. <code>&amp;MyVar</code>).</li>
+      <li>Passed directly to <a href="IsSet.htm">IsSet</a> (e.g. <code>IsSet(MyVar)</code>).</li>
+    </ul>
+    <p id="LocalSameAsGlobal"><strong>LocalSameAsGlobal:</strong> Before the script starts to run, display a warning for each <em>undeclared</em> local variable which has the same name as a global variable. This is intended to prevent errors caused by forgetting to declare a global variable inside a function before attempting to assign to it. If the variable really was intended to be local, a declaration such as <code>local x</code> or <code>static y</code> can be used to suppress the warning.</p>
+    <p>This warning is disabled by default.</p>
+    <pre>#Warn
+g := 1
+ShowG() {       <em>; The warning is displayed even if the function is never called.</em>
+    <em>;global g   ; &lt;-- This is required to assign to the global variable.</em>
+    g := 2
+}
+ShowG
+MsgBox g        <em>; Without the declaration, the above assigned to a local "g".</em></pre>
+    <p id="Unreachable"><strong>Unreachable:</strong> Before the script starts to run, show a warning for each line that immediately follows a <code>Return</code>, <code>Break</code>, <code>Continue</code>, <code>Throw</code> or <code>Goto</code> at the same nesting level, unless that line is the target of a label. Any such line would never be executed.</p>
+    <p>If the code is intended to be unreachable - such as if a <code>return</code> has been used to temporarily disable a block of code, or a hotkey or hotstring has been temporarily disabled by commenting it out - consider commenting out the unreachable code as well. Alternatively, the warning can be suppressed by defining a <a href="../misc/Labels.htm">label</a> above the first unreachable line.</p>
+    <p><strong>All:</strong> Apply the given <em>WarningMode</em> to all supported warning types.</p>
+  </dd>
+
+  <dt>WarningMode</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+
+    <p>If omitted, it defaults to <em>MsgBox</em>. Otherwise, specify a value indicating how warnings should be delivered.</p>
+    <p><strong>MsgBox:</strong> Show a message box describing the warning. Note that once the message box is dismissed, the script will continue as usual.</p>
+    <p><strong>StdOut:</strong> Send a description of the warning to <em>stdout</em> (the program's standard output stream), along with the filename and line number. This allows fancy editors such as SciTE to capture warnings without disrupting the script - the user can later jump to each offending line via the editor's output pane.</p>
+    <p><strong>OutputDebug:</strong> Send a description of the warning to the debugger for display. If a debugger is not active, this will have no effect. For more details, see <a href="OutputDebug.htm">OutputDebug</a>.</p>
+    <p><strong>Off:</strong> Disable warnings of the given <em>WarningType</em>.</p>
+  </dd>
+
+</dl>
+<h2 id="Remarks">Remarks</h2>
+	<p>If this directive is unspecified in the script, all warnings are enabled and use the MsgBox mode, except for LocalSameAsGlobal, which is disabled.</p>
+<p>The checks which produce VarUnset, LocalSameAsGlobal and Unreachable warnings are performed after all directives have been parsed, but before the script executes. Therefore, the location in the script is not significant (and, like other directives, #Warn cannot be executed conditionally).</p>
+<p>However, the ordering of multiple #Warn directives is significant: the last occurrence that sets a given warning determines the mode for that warning.  So, for example, the two statements below have the combined effect of enabling all warnings except LocalSameAsGlobal:</p>
+<pre>#Warn All
+#Warn LocalSameAsGlobal, Off
+</pre>
+<h2 id="Related">Related</h2>
+<p><a href="../Functions.htm#Local">Local and Global Variables</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExAllOff">
+<p><a class="ex_number" href="#ExAllOff"></a> Disables all warnings. Not recommended.</p>
+<pre>#Warn All, Off</pre>
+</div>
+
+<div class="ex" id="ExOmitted">
+<p><a class="ex_number" href="#ExOmitted"></a> Enables every type of warning and shows each warning in a message box.</p>
+<pre>#Warn</pre>
+</div>
+
+<div class="ex" id="ExLSAGOutputDebug">
+<p><a class="ex_number" href="#ExLSAGOutputDebug"></a> Sends a warning to OutputDebug for each undeclared local variable which has the same name as a global variable.</p>
+<pre>#Warn LocalSameAsGlobal, OutputDebug</pre>
+</div>
+
+</body>
+</html>

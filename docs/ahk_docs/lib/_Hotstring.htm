@@ -1,0 +1,64 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>#Hotstring - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The #Hotstring directive changes hotstring options or ending characters." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>#Hotstring</h1>
+
+<p>Changes <a href="../Hotstrings.htm">hotstring</a> options or ending characters.</p>
+
+<pre class="Syntax"><span class="func">#Hotstring</span> NoMouse
+<span class="func">#Hotstring</span> EndChars NewChars
+<span class="func">#Hotstring</span> NewOptions</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>NoMouse</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>Prevents mouse clicks from resetting the hotstring recognizer as described <a href="../Hotstrings.htm#NoMouse">here</a>. As a side-effect, this also prevents the <a href="InstallMouseHook.htm">mouse hook</a> from being required by hotstrings (though it will still be installed if the script requires it for other purposes, such as mouse hotkeys). The presence of <code>#Hotstring NoMouse</code> anywhere in the script affects all hotstrings, not just those physically beneath it.</p>
+  </dd>
+
+  <dt>EndChars NewChars</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>Specify the word EndChars followed by a single space and then the new ending characters. For example:</p>
+    <pre>#Hotstring EndChars -()[]{}':;"/\,.?!`n`s`t</pre>
+    <p>Since the new ending characters are in effect globally for the entire script -- regardless of where the EndChars directive appears -- there is no need to specify EndChars more than once.</p>
+    <p>The maximum number of ending characters is 100. Characters beyond this length are ignored.</p>
+    <p>To make tab or space an ending character, include `t or `s in the list.</p>
+  </dd>
+
+  <dt>NewOptions</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>Specify new options as described in <a href="../Hotstrings.htm#Options">Hotstring Options</a>. For example: <code>#Hotstring r s k0 c0</code>.</p>
+    <p>Unlike <em>EndChars</em> above, the #Hotstring directive is positional when used this way. In other words, entire sections of hotstrings can have different default options as in this example:</p>
+    <pre>::btw::by the way
+
+#Hotstring r c  <em>; All the below hotstrings will use "send raw" and will be case-sensitive by default.</em>
+::al::airline
+::CEO::Chief Executive Officer
+
+#Hotstring c0  <em>; Make all hotstrings below this point case-insensitive.</em></pre>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>Like other directives, #Hotstring cannot be executed conditionally.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="../Hotstrings.htm">Hotstrings</a></p>
+<p>The <a href="Hotstring.htm">Hotstring</a> function can be used to change hotstring options while the script is running.</p>
+
+</body>
+</html>

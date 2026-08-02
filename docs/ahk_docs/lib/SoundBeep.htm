@@ -1,0 +1,54 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>SoundBeep - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The SoundBeep function emits a tone from the PC speaker." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>SoundBeep</h1>
+
+<p>Emits a tone from the PC speaker.</p>
+
+<pre class="Syntax"><span class="func">SoundBeep</span> <span class="optional">Frequency, Duration</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Frequency</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, it defaults to 523. Otherwise, specify the frequency of the sound, a number between 37 and 32767.</p>
+  </dd>
+
+  <dt>Duration</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, it defaults to 150. Otherwise, specify the duration of the sound, in milliseconds.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>The script waits for the sound to finish before continuing. In addition, system responsiveness might be reduced during sound production.</p>
+<p>If the computer lacks a sound card, a standard beep is played through the PC speaker.</p>
+<p>To produce the standard system sounds instead of beeping the PC Speaker, see the asterisk mode of <a href="SoundPlay.htm">SoundPlay</a>.</p>
+<h2 id="Related">Related</h2>
+<p><a href="SoundPlay.htm">SoundPlay</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Plays the default pitch and duration.</p>
+<pre>SoundBeep</pre>
+</div>
+
+<div class="ex" id="ExParams">
+<p><a class="ex_number" href="#ExParams"></a> Plays a higher pitch for half a second.</p>
+<pre>SoundBeep 750, 500</pre>
+</div>
+
+</body>
+</html>

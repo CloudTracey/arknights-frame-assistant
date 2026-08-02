@@ -1,0 +1,84 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Click - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Click function clicks a mouse button at the specified coordinates. It can also hold down a mouse button, turn the mouse wheel, or move the mouse." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Click</h1>
+
+<p>Clicks a mouse button at the specified coordinates. It can also hold down a mouse button, turn the mouse wheel, or move the mouse.</p>
+<pre class="Syntax"><span class="func">Click</span> <span class="optional">Options</span></pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+  <dt>Options</dt>
+  <dd>
+    <p>Specify one or more of the following components: <var>Coords</var>, <var>WhichButton</var>, <var>ClickCount</var>, <var>DownOrUp</var> and/or <var>Relative</var>. If all components are omitted, a single left click is performed at the mouse cursor's current position.</p>
+    <p>The components may be spread across multiple parameters or combined into one or more strings. Each parameter may be either a single numeric component or a string containing zero or more components, where each component is separated from the next with at least one space, tab and/or comma (all within the string). For example, <code>Click 100, 200, "R D"</code> is equivalent to <code>Click "100 200 R D"</code> and both are valid. Parameters that are blank or omitted are ignored, as are extra commas.</p>
+    <p class="warning"><strong>Warning:</strong> <code>Click 100 200</code> would be equivalent to <code>Click "100200"</code>, as the two numbers would be <a href="../Variables.htm#concat">concatenated</a> before the function is called.</p>
+    <p>The components can appear in any order except <var>ClickCount</var>, which must occur somewhere to the right of <var>Coords</var>, if present.</p>
+    <p><strong>Coords:</strong> If omitted, the cursor's current position is used. Otherwise, specify the X and Y coordinates to which the mouse cursor is moved prior to clicking. For example, <code>Click "100 200"</code> clicks the left mouse button at a specific position. Coordinates are relative to the active window's client area unless <a href="CoordMode.htm">CoordMode</a> was used to change that.</p>
+    <p><strong>WhichButton:</strong> If omitted, it defaults to Left (the left mouse button). Otherwise, specify Left, Right, Middle (or just the first letter of each of these); or X1 (fourth button) or X2 (fifth button). For example, <code>Click "Right"</code> clicks the right mouse button at the mouse cursor's current position. Left and Right correspond to the primary button and secondary button. If the user swaps the buttons via system settings, the physical positions of the buttons are swapped but the effect stays the same.</p>
+    <p><var>WhichButton</var> can also be WheelUp or WU to turn the wheel upward (away from you), or WheelDown or WD to turn the wheel downward (toward you). WheelLeft (or WL) or WheelRight (or WR) may also be specified. <em>ClickCount</em> is the number of notches to turn the wheel. However, some applications do not obey a <var>ClickCount</var> value higher than 1 for the mouse wheel. For them, use the Click function multiple times by means such as <a href="Loop.htm">Loop</a>.</p>
+    <p><strong>ClickCount:</strong> If omitted, it defaults to 1. Otherwise, specify the number of times to click the mouse button or turn the mouse wheel. For example, <code>Click 2</code> performs a double-click at the mouse cursor's current position. If <var>Coords</var> is specified, <var>ClickCount</var> must appear after it. Specify zero (0) to move the mouse without clicking; for example, <code>Click "100 200 0"</code>.</p>
+    <p><strong>DownOrUp:</strong> If omitted, each click consists of a down-event followed by an up-event. Otherwise, specify the word Down (or the letter D) to press the mouse button down without releasing it. Later, use the word Up (or the letter U) to release the mouse button. For example, <code>Click "Down"</code> presses down the left mouse button and holds it.</p>
+    <p><strong>Relative:</strong> If omitted, the X and Y coordinates will be used for absolute positioning. Otherwise, specify the word Rel or Relative to treat the coordinates as offsets from the current mouse position. In other words, the cursor will be moved from its current position by X pixels to the right (left if negative) and Y pixels down (up if negative).</p>
+  </dd>
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>The Click function uses the sending method set by <a href="SendMode.htm">SendMode</a>. To override this mode for a particular click, use a specific Send function in combination with <a href="Send.htm#Click">{Click}</a>, as in this example: <code>SendEvent "{Click 100 200}"</code>.</p>
+<p>To perform a shift-click or control-click, <a href="Send.htm#Click">clicking via Send</a> is generally easiest. For example:</p>
+<pre>Send "+{Click 100 200}"  <em>; Shift+LeftClick</em>
+Send "^{Click 100 200 Right}"  <em>; Control+RightClick</em></pre>
+<p>Unlike <a href="Send.htm">Send</a>, the Click function does not automatically release the modifier keys (Ctrl, Alt, Shift, and Win). For example, if <kbd>Ctrl</kbd> is currently down, <code>Click</code> would produce a control-click but <code>Send "{Click}"</code> would produce a normal click.</p>
+<p>The <a href="SendMode.htm#Play">SendPlay mode</a> is able to successfully generate mouse events in a broader variety of games than the other modes. In addition, some applications and games may have trouble tracking the mouse if it moves too quickly, in which case <a href="SetDefaultMouseSpeed.htm">SetDefaultMouseSpeed</a> can be used to reduce the speed (but only in <a href="SendMode.htm#Event">SendEvent mode</a>).</p>
+<p>The <a href="BlockInput.htm">BlockInput</a> function can be used to prevent any physical mouse activity by the user from disrupting the simulated mouse events produced by the mouse functions. However, this is generally not needed for the <a href="SendMode.htm#Input">SendInput</a> and <a href="SendMode.htm#Play">SendPlay</a> modes because they automatically postpone the user's physical mouse activity until afterward.</p>
+<p>There is an automatic delay after every click-down and click-up of the mouse (except for <a href="SendMode.htm#Input">SendInput mode</a> and for turning the mouse wheel). Use <a href="SetMouseDelay.htm">SetMouseDelay</a> to change the length of the delay.</p>
+<h2 id="Related">Related</h2>
+<p><a href="Send.htm#Click">Send "{Click}"</a>, <a href="SendMode.htm">SendMode</a>, <a href="CoordMode.htm">CoordMode</a>, <a href="SetDefaultMouseSpeed.htm">SetDefaultMouseSpeed</a>, <a href="SetMouseDelay.htm">SetMouseDelay</a>, <a href="MouseClick.htm">MouseClick</a>, <a href="MouseClickDrag.htm">MouseClickDrag</a>, <a href="MouseMove.htm">MouseMove</a>, <a href="ControlClick.htm">ControlClick</a>, <a href="BlockInput.htm">BlockInput</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Clicks the left mouse button at the mouse cursor's current position.</p>
+<pre>Click</pre>
+</div>
+
+<div class="ex" id="ExCoord">
+<p><a class="ex_number" href="#ExCoord"></a> Clicks the left mouse button at a specific position.</p>
+<pre>Click 100, 200</pre>
+</div>
+
+<div class="ex" id="ExCoordMove">
+<p><a class="ex_number" href="#ExCoordMove"></a> Moves the mouse cursor to a specific position without clicking.</p>
+<pre>Click 100, 200, 0</pre>
+</div>
+
+<div class="ex" id="ExCoordRight">
+<p><a class="ex_number" href="#ExCoordRight"></a> Clicks the right mouse button at a specific position.</p>
+<pre>Click 100, 200, "Right"</pre>
+</div>
+
+<div class="ex" id="ExDouble">
+<p><a class="ex_number" href="#ExDouble"></a> Performs a double-click at the mouse cursor's current position.</p>
+<pre>Click 2</pre>
+</div>
+
+<div class="ex" id="ExDown">
+<p><a class="ex_number" href="#ExDown"></a> Presses down the left mouse button and holds it.</p>
+<pre>Click "Down"</pre>
+</div>
+
+<div class="ex" id="ExUp">
+<p><a class="ex_number" href="#ExUp"></a> Releases the right mouse button.</p>
+<pre>Click "Up Right"</pre>
+</div>
+
+</body>
+</html>

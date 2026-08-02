@@ -1,0 +1,61 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Trim / LTrim / RTrim - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Trim, LTrim and RTrim functions trim characters from the beginning and/or end of a string." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Trim / LTrim / RTrim</h1>
+
+<p>Trims characters from the beginning and/or end of a string.</p>
+
+<pre class="Syntax">NewString :=  <span class="func">Trim</span>(String <span class="optional">, OmitChars</span>)
+NewString := <span class="func">LTrim</span>(String <span class="optional">, OmitChars</span>)
+NewString := <span class="func">RTrim</span>(String <span class="optional">, OmitChars</span>)</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>String</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>Any string value or variable.  Numbers are not supported.</p>
+  </dd>
+
+  <dt>OmitChars</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If omitted, spaces and tabs will be removed. Otherwise, specify a list of characters (case-sensitive) to exclude from the beginning and/or end of <em>String</em>.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="../Concepts.htm#strings">String</a></p>
+<p>These functions return the trimmed version of the specified string.</p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Trims all spaces from the left and right side of a string.</p>
+<pre>text := "  text  "
+MsgBox
+(
+    "No trim:`t'" text "'
+    Trim:`t'" Trim(text) "'
+    LTrim:`t'" LTrim(text) "'
+    RTrim:`t'" RTrim(text) "'"
+)</pre>
+</div>
+
+<div class="ex" id="ExTrimZeros">
+<p><a class="ex_number" href="#ExTrimZeros"></a> Trims all zeros from the left side of a string.</p>
+<pre>MsgBox LTrim("00000123", "0")</pre>
+</div>
+
+</body>
+</html>

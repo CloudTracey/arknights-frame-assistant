@@ -1,0 +1,49 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>WinRestore - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The WinRestore function unminimizes or unmaximizes the specified window if it is minimized or maximized." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>WinRestore</h1>
+
+<p>Unminimizes or unmaximizes the specified window if it is minimized or maximized.</p>
+
+<pre class="Syntax"><span class="func">WinRestore</span> <span class="optional">WinTitle, WinText, ExcludeTitle, ExcludeText</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>WinTitle, WinText, ExcludeTitle, ExcludeText</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a>, <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#objects">Object</a></p>
+    <p>If each of these is blank or omitted, the <a href="../misc/WinTitle.htm#LastFoundWindow">Last Found Window</a> will be used. Otherwise, specify for <em>WinTitle</em> a <a href="../misc/WinTitle.htm">window title or other criteria</a> to identify the target window and/or for <em>WinText</em> a substring from a single text element of the target window (as revealed by the included <a href="../Program.htm#Window_Spy">Window Spy</a> utility).</p>
+    <p><em>ExcludeTitle</em> and <em>ExcludeText</em> can be used to exclude one or more windows by their title or text. Their specification is similar to <em>WinTitle</em> and <em>WinText</em>, except that <em>ExcludeTitle</em> does not recognize any criteria other than the window title.</p>
+    <p>Window titles and text are case-sensitive. By default, hidden windows are not detected and hidden text elements are detected, unless changed with <a href="DetectHiddenWindows.htm">DetectHiddenWindows</a> and <a href="DetectHiddenText.htm">DetectHiddenText</a>. When using <a href="../misc/WinTitle.htm#ahk_id">pure HWNDs</a>, hidden windows are always detected. By default, a window title can contain <em>WinTitle</em> or <em>ExcludeTitle</em> anywhere inside it to be a match, unless changed with <a href="SetTitleMatchMode.htm">SetTitleMatchMode</a>.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Error_Handling">Error Handling</h2>
+<p>A <a href="Error.htm#TargetError">TargetError</a> is thrown if the window could not be found, except if the <a href="#group">group</a> mode is used.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p>If a particular type of window does not respond correctly to WinRestore, try using the following instead:</p>
+<pre><a href="PostMessage.htm">PostMessage</a> 0x0112, 0xF120,,, WinTitle, WinText  <em>; 0x0112 = WM_SYSCOMMAND, 0xF120 = SC_RESTORE</em></pre>
+<p id="group">This function operates only upon the topmost matching window except when <em>WinTitle</em> is <a href="GroupAdd.htm">ahk_group GroupName</a>, in which case all windows in the group are affected.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="WinMinimize.htm">WinMinimize</a>, <a href="WinMaximize.htm">WinMaximize</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Unminimizes or unmaximizes Notepad if it is minimized or maximized.</p>
+<pre>WinRestore "Untitled - Notepad"</pre>
+</div>
+
+</body>
+</html>

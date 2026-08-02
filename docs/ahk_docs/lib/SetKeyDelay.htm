@@ -1,0 +1,62 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>SetKeyDelay - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The SetKeyDelay function sets the delay that will occur after each keystroke sent by the Send or ControlSend functions." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>SetKeyDelay</h1>
+
+<p>Sets the delay that will occur after each keystroke sent by <a href="Send.htm">Send</a> or <a href="ControlSend.htm">ControlSend</a>.</p>
+
+<pre class="Syntax"><span class="func">SetKeyDelay</span> <span class="optional">Delay, PressDuration, "Play"</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Delay</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, the current delay is retained. Otherwise, specify the time in milliseconds. Specify -1 for no delay at all or 0 for the smallest possible delay (however, if the <em>Play</em> parameter is present, both 0 and -1 produce no delay).</p>
+  </dd>
+
+  <dt id="dur">PressDuration</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>Certain games and other specialized applications may require a delay inside each keystroke; that is, after the press of the key but before its release.</p>
+    <p>If omitted, the current press duration is retained. Otherwise, specify the time in milliseconds. Specify -1 for no delay at all or 0 for the smallest possible delay (however, if the <em>Play</em> parameter is present, both 0 and -1 produce no delay).</p>
+    <p class="note"><strong>Note:</strong> <em>PressDuration</em> also produces a delay after any change to the modifier key state (Ctrl, Alt, Shift, and Win) needed to support the keys being sent.</p>
+  </dd>
+
+  <dt>Play</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>If blank or omitted, the delay and press duration are applied to the traditional <a href="SendMode.htm#Event">SendEvent mode</a>. Otherwise, specify the word <strong>Play</strong> to apply both to the <a href="SendMode.htm#Play">SendPlay mode</a>. If a script never uses this parameter, both are always -1 for SendPlay.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>By default, for the traditional <a href="SendMode.htm#Event">SendEvent mode</a>, a short delay (sleep) of 10 milliseconds is done automatically after every keystroke sent by <a href="Send.htm">Send</a> or <a href="ControlSend.htm">ControlSend</a>. This is done to improve the reliability of scripts because a window sometimes can't keep up with a rapid flood of keystrokes. For <a href="SendMode.htm#Play">SendPlay mode</a>, the default delay is -1. For both modes, the default press duration is -1.</p>
+<p>SetKeyDelay is not obeyed when using <a href="SendMode.htm#Input">SendInput mode</a> (which is the default); there is no delay between keystrokes in that mode.</p>
+<p>During the delay (sleep), the current thread is made <a href="../misc/Threads.htm#Interrupt">uninterruptible</a>.</p>
+<p>Due to the granularity of the OS's time-keeping system, delays might be rounded up to the nearest multiple of 10 or 15.</p>
+<p>For <a href="SendMode.htm#Event">SendEvent mode</a>, a delay of 0 internally executes a Sleep(0), which yields the remainder of the script's timeslice to any other process that may need it. If there is none, Sleep(0) will not sleep at all. By contrast, a delay of -1 will never sleep.  For better reliability, 0 is recommended as an alternative to -1.</p>
+<p>When the delay is set to -1, a script's process-priority becomes an important factor in how fast it can send keystrokes when using the traditional <a href="SendMode.htm#Event">SendEvent mode</a>. To raise a script's priority, use <code><a href="ProcessSetPriority.htm">ProcessSetPriority</a> "High"</code>. Although this typically causes keystrokes to be sent faster than the <a href="WinActivate.htm">active window</a> can process them, the system automatically buffers them. Buffered keystrokes continue to arrive in the target window after the <a href="Send.htm">Send</a> function completes (even if the window is no longer active). This is usually harmless because any subsequent keystrokes sent to the same window get queued up behind the ones already in the buffer.</p>
+<p>The built-in variables <a href="../Variables.htm#KeyDelay">A_KeyDelay</a> and <a href="../Variables.htm#KeyDelay">A_KeyDuration</a> contain the current settings for <a href="SendMode.htm#Event">SendEvent mode</a>, while <a href="../Variables.htm#KeyDelayPlay">A_KeyDelayPlay</a> and <a href="../Variables.htm#KeyDelayPlay">A_KeyDurationPlay</a> contain the current settings for <a href="SendMode.htm#Play">SendPlay mode</a>. They can also be assigned a new value instead of calling SetKeyDelay.</p>
+<p>Every newly launched <a href="../misc/Threads.htm">thread</a> (such as a <a href="../Hotkeys.htm">hotkey</a>, <a href="Menu.htm">custom menu item</a>, or <a href="SetTimer.htm">timed</a> subroutine) starts off fresh with the default setting for this function. That default may be changed by using this function during <a href="../Scripts.htm#auto">script startup</a>.</p>
+<h2 id="Related">Related</h2>
+<p><a href="Send.htm">Send</a>, <a href="ControlSend.htm">ControlSend</a>, <a href="SendMode.htm">SendMode</a>, <a href="SetMouseDelay.htm">SetMouseDelay</a>, <a href="SetControlDelay.htm">SetControlDelay</a>, <a href="SetWinDelay.htm">SetWinDelay</a>, <a href="Click.htm">Click</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Causes the smallest possible delay to occur after each keystroke sent via <a href="Send.htm">Send</a> or <a href="ControlSend.htm">ControlSend</a>.</p>
+<pre>SetKeyDelay 0</pre>
+</div>
+
+</body>
+</html>
