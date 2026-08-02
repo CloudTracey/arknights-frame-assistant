@@ -1,47 +1,32 @@
 ; == 关卡检测投票状态机 ==
-; 通过 6 个关卡内专属对象的 ImageSearch 投票，维护 State.InLevel（守卫/自动暂停二次确认消费）
+; 通过 3 个关卡内专属对象的颜色检测投票，维护 State.InLevel（守卫消费）
 ; 每秒轮询：命中 ≥2 个对象 → 置位 InLevel=true；命中 <2 个 → 复位 InLevel=false
-; 参考分辨率 2560×1440，单套模板先跑通（搜索区域用相对坐标 ww/wh 比例，多分辨率下自动换算）
-; 6 个对象：费用图标 2 变体 / 退出按钮 7 变体 / 关卡内文本 2 变体 / 蓝堡 2 变体 / 敌人数 2 变体 / 暂停按钮 5 变体
+; PixelSearch 颜色检测：区域用相对比例定位（LX/RX/UY/DY = ww/wh 比例，同项目其他位置函数），检测区域内目标颜色，不依赖模板尺寸
+; 3 个对象：关卡内文本 / 退出按钮 / 暂停按钮
 
 class LevelDetector {
-    ; 投票阈值（6 个对象命中 ≥2 置位）
+    ; 投票阈值（3 个对象命中 ≥2 置位）
     static VoteThreshold := 2
 
-    ; ImageSearch 选项：40 色差容差 + 黑色透明（对半透明 UI 友好），实测后调整
-    static ImageOptions := "*40 *TransBlack"
-
-    ; 调试模式：测试时在屏幕中央显示投票 ToolTip + 记录详细日志（测试已完成，关闭）
+    ; 调试模式：测试时在屏幕中央显示投票 ToolTip + 记录详细日志（测试完成，关闭）
     static DebugMode := false
     static _ToolTipActive := false
 
-    ; 对象配置（搜索区域为相对坐标比例，LX/RX = ww 比例，UY/DY = wh 比例）
-    ; 区域基于 2560×1440 参考分辨率下的实际对象位置换算
+    ; 对象配置（PixelSearch 颜色检测：区域用相对比例定位，LX/RX = ww 比例，UY/DY = wh 比例）
+    ; Colors: [{C: 0xRRGGBB 目标颜色, V: 容差 0-255}]，多个颜色 OR；任一命中即算对象命中
     static Objects := [
-        ; 费用图标（右下角，暂停/非暂停 2 变体）
-        {Name: "FeeIcon",
-         Paths: [FileExtractor.FeeIcon1Path, FileExtractor.FeeIcon2Path],
-         LX: 0.859, RX: 0.957, UY: 0.646, DY: 0.833},
-        ; 退出按钮（左上角，7 变体：6 模式 + _1 非暂停态，全部 OR）
-        {Name: "ExitButton",
-         Paths: [FileExtractor.ExitButton1Path, FileExtractor.ExitButton2Path, FileExtractor.ExitButton3Path, FileExtractor.ExitButton4Path, FileExtractor.ExitButton5Path, FileExtractor.ExitButton6Path, FileExtractor.ExitButton7Path],
-         LX: 0.000, RX: 0.086, UY: 0.000, DY: 0.118},
-        ; 关卡内文本（右下角，费用图标附近，暂停/非暂停 2 变体）
+        ; 关卡内文本（右下角；白色 V1，低分辨率 <1600×900 时容差放宽到 20）
         {Name: "TextInLevel",
-         Paths: [FileExtractor.TextInLevel1Path, FileExtractor.TextInLevel2Path],
-         LX: 0.926, RX: 1.000, UY: 0.757, DY: 0.854},
-        ; 蓝堡小图标（正上方偏右，暂停/非暂停 2 变体；RX 已向右扩展至 1600px）
-        {Name: "BlueCastle",
-         Paths: [FileExtractor.BlueCastle1Path, FileExtractor.BlueCastle2Path],
-         LX: 0.500, RX: 0.625, UY: 0.000, DY: 0.063},
-        ; 敌人数（正上方偏左，暂停/非暂停 2 变体）
-        {Name: "EnemyCount",
-         Paths: [FileExtractor.EnemyCount1Path, FileExtractor.EnemyCount2Path],
-         LX: 0.391, RX: 0.500, UY: 0.000, DY: 0.063},
-        ; 暂停按钮（右上角，5 变体 OR）
+         Colors: [{C: 0xFFFFFF, V: 1}],
+         LX: 0.9355, RX: 0.9375, UY: 0.7833, DY: 0.8465},
+        ; 退出按钮（左上角；灰色两色 + 其他模式深红/黄绿，OR；识别线加长至 65px 并左移到 x=136）
+        {Name: "ExitButton",
+         Colors: [{C: 0x868686, V: 3}, {C: 0x8C8C8C, V: 3}, {C: 0xB72518, V: 3}, {C: 0xBF2719, V: 3}, {C: 0xD0CF67, V: 3}, {C: 0xD9D86B, V: 3}],
+         LX: 0.0531, RX: 0.0535, UY: 0.0299, DY: 0.0750},
+        ; 暂停按钮（右上角；白/浅灰两色 OR）
         {Name: "PauseButton",
-         Paths: [FileExtractor.PauseButton1Path, FileExtractor.PauseButton2Path, FileExtractor.PauseButton3Path, FileExtractor.PauseButton4Path, FileExtractor.PauseButton5Path],
-         LX: 0.898, RX: 1.000, UY: 0.000, DY: 0.160}
+         Colors: [{C: 0xFFFFFF, V: 3}, {C: 0xF5F5F5, V: 3}],
+         LX: 0.9297, RX: 0.9453, UY: 0.0590, DY: 0.0590}
     ]
 
     ; 启动投票定时器（每秒轮询）
@@ -79,7 +64,7 @@ class LevelDetector {
             if (newVal != State.InLevel)
                 Logger.Info("LevelDetector", "关卡状态切换：" (newVal ? "进入关卡" : "退出关卡") "（投票 " hitCount "/" this.Objects.Length " " detail "）")
             ; 调试模式：ToolTip 直观实时显示各对象识别情况；关闭时清除 ToolTip
-            ; ToolTip 放屏幕中央，避开四角/顶部的 6 个检测区域（否则 ImageSearch 会读到 ToolTip 像素干扰识别）
+            ; ToolTip 放屏幕中央，避开四角/顶部的检测区域（否则会读到 ToolTip 像素干扰识别）
             if (this.DebugMode) {
                 this._ToolTipActive := true
                 ToolTip("AFA 关卡检测  " (newVal ? "●关卡内" : "○关卡外") "  " hitCount "/" this.Objects.Length "`n" detail, A_ScreenWidth // 2 - 160, A_ScreenHeight // 2 - 60, 2)
@@ -93,15 +78,17 @@ class LevelDetector {
         }
     }
 
-    ; 匹配单个对象（多变体任一命中即算命中）
-    ; try 保护：模板文件缺失/损坏时 ImageSearch 抛异常，返回 false 不崩溃（未编译运行时模板未自动提取）
+    ; 匹配单个对象：在区域内 PixelSearch 检测任一目标颜色（任一命中即算对象命中）
+    ; 区域用相对比例定位（LX/RX = ww 比例，UY/DY = wh 比例），不依赖模板尺寸
+    ; 低分辨率（长或宽任一 < 1600×900）时关卡内文本容差放宽到 20（低分辨率下文本更模糊，需更大容差）
     static _MatchObject(obj, ww, wh) {
         LX := ww * obj.LX, RX := ww * obj.RX, UY := wh * obj.UY, DY := wh * obj.DY
-        for path in obj.Paths {
-            try {
-                if ImageSearch(&FoundX, &FoundY, LX, UY, RX, DY, this.ImageOptions " " path)
-                    return true
-            }
+        for color in obj.Colors {
+            v := color.V
+            if (obj.Name = "TextInLevel" && (ww < 1600 || wh < 900))
+                v := Max(v, 20)
+            if PixelSearch(&FoundX, &FoundY, LX, UY, RX, DY, color.C, v)
+                return true
         }
         return false
     }
