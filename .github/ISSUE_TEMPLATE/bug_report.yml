@@ -12,7 +12,7 @@ body:
     id: afa_version
     attributes:
       label: AFA 版本号
-      placeholder: 例如：v1.2.1
+      placeholder: 例如：v1.6.2
     validations:
       required: true
 
@@ -27,8 +27,8 @@ body:
   - type: input
     id: resolution
     attributes:
-      label: 游戏分辨率
-      placeholder: 例如：1920x1080
+      label: 游戏分辨率 以及 是否全屏
+      placeholder: 例如：1920x1080 全屏 1600x1000 窗口化
 
   - type: input
     id: refresh_rate
@@ -69,11 +69,16 @@ body:
       label: 实际行为
       description: 描述实际发生的情况（可附带截图）
 
+  - type: markdown
+    attributes:
+      value: |
+        **如何导出日志**：打开 AFA 设置 →“日志”页面 → 点击“生成日志压缩包”，将生成的 ZIP 文件直接拖拽到下方"日志文件"输入框中即可。
+
   - type: textarea
     id: logs
     attributes:
       label: 日志文件
-      description: 如有错误日志或调试信息，请在此粘贴
+      description: 如有错误日志或调试信息，请在此粘贴或上传日志压缩包
       render: shell
 
   - type: textarea

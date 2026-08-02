@@ -5,7 +5,7 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-orange.svg)](https://spdx.org/licenses/GPL-3.0-only.html)
 [![Language: AutoHotkey v2](https://img.shields.io/badge/Language-AutoHotkey_v2-6594B9.svg)](https://www.autohotkey.com/)
-[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)  
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 <img alt="stars" src="https://img.shields.io/github/stars/CloudTracey/arknights-frame-assistant?style=social">
 <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/CloudTracey/arknights-frame-assistant/total?style=social">
 
@@ -68,9 +68,9 @@
 | 功能 | 说明 |
 |------|------|
 | 模拟左键点击 | 模拟鼠标左键点击 |
-| 放弃行动 | 放弃当前战斗行动（相当于游戏内 ESC + V 键） |
+| 放弃行动 | 放弃当前战斗行动 |
 | 跳过招募动画/剧情 | 点击跳过按钮，快速跳过招募动画或剧情 |
-| 返回上级菜单 | 一键返回上级菜单 |
+| 返回上级菜单 | 返回上级菜单 |
 | 基建快速收取 | 点击基建收取按钮，如快速收取制造站/贸易站产物 |
 | 肉鸽收取道具 | 点击肉鸽模式的"收下"按钮，快速收取道具 |
 
@@ -107,6 +107,7 @@
 | 单位技能 | S | 暂停技能 | 鼠标前侧键 |
 | 单位撤退 | A | 暂停撤退 | 鼠标后侧键 |
 | 视角切换 | 无 | 切换开局暂停 | 无 |
+| 前进 16ms | 无 | | |
 
 **快捷操作：**
 
@@ -129,7 +130,7 @@
 
 - 支持绑定键盘上的绝大多数按键
 - 支持绑定除鼠标左键外的鼠标按键（包括滚轮和侧键）
-- 使用 `BACKSPACE` 可清除绑定
+- 使用 `BACKSPACE/DELETE` 可清除绑定
 - 修改按键时会实时检测冲突并标红相关输入框，存在冲突时需先解决后才能保存
 
 ### 其他设置
@@ -137,6 +138,7 @@
 | 功能 | 说明 |
 |------|------|
 | **自动更新** | 支持自动检查并下载更新 |
+| **更新源** | 选择更新检查使用的下载源（国内源 / GitHub），默认国内源，检查失败会自动降级到另一源 |
 | **随小助手自动启动明日方舟** | 可配置随小助手启动时自动运行游戏，需设置游戏路径 |
 | **随明日方舟自动启动小助手** | 可配置随游戏启动时自动运行小助手，需设置游戏路径并开启 Windows 进程创建审核 |
 | **随游戏进程关闭自动退出** | 游戏关闭后自动退出小助手 |
@@ -182,8 +184,10 @@ AFA 会自动读取游戏内的按键设置并动态适配
 
 ### 关于游戏内帧率
 
-- 如果你的屏幕刷新率**大于等于 120 Hz**：可以开启垂直同步，且小助手内的"游戏内帧率"可以设置为 120
-- 如果你的屏幕刷新率**低于 120 Hz**：建议不要开启垂直同步，确保小助手内的"游戏内帧率"设置与游戏中实际帧数一致；若开启垂直同步，则需确保该设置与显示器刷新率一致
+小助手内的"游戏内帧率"选项为 **30 / 60 / 90 / 120 / 144 / 165 / 180 / 240+**，请选择与游戏实际运行帧数一致的档位，以保证过帧延迟计算准确。
+
+- 如果你的屏幕刷新率**大于等于 120 Hz**：可以开启垂直同步，帧率档位对应选择 120 或以上
+- 如果你的屏幕刷新率**低于 120 Hz**：建议不要开启垂直同步，确保帧率设置与游戏中实际帧数一致；若开启垂直同步，则需确保该设置与显示器刷新率一致
 
 ### 安全提示
 
@@ -248,6 +252,14 @@ A: 打开设置中的“日志”页面，点击**生成日志压缩包**，将�
 - 本工具仅供学习交流使用，请勿用于商业用途
 
 ## 🙏 鸣谢
+
+### 项目贡献者
+
+感谢所有为本项目贡献代码的朋友！
+
+[![Contributors](https://contrib.rocks/image?repo=CloudTracey/arknights-frame-assistant)](https://github.com/CloudTracey/arknights-frame-assistant/graphs/contributors)
+
+### 图标鸣谢
 
 本项目图标由 **[文件名错误EXE](https://www.mihuashi.com/profiles/8282001?role=painter)** 精心绘制，特此鸣谢
 

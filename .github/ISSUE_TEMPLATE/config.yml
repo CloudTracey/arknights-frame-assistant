@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用说明（README）
+    url: https://github.com/CloudTracey/arknights-frame-assistant/blob/main/README.md
+    about: 使用前请先阅读 README，包含下载、功能特性、常见问题等说明
+  - name: 一般性讨论（Discussions）
+    url: https://github.com/CloudTracey/arknights-frame-assistant/discussions
+    about: 使用交流、功能讨论与想法分享请前往 Discussions
