@@ -743,6 +743,7 @@ PureKeyWait(ThisHotkey) {
 ; 拦截是预期行为（非异常），用 Info 级别避免刷 critical 轨（WARN/ERROR 5 MiB 留给真正的问题）
 GuardInLevel(actionName, ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    ; 守卫判定：放弃按钮
     inLevel := IsInLevel()
     try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
     if inLevel
@@ -772,17 +773,17 @@ AbandonButtonPosition() {
     PButtonDY := wh * 0.0694
     return {PBLX: PButtonLX, PBUY: PButtonUY, PBRX: PButtonRX, PBDY: PButtonDY}
 }
-; 关卡界面检测
+; 关卡界面检测：只判定左上放弃按钮区域（灰色 0x8c8c8c / 生息演算黄色 0xd8d769，容差 20）
+; - 供 ActionBeginPause 二次确认使用：自动暂停时序下放弃按钮稳定可见，不受右上角按钮状态影响
+; - 守卫组合判定见 GuardInLevel（放弃按钮）
 IsInLevel() {
     AbdC := AbandonButtonPosition()
     if !AbdC
         return false
-    if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0x8c8c8c, 0) {
+    if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0x8c8c8c, 20)
         return true
-    }
-    if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0xd8d769, 0) {
+    if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0xd8d769, 20)
         return true
-    }
     return false
 }
 ; 获取暂停按钮位置
@@ -800,6 +801,25 @@ PauseButtonPositionLeft() {
     PButtonLX := ww * 0.9400
     PButtonLY := wh * 0.0700
     return {PBLX: PButtonLX, PBLY: PButtonLY}
+}
+; 获取暂停按钮区域（左右界取 PauseButtonPositionLeft/Right，上下界在中心 0.07 上下各取 1.5% 高度）
+PauseButtonArea() {
+    if !SafeWinGetClientPos(&ww, &wh)
+        return false
+    LX := ww * 0.9400
+    RX := ww * 0.9650
+    UY := wh * 0.0550
+    DY := wh * 0.0850
+    return {LX: LX, RX: RX, UY: UY, DY: DY}
+}
+; 右上暂停按钮白色检测（守卫辅助条件：关卡内暂停按钮为白色，容差 20）
+PauseButtonWhite() {
+    PauseC := PauseButtonArea()
+    if !PauseC
+        return false
+    if PixelSearch(&FoundX, &FoundY, PauseC.RX, PauseC.UY, PauseC.LX, PauseC.DY, 0xffffff, 20)
+        return true
+    return false
 }
 ; 获取暂停按钮右半部分位置
 PauseButtonPositionRight() {
