@@ -740,13 +740,32 @@ PureKeyWait(ThisHotkey) {
 GuardInLevel(actionName, ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     ; 守卫判定：放弃按钮
-    inLevel := IsInLevel()
+    inLevel := IsInLevel() AND PauseButtonWhite()
     try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
     if inLevel
         return true
     KeyForward.ForwardOriginalKey(ThisHotkey)
     Logger.Info("HotkeyActions", actionName " 被关卡检测拦截（不在关卡界面）")
     return false
+}
+; 右上暂停按钮白色检测（守卫辅助条件：关卡内暂停按钮为白色，容差 20）
+PauseButtonWhite() {
+    PauseC := PauseButtonArea()
+    if !PauseC
+        return false
+    if PixelSearch(&FoundX, &FoundY, PauseC.RX, PauseC.UY, PauseC.LX, PauseC.DY, 0xffffff, 20)
+        return true
+    return false
+}
+; 获取暂停按钮区域（左右界取 PauseButtonPositionLeft/Right，上下界在中心 0.07 上下各取 1.5% 高度）
+PauseButtonArea() {
+    if !SafeWinGetClientPos(&ww, &wh)
+        return false
+    LX := ww * 0.9400
+    RX := ww * 0.9650
+    UY := wh * 0.0550
+    DY := wh * 0.0850
+    return {LX: LX, RX: RX, UY: UY, DY: DY}
 }
 ; 判断鼠标是否在Client区域内
 IsMouseInClient() {
@@ -769,16 +788,16 @@ AbandonButtonPosition() {
     PButtonDY := wh * 0.0694
     return {PBLX: PButtonLX, PBUY: PButtonUY, PBRX: PButtonRX, PBDY: PButtonDY}
 }
-; 关卡界面检测：只判定左上放弃按钮区域（灰色 0x8c8c8c / 生息演算黄色 0xd8d769，容差 20）
+; 关卡界面检测：只判定左上放弃按钮区域（灰色 0x8c8c8c / 生息演算黄色 0xd8d769，容差 10）
 ; - 供 ActionBeginPause 二次确认使用：自动暂停时序下放弃按钮稳定可见，不受右上角按钮状态影响
 ; - 守卫组合判定见 GuardInLevel（放弃按钮）
 IsInLevel() {
     AbdC := AbandonButtonPosition()
     if !AbdC
         return false
-    if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0x8c8c8c, 20)
+    if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0x8c8c8c, 10)
         return true
-    if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0xd8d769, 20)
+    if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0xd8d769, 10)
         return true
     return false
 }
