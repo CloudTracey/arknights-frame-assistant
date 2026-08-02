@@ -450,10 +450,8 @@ ActionLButtonClick(ThisHotkey) {
 ; 放弃行动
 ActionCeaseOperations(ThisHotkey) {
     GameKeys.SendDown("battleLeftPopup")
-    Send "{ESC Down}"
     USleep(50)
     GameKeys.SendUp("battleLeftPopup")
-    Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
     PureKeyWait(ThisHotkey)
@@ -488,10 +486,8 @@ ActionSkip(ThisHotkey) {
 }
 ; 返回上级菜单
 ActionBack(ThisHotkey) {
-    GameKeys.SendDown("battleLeftPopup")
     Send "{ESC Down}"
     USleep(50)
-    GameKeys.SendUp("battleLeftPopup")
     Send "{ESC Up}"
     if InStr(ThisHotkey, "Wheel")
         return
