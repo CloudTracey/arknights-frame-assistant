@@ -798,25 +798,6 @@ PauseButtonPositionLeft() {
     PButtonLY := wh * 0.0700
     return {PBLX: PButtonLX, PBLY: PButtonLY}
 }
-; 获取暂停按钮区域（左右界取 PauseButtonPositionLeft/Right，上下界在中心 0.07 上下各取 1.5% 高度）
-PauseButtonArea() {
-    if !SafeWinGetClientPos(&ww, &wh)
-        return false
-    LX := ww * 0.9400
-    RX := ww * 0.9650
-    UY := wh * 0.0550
-    DY := wh * 0.0850
-    return {LX: LX, RX: RX, UY: UY, DY: DY}
-}
-; 右上暂停按钮白色检测（守卫辅助条件：关卡内暂停按钮为白色，容差 20）
-PauseButtonWhite() {
-    PauseC := PauseButtonArea()
-    if !PauseC
-        return false
-    if PixelSearch(&FoundX, &FoundY, PauseC.RX, PauseC.UY, PauseC.LX, PauseC.DY, 0xffffff, 20)
-        return true
-    return false
-}
 ; 获取暂停按钮右半部分位置
 PauseButtonPositionRight() {
     if !SafeWinGetClientPos(&ww, &wh)
