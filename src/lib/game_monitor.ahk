@@ -4,8 +4,18 @@ SetTimer CheckGameStatus, 400
 
 ; 检查游戏状态
 CheckGameStatus() {
+    ; AutoExit 运行时读 INI 实际保存值（GUI 未应用修改不影响）；检测到 AutoExit 刚被应用开启时重置游戏运行记录，
+    ; 避免应用设置后立即因"游戏曾运行过"的历史记录触发自动退出
+    static PrevAutoExit := ""
+    autoExit := Config.ReadImportantFromIni("AutoExit")
+    if (autoExit == "1" && PrevAutoExit != "1" && PrevAutoExit != "") {
+        State.GameHasStarted := false
+        Logger.Info("GameMonitor", "AutoExit 开启，重置游戏运行记录")
+    }
+    PrevAutoExit := autoExit
+
     ; 自动退出
-    if (Config.GetImportant("AutoExit") == "1") {
+    if (autoExit == "1") {
         if ProcessExist("Arknights.exe") {
             State.GameHasStarted := true
         }
@@ -17,8 +27,8 @@ CheckGameStatus() {
         }
     }
 
-    ; 自动开局暂停
-    if (Config.GetImportant("AutoBeginPause") == "1" && WinActive("ahk_exe Arknights.exe")) {
+    ; 自动开局暂停（运行时读 INI，同 AutoExit 理由）
+    if (Config.ReadImportantFromIni("AutoBeginPause") == "1" && WinActive("ahk_exe Arknights.exe")) {
         ; 寻找黑屏：遍历 17 个全屏采样点，允许 1 个点被游戏鼠标遮挡
         if (State.BlackScreenDetected == false) {
             points := BlackScreenPoints()
