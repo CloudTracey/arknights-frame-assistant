@@ -742,6 +742,9 @@ class State {
     ; 黑屏检测状态
     static BlackScreenDetected := false
 
+    ; 关卡检测状态（LevelDetector 投票状态机维护；守卫/自动暂停二次确认消费）
+    static InLevel := false
+
     ; 根据帧数设置更新延迟
     static UpdateDelay() {
         frame := Config.GetImportant("Frame")
