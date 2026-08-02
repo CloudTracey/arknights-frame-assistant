@@ -45,11 +45,11 @@ class LevelDetector {
         ; 游戏窗口未激活 → 跳过（保持现有状态，回前台自愈）
         if !WinActive("ahk_exe Arknights.exe")
             return
+        oldCtx := 0
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
         try {
             if !SafeWinGetClientPos(&ww, &wh) {
                 State.InLevel := false
-                return
             }
             hitCount := 0
             detail := ""
@@ -74,7 +74,8 @@ class LevelDetector {
             }
             State.InLevel := newVal
         } finally {
-            DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+            if (oldCtx)
+                DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         }
     }
 
