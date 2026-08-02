@@ -79,6 +79,9 @@ Logger.Info("Startup", "管理员进程启动，脚本=" A_ScriptName)
 ; 包含功能实现
 #Include ./lib/hotkey_actions.ahk
 
+; 包含关卡检测投票状态机（依赖 SafeWinGetClientPos，须在 hotkey_actions 之后）
+#Include ./lib/level_detector.ahk
+
 ; 包含按键绑定
 #Include ./lib/key_bind.ahk
 
