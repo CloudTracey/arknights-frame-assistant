@@ -875,7 +875,7 @@ SkipButtonPosition() {
     if !SafeWinGetClientPos(&ww, &wh)
         return false
     PButtonX := ww * 0.959765
-    PButtonY := wh * 0.091666
+    PButtonY := wh * 0.05
     return {PBX: PButtonX, PBY: PButtonY}
 }
 
