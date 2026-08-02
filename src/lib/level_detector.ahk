@@ -11,6 +11,7 @@ class LevelDetector {
     ; 调试模式：测试时在屏幕中央显示投票 ToolTip + 记录详细日志（测试完成，关闭）
     static DebugMode := false
     static _ToolTipActive := false
+    static _PollTimer := ""  ; 轮询定时器回调引用（SetTimer 启停需用同一对象匹配，故缓存）
 
     ; 对象配置（PixelSearch 颜色检测：区域用相对比例定位，LX/RX = ww 比例，UY/DY = wh 比例）
     ; Colors: [{C: 0xRRGGBB 目标颜色, V: 容差 0-255}]，多个颜色 OR；任一命中即算对象命中
@@ -29,10 +30,38 @@ class LevelDetector {
          LX: 0.9297, RX: 0.9453, UY: 0.0590, DY: 0.0590}
     ]
 
+    ; 守卫开关：开启→启动每秒轮询；关闭→停止轮询（不消耗像素检测）
+    static SetGuardEnabled(enabled) {
+        if enabled {
+            if (this._PollTimer = "")
+                this._PollTimer := LevelDetector.Poll.Bind(LevelDetector)
+            SetTimer this._PollTimer, 1000
+        } else if (this._PollTimer != "") {
+            SetTimer this._PollTimer, 0
+        }
+    }
+
+    ; 守卫开关同步（设置保存/应用/取消/重置后由 Loader.LoadSettings 调用）
+    ; 关闭守卫→停止轮询并强制 InLevel=true（守卫直接放行，无需维护真实关卡状态）
+    ; 开启守卫→恢复轮询（下轮 Poll 依据像素检测自动校正 InLevel）
+    static SyncGuardSetting() {
+        if (Config.ReadImportantFromIni("InLevelGuard") != "1") {
+            this.SetGuardEnabled(false)
+            State.InLevel := true
+            return
+        }
+        this.SetGuardEnabled(true)
+    }
+
     ; 启动投票定时器（每秒轮询）
     ; 类静态方法引用作回调需 Bind(LevelDetector)——直接传引用回调验证失败（Invalid callback function），同 KeyForward.ActionUpForward 模式
     static Init() {
-        SetTimer LevelDetector.Poll.Bind(LevelDetector), 1000
+        ; 未开启关卡守卫时不轮询，强制 InLevel=true（守卫直接放行，避免无谓的像素检测）
+        if (Config.ReadImportantFromIni("InLevelGuard") != "1") {
+            State.InLevel := true
+            return
+        }
+        this.SetGuardEnabled(true)
     }
 
     ; 轮询投票

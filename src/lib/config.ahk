@@ -125,7 +125,9 @@ class Constants {
         "DefaultStrongHoldProtocol", "默认启动卫戍协议方案",
         "TabOrder", "标签页顺序",
         "HiddenTabs", "隐藏的标签页",
-        "AutoBeginPause", "开局自动暂停"
+        "AutoBeginPause", "开局自动暂停",
+        "BackCeaseOperations", "使用“返回上级菜单”放弃行动",
+        "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键"
     )
 
     ; 自定义设置名称映射
@@ -209,7 +211,9 @@ class Config {
         "DefaultStrongHoldProtocol", "0",
         "TabOrder", Constants.DefaultTabOrder,
         "HiddenTabs", "",
-        "AutoBeginPause", "0"
+        "AutoBeginPause", "0",
+        "BackCeaseOperations", "0",
+        "InLevelGuard", "1"
     )
 
     ; 内部：默认自定义设置

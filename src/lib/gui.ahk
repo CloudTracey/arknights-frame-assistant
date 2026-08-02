@@ -78,7 +78,8 @@ class GuiManager {
     ; 具有对应 GUI 控件的 Important 设置；不直接遍历 Config.AllImportant，后者还包含内部字段
     static GuiImportantKeys := ["Frame", "AutoExit", "AutoOpenSettings", "ExitOnWindowClose",
         "DefaultStrongHoldProtocol", "TabOrder", "HiddenTabs", "AutoRunGame", "AutoStartWithGame", "GamePath",
-        "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause"]
+        "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause",
+        "BackCeaseOperations", "InLevelGuard"]
 
     ; 初始化GUI（单例模式）
     static Init() {
@@ -265,14 +266,27 @@ class GuiManager {
         this.NotOtherControls.Push(txtFrame)
         this.NotOtherControls.Push(this.GuiFrame)
 
-        ; 自动暂停开关
+        ; 自动暂停开关（仅"常规作战"页显示）
         checkboxAutoBeginPause := this.MainGui.Add("Checkbox", "x+84 yp+2 vAutoBeginPause", " 切换开局自动暂停")
         checkboxAutoBeginPause.OnEvent("Click", (*) => this.TrackChange("AutoBeginPause"))
         this.MainGui["AutoBeginPause"].Value := Config.GetImportant("AutoBeginPause")
-        this.NotOtherControls.Push(checkboxAutoBeginPause)
+        checkboxAutoBeginPause.GetPos(&cbPauseX, &cbPauseY)   ; 记录位置供快捷操作页复用
+        this.KeybindControls.Push(checkboxAutoBeginPause)
         editAutoBeginPauseSwitch := this.MainGui.Add("Edit", "x+15 yp-4 w140 Center -TabStop Uppercase v" "AutoBeginPauseSwitch",
             Config.GetHotkey("AutoBeginPauseSwitch"))
-        this.NotOtherControls.Push(editAutoBeginPauseSwitch)
+        this.KeybindControls.Push(editAutoBeginPauseSwitch)
+
+        ; 使用"返回上级菜单"放弃行动（仅"快捷操作"页显示，复用自动暂停开关同一位置）
+        checkboxBackCease := this.MainGui.Add("Checkbox", "x" cbPauseX " y" cbPauseY " vBackCeaseOperations", " 使用“返回上级菜单”放弃行动")
+        checkboxBackCease.OnEvent("Click", (*) => this.TrackChange("BackCeaseOperations"))
+        this.MainGui["BackCeaseOperations"].Value := Config.GetImportant("BackCeaseOperations")
+        this.QuickControls.Push(checkboxBackCease)
+
+        ; 仅在常规作战场景启用常规作战热键（控制 GuardInLevel 关卡检测守卫，仅"常规作战"页显示）
+        checkboxCombatGuard := this.MainGui.Add("Checkbox", "x75 y+12 h24 vInLevelGuard", " 仅在常规作战场景启用常规作战热键")
+        checkboxCombatGuard.OnEvent("Click", (*) => this.TrackChange("InLevelGuard"))
+        this.MainGui["InLevelGuard"].Value := Config.GetImportant("InLevelGuard")
+        this.KeybindControls.Push(checkboxCombatGuard)
 
         ; 帧数设置提示语
         this.MainGui.SetFont("s9 c1994d2")

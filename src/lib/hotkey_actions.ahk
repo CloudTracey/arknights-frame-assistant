@@ -480,8 +480,16 @@ ActionSkip(ThisHotkey) {
 ; 返回上级菜单
 ActionBack(ThisHotkey) {
     Send "{ESC Down}"
-    USleep(50)
-    Send "{ESC Up}"
+    ; 勾选"使用“返回上级菜单”放弃行动"时，ESC 后补发 battleLeftPopup（还原旧版放弃行动行为）
+    if (Config.ReadImportantFromIni("BackCeaseOperations") = "1") {
+        GameKeys.SendDown("battleLeftPopup")
+        USleep(50)
+        Send "{ESC Up}"
+        GameKeys.SendUp("battleLeftPopup")
+    } else {
+        USleep(50)
+        Send "{ESC Up}"
+    }
     if InStr(ThisHotkey, "Wheel")
         return
     PureKeyWait(ThisHotkey)
@@ -729,6 +737,7 @@ PureKeyWait(ThisHotkey) {
 }
 ; 关卡守卫：在关卡内返回 true；拦截时透传原键并记录日志，返回 false
 ; 判定依据：LevelDetector 投票状态机维护的 State.InLevel（读内存标志，无像素检测、无 DPI 切换）
+; 守卫关闭（InLevelGuard=0）时 LevelDetector 停止轮询并强制 InLevel=true，此处直接放行，无 I/O
 ; 拦截是预期行为（非异常），用 Info 级别避免刷 critical 轨（WARN/ERROR 5 MiB 留给真正的问题）
 GuardInLevel(actionName, ThisHotkey) {
     if State.InLevel
