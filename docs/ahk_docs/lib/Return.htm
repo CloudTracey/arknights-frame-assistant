@@ -1,0 +1,74 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Return - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Return statement returns from a function to which execution had previously jumped via function-call, Hotkey activation, or other means." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Return</h1>
+
+<p>Returns from a function to which execution had previously jumped via <a href="../Functions.htm">function-call</a>, <a href="../Hotkeys.htm">Hotkey</a> activation, or other means.</p>
+
+<pre class="Syntax"><span class="func">Return</span> <span class="optional">Expression</span></pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Expression</dt>
+  <dd>
+    <p>This parameter can only be used within a <a href="../Functions.htm">function</a>.</p>
+    <p>If omitted, it defaults to an empty string.</p>
+    <p>Since this parameter is an <a href="../Variables.htm#Expressions">expression</a>, all of the following lines are valid:</p>
+<pre>return 3
+return "literal string"
+return MyVar 
+return i + 1
+return true  <em>; Returns the number 1 to mean "true".</em>
+return ItemCount &lt; MaxItems  <em>; Returns a true or false value.</em>
+return FindColor(TargetColor)</pre>
+    </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>The space or tab after <em>Return</em> is optional if the expression is enclosed in parentheses, as in <code>return(expression)</code>.</p>
+<p>If there is no caller to which to return, <em>Return</em> will do an <a href="Exit.htm">Exit</a> instead.</p>
+<p>There are various ways to return multiple values from function to caller described within <a href="../Functions.htm#return">Returning Values to Caller</a>.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="../Functions.htm">Functions</a>, <a href="Exit.htm">Exit</a>, <a href="ExitApp.htm">ExitApp</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Reports the value returned by the function.</p>
+<pre>MsgBox returnTest() <em>; Shows 123</em>
+
+returnTest() {
+    return 123
+}</pre>
+</div>
+<div class="ex" id="ExUsage">
+<p><a class="ex_number" href="#ExUsage"></a> The first Return ensures that the subsequent function call is skipped if the preceding condition is true. The second Return is redundant when used at the end of a function like this.</p>
+<pre>#z::  <em>; Win-Z</em>
+^#z::  <em>; Ctrl-Win-Z</em>
+{
+    MsgBox "A Win-Z hotkey was pressed."
+    if GetKeyState("Ctrl")
+        return  <em>; Finish early, skipping the function call below.</em>
+    MyFunction()
+}
+
+MyFunction()
+{
+    Sleep 1000
+    return  <em>; Redundant when used at the end of the function like this.</em>
+}</pre>
+</div>
+
+</body>
+</html>

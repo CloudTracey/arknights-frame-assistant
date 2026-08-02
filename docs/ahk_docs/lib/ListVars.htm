@@ -1,0 +1,54 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>ListVars - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The ListVars function displays the script's variables: their names and current contents." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>ListVars</h1>
+
+<p>Displays the script's <a href="../Variables.htm">variables</a>: their names and current contents.</p>
+
+<pre class="Syntax"><span class="func">ListVars</span></pre>
+<h2 id="Remarks">Remarks</h2>
+<p>This function is equivalent to selecting the "View-&gt;Variables" menu item in the <a href="../Program.htm#main-window">main window</a>. It can help <a href="../Scripts.htm#debug">debug a script</a>.</p>
+<p>For each variable in the list, the variable's name and contents are shown, along with other information depending on what the variable contains. Each item is terminated with a carriage return and newline (<code class="no-highlight">`r`n</code>), but may span multiple lines if the variable contains <code class="no-highlight">`r`n</code>.</p>
+<p>List items may take the following forms (where words in <i>italics</i> are placeholders):</p>
+<pre class="no-highlight">
+<i>VarName</i>[<i>Length</i> of <i>Capacity</i>]: <i>String</i>
+<i>VarName</i>: <i>TypeName</i> object {<i>Info</i>}
+<i>VarName</i>: <i>Number</i>
+</pre>
+<p><i>Capacity</i> is the variable's current <a href="VarSetStrCapacity.htm">capacity</a>.</p>
+<p><i>String</i> is the first 60 characters of the variable's string value.</p>
+<p><i>Info</i> depends on the type of object, but is currently very limited.</p>
+<p>If ListVars is used inside a <a href="../Functions.htm">function</a>, the following are listed:</p>
+<ul>
+  <li><a href="../Functions.htm#Local">Local variables</a>, including variables of outer functions which are referenced by the current function.</li>
+  <li><a href="../Functions.htm#static">Static variables</a> for the current function. <a href="../Functions.htm#Global">Global variables</a> declared inside the function are also listed in this section.</li>
+  <li>If the current function is nested inside another function, static variables of each outer function are also listed.</li>
+  <li>All <a href="../Functions.htm#Global">global variables</a>.</li>
+</ul>
+
+<h2 id="Related">Related</h2>
+<p><a href="KeyHistory.htm">KeyHistory</a>, <a href="ListHotkeys.htm">ListHotkeys</a>, <a href="ListLines.htm">ListLines</a></p>
+<p>The <a href="https://github.com/Lexikos/DebugVars.ahk#debugvars">DebugVars</a> script can be used to inspect and change the contents of variables and objects.</p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Displays information about the script's variables.</p>
+<pre>var1 := "foo"
+var2 := "bar"
+obj := []
+ListVars
+Pause</pre>
+</div>
+
+</body>
+</html>

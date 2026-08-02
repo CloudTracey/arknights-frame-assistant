@@ -1,4 +1,4 @@
-; == 按键绑定 == 
+; == 按键绑定 ==
 class KeyBinder {
     ; 按键绑定状态
     static ModifyHook := InputHook("L0")
@@ -63,13 +63,13 @@ class KeyBinder {
         ; 若有输入按键且不是鼠标左键
         if(Newkey != "") {
             pureNewkey := RegExReplace(Newkey, "^[~*$!^+#&<>()]+")
-            if(pureNewkey == "Backspace") {
+            if(pureNewkey == "Backspace" || pureNewkey == "Delete") {
                 KeyBinder.ControlObj.Value := ""
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, "")
                 else
                     Config.SetHotkey(KeyBinder.ControlObj.Name, "")
-                GuiManager.TrackChange(KeyBinder.ControlObj.Name)
+                KeyBinder.NotifyBindingChanged(KeyBinder.ControlObj.Name)
             }
             else if(pureNewkey == "LWin" OR pureNewkey == "RWin") {
                 KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
@@ -78,9 +78,9 @@ class KeyBinder {
                 KeyBinder.ControlObj.Value := virtualNewkey ; 让GUI显示人能读的东西
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, realNewkey)
-                else 
+                else
                     Config.SetHotkey(KeyBinder.ControlObj.Name, realNewkey) ; 把人不能读也不该读的东西丢给内存
-                GuiManager.TrackChange(KeyBinder.ControlObj.Name)
+                KeyBinder.NotifyBindingChanged(KeyBinder.ControlObj.Name)
             }
         }
         KeyBinder.LastEditObject := ""
@@ -90,6 +90,12 @@ class KeyBinder {
         EventBus.Publish("KeyBindFocusCancel")
     }
 
+    ; 通知 GUI 重新计算热键冲突，并更新修改状态。
+    static NotifyBindingChanged(controlName) {
+        GuiManager.TrackChange(controlName)
+        EventBus.Publish("HotkeyBindingsChanged")
+    }
+
     ; 格式化显示键值
     static VirtualNewkeyFormat(value) {
         if(value == "")
@@ -97,12 +103,12 @@ class KeyBinder {
         ; 将<替换为L，>替换为R
         value := RegExReplace(value, "<", "L")
         value := RegExReplace(value, ">", "R")
-        
+
         ; 将修饰符!^+替换为完整名称
         value := RegExReplace(value, "!", "ALT")
         value := RegExReplace(value, "\^", "CTRL")
         value := RegExReplace(value, "\+", "SHIFT")
-        
+
         ; 提取CTRL、SHIFT、ALT修饰符
         hasLCTRL := false
         hasLSHIFT := false
@@ -112,7 +118,7 @@ class KeyBinder {
         hasRALT := false
         hasMainkey := false
         mainkey := ""
-        
+
         ; 检查是否包含各修饰符
         if RegExMatch(value, "i)LCTRL") {
             hasLCTRL := true
@@ -188,7 +194,7 @@ class KeyBinder {
         hasRALT := false
         hasMainkey := false
         mainkey := ""
-        
+
         ; 检查是否包含各修饰符
         if RegExMatch(value, "<\^") {
             hasLCTRL := true
@@ -320,6 +326,9 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             ; 释放可能存在的Hook
             KeyBinder.StopHook()
         }
+        ; 点击非Edit区域时聚焦取消按钮，取消普通Edit控件的选中状态
+        if (hwnd = GuiManager.MainGui.Hwnd)
+            GuiManager.FocusCancelButton()
         return
     }
     ; 无事发生

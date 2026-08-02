@@ -1,0 +1,361 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Changes &amp; New Features | AutoHotkey v2</title>
+<meta name="description" content="Changes and new features introduced by the current branch of AutoHotkey development." />
+<meta name="ahk:equiv-v1" content="AHKL_ChangeLog.htm" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="static/theme.css" rel="stylesheet" type="text/css" />
+<link href="static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="static/content.js" type="text/javascript"></script>
+</head>
+<body>
+<h1>Changes &amp; New Features</h1>
+<p><a href="v2-changes.htm">Changes from v1.1 to v2.0</a> covers the differences between v1.1 and v2.0.</p>
+<p>For full technical details of changes, refer to <a href="https://github.com/AutoHotkey/AutoHotkey">GitHub</a>.</p>
+
+<h2 id="v2.0.26">2.0.26 - May 4, 2026</h2>
+<p>Fixed ControlGetItems/ControlGetChoice not throwing for Tab controls.</p>
+<p>Fixed error reporting for ComObjArray().__Enum(), if it ever fails.</p>
+<p>Fixed <code>TraySetIcon("HBITMAP:" handle)</code> without *.</p>
+
+<h2 id="v2.0.25">2.0.25 - April 26, 2026</h2>
+<p>Fixed ByRef alias to global var becoming unset in recursive calls.</p>
+<p>Fixed error raised by Hotkey() not transferring control correctly.</p>
+
+<h2 id="v2.0.24">2.0.24 - April 19, 2026</h2>
+<p>Fixed navigation with Tab key in a Gui with a nested Gui (+Parent).</p>
+<strong>UX/Dash</strong>
+<p>Added an <a href="Program.htm#update">optional check for AutoHotkey updates</a>, disabled by default. [based on UX PR #11 by kczx3]</p>
+<p>Fixed errors being raised when arrow keys are used in the Help Files menu. [UX PR #24 by iPhilip]</p>
+<p>Fixed install-version.ahk to delete the temporary ".staging" directory after installing an upgrade.</p>
+<p>Fixed Help Files menu to be displayed at the button, not at the mouse cursor.</p>
+<p>Changed "New script" to add the file to recent files.</p>
+
+<h2 id="v2.0.23">2.0.23 - April 5, 2026</h2>
+<p>Changed how key-up events are correlated to key-down events for the purpose of determining whether to suppress key-up. A key-down with SendLevel between 1 and 7 now only correlates with a key-up of the same level. When <code>#InputLevel 1</code> is in effect, this fixes <code>Right::Send "{Right}"</code> not suppressing key-up, <code>RShift::RAlt</code> interfering with <code>RAlt::RShift</code> and vice versa. Events with SendLevel 8 and above are still grouped with non-sent events for practical reasons.</p>
+<p>Fixed <code>WinExist("A",,,"B")</code> to not exclude windows which have no controls.</p>
+<p>Fixed custom combo hotkeys with neutral modifiers (e.g. <code>Alt &amp; Esc::</code>) [broken by v2.0.22].</p>
+<p>Fixed key-up hotkeys to fire consistently when the key is used as both a prefix and a suffix (e.g. <code>a &amp; b::</code>, <code>b &amp; a::</code> and <code>a up::</code>).</p>
+<p>Fixed timers interrupting MsgBox after the timeout starts but before the window is shown, such as if <code>SetTimer(MsgBox, -10)</code> is used immediately before <code>MsgBox(1,,"T1")</code>.</p>
+
+<h2 id="v2.0.22">2.0.22 - March 22, 2026</h2>
+<p>Removed the undocumented effect that a hotkey with the &lt;/&gt; prefix had on the corresponding modifier key; e.g. <code>&lt;^a::</code> causing <code>LCtrl::</code> to fire on release, inconsistent with the <a href="KeyList.htm#modifier">documentation</a>. Always firing on press provides greater consistency and flexibility. The modifier key itself was suppressed since v2.0.20. Neutral modifiers such as <code>Ctrl::</code> always fire on release, and similar behaviour can be implemented with <a href="Variables.htm#PriorKey">A_PriorKey</a> and <code>~LCtrl up::</code>.</p>
+<p>Changed error dialogs to use msftedit.dll instead of riched20.dll to fix the following issues:</p>
+<ul>
+  <li>Hanging when inspected by UI Automation.</li>
+  <li>Broken characters and inconsistent fonts when the error message includes certain character sets (e.g. emoji, Chinese or Arabic).</li>
+</ul>
+<p>Fixed errors within __Delete being suppressed if a Try/Catch is active.</p>
+<p>Fixed CallbackCreate to validate ParamCount.</p>
+<p>Fixed detection of <code>DllCall(... "str",&amp;var:={} ...)</code> as an error.</p>
+<p>Fixed <code>CapsLock::</code> to suppress even if CapsLock is used as a prefix key.</p>
+<p>Fixed neutral Ctrl/Alt/Shift hotkeys to not suppress the key [broken by v2.0.20].</p>
+<p>Fixed fire-on-release behaviour of neutral Ctrl/Alt/Shift hotkeys when a key-up variant is turned on but disabled by #HotIf.</p>
+<p>Fixed <code>CapsLock &amp; 1::</code> to revert CapsLock state even if another prefix key is pressed before CapsLock is released.</p>
+<p>Fixed L/R modifier key-up not being suppressed in some cases where key-down was suppressed.</p>
+<p>Fixed L/R modifier key-up to be passed through if <code class="no-highlight">~</code> is used even if key-down was suppressed.</p>
+<p>Fixed L/R modifier hotkeys to fire on press even if the corresponding neutral modifier is present; e.g. <code>LCtrl::</code> with <code>Ctrl::</code>.</p>
+<p>Fixed corruption of unquoted continuation sections with trailing spaces.</p>
+<p>Fixed file stream I/O to flush cached writes if the file hasn't been closed when the process exits.</p>
+<p>Fixed <code class="no-highlight">`;</code> in continuation sections with the <code class="no-highlight">`</code> (literal escape) and <code class="no-highlight">C</code> (comment) options.</p>
+<p>Cleaned up some code within the keyboard/mouse hook.</p>
+
+<h2 id="v2.0.21">2.0.21 - February 9, 2026</h2>
+<p>Fixed StrGet crashing when given an address and not a length. (Broken by v2.0.20)</p>
+
+<h2 id="v2.0.20">2.0.20 - February 8, 2026</h2>
+<p>Fixed potential undefined behaviour in message callbacks during script termination.</p>
+<p>Fixed Run not closing the process handle.</p>
+<p>Fixed GuiFromHwnd crashing if passed another script's GUI window HWND.</p>
+<p>Fixed leading space in <code>For( a in b )</code> incorrectly raising an error.</p>
+<p>Fixed enumerator calls (For) treating implicitly returned "" as true.</p>
+<p>Fixed <code>A_maxHotkeysPerInterval</code> and <code>A_Hotkeyinterval</code> returning incorrect values if spelled in lower case.</p>
+<p>Fixed FileSelect duplicating the filter pattern if it lacks <code>*.</code>.</p>
+<p>Fixed ListBox tab-stop spacing when T option is used during control creation. [<a href="https://github.com/AutoHotkey/AutoHotkey/pull/346">PR #346</a>]</p>
+<p>Fixed <code>~RAlt &amp; &lt;::</code> causing <code>RAlt::</code> to fire on release despite <code>~</code> (and likewise with other L/R modifier keys).</p>
+<p>Fixed remap with nonexistent source key causing silent exit.</p>
+<p>Fixed key-up hotkey causing unwanted passthrough when modifiers don't match. e.g. RButton release not being suppressed after activating <code>RButton::</code> if <code>^RButton up::</code> was also present.</p>
+<p>Fixed semicolon in <code>/* ; */</code> preventing the block comment from ending.</p>
+<p>Fixed IsOptional and IsByRef return values for built-in methods.</p>
+<p>Fixed RegWrite parameter 1 to be mandatory.</p>
+<p>Fixed string return value being corrupted during debugging.</p>
+<p>Fixed erroneous <code>Else</code> placement to raise an error, not crash on load.</p>
+<p>Fixed StrPut/StrGet handling of 32-bit integer limits on x64.</p>
+<ul>
+  <li>Operations not requiring conversion no longer limit string length.</li>
+  <li>Conversion now throws more consistently if the API's limit is exceeded.</li>
+</ul>
+<p>Fixed <code>1::</code> to not fire after <code>1 &amp; LButton up::</code> is used, and similar.</p>
+<p>Fixed crash when ListView has the Sort option and Add is called with Col1 omitted.</p>
+<p>Fixed static functions not using static variables of grandparent functions.</p>
+<p>Fixed unpaired key-up hotkey not suppressing the key if it is also used as a prefix but the custom combos are disabled or have the tilde modifier.</p>
+<p>Fixed L/R modifier hotkeys to suppress even if the corresponding neutral modifier is present; e.g. <code>LCtrl::</code> with <code>Ctrl::</code>.</p>
+
+<h2 id="v2.0.19">2.0.19 - January 25, 2025</h2>
+<p>Fixed memory out-of-bounds access during RegEx compilation.</p>
+<p>Fixed externally-released modifiers to not be "restored" post-Send.</p>
+<p>Fixed modal dialog boxes suppressing InputHook events.</p>
+<p>Fixed key-up erroneously being suppressed after key-repeat presses it down in some cases.</p>
+<p>Fixed Critical Error when loading large icons with no alpha channel.</p>
+<p>Fixed MouseGetPos to make Control blank and not throw if ClassNN cannot be determined.</p>
+<p>Fixed FileSelect to validate Options.</p>
+<p>Fixed unexpected Catch/Else/Finally/Until not being flagged as an error in some cases.</p>
+<p>Fixed Try/Catch/Else/Finally not executing Finally if Else returns.</p>
+<p>Fixed execution of if-else-if-else-if containing fat arrow functions.</p>
+
+<h2 id="v2.0.18">2.0.18 - July 6, 2024</h2>
+<p>Fixed A_Clipboard silently exiting when GetClipboardData returns NULL.</p>
+<p>Fixed <code>a.b[c] := d</code> to invoke the getter for <code>a.b</code> if there is no setter.</p>
+
+<h2 id="v2.0.17">2.0.17 - June 5, 2024</h2>
+<p>Implemented an optimization to the WinText parameter by Descolada. [<a href="https://github.com/AutoHotkey/AutoHotkey/pull/335">PR #335</a>]</p>
+<p>Changed UnsetError message to suggest a global declaration instead of appending "(same name as a global)" after the variable name.</p>
+<p>Changed VarUnset warning message for consistency with UnsetError.</p>
+<p>Fixed the increment/decrement operators to throw UnsetError if the var is unset, not TypeError.</p>
+<p>Fixed OwnProps to assign the property name safely in cases where a property deletes itself.</p>
+<p>Fixed breakpoints to work in arrow functions under a control flow statement without a block.</p>
+<p>Fixed debugger to break at the line of the call when stepping out of a function. (This behaviour was added in Revision 31 and broken by v1.1.30.00.)</p>
+<p>Stepping out of a function which was called as a new thread now breaks at the line which was interrupted, instead of waiting until the next line is reached.</p>
+<p>Fixed debugger to not delete temporary breakpoints which are ignored while evaluating DBGp property_get or context_get.</p>
+
+<h2 id="v2.0.16">2.0.16 - May 30, 2024</h2>
+<p>Fixed load-time errors sent to stdout showing incorrect file/line number in some cases.</p>
+<p>Fixed ExitApp on load-time error/warning dialogs to use exit code 2.</p>
+<p>Fixed locating WindowSpy.ahk in Current User (non-admin) installs.</p>
+<p>Fixed DBGp property_get paging items incorrectly (again).</p>
+<p>Fixed StrPut failing if Length/Buffer is specified and <a href="https://learn.microsoft.com/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar">MultiByteToWideChar</a> doesn't support the WC_NO_BEST_FIT_CHARS flag for the target codepage.</p>
+<p>Fixed Download to attempt anonymous authentication if the server requests client authentication.</p>
+
+<h2 id="v2.0.15">2.0.15 - May 16, 2024</h2>
+<p>Fixed DBGp property_get failing to retrieve properties due to incorrect paging (since v2.0.14).</p>
+<p>Fixed DBGp property evaluation causing Try without Catch to fail (since v2.0.14).</p>
+<p>Fixed &lt;base&gt; debugger pseudo-property leaking a reference (since v2.0.14).</p>
+
+<h2 id="v2.0.14">2.0.14 - May 6, 2024</h2>
+<p>Fixed the error dialog to handle letter key shortcuts even when text is focused.</p>
+<p>Fixed MonthCal W-<em>n</em> (number of month) width values to not be affected by DPI scaling.</p>
+<p>Fixed Click to not return an integer.</p>
+<p>Fixed detection of <code class="no-highlight"><i>key</i>::try {</code> as an error.</p>
+<p>Fixed <code>:B0*O:XY::Z</code> to produce XYZ rather than XZ (suppressing Y).</p>
+<p>Fixed Send to leave any prior <code class="no-highlight">{<i>modifier</i> Down}</code> in effect even if the key happens to be physically held down.</p>
+<p>Improved the reliability of the script taking focus when a menu popup is shown.</p>
+
+<p><strong>Debugger improvements:</strong></p>
+<p>Fixed stdout/stderr packets sent during the processing of another command to not corrupt the pending response.</p>
+<p>Fixed <code class="no-highlight">property_get -n &lt;exception&gt;.message</code> and similar.</p>
+<p>Fixed corrupted results from property_get when a property returns a temporary object with a string, such as <code>x.y.z</code> where <code>y =&gt; {z:"a"}</code>.</p>
+<p>Fixed crashes when an asynchronous command is received during the processing of another command.</p>
+<p>Fixed exceptions not being deleted after they are suppressed via property_set.</p>
+<p>Fixed <code class="no-highlight">property_get -c 0 -d 0</code> to allow global variables, as already allowed by <code class="no-highlight">-d 1</code>.</p>
+<p>Fixed property_get paging enumerated items incorrectly.</p>
+
+<p>Improved property_get to support property getters with one parameter (previously only the implicit __Item property supported this).</p>
+<p>Improved property_get to support properties of primitive values. The value must still be contained by a variable or returned from a property.</p>
+<p>Improved property_get to allow calling functions with &lt;=1 parameter.</p>
+<p>Improved property_get to support float keys/parameters.</p>
+
+<p>Changed debugger to suppress exceptions during property evaluation.</p>
+<p>Changed debugger to ignore errors thrown by __Enum (treat as no items).</p>
+<p>Changed the &lt;enum&gt; pseudo-property to require __Enum. This prevents the object itself from being called as an enumerator.</p>
+<p>Small code size optimizations in the debugger.</p>
+
+<h2 id="v2.0.13">2.0.13 - April 20, 2024</h2>
+<p>Changed Hotkey function to throw ValueError if Options contains an invalid option.</p>
+<p>Fixed InputHook to respect the +S option for Backspace when acting as undo.</p>
+<p>Fixed debugger to safely handle property deletion during enumeration.</p>
+<p>Fixed OLE clipboard content (e.g. error dialog text) being lost on exit.</p>
+<p>Fixed detection of invalid suffix on a hotkey, such as <code>Hotkey "a pu"</code>.</p>
+<p>Fixed DllCall <code class="no-highlight">AStr*</code> arg type to copy back only if address changes.</p>
+<p>Fixed #Include to correctly "close" any built-in variable it reads (no known impact on real-world scripts).</p>
+<p>Fixed WinTitles with two different ahk_id values to yield no match.</p>
+
+<h2 id="v2.0.12">2.0.12 - March 23, 2024</h2>
+<p>Fixed Gui GetPos/GetClientPos when Gui has an owner window or +DPIScale.</p>
+<p>Fixed Until preventing subfolder recursion in file loops.</p>
+<p>Fixed DllCall to throw when arg type is UStr.</p>
+<p>Fixed a memory leak occurring for each regex callout.</p>
+<p>Fixed Send erroneously releasing a modifier due to a race condition. For example, <code>~LAlt::Send "{Blind}x"</code> intermittently released LAlt if some other keyboard hook was installed more recently than the script's own hook.</p>
+<p>Fixed icon loader to prefer higher bit-depth when multiple bitmaps of the same size are present.</p>
+<p>Fixed SendInput failing to release LCtrl if it had already released RAlt and the layout does not have AltGr.</p>
+<p>Fixed key-up hotkeys not firing if the key repeats after modifiers change. For example, <code>F1::Send "{Ctrl down}"</code> should allow <code>F1 up::</code> to execute when the key is released even though Ctrl is down, but was not allowing it after key-repeat occurs.</p>
+<p>Fixed an error message to refer to #HotIf rather than #IfWin. [PR #327]</p>
+<p>Fixed OwnProps erroneously skipping properties with optional parameters.</p>
+<p>Fixed inconsistent behaviour of cloned dynamic properties.</p>
+<ul>
+  <li>OwnProps not skipping cloned properties which require parameters.</li>
+  <li>Parameters not being passed recursively to parameterless properties (i.e. to allow <code>a.b[c]</code> to evaluate as <code>(a.b)[c]</code>).</li>
+</ul>
+<p>Fixed SysGetIPAddresses causing a Critical Error when the network subsystem is non-functional; e.g. in Windows safe mode.</p>
+<p>Changed ControlGetFocus to return 0 when focus can't be determined, such as when a console window is active.</p>
+
+<h2 id="v2.0.11">2.0.11 - December 23, 2023</h2>
+<p>Added a workaround for the first shown menu not accepting keyboard input on Windows 10.</p>
+<p>Fixed the <a href="lib/Gui.htm#Add">Add method (Gui)</a> to support the ShortDate option for DateTime controls.</p>
+<p>Fixed a reference counting error with multi-level function nesting.</p>
+<p>Fixed <code>#include &lt;x&gt;</code> causing a load-time crash if used inside a function.</p>
+<p>Fixed <code>ListView.Opt("NoSort")</code>.</p>
+<p>Fixed a memory leak occurring when an object with no own properties is cloned.</p>
+<p>Fixed #include and FileInstall (non-compiled) to compare file names <a href="https://learn.microsoft.com/windows/win32/intl/handling-sorting-in-your-applications#sort-strings-ordinally">ordinally</a>, not linguistically.</p>
+
+<h2 id="v2.0.10">2.0.10 - September 24, 2023</h2>
+<p>Fixed crashing when a named function hotkey is used after #HotIf.</p>
+<p>Fixed numeric literals ending with a dot to not cause line continuation.</p>
+<p>Fixed pre-increment/decrement to work with chained array indexing.</p>
+<p>Fixed OnNotify/OnCommand applying styles only applicable to OnEvent.</p>
+<p>Fixed FileExist/DirExist leaking handles when <code class="no-highlight">emptydir\*</code> is used.</p>
+<p>Fixed DirExist leaking handles when only files match.</p>
+
+<h2 id="v2.0.9">2.0.9 - September 17, 2023</h2>
+<p>Fixed stacking of hotstrings with the X option.</p>
+<p>Fixed debugger not listing local vars if the function is at the bottom of the stack.</p>
+<p>Fixed Gui threads to show on the debugger's call stack.</p>
+<p>Fixed some combinations of &amp;/ByRef causing stack overflow in ExitApp.</p>
+
+<h2 id="v2.0.8">2.0.8 - September 11, 2023</h2>
+<p>Fixed ByRef parameters erroneously assigning the default value to the caller's VarRef if unset.</p>
+<p>Fixed some issues affecting suppressed Alt/Ctrl/Shift/Win hotkeys, such as:</p>
+<ul>
+  <li><code>*LCtrl::</code> blocked LCtrl from the active window, but sending Alt-key combinations would fail because the system thinks Ctrl is down, and would therefore send WM_KEYDOWN instead of WM_SYSKEYDOWN.</li>
+  <li><code>*LAlt::</code> caused the system to forget any prior <code class="no-highlight">{LAlt DownR}</code>, so a remapping such as <code>LCtrl::LAlt</code> would not behave correctly while LAlt is physically down, even though LAlt was suppressed.</li>
+  <li>Other potential issues where the system's low-level tracking of a modifier key doesn't match up with the logical state.</li>
+</ul>
+<p>Fixed some issues affecting continuation sections:</p>
+<ul>
+  <li>Escape sequences in the Join option were translated twice, causing <code class="no-highlight">````</code> to become one literal <code class="no-highlight">`</code> instead of two, <code class="no-highlight">``n</code> to become a linefeed, and similar.</li>
+  <li><code class="no-highlight">`"</code> or <code class="no-highlight">`'</code> produced a literal backtick and ended the string, instead of producing a literal quote mark, if the continuation section was enclosed in quotes of the same type and lacked the <code class="no-highlight">`</code> option.</li>
+</ul>
+<p>Optimized the automatic escaping of quote marks and backtick in continuation sections.</p>
+<p>Fixed breakpoint_list (debugger) returning duplicates on lines containing fat arrow functions.</p>
+<p>Fixed <code class="no-highlight">+BackgroundDefault</code> failing to override the Gui's BackColor property.</p>
+
+<h2 id="v2.0.7">2.0.7 - September 2, 2023</h2>
+<p>Fixed MouseClickDrag to allow X1 and Y1 to be omitted.</p>
+<p>Fixed mouse AltTab hotkeys not suppressing execution of a prefix hotkey, such as <code>1::</code> for <code>1 &amp; WheelDown::AltTab</code>. (Broken by v2.0.4)</p>
+<p>Fixed hook hotkeys not recognizing modifiers which are pressed down by SendInput.</p>
+<p>Fixed A_AhkPath to not be reliant on the case/format of the command line used to launch the process.</p>
+<p>Fixed heap corruption during window searches involving groups. (Broken by v2.0.6)</p>
+<p><strong>Launcher</strong></p>
+<p>Fixed #Requires not being detected if followed by a comment other than <code>; prefer <i>xxx</i></code>. (Broken by v2.0.6)</p>
+<p>Fixed syntax detection misinterpreting multi-line auto-replace hotstrings.</p>
+<p><strong>Window Spy</strong></p>
+<p>Changed font to Segoe UI size 9, consistent with Dash.</p>
+
+<h2 id="v2.0.6">2.0.6 - August 30, 2023</h2>
+<p>Fixed some ambiguity with COM calls, such as <code>x.y</code> acting as <code>x.y()</code>.</p>
+<p>Fixed breakpoint on control flow statement being "hit" when a fat arrow function on the line below it returns.</p>
+<p>Fixed <code>Default :</code> to not merge with the line below it. This prevented <code>Default :</code> from being used at the end of a Switch block, and caused any subsequent line to take the line number of the Default.</p>
+<p>Optimized ProcessGetPath, ProcessSetPriority and ProcessClose to not scan through all processes when given a valid PID, even if access to the process is denied.</p>
+<p>Fixed inability of <code>LWin::Alt</code> to be used to activate some Alt key combos.</p>
+<p>Fixed TypeError thrown by <code>x is y</code> to say "Class" rather than "Object".</p>
+<p>Fixed WinTitle to support criteria longer than 1023 characters.</p>
+<p>Fixed issues when <code>&amp;ref</code> is used on different aliases of the same variable.</p>
+<p>Fixed optional parameter default expressions (other than simple literal values) preventing the use of assume-global/assume-static.</p>
+
+<h2 id="v2.0.5">2.0.5 - August 12, 2023</h2>
+<p>Fixed a memory leak caused by incorrect reference counting when an object is enumerated via COM. [PR# 325]</p>
+<p>Fixed internal calls to __Enum to not call __Call.</p>
+<p>Fixed error messages referring to parameter #65535.</p>
+<p>Fixed incorrect IEnumVARIANT return count.</p>
+<p>Fixed Download throwing OSError(0) when error should be non-zero.</p>
+<p>Fixed LV.Add/Insert/Modify crashing when passed the minimum number of parameters.</p>
+<p>Fixed stack traces to exclude calls to __new for Error subclasses.</p>
+
+<h2 id="v2.0.4">2.0.4 - July 3, 2023</h2>
+<p>Changed the Reload button on error/warning dialogs to explicitly close the dialog, even if the current script instance isn't terminated.</p>
+<p>Removed an optimization for <code>return var</code> which caused the variable to appear blank when accessed within a <code>finally</code> block.</p>
+<p>Fixed Default (Switch) to allow space before the colon.</p>
+<p>Fixed Array.Prototype.RemoveAt to return the removed value when Length is "explicitly omitted" with <code>unset</code> or <code>var?</code>.</p>
+<p>Fixed crashing when a ComObject is passed to a for-loop with only the second variable specified.</p>
+<p><strong>Changes merged from v1.1.37.00 and v1.1.37.01:</strong></p>
+<p>Changed COM method and property calls to pass large integers as VT_I8, not VT_R8 (floating-point), so the original type and precision is retained. Integers in the 32-bit range are still passed as VT_I4.</p>
+<p>Added support for multi-variable enumerators (for-loops) with IDispatch-wrapped AutoHotkey objects. Both the script invoking the object and the object itself must be running a supported AutoHotkey version.</p>
+<p>Fixed omitted parameters to receive their default values rather than the "optional argument marker" when an AutoHotkey method is called via IDispatch (COM). The reverse translation was already done when <em>calling</em> COM methods in previous versions.</p>
+<p>Fixed <code>VerCompare(a, "&gt;" b)</code> and reduced code size marginally.</p>
+<p>Fixed AltTab-related load-time errors to be consistent with other errors.</p>
+<p>Fixed errors thrown by a ComObject wrapper not being propagated correctly if it is called via an object/COM.</p>
+<p>Fixed the Hotkey GUI control to allow setting the symbols <code class="no-highlight">^</code>, <code class="no-highlight">!</code> and <code class="no-highlight">+</code> as hotkeys.</p>
+<p>Fixed the Hotkey control to include modifiers when its value is set to a symbol.</p>
+<p>Fixed potential misbehaviour of InputHook.KeyOpt() with single chars.</p>
+<ul>
+<li>Option removal potentially not affecting the corresponding SC.</li>
+<li>Options potentially also being applied to sc000.</li>
+</ul>
+<p>Fixed a bug with custom combos where a set of hotkeys like <code>a &amp; b::</code>, <code>a::</code> and <code>a up::</code> would fail to suppress the release of <kbd>a</kbd> if <code>a::</code> alone is disabled with #HotIf.</p>
+<p>Fixed a bug where a key-down event is correctly suppressed by a hotkey, but sending an additional key-down with SendLevel &gt; 0 would prevent the subsequent key-up from being suppressed, even if the sent event is ignored due to #InputLevel.</p>
+<p>Fixed <code>a &amp; b up::</code> not suppressing <kbd>b</kbd> if <code>a &amp; b::</code> is present but disabled by #HotIf.</p>
+<p>Fixed an issue with hotkeys not firing due to a race condition. If a modifier hotkey such as <code>~*RWin::</code> called Send or GetKeyState too soon, the OS could report that RWin isn't down, so the hook's modifier state would be "corrected" and hotkeys would wrongly fire or fail to fire. This was likely to occur only if another keyboard hook was installed more recently than the script's own hook, since in that case the OS would not update key state until the other hook's thread has resumed and returned.</p>
+<p>Fixed hotstrings to use the Last Found Window set by #HotIf.</p>
+<p>Fixed an issue where any attempt to reinstall the keyboard or mouse hook would fail if the OS had automatically uninstalled the hook. It is still necessary to meet certain conditions before any such attempt can be made.</p>
+<p>Optimized allocation of cached COM property names for built-in IDispatch.</p>
+<p>Refactored code to support a build configuration for AutoHotkey as a DLL.</p>
+
+<h2 id="v2.0.3">2.0.3 - June 19, 2023</h2>
+<p>Fixed <code>Hotkey("a", "b")</code> to use the original function of "b", not "a". [PR #318]</p>
+<p>Fixed FileSetAttribute crash when used in a File Reading Loop. [PR #323]</p>
+<p>Fixed duplicate Gui control name errors to correctly abort the thread.</p>
+<p>Fixed DateTime/MonthCal Range option not applying minimum value.</p>
+<p>Fixed <code>s[x] =&gt; x</code> and other single-line properties starting with "s".</p>
+<p>Fixed a bug with deleting a breakpoint on a static line containing <code>=&gt;</code>.</p>
+<p>Fixed Button control not becoming default when clicked.</p>
+<p>Fixed PixelSearch to unset X when pixel is not found.</p>
+<p>Fixed hotstring with escape sequence causing next line to be skipped.</p>
+<p>Fixed WinTitle ignoring character 1 when "ahk_" is at character 2.</p>
+<p>Fixed remapping to utilize right-hand modifier already being down. For example, <code>+x::+y</code> will no longer release RShift to press LShift.</p>
+<p>Changed error message for <code>a == b &amp;&amp; c()</code> and similar cases to avoid alluding to legacy <code>=</code>.</p>
+<p>Improved error message for some cases of unintended line continuation.</p>
+<p>Fixed reserved words to be permitted as method names, as documented.</p>
+<p>Fixed duplicate OnMessage calls for some keyboard messages.</p>
+<p>Fixed inter-referenced closures being deleted prematurely.</p>
+<p>Fixed SetFont to permit leading spaces in the Options parameter.</p>
+<p>Fixed sending of <code class="no-highlight">{ASC nnnn}</code>.</p>
+<p>Fixed <code>a.base := a</code> to throw an error.</p>
+<p>Fixed <code>x.y := unset</code> causing crashes or undefined behaviour.</p>
+<p>Fixed GuiControl.Move() to be relative to the GUI's client area even when the GUI is not its parent.</p>
+<p>Fixed Menu Add overwriting items which were appended by Menu Insert.</p>
+<strong>Launcher</strong>
+<p>Run Dash instead of showing the old Welcome page in the documentation, when run without parameters.</p>
+<p>Fixed version selection GUI raising an error if Enter is pressed without selecting a version. [PR UX/#4]</p>
+<p>Suppress errors when checking whether an absent version can be downloaded.</p>
+<p>Fixed absent version download prompt to not show the UAC shield if UAC is disabled.</p>
+<p>Fixed issues with #Requires interpretation.</p>
+<ul>
+<li>Support omitting the "v" prefix.</li>
+<li>Support operators (<code class="no-highlight">&gt; &gt;= &lt; &lt;= =</code>).</li>
+<li>Support a single digit for the version.</li>
+</ul>
+<strong>Installation</strong>
+<p>Fixed the default installation directory for command-line use.</p>
+<p>Renamed the Start menu shortcut from "AutoHotkey" to "AutoHotkey Dash".</p>
+<p>Fixed EnableUIAccess when running as SYSTEM.</p>
+<p>Fixed EnableUIAccess to verify the private key when selecting a certificate.</p>
+<strong>Dash</strong>
+<p>Fixed Launch Config GUI to update the "Run as administrator" and "Run with UI access" options.</p>
+<p>Fixed Up/Down key handling in the Launch Config GUI.</p>
+
+<h2 id="v2.0.2">2.0.2 - January 2, 2023</h2>
+<p>Fixed Short DllCall arg type and undefined behaviour for invalid types.</p>
+<p>Fixed (non-string) file version number for AutoHotkey binaries.</p>
+<p>Fixed parameter type errors to show the correct parameter number.</p>
+
+<h2 id="v2.0.1">2.0.1 - January 1, 2023</h2>
+<p>Fixed Func.IsOptional(1) returning 0 in some cases where it shouldn't.</p>
+<p>Fixed Gui event handler functions to not drop the Gui parameter when the Gui is its own event sink.</p>
+<p>Fixed COM errors to not show "(null)" when no description is available.</p>
+<p>Fixed ToolTips intermittently appearing at the wrong position.</p>
+<p>Fixed __Enum(unset) to permit a second variable for Array, Match and Gui.</p>
+<p>Fixed #include &lt;&gt; error messages to show "Script library" rather than "Function library".</p>
+<p>Fixed new threads being unable to prevent a message check with Critical.</p>
+<p>Optimized conversion of DllCall type names.</p>
+<p>Made some trivial but effective code size optimizations.</p>
+
+<h2 id="Pre-Release">Pre-Release</h2>
+<p>For a history of changes prior to the v2.0.0 release, refer to the following (but note some changes were superseded):</p>
+<ul>
+  <li><a href="https://www.autohotkey.com/boards/viewtopic.php?f=24&t=110696">v2.0 release candidates</a></li>
+  <li><a href="https://www.autohotkey.com/boards/viewtopic.php?f=24&t=95688">v2.0-beta releases</a></li>
+  <li><a href="https://www.autohotkey.com/boards/viewtopic.php?f=37&t=2120">v2.0-alpha releases</a></li>
+</ul>
+</body>
+</html>

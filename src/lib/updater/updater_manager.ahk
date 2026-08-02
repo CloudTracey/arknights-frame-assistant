@@ -2,17 +2,13 @@
 ; 协调更新流程的各个模块
 
 class Updater {
-    ; 最大重试次数
-    static MaxRetries := 3
+    ; 每源下载重试次数（降级前）
+    static DownloadRetries := 3
     ; 重试间隔（毫秒）
-    static RetryDelay := 2000
+    static DownloadRetryDelay := 1000
     ; 启动延迟检查时间（毫秒）
     static StartupDelay := 100
-    
-    ; 下载参数存储（用于重试）
-    static CurrentDownloadParams := ""
-    static CurrentRetryCount := 0
-    
+
     ; 初始化：订阅事件
     static Init() {
         ; 订阅应用启动事件（自动检查）
@@ -22,40 +18,38 @@ class Updater {
         ; 订阅更新可用事件
         EventBus.Subscribe("UpdateAvailable", (data) => this.ShowUpdateDialog(data))
         ; 订阅更新确认事件
-        EventBus.Subscribe("UpdateConfirmed", (data) => this.DownloadWithRetry(data))
+        EventBus.Subscribe("UpdateConfirmed", (data) => this.DownloadWithAltSource(data))
         ; 订阅更新忽略事件
         EventBus.Subscribe("UpdateIgnored", (data) => this.HandleUpdateIgnored(data))
-        ; 订阅下载完成事件
-        EventBus.Subscribe("UpdateDownloadComplete", (data) => this.HandleDownloadComplete(data))
-        ; 订阅下载错误事件
-        EventBus.Subscribe("UpdateDownloadError", (data) => this.HandleDownloadError(data))
         ; 订阅下载取消事件
         EventBus.Subscribe("UpdateDownloadCancelled", (*) => this.HandleDownloadCancelled())
     }
-    
+
     ; 启动时检查（异步）
     static CheckOnStartup() {
         ; 延迟执行，避免阻塞GUI初始化
         SetTimer(() => this._DoCheck(false), -this.StartupDelay)
     }
-    
+
     ; 手动检查
     static CheckManual() {
         ; 立即执行检查
         this._DoCheck(true)
     }
-    
+
     ; 内部：执行版本检查
     static _DoCheck(isManual) {
+        Logger.Info("Updater", "开始检查更新 manual=" isManual)
         ; 自动检查时，检查是否开启了自动更新
         if (!isManual && Config.GetImportant("AutoUpdate") != "1") {
             return
         }
-        
+
         ; 执行版本检查
         EventBus.Publish("CheckUpdateStart")
         checkResult := VersionChecker.Check()
-        
+        Logger.Info("Updater", "版本检查结果 status=" checkResult.status)
+
         ; 处理检查结果
         switch checkResult.status {
             case "up_to_date":
@@ -63,11 +57,18 @@ class Updater {
                     UpdateUI.ShowUpToDateDialog(checkResult.localVersion)
                 }
                 ; 清除已忽略版本记录（当前已是最新）
-                if (Config.GetImportant("LastDismissedVersion") != "") {
+                dismissedVersion := Config.GetImportant("LastDismissedVersion")
+                if (dismissedVersion != "") {
                     Config.SetImportant("LastDismissedVersion", "")
-                    Config.SaveAllToIni()
+                    saveResult := Config.SaveAllToIni()
+                    if (!saveResult.success) {
+                        ; 保存失败时恢复内存值，避免配置文件与当前状态不一致。
+                        Config.SetImportant("LastDismissedVersion", dismissedVersion)
+                        Logger.Warn("Updater", "清除已忽略版本记录失败：" saveResult.message)
+                        MessageBox.Warning("当前版本已是最新，但忽略版本记录未能清除：`n" saveResult.message, "配置未保存")
+                    }
                 }
-            
+
             case "update_available":
                 ; 检查是否是已忽略的版本
                 lastDismissed := Config.GetImportant("LastDismissedVersion")
@@ -76,7 +77,7 @@ class Updater {
                     EventBus.Publish("CheckUpdateComplete")
                     return
                 }
-                
+
                 ; 发布更新可用事件
                 EventBus.Publish("UpdateAvailable", {
                     localVersion: checkResult.localVersion,
@@ -85,22 +86,51 @@ class Updater {
                     isManual: isManual,
                     changelogBody: checkResult.HasProp("changelogBody") ? checkResult.changelogBody : ""
                 })
-            
+
             case "rate_limited":
+                ; 自动检查时静默降级到国内源
+                if (!isManual) {
+                    fallbackResult := VersionChecker._CheckFromDomestic(checkResult.localVersion)
+                    if (fallbackResult.status = "update_available") {
+                        EventBus.Publish("UpdateAvailable", {
+                            localVersion: fallbackResult.localVersion,
+                            remoteVersion: fallbackResult.remoteVersion,
+                            downloadUrl: fallbackResult.downloadUrl,
+                            isManual: isManual,
+                            changelogBody: fallbackResult.HasProp("changelogBody") ? fallbackResult.changelogBody : ""
+                        })
+                        EventBus.Publish("CheckUpdateComplete")
+                        return
+                    }
+                }
                 if (isManual) {
                     suggestToken := checkResult.HasProp("suggestToken") ? checkResult.suggestToken : false
                     UpdateUI.ShowCheckFailedDialog(checkResult.message, suggestToken)
                 }
-            
+
             case "token_invalid":
+                ; 自动检查时静默降级到国内源
+                if (!isManual) {
+                    fallbackResult := VersionChecker._CheckFromDomestic(checkResult.localVersion)
+                    if (fallbackResult.status = "update_available") {
+                        EventBus.Publish("UpdateAvailable", {
+                            localVersion: fallbackResult.localVersion,
+                            remoteVersion: fallbackResult.remoteVersion,
+                            downloadUrl: fallbackResult.downloadUrl,
+                            isManual: isManual,
+                            changelogBody: fallbackResult.HasProp("changelogBody") ? fallbackResult.changelogBody : ""
+                        })
+                        EventBus.Publish("CheckUpdateComplete")
+                        return
+                    }
+                }
+                ; 手动检查或降级也失败，显示错误
                 if (isManual) {
-                    ; Token无效，引导用户重新配置
                     result := MessageBox.Info(checkResult.message)
-                    ; 重置Token验证状态
                     VersionChecker.TokenValidated := false
                     GuiManager.Show()
                 }
-            
+
             case "check_failed":
                 if (isManual) {
                     UpdateUI.ShowCheckFailedDialog(checkResult.message)
@@ -108,115 +138,135 @@ class Updater {
         }
         EventBus.Publish("CheckUpdateComplete")
     }
-    
-    ; 带重试的下载
-    static DownloadWithRetry(params, retryCount := 0) {
-        ; 保存当前参数（用于重试和取消）
-        this.CurrentDownloadParams := params
-        this.CurrentRetryCount := retryCount
-        
-        ; 显示下载中提示（传递重试次数）
+
+    ; 下载入口（含同源重试 + 降级备选源）
+    static DownloadWithAltSource(params, triedFallback := false) {
+        this._TryDownload(params, triedFallback)
+    }
+
+    ; 内部：执行单次下载（在新线程中）
+    static _ExecuteDownloadAttempt(downloadParams) {
+        UpdateDownloader.Download(downloadParams)
+    }
+
+    ; 内部：带重试的单源下载
+    static _TryDownload(params, triedFallback, retryCount := 0) {
         UpdateUI.ShowDownloadingDialog(retryCount)
-        
-        ; 执行下载
+
         downloadParams := {
             downloadUrl: params.downloadUrl,
             localVersion: params.localVersion,
             remoteVersion: params.remoteVersion,
             onProgress: (data) => UpdateUI.UpdateDownloadProgress(data),
             onComplete: (result) => this.HandleDownloadSuccess(result),
-            onError: (error) => this.HandleDownloadFailure(error, params, retryCount),
+            onError: (error) => this.HandleDownloadRetryOrFallback(error, params, triedFallback, retryCount),
             onCancel: (info) => this.HandleDownloadCancelComplete()
         }
-        
-        ; 在新线程中执行下载，避免阻塞UI
-        SetTimer(() => this._ExecuteDownload(downloadParams), -10)
+
+        SetTimer(() => this._ExecuteDownloadAttempt(downloadParams), -10)
     }
-    
-    ; 执行下载（在新线程中）
-    static _ExecuteDownload(downloadParams) {
-        UpdateDownloader.Download(downloadParams)
+
+    ; 下载错误处理——重试或降级
+    static HandleDownloadRetryOrFallback(error, params, triedFallback, retryCount) {
+        Logger.Warn("Updater", "下载失败 retry=" retryCount " fallback=" triedFallback " message=" error.message)
+        if (error.HasProp("cancelled") && error.cancelled) {
+            return
+        }
+
+        ; 同源重试
+        if (retryCount < this.DownloadRetries - 1) {
+            Sleep(this.DownloadRetryDelay)
+            this._TryDownload(params, triedFallback, retryCount + 1)
+            return
+        }
+
+        ; 同源重试耗尽，尝试降级备选源
+        if (!triedFallback) {
+            UpdateUI.CloseDownloadingDialog()
+            fallbackUrl := this._GetFallbackDownloadUrl(params)
+            if (fallbackUrl != "") {
+                fallbackParams := {
+                    downloadUrl: fallbackUrl,
+                    localVersion: params.localVersion,
+                    remoteVersion: params.remoteVersion
+                }
+                this._TryDownload(fallbackParams, true, 0)
+                return
+            }
+        }
+
+        ; 降级也失败，显示错误
+        UpdateUI.CloseDownloadingDialog()
+        UpdateUI.ShowDownloadFailedDialog("下载失败：`n" error.message "`n`n两个更新源均不可用，请稍后重试或手动下载")
     }
-    
+
+    ; 内部：获取备选源的下载地址（重新用备选源检查版本）
+    static _GetFallbackDownloadUrl(params) {
+        updateSource := Config.GetImportant("UpdateSource")
+        isGitHubPreferred := (updateSource == "2")
+
+        localVersion := params.localVersion
+        fallbackResult := isGitHubPreferred
+            ? VersionChecker._CheckFromDomestic(localVersion)
+            : VersionChecker._CheckFromGithub(localVersion)
+
+        if (fallbackResult.status = "update_available" || fallbackResult.status = "up_to_date") {
+            return fallbackResult.HasProp("downloadUrl") ? fallbackResult.downloadUrl : ""
+        }
+        return ""
+    }
+
     ; 下载成功处理
     static HandleDownloadSuccess(result) {
+        Logger.Info("Updater", "更新下载完成，准备执行自替换")
         ; 关闭下载对话框
         UpdateUI.CloseDownloadingDialog()
         UpdateUI.ShowDownloadCompleteDialog()
         ; 执行自替换
         this.ExecuteSelfReplacement(result)
     }
-    
-    ; 下载失败处理（带重试）
-    static HandleDownloadFailure(error, originalParams, retryCount) {
-        ; 检查是否是取消导致的失败
-        if (error.HasProp("cancelled") && error.cancelled) {
-            ; 取消导致的失败，不显示错误，也不重试
-            return
-        }
-        
-        if (retryCount < this.MaxRetries) {
-            ; 延迟后重试
-            Sleep(this.RetryDelay)
-            this.DownloadWithRetry(originalParams, retryCount + 1)
-        } else {
-            ; 关闭下载对话框
-            UpdateUI.CloseDownloadingDialog()
-            ; 重试次数用尽，显示失败
-            UpdateUI.ShowDownloadFailedDialog("重试" this.MaxRetries "次后仍失败：`n" error.message)
-        }
-    }
-    
+
     ; 处理下载取消
     static HandleDownloadCancelled() {
         ; 取消下载器
         UpdateDownloader.Cancel()
     }
-    
+
     ; 处理下载取消完成
     static HandleDownloadCancelComplete() {
+        Logger.Info("Updater", "用户取消更新下载")
         ; 关闭下载对话框
         UpdateUI.CloseDownloadingDialog()
         ; 显示取消提示
         UpdateUI.ShowDownloadCancelledDialog()
-        ; 清理参数
-        this.CurrentDownloadParams := ""
-        this.CurrentRetryCount := 0
     }
-    
-    ; 处理下载完成事件
-    static HandleDownloadComplete(data) {
-        ; 由 onComplete 回调处理，这里不需要额外操作
-    }
-    
-    ; 处理下载错误事件
-    static HandleDownloadError(data) {
-        ; 由 onError 回调处理，这里不需要额外操作
-    }
-    
+
     ; 执行自替换
     static ExecuteSelfReplacement(downloadResult) {
         replaceResult := SelfReplacer.ExecuteReplacement({
             newFilePath: downloadResult.tempFile,
             backupOldVersion: true
         })
-        
+
         if (!replaceResult.success) {
             MessageBox.Error("启动更新失败：`n" replaceResult.error, "更新失败")
         }
         ; 成功时会自动退出程序
     }
-    
+
     ; 处理忽略此版本
     static HandleUpdateIgnored(data) {
         ; 记录忽略的版本号
         Config.SetImportant("LastDismissedVersion", data.remoteVersion)
-        Config.SaveAllToIni()
-        
+        saveResult := Config.SaveAllToIni()
+
         ; 显示提示
-        MessageBox.Info("已忽略版本 " data.remoteVersion " 的更新提示。`n`n下次自动检查更新时将不再提示此版本。", "已忽略")
+        if (saveResult.success)
+            MessageBox.Info("已忽略版本 " data.remoteVersion " 的更新提示。`n`n下次自动检查更新时将不再提示此版本。", "已忽略")
+        else
+            MessageBox.Warning("已关闭本次更新提示，但忽略状态未能写入配置：`n" saveResult.message, "配置未保存")
     }
-    
+
     ; 显示更新对话框
     static ShowUpdateDialog(data) {
         UpdateUI.ShowUpdateDialog(data)

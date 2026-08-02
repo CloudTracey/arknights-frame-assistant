@@ -1,0 +1,123 @@
+name: Sync Release to COS
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '版本号 (如 v1.5.6)'
+        required: true
+      prerelease:
+        description: '是否测试版'
+        type: boolean
+        default: false
+      body:
+        description: '更新日志 (可选)'
+        required: false
+        default: '# 手动测试'
+
+jobs:
+  sync-to-cos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+          cache-dependency-path: '.github/scripts/requirements.txt'
+
+      - name: Install dependencies
+        run: pip install -r .github/scripts/requirements.txt
+
+      - name: Parse release info
+        id: release
+        env:
+          IS_MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [ "$IS_MANUAL" = "true" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "prerelease=${{ github.event.inputs.prerelease }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "prerelease=${{ github.event.release.prerelease }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set channel
+        id: channel
+        run: |
+          if [ "${{ steps.release.outputs.prerelease }}" = "true" ]; then
+            echo "name=beta" >> $GITHUB_OUTPUT
+          else
+            echo "name=stable" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download release asset
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          ASSET_URL=$(echo '${{ toJson(github.event.release.assets) }}' | jq -r '.[] | select(.name == "AFA.exe") | .browser_download_url')
+          if [ -z "$ASSET_URL" ]; then
+            echo "Error: AFA.exe not found in release assets" >&2
+            exit 1
+          fi
+          curl -L -o AFA.exe "$ASSET_URL"
+
+      - name: Configure coscmd
+        run: |
+          coscmd config -a ${{ secrets.COS_SECRET_ID }} \
+                         -s ${{ secrets.COS_SECRET_KEY }} \
+                         -b ${{ secrets.COS_BUCKET }} \
+                         -r ${{ secrets.COS_REGION }}
+
+      - name: Upload AFA.exe to COS
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          coscmd upload AFA.exe /${{ steps.channel.outputs.name }}/${{ steps.release.outputs.tag }}/AFA.exe
+
+      - name: Fetch all releases from GitHub API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/CloudTracey/arknights-frame-assistant/releases \
+            --paginate \
+            --jq '.[] | {tag_name, body, published_at, prerelease, assets: [.assets[]? | {browser_download_url}]}' \
+            > /tmp/all_releases.jsonl
+          echo "Fetched $(wc -l < /tmp/all_releases.jsonl) releases from GitHub API"
+
+      - name: Build and upload version.json
+        env:
+          COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
+          COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+          CDN_DOMAIN: ${{ secrets.CDN_DOMAIN }}
+          IS_MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_DATE: ${{ github.event.release.published_at }}
+          INPUT_BODY: ${{ github.event.inputs.body }}
+        run: |
+          if [ "$IS_MANUAL" = "true" ]; then
+            printf '%s' "$INPUT_BODY" > /tmp/release_body.txt
+            RELEASE_DATE_INPUT=$(date +%Y-%m-%d)
+          else
+            printf '%s' "$RELEASE_BODY" > /tmp/release_body.txt
+            RELEASE_DATE_INPUT="$RELEASE_DATE"
+          fi
+          python .github/scripts/build_version_json.py \
+            --channel ${{ steps.channel.outputs.name }} \
+            --version ${{ steps.release.outputs.tag }} \
+            --date "$(date -d "$RELEASE_DATE_INPUT" +%Y-%m-%d)" \
+            --body-file /tmp/release_body.txt \
+            --domain "${{ secrets.CDN_DOMAIN }}" \
+            --releases-file /tmp/all_releases.jsonl \
+            --sync-both
+
+      - name: Refresh CDN cache
+        run: |
+          tccli configure set secretId ${{ secrets.COS_SECRET_ID }}
+          tccli configure set secretKey ${{ secrets.COS_SECRET_KEY }}
+          tccli configure set region ${{ secrets.COS_REGION }}
+          DOMAIN="${{ secrets.CDN_DOMAIN }}"
+          tccli cdn PurgePathCache --Paths "[\"https://${DOMAIN}/stable/version.json\", \"https://${DOMAIN}/beta/version.json\"]" --FlushType flush

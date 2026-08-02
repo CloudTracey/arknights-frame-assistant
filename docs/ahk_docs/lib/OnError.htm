@@ -1,0 +1,166 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>OnError - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The OnError function registers a function to be called automatically whenever an unhandled error occurs." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>OnError</h1>
+<p>Registers a <a href="../Functions.htm">function</a> to be called automatically whenever an unhandled error occurs.</p>
+
+<pre class="Syntax"><span class="func">OnError</span> Callback <span class="optional">, AddRemove</span></pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Callback</dt>
+  <dd>
+    <p>Type: <a href="../misc/Functor.htm">Function Object</a></p>
+    <p>The function to call.</p>
+    <p>The callback accepts two parameters and can be <a href="../Functions.htm#intro">defined</a> as follows:</p>
+    <pre class="NoIndent">MyCallback(Thrown, Mode) { ...</pre>
+    <p>Although the names you give the parameters do not matter, the following values are sequentially assigned to them:</p>
+    <ol>
+      <li>The thrown value, usually an <a href="Error.htm">Error object</a>.</li>
+      <li>The error mode: Return, Exit, or ExitApp. For details, see the <a href="#Error_Modes">table below</a>.</li>
+    </ol>
+    <p>You can omit one or more parameters from the end of the callback's parameter list if the corresponding information is not needed, but in this case an asterisk must be specified as the final parameter, e.g. <code>MyCallback(Param1, *)</code>.</p>
+    <p>The callback can return one of the following values (other values are reserved for future use and should be avoided):</p>
+    <ul>
+      <li><code>0</code>, <code>""</code> or no Return: Allow error handling to proceed as normal.</li>
+      <li><code>1</code>: Suppress the default error dialog and any remaining error callbacks.</li>
+      <li><code>-1</code>: As above, but if <em>Mode</em> (the second parameter) contains the word Return, execution of the current thread is permitted to continue.</li>
+    </ul>
+  </dd>
+  
+  <dt>AddRemove</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted, it defaults to 1. Otherwise, specify one of the following numbers:</p>
+    <ul>
+      <li>1 = Call the callback after any previously registered callbacks.</li>
+      <li>-1 = Call the callback before any previously registered callbacks.</li>
+      <li>0 = Do not call the callback.</li>
+    </ul>
+  </dd>
+
+</dl>
+
+<h2 id="Error_Modes">Error Modes</h2>
+<table class="info">
+  <tr>
+    <th>Mode</th>
+    <th abbr="Descr">Description</th>
+  </tr>
+  <tr>
+    <td>Return</td>
+    <td>The thrown value is a continuable runtime error. The thread continues if the callback returns -1; otherwise the thread exits.</td>
+  </tr>
+  <tr>
+    <td>Exit</td>
+    <td>The thrown value is a non-continuable runtime error or a value <a href="Throw.htm">thrown</a> by the script. The thread will exit.</td>
+  </tr>
+  <tr>
+    <td>ExitApp</td>
+    <td>The thrown value is a critical runtime error, such as corruption detected by DllCall. The program will exit.</td>
+  </tr>
+</table>
+
+<h2 id="Remarks">Remarks</h2>
+<p><em>Callback</em> is called only for errors or exceptions which would normally cause an error message to be displayed. It cannot be called for a load-time error, since OnError cannot be called until after the script has loaded.</p>
+<p><em>Callback</em> is called on the current <a href="../misc/Threads.htm">thread</a>, before it exits (that is, before the call stack unwinds).</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="Try.htm">Try</a>, <a href="Catch.htm">Catch</a>, <a href="Throw.htm">Throw</a>, <a href="OnExit.htm">OnExit</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Logs errors caused by the script into a text file instead of displaying them to the user.</p>
+<pre>
+OnError LogError
+i := Integer("cause_error")
+
+LogError(exception, mode) {
+    FileAppend "Error on line " exception.Line ": " exception.Message "`n"
+        , "errorlog.txt"
+    return true
+}</pre>
+</div>
+
+<div class="ex" id="ExAccumulator">
+<p><a class="ex_number" href="#ExAccumulator"></a> Use OnError to implement alternative error handling methods. Caveat: OnError is ineffective while <a href="Try.htm">Try</a> is active.</p>
+<pre>
+AccumulateErrors()
+{
+    local ea := ErrorAccumulator()
+    ea.Start()
+    return ea
+}
+
+class ErrorAccumulator
+{
+    Errors := []                        <em>; Array for accumulated errors.</em>
+    _cb := AccumulateError.Bind(this.Errors)
+    Start() =&gt; OnError(this._cb, -1)    <em>; Register our cb before others.</em>
+    Stop() =&gt; OnError(this._cb, 0)      <em>; Unregister our cb.</em>
+    Last =&gt; this.Errors[-1]             <em>; Most recent error.</em>
+    Count =&gt; this.Errors.Length         <em>; Number of accumulated errors.</em>
+    __item[i] =&gt; this.Errors[i]         <em>; Shortcut for indexing.</em>
+    __delete() =&gt; this.Stop()           <em>; For tying to function scope.</em>
+}
+
+<em>; This is the OnError callback. 'errors' is given a value via Bind().</em>
+AccumulateError(errors, e, mode)
+{
+    if mode != "Return" <em>; Not continuable.</em>
+        return
+    if e.What = "" <em>; Expression defect or similar, not a built-in function.</em>
+        return
+    try {
+        <em>; Try to print the error to stdout.</em>
+        FileAppend Format("{1} ({2}) : ({3}) {4}`n", e.File, e.Line, e.What, e.Message), "*"
+        if HasProp(e, "extra")
+            FileAppend "     Specifically: " e.Extra "`n", "*"
+    }
+    errors.Push(e)
+    return -1 <em>; Continue.</em>
+}
+
+RearrangeWindows()
+{
+    <em>; Start accumulating errors in 'err'.</em>
+    local err := AccumulateErrors()
+
+    <em>; Do some things that might fail...</em>
+    MonitorGetWorkArea , &amp;left, &amp;top, &amp;right, &amp;bottom
+    width := (right-left)//2, height := bottom-top
+    WinMove left, top, width, height, A_ScriptFullPath
+    WinMove left+width, top, width, height, "AutoHotkey v2 Help"
+
+    <em>; Check if any errors occurred.</em>
+    if err.Count
+        MsgBox err.Count " error(s); last error at line #" err.Last.Line
+    else
+        MsgBox "No errors"
+
+    <em>; Stop is called automatically when the variable goes out of scope,
+    ; since only we have a reference to the object.  This causes OnError
+    ; to be called to unregister the callback.
+    ;err.Stop()</em>
+}
+
+<em>; Call the test function which suppresses and accumulates errors.</em>
+RearrangeWindows()
+<em>; Call another function to show normal error behaviour is restored.</em>
+WinMove 0, 0, 0, 0, "non-existent window"
+</pre>
+</div>
+
+</body>
+</html>

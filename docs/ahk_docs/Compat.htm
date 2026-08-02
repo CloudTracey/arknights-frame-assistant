@@ -1,0 +1,111 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Binary Compatibility | AutoHotkey v2</title>
+<meta name="description" content="This document contains some topics which are sometimes important when dealing with external libraries or sending messages to a control or window." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="static/theme.css" rel="stylesheet" type="text/css" />
+<link href="static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Binary Compatibility</h1>
+
+<p>This document contains some topics which are sometimes important when dealing with external libraries or sending messages to a control or window.</p>
+
+<ul>
+  <li><a href="#Format">Unicode vs ANSI</a>
+    <ul>
+      <li><a href="#Buffer">Buffer</a></li>
+      <li><a href="#DllCall">DllCall</a></li>
+      <li><a href="#NumPutGet">NumPut / NumGet</a></li>
+    </ul>
+  </li>
+  <li><a href="#ptr">Pointer Size</a></li>
+</ul>
+
+<h2 id="Format">Unicode vs ANSI</h2>
+<p class="note"><strong>Note:</strong> This section builds on topics covered in other parts of the documentation: <a href="Concepts.htm#strings">Strings</a>, <a href="Concepts.htm#string-encoding">String Encoding</a>.</p>
+<p>Within a string (text value), the numeric character code and size (in bytes) of each character depends on the <a href="Concepts.htm#string-encoding">encoding</a> of the string. These details are typically important for scripts which do any of the following:</p>
+<ul>
+  <li>Pass strings to external functions via <a href="#DllCall">DllCall</a>.</li>
+  <li>Pass strings via <a href="lib/PostMessage.htm">PostMessage</a> or <a href="lib/SendMessage.htm">SendMessage</a>.</li>
+  <li>Manipulate strings directly via <a href="#NumPutGet">NumPut/NumGet</a>.</li>
+  <li>Allocate a <a href="#Buffer">Buffer</a> to hold a specific number of characters.</li>
+</ul>
+<p>AutoHotkey v2 natively uses Unicode (UTF-16), but some external libraries or window messages might require ANSI strings.</p>
+<p><strong>ANSI:</strong> Each character is <strong>one byte</strong> (8 bits).  Character codes above 127 depend on your system's language settings (or the codepage chosen when the text was encoded, such as when it is written to a file).</p>
+<p><strong>Unicode:</strong> Each character is <strong>two bytes</strong> (16 bits).  Character codes are as defined by the <a href="https://en.wikipedia.org/wiki/UTF-16">UTF-16</a> format.</p>
+<p class="Indent"><em>Semantic note:</em> Technically, some Unicode characters are represented by <i>two</i> 16-bit code units, collectively known as a "surrogate pair."  Similarly, some <a href="https://learn.microsoft.com/windows/win32/intl/code-pages">ANSI code pages</a> (commonly known as <a href="https://learn.microsoft.com/windows/win32/intl/double-byte-character-sets">Double Byte Character Sets</a>) contain some double-byte characters.  However, for practical reasons these are almost always treated as two individual units (referred to as "characters" for simplicity).</p>
+
+<h3 id="Buffer">Buffer</h3>
+<p>When allocating a <a href="lib/Buffer.htm">Buffer</a>, take care to calculate the correct number of <em>bytes</em> for whichever encoding is required. For example:</p>
+<pre>ansi_buf  := Buffer(capacity_in_chars)
+utf16_buf := Buffer(capacity_in_chars * 2)</pre>
+<p>If an ANSI or UTF-8 string will be written into the buffer with <a href="lib/StrPut.htm">StrPut</a>, do not use <a href="lib/StrLen.htm">StrLen</a> to determine the buffer size, as the ANSI or UTF-8 length may differ from the native (UTF-16) length. Instead, use <a href="lib/StrPut.htm#ExEncoding">StrPut</a> to calculate the required buffer size. For example:</p>
+<pre>required_bytes := StrPut(source_string, "cp0")
+ansi_buf := Buffer(required_bytes)
+StrPut(source_string, ansi_buf)</pre>
+
+<h3 id="DllCall">DllCall</h3>
+<p>When the "Str" type is used, it means a string in the native format of the current build.  Since some functions may require or return strings in a particular format, the following string types are available:</p>
+<table class="info">
+  <tr><th>&nbsp;</th><th class="center">Char Size</th><th>C / Win32 Types</th><th>Encoding</th></tr>
+  <tr><td class="Syntax center">WStr</td><td class="center">16-bit</td><td>wchar_t*, WCHAR*, LPWSTR, LPCWSTR</td><td>UTF-16</td></tr>
+  <tr><td class="Syntax center">AStr</td><td class="center">8-bit</td><td>char*, CHAR*, LPSTR, LPCSTR</td><td>ANSI (the system default ANSI code page)</td></tr>
+  <tr><td class="Syntax center">Str</td><td class="center">--</td><td>TCHAR*, LPTSTR, LPCTSTR</td><td>Equivalent to <b>WStr</b> in AutoHotkey v2.</td></tr>
+</table>
+<p>If "Str" or "WStr" is used for a parameter, the address of the string is passed to the function. For "AStr", a temporary ANSI copy of the string is created and its address is passed instead. As a general rule, "AStr" should not be used for an output parameter since the buffer is only large enough to hold the input string.</p>
+<p class="note"><b>Note:</b> "AStr" and "WStr" are equally valid for parameters and the function's return value.</p>
+<p>In general, if a script calls a function via DllCall which accepts a string as a parameter, one or more of the following approaches must be taken:</p>
+<ol>
+  <li>If both Unicode (W) and ANSI (A) versions of the function are available, omit the W or A suffix and use the "Str" type for input parameters or the return value. For example, the DeleteFile function is exported from kernel32.dll as <code class="no-highlight">DeleteFileA</code> and <code class="no-highlight">DeleteFileW</code>. Since <code class="no-highlight">DeleteFile</code> itself doesn't really exist, DllCall automatically tries <code class="no-highlight">DeleteFileW</code>:
+  <pre>DllCall("DeleteFile", "Ptr", StrPtr(filename))
+DllCall("DeleteFile", "Str", filename)</pre>
+  <p>In both cases, the address of the original unmodified string is passed to the function.</p>
+  <p>In some cases this approach may backfire, as DllCall adds the W suffix only if no function could be found with the original name. For example, shell32.dll exports ExtractIconExW, ExtractIconExA and ExtractIconEx with no suffix, with the last two being equivalent. In that case, omitting the W suffix causes the ANSI version to be called.</p></li>
+  <li>If the function accepts a specific type of string as input, the script may use the appropriate string type:
+  <pre>DllCall("DeleteFileA", "AStr", filename)
+DllCall("DeleteFileW", "WStr", filename)</pre></li>
+  <li>If the function has a string parameter used for output, the script must allocate a buffer as described <a href="#Buffer">above</a> and pass it to the function. If the parameter accepts input, the script must also convert the input string to the appropriate format; <a href="lib/StrPut.htm">StrPut</a> can be used for this.</li>
+</ol>
+
+<h3 id="NumPutGet">NumPut / NumGet</h3>
+<p>When NumPut or NumGet are used with strings, the offset and type must be correct for the given type of string.  The following may be used as a guide:</p>
+<pre><em>;  8-bit/ANSI   strings:  size_of_char=1  type_of_char="UChar"
+; 16-bit/UTF-16 strings:  size_of_char=2  type_of_char="UShort"</em>
+<i>n</i>th_char := NumGet(buffer_or_address, (<i>n</i>-1)*size_of_char, type_of_char)
+NumPut(type_of_char, <i>n</i>th_char, buffer_or_address, (<i>n</i>-1)*size_of_char)</pre>
+<p>For the first character, <em>n</em> should have the value 1.</p>
+
+<h2 id="ptr">Pointer Size</h2>
+<p>Pointers are 4 bytes in 32-bit builds and 8 bytes in 64-bit builds. Scripts using structures or DllCalls may need to account for this to run correctly on both platforms. Specific areas which are affected include:</p>
+<ul>
+  <li>Offset calculation for fields in structures which contain one or more pointers.</li>
+  <li>Size calculation for structures containing one or more pointers.</li>
+  <li>Type names used with <a href="lib/DllCall.htm">DllCall</a>, <a href="lib/NumPut.htm">NumPut</a> or <a href="lib/NumGet.htm">NumGet</a>.</li>
+</ul>
+<p>For size and offset calculations, use <a href="Variables.htm#PtrSize">A_PtrSize</a>. For DllCall, NumPut and NumGet, use the <a href="lib/DllCall.htm">Ptr</a> type where appropriate.</p>
+<p>Remember that the offset of a field is usually the total size of all fields preceding it. Also note that handles (including types like HWND and HBITMAP) are essentially pointer-types.</p>
+<pre><em>/*
+  typedef struct _PROCESS_INFORMATION {
+    HANDLE hProcess;    // Ptr
+    HANDLE hThread;
+    DWORD  dwProcessId; // UInt (4 bytes)
+    DWORD  dwThreadId;
+  } <a href="https://learn.microsoft.com/windows/win32/api/processthreadsapi/ns-processthreadsapi-process_information">PROCESS_INFORMATION</a>, *LPPROCESS_INFORMATION;
+*/</em>
+pi := Buffer(A_PtrSize*2 + 8) <em>; Ptr + Ptr + UInt + UInt</em>
+DllCall("<a href="https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessa">CreateProcess</a>", <span class="dull">&lt;omitted for brevity&gt;</span>, "Ptr", &amp;pi, <span class="dull">&lt;omitted&gt;</span>)
+hProcess    := NumGet(pi, 0)         <em>; Defaults to "Ptr".</em>
+hThread     := NumGet(pi, A_PtrSize) <em>;</em>
+dwProcessId := NumGet(pi, A_PtrSize*2,     "UInt")
+dwProcessId := NumGet(pi, A_PtrSize*2 + 4, "UInt")
+</pre>
+
+
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+</body>
+</html>

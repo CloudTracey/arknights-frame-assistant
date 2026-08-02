@@ -4,12 +4,18 @@ class Saver {
     static SettingsIniWrite() {
         EventBus.Publish("SettingsWillSave")
         SavedObj := GuiManager.Submit()
-        
+
+        ; 先登记本次会话中新输入的敏感值，覆盖后续验证、外部设置和保存流程的日志。
+        if (SavedObj.HasProp("GitHubToken"))
+            Logger.RegisterSecret(SavedObj.GitHubToken)
+        if (SavedObj.HasProp("GamePath"))
+            Logger.RegisterSecret(SavedObj.GamePath)
+
         ; 检查按键冲突
-        if (!this._CheckKeyConflicts(SavedObj)) {
+        if (!this._CheckKeyConflicts()) {
             Exit
         }
-        
+
         ; 验证GitHub Token（如果输入了的话）
         if (SavedObj.HasProp("GitHubToken") && SavedObj.GitHubToken != "") {
             ; 如果Token与当前保存的不同，需要验证
@@ -29,7 +35,15 @@ class Saver {
                 }
             }
         }
-        
+
+        ; 在应用其他外部设置前，预检 GitHub Token 的 DPAPI 加密。
+        plainToken := SavedObj.HasProp("GitHubToken") ? SavedObj.GitHubToken : ""
+        tokenStorage := Config.PrepareGitHubTokenForStorage(plainToken)
+        if (!tokenStorage.success) {
+            MessageBox.Error("GitHub Token 无法安全保存：`n" tokenStorage.message, "设置保存失败")
+            Exit
+        }
+
         ; 验证游戏路径
         if (SavedObj.HasProp("GamePath") && SavedObj.GamePath != "") {
             if !FileExist(SavedObj.GamePath) {
@@ -49,8 +63,54 @@ class Saver {
             }
         }
 
+        ; 应用“启动游戏时自动启动小助手”设置
+        if (!this._ApplyGameAutoStart(SavedObj)) {
+            Exit
+        }
+
         ; 保存到INI
-        Config.SaveToIni(SavedObj)
+        saveResult := Config.SaveToIni(SavedObj, tokenStorage)
+        if (!saveResult.success) {
+            MessageBox.Error(saveResult.message, "设置保存失败")
+            Exit
+        }
+    }
+
+    ; 应用随游戏自动启动配置。外部任务成功后才保存配置开关。
+    static _ApplyGameAutoStart(SavedObj) {
+        if (!SavedObj.HasProp("AutoStartWithGame"))
+            return true
+
+        enabled := (SavedObj.AutoStartWithGame = 1 || SavedObj.AutoStartWithGame = "1")
+        appliedGamePath := ""
+        if (enabled) {
+            validation := GameAutoStartManager.ValidateGamePath(SavedObj.GamePath)
+            if (!validation.success) {
+                MessageBox.Error(validation.message, "无法启用随游戏自动启动")
+                return false
+            }
+            ; 保存规范化后的绝对路径，确保后续启动校准使用同一事件过滤条件。
+            SavedObj.GamePath := validation.path
+            Logger.RegisterSecret(SavedObj.GamePath)
+            GuiManager.SetControlValue("GamePath", validation.path)
+            appliedGamePath := validation.path
+
+            if (Config.GetImportant("AutoStartWithGame") != "1") {
+                confirmationMessage := "启用此功能需要开启 Windows 的“进程创建成功审核”。`n"
+                confirmationMessage .= "Windows 将为进程启动记录安全日志；关闭此功能后，审核设置仍会保留。`n`n"
+                confirmationMessage .= "是否继续？"
+                result := MessageBox.Confirm(confirmationMessage, "启用随游戏自动启动")
+                if (result = "No")
+                    return false
+            }
+        }
+
+        result := GameAutoStartManager.Apply(enabled, appliedGamePath)
+        if (!result.success) {
+            MessageBox.Error(result.message, enabled ? "启用随游戏自动启动失败" : "关闭随游戏自动启动失败")
+            return false
+        }
+        return true
     }
 
     ; 内部：检查按键冲突
@@ -58,67 +118,22 @@ class Saver {
     ; 1. 常规作战 + 快捷操作 + SwitchHotkey 互相检测
     ; 2. 卫戍协议按键 + SwitchHotkey 互相检测
     ; 3. 卫戍协议按键不与作战/快捷操作检测冲突
-    static _CheckKeyConflicts(SavedObj) {
-        ; 定义按键分组
-        battleKeys := ["PressPause", "ReleasePause", "GameSpeed", "PauseSelect",
-                       "Skill", "Retreat", "16ms", "33ms", "166ms", "OneClickSkill",
-                       "OneClickRetreat", "PauseSkill", "PauseRetreat",
-                       "LButtonClick", "CeaseOperations", "Skip", "Back",
-                       "Harvest", "CollectCollectibles", "SwitchView", "BeginPause"]
+    static _CheckKeyConflicts() {
+        result := HotkeyConflictValidator.FindAll(
+            Config.AllHotkeys,
+            Config.AllCustom
+        )
 
-        strongholdKeys := ["CheckEnemies", "DispatchCenter", "Freeze", "Refresh",
-                          "Upgrade", "Sell", "Ready", "StrongHoldProtocolLButtonClick",
-                          "StrongHoldProtocolRetreat", "StrongHoldProtocolOneClickRetreat",
-                          "OneClickSell", "OneClickPurchase"]
+        if !result.HasConflicts
+            return true
 
-        ; 获取SwitchHotkey值
-        switchHotkey := SavedObj.HasProp("SwitchHotkey") ? SavedObj.SwitchHotkey : ""
-
-        ; 检测组A：作战+快捷
-        battleUsed := Map()
-        for keyVar in battleKeys {
-            if (!SavedObj.HasProp(keyVar))
-                continue
-            currentKey := SavedObj.%keyVar%
-            if (currentKey != "") {
-                if (battleUsed.Has(currentKey)) {
-                    this._ShowConflictError(currentKey, battleUsed[currentKey], Constants.KeyNames[keyVar])
-                    return false
-                }
-                battleUsed[currentKey] := Constants.KeyNames[keyVar]
-            }
-        }
-        ; 将SwitchHotkey加入组A检测
-        if (switchHotkey != "") {
-            if (battleUsed.Has(switchHotkey)) {
-                this._ShowConflictError(switchHotkey, battleUsed[switchHotkey], "启用/禁用热键")
-                return false
-            }
-        }
-
-        ; 检测组B：卫戍协议
-        strongholdUsed := Map()
-        for keyVar in strongholdKeys {
-            if (!SavedObj.HasProp(keyVar))
-                continue
-            currentKey := SavedObj.%keyVar%
-            if (currentKey != "") {
-                if (strongholdUsed.Has(currentKey)) {
-                    this._ShowConflictError(currentKey, strongholdUsed[currentKey], Constants.KeyNames[keyVar])
-                    return false
-                }
-                strongholdUsed[currentKey] := Constants.KeyNames[keyVar]
-            }
-        }
-        ; 将SwitchHotkey加入组B检测
-        if (switchHotkey != "") {
-            if (strongholdUsed.Has(switchHotkey)) {
-                this._ShowConflictError(switchHotkey, strongholdUsed[switchHotkey], "启用/禁用热键")
-                return false
-            }
-        }
-
-        return true
+        conflict := result.Items[1]
+        this._ShowConflictError(
+            conflict.Key,
+            HotkeyConflictValidator.GetDisplayName(conflict.FirstControl),
+            HotkeyConflictValidator.GetDisplayName(conflict.SecondControl)
+        )
+        return false
     }
 
     ; 内部：显示冲突错误

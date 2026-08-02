@@ -1,4 +1,4 @@
-# 测试清单：`pause button color recognition fix`
+# 测试清单：`pause_button_color_recognition_fix`
 
 > 对应更改：修改暂停按钮颜色识别位置和匹配颜色，尝试修复特定关卡和比例下“开局暂停”功能异常的问题
 

@@ -1,0 +1,315 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Frequently Asked Questions (FAQ) | AutoHotkey v2</title>
+<meta name="description" content="This page lists questions and answers about general troubleshooting, common tasks, hotkeys, hotstrings and remapping." />
+<link href="static/theme.css" rel="stylesheet" type="text/css" />
+<link href="static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Frequently Asked Questions (FAQ)</h1>
+
+<h2 id="toc">Table of Contents</h2>
+<p><strong><a href="#general-troubleshooting">General Troubleshooting</a></strong></p>
+<ul>
+  <li><a href="#install">What can I do if AutoHotkey won't install?</a></li>
+  <li><a href="#rightclick">How do I restore the right-click context menu options for .ahk files?</a></li>
+  <li><a href="#vista">Why doesn't my script work on Windows <em>xxx</em> even though it worked on a previous version?</a></li>
+  <li><a href="#uac">How do I work around problems caused by User Account Control (UAC)?</a></li>
+  <li><a href="#DefaultScript">I can't edit my script via tray icon because it won't start due to an error. What should I do?</a></li>
+  <li><a href="#Debug">How can I find and fix errors in my code?</a></li>
+  <li><a href="#run">Why is the Run function unable to launch my game or program?</a></li>
+  <li><a href="#nonascii">Why are the non-ASCII characters in my script displaying or sending incorrectly?</a></li>
+  <li><a href="#games">Why don't Hotstrings, Send, and Click work in certain games?</a></li>
+  <li><a href="#perf">How can performance be improved for games or at other times when the CPU is under heavy load?</a></li>
+  <li><a href="#Virus">My antivirus program flagged AutoHotkey or a compiled script as malware. Is it really a virus?</a></li>
+</ul>
+<p><strong><a href="#common-tasks">Common Tasks</a></strong></p>
+<ul>
+  <li><a href="#Download">Where can I find the official build, or older releases?</a></li>
+  <li><a href="#USB">Can I run AHK from a USB drive?</a></li>
+  <li><a href="#output">How can the output of a command line operation be retrieved?</a></li>
+  <li><a href="#close">How can a script close, pause, suspend or reload other script(s)?</a></li>
+  <li><a href="#repeat">How can a repeating action be stopped without exiting the script?</a></li>
+  <li><a href="#help">How can context sensitive help for AutoHotkey functions be used in any editor?</a></li>
+  <li><a href="#load">How to detect when a web page is finished loading?</a></li>
+  <li><a href="#time">How can dates and times be compared or manipulated?</a></li>
+  <li><a href="#SendDate">How can I send the current Date and/or Time?</a></li>
+  <li><a href="#ControlSend">How can I send text to a window which isn't active or isn't visible?</a></li>
+  <li><a href="#winamp">How can Winamp be controlled even when it isn't active?</a></li>
+  <li><a href="#msgbox">How can MsgBox's button names be changed?</a></li>
+  <li><a href="#DefaultEditor">How can I change the default editor, which is accessible via context menu or tray icon?</a></li>
+  <li><a href="#GuiSubmit">How can I save the contents of my GUI controls?</a></li>
+  <li><a href="#GDIPlus">Can I draw something with AHK?</a></li>
+  <li><a href="#WinWaitAction">How can I start an action when a window appears, closes or becomes [in]active?</a></li>
+</ul>
+<p><strong><a href="#hotkeys-hotstrings-and-remapping">Hotkeys, Hotstrings, and Remapping</a></strong></p>
+<ul>
+  <li><a href="#Startup">How do I put my hotkeys and hotstrings into effect automatically every time I start my PC?</a></li>
+  <li><a href="#HotMouse">I'm having trouble getting my mouse buttons working as hotkeys. Any advice?</a></li>
+  <li><a href="#HotSymb">How can Tab and Space be defined as hotkeys?</a></li>
+  <li><a href="#Remap">How can keys or mouse buttons be remapped so that they become different keys?</a></li>
+  <li><a href="#DoublePress">How do I detect the double press of a key or button?</a></li>
+  <li><a href="#HotContext">How can a hotkey or hotstring be made exclusive to certain program(s)? In other words, I want a certain key to act as it normally does except when a specific window is active.</a></li>
+  <li><a href="#HotPrefix">How can a prefix key be made to perform its native function rather than doing nothing?</a></li>
+  <li><a href="#HotOverride">How can the built-in Windows shortcut keys, such as Win+U (Utility Manager) and Win+R (Run), be changed or disabled?</a></li>
+  <li><a href="#HotRegex">Can I use wildcards or regular expressions in Hotstrings?</a></li>
+  <li><a href="#SpecialKey">How can I use a hotkey that is not in my keyboard layout?</a></li>
+  <li><a href="#HotZero">My keypad has a special 000 key. Is it possible to turn it into a hotkey?</a></li>
+</ul>
+
+<h2 id="general-troubleshooting">General Troubleshooting</h2>
+<h3 id="install">What can I do if AutoHotkey won't install?</h3>
+<p>If AutoHotkey cannot be installed the normal way, see <a href="howto/Install.htm">How to Install AutoHotkey</a> for more help.</p>
+
+<h3 id="rightclick">How do I restore the right-click context menu options for .ahk files?</h3>
+<p>Normally if AutoHotkey is installed, right-clicking an AutoHotkey script (.ahk) file should give the following options:</p>
+<ul>
+  <li>Run script</li>
+  <li>Compile script (if Ahk2Exe is installed)</li>
+  <li>Edit script</li>
+  <li>Run as administrator</li>
+  <li>Run with UI access (if the <a href="Program.htm#Installer_uiAccess">prerequisites</a> are met)</li>
+</ul>
+<p class="note"><strong>Note:</strong> On Windows 11, some of these options are usually relegated to a submenu that can be accessed by selecting "Show more options".</p>
+<p>Sometimes these options are overridden by settings in the current user's profile, such as if <em>Open With</em> has been used to change the default program for opening .ahk files. This can be fixed by deleting the following registry key:</p>
+<pre class="no-highlight">HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ahk\UserChoice</pre>
+<p>This can be done by applying <a href="misc/remove-userchoice.reg" download="remove-userchoice.reg">this registry patch</a> or by running <code class="no-highlight">UX\reset-assoc.ahk</code> from the AutoHotkey installation directory.</p>
+<p>It may also be necessary to repair the default registry values, either by reinstalling AutoHotkey or by running <code class="no-highlight">UX\install.ahk</code> from the AutoHotkey installation directory.</p>
+
+<h3 id="vista">Why doesn't my script work on Windows <em>xxx</em> even though it worked on a previous version?</h3>
+<p>There are many variations of this problem, such as:</p>
+<ul>
+  <li>I've upgraded my computer/Windows and now my script won't work.</li>
+  <li>Hotkeys/hotstrings don't work when a program running as admin is active.</li>
+  <li>Some windows refuse to be automated (e.g. Device Manager ignores Send).</li>
+</ul>
+<p>If you've switched operating systems, it is likely that something else has also changed and may be affecting your script. For instance, if you've got a new computer, it might have different drivers or other software installed. If you've also updated to a newer version of AutoHotkey, find out which version you had before and then check the <a href="ChangeLog.htm">changelog</a> and <a href="Compat.htm">compatibility notes</a>.</p>
+<p>Also refer to the following question:</p>
+
+<h3 id="uac">How do I work around problems caused by User Account Control (UAC)?</h3>
+<p>By default, <a href="https://en.wikipedia.org/wiki/User_Account_Control">User Account Control (UAC)</a> protects "elevated" programs (that is, programs which are running as admin) from being automated by non-elevated programs, since that would allow them to bypass security restrictions. Hotkeys are also blocked, so for instance, a non-elevated program cannot spy on input intended for an elevated program.</p>
+<p>UAC may also prevent <a href="lib/SendMode.htm#Play">SendPlay</a> and <a href="lib/BlockInput.htm">BlockInput</a> from working.</p>
+<p>Common workarounds are as follows:</p>
+<ul>
+  <li><strong>Recommended:</strong> <a href="Program.htm#Installer_uiAccess">Run with UI access</a>. This requires AutoHotkey to be installed under Program Files. There are several ways to do this, including:
+  <ul>
+    <li>Right-click the script in Explorer and select <em>Run with UI access</em>.</li>
+    <li>Use the <em>UIAccess</em> shell verb with Run, as in <code>Run '*UIAccess "Your script.ahk"'</code>.</li>
+    <li>Use a <a href="Scripts.htm#cmd">command line</a> such as <code>"AutoHotkey32_UIA.exe" "Your script.ahk"</code> (but include full paths where necessary).</li>
+    <li>Set scripts to run with UI access by default, by checking the appropriate box in the <a href="Program.htm#launcher-config">Launch Settings</a> GUI.</li>
+  </ul></li>
+  <li>Run the script <a href="Variables.htm#IsAdmin">as administrator</a>. Note that this also causes any programs launched by the script to run as administrator, and may require the user to accept an approval prompt when launching the script.</li>
+  <li>Disable the local security policy "Run all administrators in Admin Approval Mode" (not recommended).</li>
+  <li>Disable UAC completely. This is not recommended, and is not feasible on Windows 8 or later.</li>
+</ul>
+
+<h3 id="DefaultScript">I can't edit my script via tray icon because it won't start due to an error. What should I do?</h3>
+<p>You need to fix the error in your script before you can get your <a href="Program.htm#tray-icon">tray icon</a> back. This will require locating the script and opening it in an editor by some other means than the tray icon.</p>
+<p>If you are running an AutoHotkey executable file directly, the name of the script depends on the executable. For example, if you are running AutoHotkey32.exe, look for AutoHotkey32.ahk in the same directory. Note that depending on your system settings the ".ahk" part may be hidden, but the file should have an icon like <img src="static/ahkfile16.png" alt="[H]"></p>
+<p>You can usually <a href="Program.htm#edit">edit a script file</a> by right clicking it and selecting <em>Edit Script</em>. If that doesn't work, you can open the file in Notepad or another editor.</p>
+<p>Normally, you should <a href="Program.htm#create">create a script file</a> (something.ahk) anywhere you like, and run that script file instead of running AutoHotkey.</p>
+<p>See also <a href="Scripts.htm#defaultfile">Command Line Parameter "Script Filename"</a> and <a href="Program.htm#portability">Portability of AutoHotkey.exe</a>.</p>
+<h3 id="Debug">How can I find and fix errors in my code?</h3>
+<p>For simple scripts, see <a href="Scripts.htm#debug">Debugging a Script</a>. To show contents of a variable, use <a href="lib/MsgBox.htm">MsgBox</a> or <a href="lib/ToolTip.htm">ToolTip</a>. For complex scripts, see <a href="Scripts.htm#idebug">Interactive Debugging</a>.</p>
+<h3 id="run">Why is the <a href="lib/Run.htm">Run</a> function unable to launch my game or program?</h3>
+<p>Some programs need to be started in their own directories (when in doubt, it is usually best to do so). For example:</p>
+<pre>Run A_ProgramFiles "\Some Application\App.exe", A_ProgramFiles "\Some Application"</pre>
+<p>If the program you are trying to start is in <code>A_WinDir "\System32"</code> and you are using AutoHotkey 32-bit on a 64-bit system, the <a href="https://learn.microsoft.com/windows/win32/winprog64/file-system-redirector">File System Redirector</a> may be interfering. To work around this, use <code>A_WinDir "\SysNative"</code> instead; this is a virtual directory only visible to 32-bit programs running on 64-bit systems.</p>
+
+<h3 id="nonascii">Why are the non-ASCII characters in my script displaying or sending incorrectly?</h3>
+<p>Short answer: Save the script as UTF-8, preferably with BOM.</p>
+<p>Non-ASCII characters are represented by different binary values depending on the chosen encoding. In order for such characters to be interpreted correctly, your text editor and AutoHotkey must be <em>on the same codepage</em>, so to speak. AutoHotkey v2 defaults to UTF-8 for all script files, although this can be overridden with the <a href="Scripts.htm#cp">/CP command line switch</a>.</p>
+<p>It is recommended to save the script as UTF-8 with BOM (byte order mark) to ensure that editors (and maybe other applications) can determine with certainty that the file is indeed UTF-8. Without BOM, the editor has to guess the encoding of the file, which can sometimes be wrong.</p>
+<p>To save as UTF-8 in Notepad, select <em>UTF-8</em> or <em>UTF-8 with BOM</em> from the <em>Encoding</em> drop-down in the Save As dialog. Note that Notepad in Windows 10 v1903 and later defaults to <em>UTF-8</em> (without BOM).</p>
+<p>To read other UTF-8 files which lack a byte order mark (BOM), use <code><a href="lib/FileEncoding.htm">FileEncoding</a> "UTF-8-RAW"</code>, the <code class="no-highlight">*P65001</code> option with <a href="lib/FileRead.htm">FileRead</a>, or <code>"UTF-8-RAW"</code> for the third parameter of <a href="lib/FileOpen.htm">FileOpen</a>. The <code class="no-highlight">-RAW</code> suffix can be omitted, but in that case any newly created files will have a BOM.</p>
+<p>Note that INI files accessed with the standard INI functions do not support UTF-8; they must be saved as ANSI or UTF-16.</p>
+
+<h3 id="games">Why don't <a href="Hotstrings.htm">Hotstrings</a>, <a href="lib/Send.htm">Send</a>, and <a href="lib/Click.htm">Click</a> work in certain games?</h3>
+<p>Not all games allow AHK to send keys and clicks or receive pixel colors.</p>
+<p>But there are some alternatives, try all the solutions mentioned below. If all these fail, it may not be possible for AHK to work with your game. Sometimes games have a hack and cheat prevention measure, such as GameGuard and Hackshield. If they do, there is a high chance that AutoHotkey will not work with that game.</p>
+<ul>
+  <li>
+  <p>Use SendPlay via the <a href="lib/Send.htm">SendPlay</a> function, <a href="lib/SendMode.htm#Play">SendMode Play</a> and/or the <a href="Hotstrings.htm#SP">hotstring option SP</a>.</p>
+  <pre>SendPlay "abc"</pre>
+  <pre>SendMode "Play"
+Send "abc"</pre>
+  <pre>:SP:btw::by the way
+
+<em>; or</em>
+
+#Hotstring SP
+::btw::by the way</pre>
+  <p class="warning"><strong>Deprecated:</strong> SendPlay does not tend to work if <a href="https://en.wikipedia.org/wiki/User_Account_Control">User Account Control (UAC)</a> is enabled, even if the script is running as an administrator. On Windows 11 and later, SendPlay may have no effect at all.</p>
+  </li>
+  <li>
+  <p>Increase <a href="lib/SetKeyDelay.htm">SetKeyDelay</a>. For example:</p>
+  <pre>SetKeyDelay 0, 50
+SetKeyDelay 0, 50, "Play"</pre>
+  </li>
+  <li>
+  <p>Try <a href="lib/ControlSend.htm">ControlSend</a>, which might work in cases where the other Send modes fail:</p>
+  <pre>ControlSend "abc",, <i>GameTitle</i></pre>
+  </li>
+  <li>
+  <p>Try the down and up event of a key with the various send methods:</p>
+  <pre>Send "{<i>KEY</i> Down}{<i>KEY</i> Up}"</pre>
+  </li>
+  <li>
+  <p>Try the down and up event of a key with a <a href="lib/Sleep.htm">Sleep</a> between them:</p>
+  <pre>Send "{<i>KEY</i> down}"
+Sleep 10 <em>; Try various milliseconds.</em>
+Send "{<i>KEY</i> up}"</pre>
+  </li>
+</ul>
+<h3 id="perf">How can performance be improved for games or at other times when the CPU is under heavy load?</h3>
+<p>If a script's <a href="Hotkeys.htm">Hotkeys</a>, <a href="lib/Click.htm">Clicks</a>, or <a href="lib/Send.htm">Sends</a> are noticeably slower than normal while the CPU is under heavy load, raising the script's process-priority may help. To do this, include the following line near the top of the script:</p>
+<pre><a href="lib/ProcessSetPriority.htm">ProcessSetPriority</a> "High"</pre>
+<h3 id="Virus">My antivirus program flagged AutoHotkey or a compiled script as malware. Is it really a virus?</h3>
+<p>Although it is certainly possible that the file has been infected, most often these alerts are <em>false positives</em>, meaning that the antivirus program is mistaken. One common suggestion is to upload the file to an online service such as <a href="https://www.virustotal.com/">virustotal</a> or <a href="https://virusscan.jotti.org/">Jotti</a> and see what other antivirus programs have to say. If in doubt, you could send the file to the vendor of your antivirus software for confirmation. This might also help us and other AutoHotkey users, as the vendor may confirm it is a false positive and fix their product to play nice with AutoHotkey.</p>
+<p>False positives might be more common for compiled scripts which have been compressed, such as with UPX (default for AutoHotkey 1.0 but not 1.1) or MPRESS (optional for AutoHotkey 1.1). As the default AutoHotkey installation does not include a compressor, compiled scripts are not compressed by default.</p>
+
+<h2 id="common-tasks">Common Tasks</h2>
+
+<h3 id="Download">Where can I find the official build, or older releases?</h3>
+<p>See <a href="https://www.autohotkey.com/download/">download page of AutoHotkey</a>.</p>
+<h3 id="USB">Can I run AHK from a USB drive?</h3>
+<p>See <a href="Program.htm#portability">Portability of AutoHotkey.exe</a>.</p>
+<h3 id="output">How can the output of a command line operation be retrieved?</h3>
+<p>Testing shows that due to file caching, a temporary file can be very fast for relatively small outputs. In fact, if the file is deleted immediately after use, it often does not actually get written to disk. For example:</p>
+<pre><a href="lib/Run.htm">RunWait</a> A_ComSpec ' /c dir &gt; C:\My Temp File.txt'
+VarToContainContents := FileRead("C:\My Temp File.txt")
+FileDelete "C:\My Temp File.txt"</pre>
+<p>To avoid using a temporary file (especially if the output is large), consider using the <a href="lib/Run.htm#ExStdOut">Shell.Exec()</a> method as shown in the examples for the <a href="lib/Run.htm">Run</a> function.</p>
+<h3 id="close">How can a script close, pause, suspend or reload other script(s)?</h3>
+<p>First, here is an example that closes another script:</p>
+<pre>DetectHiddenWindows True  <em>; Allows a script's hidden main window to be detected.</em>
+SetTitleMatchMode 2  <em>; Avoids the need to specify the full path of the file below.</em>
+WinClose "ScriptFileName.ahk - AutoHotkey"  <em>; Update this to reflect the script's name (case-sensitive).</em></pre>
+<p>To <a href="lib/Suspend.htm">suspend</a>, <a href="lib/Pause.htm">pause</a> or <a href="lib/Reload.htm">reload</a> another script, replace the last line above with one of these:</p>
+<pre>PostMessage 0x0111, 65305,,, "ScriptFileName.ahk - AutoHotkey"  <em>; Suspend.</em>
+PostMessage 0x0111, 65306,,, "ScriptFileName.ahk - AutoHotkey"  <em>; Pause.</em>
+PostMessage 0x0111, 65303,,, "ScriptFileName.ahk - AutoHotkey"  <em>; Reload.</em></pre>
+<h3 id="repeat">How can a repeating action be stopped without exiting the script?</h3>
+<p>To pause or resume the entire script at the press of a key, assign a hotkey to the <a href="lib/Pause.htm">Pause</a> function as in this example:</p>
+<pre>^!p::Pause  <em>; Press Ctrl+Alt+P to pause. Press it again to resume.</em></pre>
+<p>To stop an action that is repeating inside a <a href="lib/Loop.htm">Loop</a>, consider the following working example, which is a hotkey that both starts and stops its own repeating action. In other words, pressing the hotkey once will start the loop. Pressing the same hotkey again will stop it.</p>
+<pre>#MaxThreadsPerHotkey 3
+#z::  <em><strong>; Win+Z hotkey (change this hotkey to suit your preferences).</strong></em>
+{
+    static KeepWinZRunning := false
+    if KeepWinZRunning  <em>; This means an underlying <a href="misc/Threads.htm">thread</a> is already running the loop below.</em>
+    {
+        KeepWinZRunning := false  <em>; Signal that thread's loop to stop.</em>
+        return  <em>; End this thread so that the one underneath will resume and see the change made by the line above.</em>
+    }
+    <em>; Otherwise:</em>
+    KeepWinZRunning := true
+    Loop
+    {
+        <em><strong>; The next four lines are the action you want to repeat (update them to suit your preferences):</strong></em>
+        ToolTip "Press Win-Z again to stop this from flashing."
+        Sleep 1000
+        ToolTip
+        Sleep 1000
+        <em><strong>; But leave the rest below unchanged.</strong></em>
+        if not KeepWinZRunning  <em>; The user signaled the loop to stop by pressing Win-Z again.</em>
+            break  <em>; Break out of this loop.</em>
+    }
+    KeepWinZRunning := false  <em>; Reset in preparation for the next press of this hotkey.</em>
+}
+#MaxThreadsPerHotkey 1</pre>
+<h3 id="help">How can context sensitive help for AutoHotkey functions be used in any editor?</h3>
+<p>Rajat created <a href="scripts/index.htm#ContextSensitiveHelp">this script</a>.</p>
+<h3 id="load">How to detect when a web page is finished loading?</h3>
+<p>With Internet Explorer, perhaps the most reliable method is to use DllCall and COM as demonstrated at <a href="https://www.autohotkey.com/board/topic/17715-">this archived forum thread</a>. On a related note, the contents of the address bar and status bar can be retrieved as demonstrated at <a href="https://www.autohotkey.com/board/topic/17714-">this archived forum thread</a>.</p>
+<p><strong>Older, less reliable method:</strong> The technique in the following example will work with MS Internet Explorer for most pages. A similar technique might work in other browsers:</p>
+<pre>Run "www.yahoo.com"
+MouseMove 0, 0  <em>; Prevents the status bar from showing a mouse-hover link instead of "Done".</em>
+WinWait "Yahoo! - "
+WinActivate
+if StatusBarWait("Done", 30)
+    MsgBox "The page is done loading."
+else
+    MsgBox "The wait timed out or the window was closed."
+</pre>
+<h3 id="time">How can dates and times be compared or manipulated?</h3>
+<p>The <a href="lib/DateAdd.htm">DateAdd</a> function can add or subtract a quantity of days, hours, minutes, or seconds to a time-string that is in the <a href="lib/FileSetTime.htm#YYYYMMDD">YYYYMMDDHH24MISS</a> format. The following example subtracts 7 days from the specified time:</p>
+<pre>Result := DateAdd(VarContainingTimestamp, -7, "days")</pre>
+<p>To determine the amount of time between two dates or times, see <a href="lib/DateDiff.htm">DateDiff</a>, which gives an example. Also, the built-in variable <a href="Variables.htm#Now">A_Now</a> contains the current local time. Finally, there are several built-in <a href="Variables.htm#date">date/time variables</a>, as well as the <a href="lib/FormatTime.htm">FormatTime</a> function to create a custom date/time string.</p>
+<h3 id="SendDate">How can I send the current Date and/or Time?</h3>
+<p>Use <a href="lib/FormatTime.htm">FormatTime</a> or <a href="Variables.htm#date">built-in variables for date and time</a>.</p>
+<h3 id="ControlSend">How can I send text to a window which isn't active or isn't visible?</h3>
+<p>Use <a href="lib/ControlSend.htm">ControlSend</a>.</p>
+<h3 id="winamp">How can Winamp be controlled even when it isn't active?</h3>
+<p>See <a href="misc/Winamp.htm">Automating Winamp</a>.</p>
+<h3 id="msgbox">How can <a href="lib/MsgBox.htm">MsgBox</a>'s button names be changed?</h3>
+<p>Here is an <a href="scripts/index.htm#MsgBoxButtonNames">example</a>.</p>
+<h3 id="DefaultEditor">How can I change the default editor, which is accessible via context menu or tray icon?</h3>
+<p>In the example section of <a href="lib/Edit.htm">Edit</a> you will find a script that allows you to change the default editor.</p>
+<h3 id="GuiSubmit">How can I save the contents of my GUI controls?</h3>
+<p>Use <a href="lib/Gui.htm#Submit">Gui.Submit</a>. For Example:</p>
+<pre>MyGui := Gui()
+MyGui.Add("Text",, "Enter some Text and press Submit:")
+MyGui.Add("Edit", "vMyEdit")
+MyGui.Add("Button",, "Submit").OnEvent("Click", Submit)
+MyGui.Show()
+
+Submit(*)
+{
+    Saved := MyGui.Submit(false)
+    MsgBox "Content of the edit control: " Saved.MyEdit
+}</pre>
+<h3 id="GDIPlus">Can I draw something with AHK?</h3>
+<p>See <a href="https://www.autohotkey.com/boards/viewtopic.php?t=6517">GDI+ standard library</a> by tic. It's also possible with some rudimentary methods using Gui, but in a limited way.</p>
+<h3 id="WinWaitAction">How can I start an action when a window appears, closes or becomes [in]active?</h3>
+<p>Use <a href="lib/WinWait.htm">WinWait</a>, <a href="lib/WinWaitClose.htm">WinWaitClose</a> or <a href="lib/WinWaitActive.htm">WinWait[Not]Active</a>.</p>
+<p>There are also user-created solutions such as <a href="https://www.autohotkey.com/boards/viewtopic.php?f=6&t=6463">OnWin.ahk</a> and <a href="https://www.autohotkey.com/board/topic/80644-how-to-hook-on-to-shell-to-receive-its-messages/">[How to] Hook on to Shell to receive its messages</a> on the archived forum.</p>
+<h2 id="hotkeys-hotstrings-and-remapping">Hotkeys, Hotstrings, and Remapping</h2>
+<h3 id="Startup">How do I put my hotkeys and hotstrings into effect automatically every time I start my PC?</h3>
+<p>There are several ways to make a script (or any program) launch automatically every time you start your PC. The easiest is to place a shortcut to the script in the Startup folder:</p>
+<ol>
+  <li>Find the script file, select it, and press <kbd>Ctrl</kbd>+<kbd>C</kbd>.</li>
+  <li>Press <kbd>Win</kbd>+<kbd>R</kbd> to open the Run dialog, then enter <code class="no-highlight">shell:startup</code> and click OK or <kbd>Enter</kbd>. This will open the Startup folder for the current user. To instead open the folder for all users, enter <code class="no-highlight">shell:common startup</code> (however, in that case you must be an administrator to proceed).</li>
+  <li>Right click inside the window, and click "Paste Shortcut". The shortcut to the script should now be in the Startup folder.</li>
+</ol>
+<h3 id="HotMouse">I'm having trouble getting my mouse buttons working as hotkeys. Any advice?</h3>
+<p>The left and right mouse buttons should be assignable normally (for example, <code>#LButton::</code> is the <kbd>Win</kbd>+LeftButton hotkey). Similarly, the middle button and the turning of the <a href="KeyList.htm">mouse wheel</a> should be assignable normally except on mice whose drivers directly control those buttons.</p>
+<p> The fourth button (XButton1) and the fifth button (XButton2) might be assignable if your mouse driver allows their clicks to be <a href="lib/KeyHistory.htm">seen</a> by the system. If they cannot be seen -- or if your mouse has more than five buttons that you want to use -- you can try configuring the software that came with the mouse (sometimes accessible in the Control Panel or Start Menu) to send a keystroke whenever you press one of these buttons. Such a keystroke can then be defined as a hotkey in a script. For example, if you configure the fourth button to send <kbd>Ctrl</kbd>+<kbd>F1</kbd>, you can then indirectly configure that button as a hotkey by using <code>^F1::</code> in a script.</p>
+<p>If you have a five-button mouse whose fourth and fifth buttons cannot be <a href="lib/KeyHistory.htm">seen</a>, you can try changing your mouse driver to the default driver included with the OS. This assumes there is such a driver for your particular mouse and that you can live without the features provided by your mouse's custom software.</p>
+<h3 id="HotSymb">How can Tab and Space be defined as hotkeys?</h3>
+<p>Use the names of the keys (Tab and Space) rather than their characters. For example, <code class="no-highlight">#Space</code> is <kbd>Win</kbd>+<kbd>Space</kbd> and <code class="no-highlight">^!Tab</code> is <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Tab</kbd>.</p>
+<h3 id="Remap">How can keys or mouse buttons be remapped so that they become different keys?</h3>
+<p>This is described on the <a href="misc/Remap.htm">remapping</a> page.</p>
+<h3 id="DoublePress">How do I detect the double press of a key or button?</h3>
+<p>Use <a href="Variables.htm#h">built-in variables for hotkeys</a> as follows:</p>
+<pre>~Ctrl::
+{
+    if (ThisHotkey = A_PriorHotkey &amp;&amp; A_TimeSincePriorHotkey &lt; 200)
+        MsgBox "double-press"
+}</pre>
+<h3 id="HotContext">How can a <a href="Hotkeys.htm">hotkey</a> or <a href="Hotstrings.htm">hotstring</a> be made exclusive to  certain program(s)? In other words, I want a certain key to act as it normally does except when a specific window is active.</h3>
+<p>The preferred method is <a href="lib/_HotIf.htm">#HotIf</a>. For example:</p>
+<pre>#HotIf WinActive("ahk_class Notepad")
+^a::MsgBox "You pressed Control-A while Notepad is active."
+</pre>
+<h3 id="HotPrefix">How can  a prefix key be made to perform its native function rather than doing nothing?</h3>
+<p>Consider the following example, which makes Numpad0 into a prefix key:</p>
+<pre>Numpad0 &amp; Numpad1::MsgBox "You pressed Numpad1 while holding down Numpad0."</pre>
+<p>Now, to make Numpad0 send a real Numpad0 keystroke whenever it wasn't used to launch a hotkey such as the above, add the following hotkey:</p>
+<pre>$Numpad0::Send "{Numpad0}"</pre>
+<p>The $ prefix is needed to prevent a warning dialog about an infinite loop (since the hotkey "sends itself"). In addition, the above action occurs at the time the key is <strong>released</strong>.</p>
+<h3 id="HotOverride">How can the built-in Windows shortcut keys, such as Win+U (Utility Manager) and Win+R (Run), be changed or disabled?</h3>
+<p>Here are some <a href="misc/Override.htm">examples</a>.</p>
+<h3 id="HotRegex">Can I use wildcards or regular expressions in Hotstrings?</h3>
+<p>Use the <a href="https://github.com/polyethene/AutoHotkey-Scripts/blob/master/Hotstrings.ahk">script</a> by polyethene (examples are included).</p>
+<h3 id="SpecialKey">How can I use a hotkey that is not in my keyboard layout?</h3>
+<p>See <a href="KeyList.htm#SpecialKeys">Special Keys</a>.</p>
+<h3 id="HotZero">My keypad has a special 000 key. Is it possible to turn it into a hotkey?</h3>
+<p>You can. This  <a href="scripts/index.htm#Numpad000">example script</a> makes <kbd>000</kbd> into an equals key. You can change the action by replacing the <code>Send "="</code> line with line(s) of your choice.</p>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>WinSetRegion - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The WinSetRegion function changes the shape of the specified window to be the specified rectangle, ellipse, or polygon." />
+<meta name="ahk:equiv-v1" content="lib/WinSet.htm#Region" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>WinSetRegion</h1>
+
+<p>Changes the shape of the specified window to be the specified rectangle, ellipse, or polygon.</p>
+
+<pre class="Syntax"><span class="func">WinSetRegion</span> <span class="optional">Options, WinTitle, WinText, ExcludeTitle, ExcludeText</span></pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+    <dt>Options</dt>
+    <dd>
+        <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+        <p>If blank or omitted, the window is restored to its original/default display area. Otherwise, specify one or more of the following options, each separated from the others with space(s):</p>
+        <p><strong>W</strong><em>n</em>: Width of rectangle or ellipse. For example: <code class="no-highlight">w200</code>.</p>
+        <p><strong>H</strong><em>n</em>: Height of rectangle or ellipse. For example: <code class="no-highlight">h200</code>.</p>
+        <p><strong>X-Y:</strong> Each of these is a pair of X/Y coordinates. For example, <code class="no-highlight">200-0</code> would use 200 for the X coordinate and 0 for the Y.</p>
+        <p><strong>E:</strong> Makes the region an ellipse rather than a rectangle. This option is valid only when W and H are present.</p>
+        <p><strong>R</strong><em>w-h</em>: Makes the region a rectangle with rounded corners. For example, <code class="no-highlight">r30-30</code> would use a 30x30 ellipse for each corner. If <em>w-h</em> is omitted, 30-30 is used. R is valid only when W and H are present.</p>
+        <p><strong>Rectangle or ellipse:</strong> If the W and H options are present, the new display area will be a rectangle whose upper left corner is specified by the first (and only) pair of X-Y coordinates. However, if the E option is also present, the new display area will be an ellipse rather than a rectangle. For example: <code>WinSetRegion "50-0 w200 h250 E"</code>.</p>
+        <p><strong>Polygon:</strong> When the W and H options are absent, the new display area will be a polygon determined by multiple pairs of X-Y coordinates (each pair of coordinates is a point inside the window relative to its upper left corner). For example, if three pairs of coordinates are specified, the new display area will be a triangle in most cases. The order of the coordinate pairs with respect to each other is sometimes important. In addition, the word <strong>Wind</strong> may be present in <em>Options</em> to use the winding method instead of the alternating method to determine the polygon's region.</p>
+    </dd>
+    <dt>WinTitle, WinText, ExcludeTitle, ExcludeText</dt>
+    <dd>
+        <p>Type: <a href="../Concepts.htm#strings">String</a>, <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#objects">Object</a></p>
+        <p>If each of these is blank or omitted, the <a href="../misc/WinTitle.htm#LastFoundWindow">Last Found Window</a> will be used. Otherwise, specify for <em>WinTitle</em> a <a href="../misc/WinTitle.htm">window title or other criteria</a> to identify the target window and/or for <em>WinText</em> a substring from a single text element of the target window (as revealed by the included <a href="../Program.htm#Window_Spy">Window Spy</a> utility).</p>
+        <p><em>ExcludeTitle</em> and <em>ExcludeText</em> can be used to exclude one or more windows by their title or text. Their specification is similar to <em>WinTitle</em> and <em>WinText</em>, except that <em>ExcludeTitle</em> does not recognize any criteria other than the window title.</p>
+        <p>Window titles and text are case-sensitive. By default, hidden windows are not detected and hidden text elements are detected, unless changed with <a href="DetectHiddenWindows.htm">DetectHiddenWindows</a> and <a href="DetectHiddenText.htm">DetectHiddenText</a>. When using <a href="../misc/WinTitle.htm#ahk_id">pure HWNDs</a>, hidden windows are always detected. By default, a window title can contain <em>WinTitle</em> or <em>ExcludeTitle</em> anywhere inside it to be a match, unless changed with <a href="SetTitleMatchMode.htm">SetTitleMatchMode</a>.</p>
+    </dd>
+</dl>
+
+<h2 id="Error_Handling">Error Handling</h2>
+<p>A <a href="Error.htm#TargetError">TargetError</a> is thrown if the window could not be found.</p>
+<p>A <a href="Error.htm#ValueError">ValueError</a> is thrown if one or more <em>Options</em> are invalid, or if more than 2000 pairs of coordinates were specified.</p>
+<p>An <a href="Error.htm#OSError">OSError</a> is thrown if the specified region is invalid or could not be applied to the target window.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p>When a region is set for a window owned by the script, the system may automatically change the method it uses to render the window's frame, thereby altering its appearance. The effect is similar to workaround #2 shown below, but only affects the window until its region is reset.</p>
+<p><strong>Known limitation:</strong> Setting a region for a window not owned by the script may produce unexpected results if the window has a caption (title bar), and the system has desktop composition enabled. This is because the visible frame is not actually part of the window, but rendered by a separate system process known as Desktop Window Manager (DWM). Note that desktop composition is <a href="https://learn.microsoft.com/windows/compatibility/desktop-window-manager-is-always-on">always enabled</a> on Windows 8 and later. One of the following two workarounds can be used:</p>
+<pre><em>; #1: Remove the window's caption.</em>
+WinSetStyle "-0xC00000", "Window Title"
+
+<em>; To undo it:</em>
+WinSetStyle "+0xC00000", "Window Title"</pre>
+<pre><em>; #2: Disable DWM rendering of the window's frame.</em>
+DllCall("dwmapi\DwmSetWindowAttribute", "ptr", WinExist("Window Title")
+  , "uint", DWMWA_NCRENDERING_POLICY := 2, "int*", DWMNCRP_DISABLED := 1, "uint", 4)
+  
+<em>; To undo it (this might also cause any set region to be ignored):</em>
+DllCall("dwmapi\DwmSetWindowAttribute", "ptr", WinExist("Window Title")
+  , "uint", DWMWA_NCRENDERING_POLICY := 2, "int*", DWMNCRP_ENABLED := 2, "uint", 4)
+</pre>
+
+
+<h2 id="Related">Related</h2>
+<p><a href="Win.htm">Win functions</a>, <a href="Control.htm">Control functions</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Makes all parts of Notepad outside this rectangle invisible. This example may not work well with the new Notepad on Windows 11 or later.</p>
+<pre>WinSetRegion "50-0 w200 h250", "ahk_class Notepad"</pre>
+</div>
+
+<div class="ex" id="ExRounded">
+<p><a class="ex_number" href="#ExRounded"></a> Same as above but with corners rounded to 40x40. This example may not work well with the new Notepad on Windows 11 or later.</p>
+<pre>WinSetRegion "50-0 w200 h250 r40-40", "ahk_class Notepad"</pre>
+</div>
+
+<div class="ex" id="ExEllipse">
+<p><a class="ex_number" href="#ExEllipse"></a> Creates an ellipse instead of a rectangle. This example may not work well with the new Notepad on Windows 11 or later.</p>
+<pre>WinSetRegion "50-0 w200 h250 E", "ahk_class Notepad"</pre>
+</div>
+
+<div class="ex" id="ExTriangle">
+<p><a class="ex_number" href="#ExTriangle"></a> Creates a triangle with apex pointing down. This example may not work well with the new Notepad on Windows 11 or later.</p>
+<pre>WinSetRegion "50-0 250-0 150-250", "ahk_class Notepad"</pre>
+</div>
+
+<div class="ex" id="ExRestore">
+<p><a class="ex_number" href="#ExRestore"></a> Restores the window to its original/default display area. This example may not work well with the new Notepad on Windows 11 or later.</p>
+<pre>WinSetRegion , "ahk_class Notepad"</pre>
+</div>
+
+<div class="ex" id="ExAdvanced">
+<p><a class="ex_number" href="#ExAdvanced"></a> Creates a see-through rectangular hole inside Notepad (or any other window). There are two rectangles specified below: an outer and an inner. Each rectangle consists of 5 pairs of X/Y coordinates because the first pair is repeated at the end to "close off" each rectangle. This example may not work well with the new Notepad on Windows 11 or later.</p>
+<pre>WinSetRegion "0-0 300-0 300-300 0-300 0-0   100-100 200-100 200-200 100-200 100-100", "ahk_class Notepad"</pre>
+</div>
+
+</body>
+</html>

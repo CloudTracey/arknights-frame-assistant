@@ -1,0 +1,48 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Reload - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Reload function replaces the currently running instance of the script with a new one." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Reload</h1>
+
+<p>Replaces the currently running instance of the script with a new one.</p>
+
+<pre class="Syntax"><span class="func">Reload</span></pre>
+<p>This function is useful for scripts that are frequently changed. By assigning a hotkey to this function, you can easily restart the script after saving your changes in an editor.</p>
+<p>By default, the script can also be reloaded via its <a href="../Program.htm#tray-icon">tray icon</a> or <a href="../Program.htm#main-window">main window</a>.</p>
+<p>If the <a href="../Scripts.htm#SlashInclude">/include</a> switch was passed to the script's current instance, it is automatically passed to the new instance.</p>
+<p>Any other <a href="../Scripts.htm#cmd">command-line parameters</a> passed to the script's current instance are not passed to the new instance. To pass such parameters, do not use Reload. Instead, use <a href="Run.htm">Run</a> in conjunction with <a href="../Variables.htm#AhkPath">A_AhkPath</a> and <a href="../Variables.htm#ScriptFullPath">A_ScriptFullPath</a> (and <a href="../Variables.htm#IsCompiled">A_IsCompiled</a> if the script is ever used in compiled form). Also, include the string <code class="no-highlight">/restart</code> as the first parameter (i.e. after the name of the executable), which tells the program to use the same behavior as Reload. See also: <a href="../Scripts.htm#cmd">command line switches and syntax</a>.</p>
+<p>When the script restarts, it is launched in its original working directory (the one that was in effect when it was first launched). In other words, <a href="SetWorkingDir.htm">SetWorkingDir</a> will not change the working directory that will be used for the new instance.</p>
+<p>If the script cannot be reloaded -- perhaps because it has a syntax error -- the original instance of the script will continue running. Therefore, the reload function should be followed by whatever actions you want taken in the event of a failure (such as a <a href="Return.htm">return</a> to exit the current subroutine). To have the original instance detect the failure, follow this example:</p>
+<pre>Reload
+Sleep 1000 <em>; If successful, the reload will close this instance during the Sleep, so the line below will never be reached.</em>
+Result := MsgBox("The script could not be reloaded. Would you like to open it for editing?",, 4)
+if Result = "Yes"
+    Edit
+return</pre>
+<p>Previous instances of the script are identified by the same mechanism as for <a href="_SingleInstance.htm">#SingleInstance</a>, with the same <a href="_SingleInstance.htm#Limitations">limitations</a>.</p>
+<p>If the script allows multiple instances, Reload may fail to identify the correct instance. The simplest alternative is to <a href="Run.htm">Run</a> a new instance and then exit. For example:</p>
+<pre>if A_IsCompiled
+    Run Format('"{1}" /force', A_ScriptFullPath)
+else
+    Run Format('"{1}" /force "{2}"', A_AhkPath, A_ScriptFullPath)
+ExitApp</pre>
+
+<h2 id="Related">Related</h2>
+<p><a href="Edit.htm">Edit</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExHotkey">
+<p><a class="ex_number" href="#ExHotkey"></a> Press a hotkey to restart the script.</p>
+<pre>^!r::Reload  <em>; Ctrl+Alt+R</em></pre>
+</div>
+
+</body>
+</html>

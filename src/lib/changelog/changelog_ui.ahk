@@ -36,8 +36,13 @@ class ChangelogUI {
 
     static _OnConfirm(chkBox) {
         if chkBox.Value {
-            Config.SetImportant("DismissedChangelogVersion", this.CurrentVersion)
-            IniWrite(Config._ImportantSettings["DismissedChangelogVersion"], Config.IniFile, "Main", "DismissedChangelogVersion")
+            try {
+                IniWrite(this.CurrentVersion, Config.IniFile, "Main", "DismissedChangelogVersion")
+                Config.SetImportant("DismissedChangelogVersion", this.CurrentVersion)
+            } catch Error as e {
+                Logger.Warn("Changelog", "忽略版本保存失败：" e.Message)
+                MessageBox.Warning("更新公告已关闭，但忽略状态未能保存。下次启动可能会再次显示，请检查 Settings.ini 的写入权限。", "配置未保存")
+            }
         }
         this.GuiObj.Destroy()
     }

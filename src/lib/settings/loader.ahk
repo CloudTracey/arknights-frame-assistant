@@ -4,6 +4,7 @@ class Loader {
     ; 从配置文件加载设置
     static LoadSettings() {
         Config.MigrateFrameRate()
+        Config.MigrateGitHubToken()
         Config.LoadFromIni()
         State.UpdateDelay()
         State.UpdateClickDelay()

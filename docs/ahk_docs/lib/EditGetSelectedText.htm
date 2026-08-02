@@ -1,0 +1,53 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>EditGetSelectedText - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The EditGetSelectedText function returns the selected text in an edit control." />
+<meta name="ahk:equiv-v1" content="lib/ControlGet.htm#Selected" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>EditGetSelectedText</h1>
+
+<p>Returns the selected text in an edit control.</p>
+
+<pre class="Syntax">SelectedText := <span class="func">EditGetSelectedText</span>(ControlID <span class="optional">, WinTitle, WinText, ExcludeTitle, ExcludeText</span>)</pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+    <dt>ControlID</dt>
+    <dd>
+        <p>Type: <a href="../Concepts.htm#strings">String</a>, <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#objects">Object</a></p>
+        <p>The control's ClassNN, text or HWND, or an object with a Hwnd property. For details, see <a href="../misc/ControlID.htm">Control Identifiers</a>.</p>
+    </dd>
+    <dt>WinTitle, WinText, ExcludeTitle, ExcludeText</dt>
+    <dd>
+        <p>Type: <a href="../Concepts.htm#strings">String</a>, <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#objects">Object</a></p>
+        <p>If each of these is blank or omitted, the <a href="../misc/WinTitle.htm#LastFoundWindow">Last Found Window</a> will be used. Otherwise, specify for <em>WinTitle</em> a <a href="../misc/WinTitle.htm">window title or other criteria</a> to identify the target window and/or for <em>WinText</em> a substring from a single text element of the target window (as revealed by the included <a href="../Program.htm#Window_Spy">Window Spy</a> utility).</p>
+        <p><em>ExcludeTitle</em> and <em>ExcludeText</em> can be used to exclude one or more windows by their title or text. Their specification is similar to <em>WinTitle</em> and <em>WinText</em>, except that <em>ExcludeTitle</em> does not recognize any criteria other than the window title.</p>
+        <p>Window titles and text are case-sensitive. By default, hidden windows are not detected and hidden text elements are detected, unless changed with <a href="DetectHiddenWindows.htm">DetectHiddenWindows</a> and <a href="DetectHiddenText.htm">DetectHiddenText</a>. When using <a href="../misc/WinTitle.htm#ahk_id">pure HWNDs</a>, hidden windows are always detected. By default, a window title can contain <em>WinTitle</em> or <em>ExcludeTitle</em> anywhere inside it to be a match, unless changed with <a href="SetTitleMatchMode.htm">SetTitleMatchMode</a>.</p>
+    </dd>
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="../Concepts.htm#strings">String</a></p>
+<p>This function returns the selected text in an edit control. If no text is selected, an empty string is returned.</p>
+<p>Certain types of controls, such as RichEdit20A, might not produce the correct text in some cases (e.g. Metapad).</p>
+
+<h2 id="Error_Handling">Error Handling</h2>
+<p>A <a href="Error.htm#TargetError">TargetError</a> is thrown if the window or control could not be found.</p>
+<p>An <a href="Error.htm">Error</a> or <a href="Error.htm#OSError">OSError</a> is thrown if there was a problem retrieving the text.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p>This function works best with common or predefined Microsoft controls; some applications use custom or modified controls, in which case the function might not work as expected.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="EditGetCurrentCol.htm">EditGetCurrentCol</a>, <a href="EditGetCurrentLine.htm">EditGetCurrentLine</a>, <a href="EditGetLineCount.htm">EditGetLineCount</a>, <a href="EditGetLine.htm">EditGetLine</a>, <a href="EditPaste.htm">EditPaste</a>, <a href="Control.htm">Control functions</a></p>
+
+</body>
+</html>

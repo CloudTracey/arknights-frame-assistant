@@ -17,6 +17,7 @@ HandleSettingsReset(*) {
         EventBus.Publish("GuiUpdateCustomControls")
         Saver.SettingsIniWrite()
         Loader.LoadSettings()
+        Logger.Info("Settings", "已重置按键并保存默认设置")
         if(HotkeyController.HotkeyState == true) {
             HotkeyController.EnableByTab(GuiManager.LastActiveTab)
         }
@@ -33,6 +34,8 @@ HandleSettingsSave(*) {
     EventBus.Publish("UnsetSwitchKey")
     Saver.SettingsIniWrite()
     Loader.LoadSettings()
+    GuiManager.CommitTabSettings()
+    Logger.Info("Settings", "设置已保存并关闭")
     if(HotkeyController.HotkeyState == true) {
         HotkeyController.EnableByTab(GuiManager.LastActiveTab)
     }
@@ -51,6 +54,8 @@ HandleSettingsApply(*) {
     EventBus.Publish("UnsetSwitchKey")
     Saver.SettingsIniWrite()
     Loader.LoadSettings()
+    GuiManager.CommitTabSettings()
+    Logger.Info("Settings", "设置已应用")
     if(HotkeyController.HotkeyState == true) {
         HotkeyController.EnableByTab(GuiManager.LastActiveTab)
     }
@@ -65,6 +70,7 @@ HandleSettingsApply(*) {
 ; 处理取消设置事件
 HandleSettingsCancel(*) {
     Loader.LoadSettings()
+    Logger.Info("Settings", "取消设置修改并恢复配置")
     ; 通过事件总线通知GUI恢复显示
     EventBus.Publish("GuiUpdateHotkeyControls")
     EventBus.Publish("GuiUpdateImportantControls")

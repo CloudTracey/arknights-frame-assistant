@@ -1,0 +1,70 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Continue - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Continue statement skips the rest of a loop statement's current iteration and begins a new one." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Continue</h1>
+<p>Skips the rest of a <a href="../Language.htm#loop-statement">loop statement</a>'s current iteration and begins a new one.</p>
+<pre class="Syntax"><span class="func">Continue</span> <span class="optional">LoopLabel</span></pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+  <dt>LoopLabel</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a> or <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>If omitted or 1, this statement applies to the innermost loop in which it is enclosed. Otherwise, specify which loop this statement should apply to; either by <a href="../misc/Labels.htm">label name</a> or numeric nesting level. If a <a href="../misc/Labels.htm">label</a> is specified, it must point directly at a <a href="../Language.htm#loop-statement">loop statement</a>.</p>
+    <p><em>LoopLabel</em> must be a constant value - variables and expressions are not supported, with the exception of a single literal number or quoted string enclosed in parentheses. For example: <code>continue("outer")</code></p>
+  </dd>
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>Continue behaves the same as reaching the loop's closing brace:</p>
+<ol>
+  <li>It skips the rest of the loop's body.</li>
+  <li>The loop's <a href="Until.htm">Until</a> expression (if it has one) is evaluated.</li>
+  <li><a href="../Variables.htm#Index">A_Index</a> is increased by 1.</li>
+  <li>The loop's own condition (if it has one) is checked to see if it is satisfied. If so, a new iteration begins; otherwise the loop ends.</li>
+</ol>
+<p>The use of <a href="Break.htm">Break</a> and Continue are encouraged over <a href="Goto.htm">Goto</a> since they usually make scripts more readable and maintainable.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="Break.htm">Break</a>, <a href="Loop.htm">Loop</a>, <a href="Until.htm">Until</a>, <a href="While.htm">While-loop</a>, <a href="For.htm">For-loop</a>, <a href="Block.htm">Blocks</a>, <a href="../misc/Labels.htm">Labels</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Displays 5 message boxes, one for each number between 6 and 10. Note that in the first 5 iterations of the loop, the Continue statement causes the loop to start over before it reaches the MsgBox line.</p>
+<pre>
+Loop 10
+{
+    if (A_Index &lt;= 5)
+        continue
+    MsgBox A_Index
+}</pre>
+</div>
+
+<div class="ex" id="ExContinueOuter">
+<p><a class="ex_number" href="#ExContinueOuter"></a> Continues the outer loop from within a nested loop.</p>
+<pre>outer:
+Loop 3
+{
+    x := A_Index
+    Loop 3
+    {
+        if (x*A_Index = 4)
+            continue outer  <em>; Equivalent to <b>continue 2</b> or <b>goto continue_outer</b>.</em>
+        MsgBox x "," A_Index
+    }
+    continue_outer: <em>; For goto.</em>
+}</pre>
+</div>
+
+</body>
+</html>

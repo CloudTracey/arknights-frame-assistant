@@ -1,0 +1,91 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Shutdown - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Shutdown function shuts down, restarts, or logs off the system." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Shutdown</h1>
+
+<p>Shuts down, restarts, or logs off the system.</p>
+
+<pre class="Syntax"><span class="func">Shutdown</span> Flags</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Flags</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>A combination (or sum) of numbers from the table below to indicate the shutdown type.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Shutdown_Types">Shutdown Types</h2>
+<table class="info">
+  <tr>
+    <th>Number</th>
+    <th abbr="Constant">Windows Constant</th>
+    <th abbr="Descr">Description</th>
+  </tr>
+  <tr>
+    <td>0x0 (0)</td>
+    <td>EWX_LOGOFF</td>
+    <td>Closes all processes and then logs the user off.</td>
+  </tr>
+  <tr>
+    <td>0x1 (1)</td>
+    <td>EWX_SHUTDOWN</td>
+    <td>Shuts down the system to a point at which it is safe to turn off the power. All file buffers have been flushed to disk, and all running processes have stopped. Then, it turns off the power if the system supports the power-off feature.</td>
+  </tr>
+  <tr>
+    <td>0x2 (2)</td>
+    <td>EWX_REBOOT</td>
+    <td>Shuts down the system and then restarts the system.</td>
+  </tr>
+  <tr>
+    <td>0x4 (4)</td>
+    <td>EWX_FORCE</td>
+    <td>Forces all open applications to close. It should only be used in an emergency because it may cause any open applications to lose data.</td>
+  </tr>
+  <tr>
+    <td>0x8 (8)</td>
+    <td>EWX_POWEROFF</td>
+    <td>Shuts down the system and turns off the power. The system must support the power-off feature.</td>
+  </tr>
+  <tr>
+    <td>0x400000 (4194304)</td>
+    <td>EWX_HYBRID_SHUTDOWN</td>
+    <td>Prepares the system for the fast startup, shuts down the system and turns off the power. Requires Windows 8 or later, and the corresponding option must be enabled in the system's power settings (if available).</td>
+  </tr>
+</table>
+
+<h2 id="Remarks">Remarks</h2>
+<p>Add or combine the required values together. For example, to shut down and power off, use 9 (1 + 8). Alternatively, an <a href="../Variables.htm#Expressions">expression</a> such as <code>1 + 8</code> or <code>0x1 | 0x8</code> can be specified.</p>
+<p>To have the system suspend or hibernate, see <a href="#ExSuspend">example #2</a> at the bottom of this page.</p>
+<p>To turn off the monitor, see <a href="SendMessage.htm#ExMonitorPower">SendMessage example #1</a>.</p>
+<p>On a related note, a script can detect when the system is shutting down or the user is logging off via <a href="OnExit.htm">OnExit</a>.</p>
+<h2 id="Related">Related</h2>
+<p><a href="Run.htm">Run</a>, <a href="ExitApp.htm">ExitApp</a>, <a href="OnExit.htm">OnExit</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Forces a reboot (reboot + force = 2 + 4 = 6).</p>
+<pre>Shutdown 6</pre>
+</div>
+
+<div class="ex" id="ExSuspend">
+<p><a class="ex_number" href="#ExSuspend"></a> Calls the Windows API function "SetSuspendState" to have the system suspend or hibernate. Note that the second parameter may have no effect at all on newer systems.</p>
+<pre><em>; Parameter #1: Pass 1 instead of 0 to hibernate rather than suspend.
+; Parameter #2: Pass 1 instead of 0 to suspend immediately rather than asking each application for permission.
+; Parameter #3: Pass 1 instead of 0 to disable all wake events.</em>
+DllCall("PowrProf\SetSuspendState", "Int", 0, "Int", 0, "Int", 0)</pre>
+</div>
+
+</body>
+</html>

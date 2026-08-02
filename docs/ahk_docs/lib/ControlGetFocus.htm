@@ -1,0 +1,58 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>ControlGetFocus - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The ControlGetFocus function retrieves which control of the target window has keyboard focus, if any." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>ControlGetFocus</h1>
+
+<p>Retrieves which control of the target window has keyboard focus, if any.</p>
+
+<pre class="Syntax">HWND := <span class="func">ControlGetFocus</span>(<span class="optional">WinTitle, WinText, ExcludeTitle, ExcludeText</span>)</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>WinTitle, WinText, ExcludeTitle, ExcludeText</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a>, <a href="../Concepts.htm#numbers">Integer</a> or <a href="../Concepts.htm#objects">Object</a></p>
+    <p>If each of these is blank or omitted, the <a href="../misc/WinTitle.htm#LastFoundWindow">Last Found Window</a> will be used. Otherwise, specify for <em>WinTitle</em> a <a href="../misc/WinTitle.htm">window title or other criteria</a> to identify the target window and/or for <em>WinText</em> a substring from a single text element of the target window (as revealed by the included <a href="../Program.htm#Window_Spy">Window Spy</a> utility).</p>
+    <p><em>ExcludeTitle</em> and <em>ExcludeText</em> can be used to exclude one or more windows by their title or text. Their specification is similar to <em>WinTitle</em> and <em>WinText</em>, except that <em>ExcludeTitle</em> does not recognize any criteria other than the window title.</p>
+    <p>Window titles and text are case-sensitive. By default, hidden windows are not detected and hidden text elements are detected, unless changed with <a href="DetectHiddenWindows.htm">DetectHiddenWindows</a> and <a href="DetectHiddenText.htm">DetectHiddenText</a>. When using <a href="../misc/WinTitle.htm#ahk_id">pure HWNDs</a>, hidden windows are always detected. By default, a window title can contain <em>WinTitle</em> or <em>ExcludeTitle</em> anywhere inside it to be a match, unless changed with <a href="SetTitleMatchMode.htm">SetTitleMatchMode</a>.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="../Concepts.htm#numbers">Integer</a></p>
+<p>This function returns the <a href="../misc/ControlID.htm#HWND">window handle (HWND)</a> of the focused control.</p>
+<p>If none of the target window's controls has keyboard focus, the return value is 0.</p>
+
+<h2 id="Error_Handling">Error Handling</h2>
+<p>A <a href="Error.htm#TargetError">TargetError</a> is thrown if there is a problem determining the target window or control.</p>
+<p>An <a href="Error.htm#OSError">OSError</a> is thrown if there is a problem determining the keyboard focus.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p>This function is intended for use with controls in a non-GUI window, i.e. a window that is not created with the <a href="Gui.htm#Call">Gui</a> function. It works best with common or predefined Microsoft controls; some applications use custom or modified controls, in which case the function might not work as expected. For <a href="GuiControls.htm">GUI controls</a>, it is usually more convenient to use <a href="Gui.htm#FocusedCtrl">Gui.FocusedCtrl</a>.</p>
+<p>The control retrieved by this function is the one that has keyboard focus, that is, the one that would receive keystrokes if the user were to type any.</p>
+<p>The target window must be active to have a focused control, but even the active window may lack a focused control.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="ControlFocus.htm">ControlFocus</a>, <a href="Gui.htm#FocusedCtrl">Gui.FocusedCtrl</a>, <a href="Control.htm">Control functions</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Reports the <a href="../misc/ControlID.htm#HWND">HWND</a> and <a href="../misc/ControlID.htm#ClassNN">ClassNN</a> of the active window's focused control.</p>
+<pre>
+FocusedHwnd := ControlGetFocus("A")
+FocusedClassNN := ControlGetClassNN(FocusedHwnd)
+MsgBox 'Control with focus = {Hwnd: ' FocusedHwnd ', ClassNN: "' FocusedClassNN '"}'</pre>
+</div>
+
+</body>
+</html>

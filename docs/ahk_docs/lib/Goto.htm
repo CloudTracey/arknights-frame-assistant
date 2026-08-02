@@ -1,0 +1,49 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>Goto - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The Goto statement jumps to the specified label and continues execution." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>Goto</h1>
+
+<p>Jumps to the specified label and continues execution.</p>
+
+<pre class="Syntax"><span class="func">Goto</span> Label</pre>
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>Label</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>The name of the <a href="../misc/Labels.htm">label</a> to which to jump.</p>
+    <p><em>Label</em> can be a variable or expression only if parentheses are used. For example, <code>Goto MyLabel</code> and <code>Goto("MyLabel")</code> both jump to <code>MyLabel:</code>.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Remarks">Remarks</h2>
+<p>Performance is slightly reduced when using a dynamic label (that is, a variable or expression which returns a label name) because the target label must be "looked up" each time rather than only once when the script is first loaded. An error dialog will be displayed if the label does not exist. To avoid this, call <a href="IsLabel.htm">IsLabel()</a> beforehand. For example:</p>
+<pre>if IsLabel(VarContainingLabelName)
+    Goto(VarContainingLabelName)</pre>
+<p>The use of Goto is discouraged because it generally makes scripts less readable and harder to maintain. Consider using <a href="Else.htm">Else</a>, <a href="Block.htm">Blocks</a>, <a href="Break.htm">Break</a>, and <a href="Continue.htm">Continue</a> as substitutes for Goto.</p>
+<h2 id="Related">Related</h2>
+<p><a href="Return.htm">Return</a>, <a href="IsLabel.htm">IsLabel</a>, <a href="Else.htm">Else</a>, <a href="Block.htm">Blocks</a>, <a href="Break.htm">Break</a>, <a href="Continue.htm">Continue</a></p>
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExBasic">
+<p><a class="ex_number" href="#ExBasic"></a> Jumps to the label named "MyLabel" and continues execution.</p>
+<pre>Goto MyLabel
+<em>; ...</em>
+MyLabel:
+Sleep 100
+<em>; ...</em></pre>
+</div>
+
+</body>
+</html>

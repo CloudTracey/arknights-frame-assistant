@@ -1,0 +1,156 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>ComObjQuery - Syntax &amp; Usage | AutoHotkey v2</title>
+<meta name="description" content="The ComObjQuery function queries a COM object for an interface or service." />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<link href="../static/theme.css" rel="stylesheet" type="text/css" />
+<link href="../static/dark.css" rel="stylesheet" type="text/css" media="(prefers-color-scheme: dark)" id="dark_css" />
+<script src="../static/content.js" type="text/javascript"></script>
+</head>
+<body>
+
+<h1>ComObjQuery</h1>
+<p>Queries a COM object for an interface or service.</p>
+<pre class="Syntax">InterfaceComObj := <span class="func">ComObjQuery</span>(ComObj, SID, IID)
+InterfaceComObj := <span class="func">ComObjQuery</span>(ComObj, IID)</pre>
+
+<h2 id="Parameters">Parameters</h2>
+<dl>
+
+  <dt>ComObj</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#objects">Object</a> or <a href="../Concepts.htm#numbers">Integer</a></p>
+    <p>A COM wrapper object, an interface pointer, or an object with a <code class="no-highlight">Ptr</code> property which returns an interface pointer. See <a href="ComValue.htm">ComValue</a> for details.</p>
+  </dd>
+
+  <dt>IID</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>An interface identifier (GUID) in the form "{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}".</p>
+  </dd>
+
+  <dt>SID</dt>
+  <dd>
+    <p>Type: <a href="../Concepts.htm#strings">String</a></p>
+    <p>A service identifier in the same form as IID.</p>
+  </dd>
+
+</dl>
+
+<h2 id="Return_Value">Return Value</h2>
+<p>Type: <a href="../Concepts.htm#objects">Object</a></p>
+<p>This function returns a COM wrapper object of type dependent on the IID parameter.</p>
+<table class="info">
+  <tr><th>IID</th><th>Class</th><th abbr="Type">Variant Type</th><th abbr="Descr">Description</th></tr>
+  <tr>
+    <td>IID_IDispatch</td>
+    <td><code style="white-space:nowrap">ComObject</code></td>
+    <td><span style="white-space:nowrap">VT_DISPATCH (9)</span></td>
+    <td>Allows the script to call properties and methods of the object using normal <a href="../Objects.htm#Usage_Objects">object syntax</a>.</td>
+  </tr>
+  <tr>
+    <td>Any other IID</td>
+    <td><code style="white-space:nowrap">ComValue</code></td>
+    <td><span style="white-space:nowrap">VT_UNKNOWN (13)</span></td>
+    <td>Provides only a <code class="no-highlight">Ptr</code> property, which allows the object to be passed to <a href="DllCall.htm">DllCall</a> or <a href="ComCall.htm">ComCall</a>.</td>
+  </tr>
+</table>
+
+<h2 id="Error_Handling">Error Handling</h2>
+<p>An exception is thrown on failure, such as if the interface is not supported.</p>
+
+<h2 id="Remarks">Remarks</h2>
+<p>In its two-parameter mode, this function is equivalent to <a href="https://learn.microsoft.com/windows/win32/api/unknwn/nf-unknwn-iunknown-queryinterface(refiid_void)">IUnknown::QueryInterface</a>. When SID and IID are both specified, it internally queries for the <a href="https://learn.microsoft.com/previous-versions/windows/internet-explorer/ie-developer/platform-apis/cc678965(v=vs.85)">IServiceProvider</a> interface, then calls <a href="https://learn.microsoft.com/previous-versions/windows/internet-explorer/ie-developer/platform-apis/cc678966(v=vs.85)">IServiceProvider::QueryService</a>.</p>
+<p><a href="ComCall.htm">ComCall</a> can be used to call native interface methods.</p>
+
+<h2 id="Related">Related</h2>
+<p><a href="ComCall.htm">ComCall</a>, <a href="ComObject.htm">ComObject</a>, <a href="ComObjGet.htm">ComObjGet</a>, <a href="ComObjActive.htm">ComObjActive</a></p>
+
+<h2 id="Examples">Examples</h2>
+<div class="ex" id="ExClassName">
+<p><a class="ex_number" href="#ExClassName"></a> Determines the class name of an object.</p>
+<pre>
+obj := ComObject("Scripting.Dictionary")
+
+MsgBox "Interface name: " ComObjType(obj, "name")
+
+IID_IProvideClassInfo := "{B196B283-BAB4-101A-B69C-00AA00341D07}"
+
+<em>; Request the object's IProvideClassInfo interface.</em>
+try
+    pci := ComObjQuery(obj, IID_IProvideClassInfo)
+catch
+{
+    MsgBox "IProvideClassInfo interface not supported."
+    return
+}
+
+<em>; Call GetClassInfo to retrieve a pointer to the ITypeInfo interface.</em>
+ComCall(3, pci, "ptr*", &amp;ti := 0)
+
+<em>; Wrap ti to ensure automatic cleanup.</em>
+ti := ComValue(13, ti)
+
+<em>; Call GetDocumentation to get the object's full type name.</em>
+ComCall(12, ti, "int", -1, "ptr*", &amp;pname := 0, "ptr", 0, "ptr", 0, "ptr", 0)
+
+<em>; Convert the BSTR pointer to a usable string.</em>
+name := StrGet(pname, "UTF-16")
+
+<em>; Clean up.</em>
+DllCall("oleaut32\SysFreeString", "ptr", pname)
+pci := ti := ""
+
+<em>; Display the type name!</em>
+MsgBox "Class name: " name
+</pre>
+</div>
+
+<div class="ex" id="ExIE">
+<p><a class="ex_number" href="#ExIE"></a> Automates an existing Internet Explorer window.</p>
+<pre>
+sURL := "https://www.autohotkey.com/boards/"
+if WebBrowser := GetWebBrowser()
+    WebBrowser.Navigate(sURL)
+
+GetWebBrowser()
+{
+    <em>; Get a raw pointer to the document object of the top-most IE window.</em>
+    static msg := DllCall("RegisterWindowMessage", "Str", "WM_HTML_GETOBJECT")
+    lResult := SendMessage(msg, 0, 0, "Internet Explorer_Server1", "ahk_class IEFrame")
+    if !lResult
+        return  <em>; IE not found.</em>
+    static IID_IHTMLDocument2 := GUID("{332C4425-26CB-11D0-B483-00C04FD90119}")
+    static VT_UNKNOWN := 13
+    DllCall("oleacc\ObjectFromLresult", "Ptr", lResult
+        , "Ptr", IID_IHTMLDocument2, "Ptr", 0
+        , "Ptr*", pdoc := ComValue(VT_UNKNOWN, 0))
+    
+    <em>; Query for the WebBrowserApp service. In this particular case,
+    ; the SID and IID are the same, but it isn't always this way.</em>
+    static IID_IWebBrowserApp := "{0002DF05-0000-0000-C000-000000000046}"
+    static SID_SWebBrowserApp := IID_IWebBrowserApp
+    pweb := ComObjQuery(pdoc, SID_SWebBrowserApp, IID_IWebBrowserApp)
+    
+    <em>; Return the WebBrowser object as IDispatch for usability.
+    ; This works only because IWebBrowserApp is derived from IDispatch.
+    ; pweb will release its ptr automatically, so AddRef to counter that.</em>
+    ObjAddRef(pweb.ptr)
+    static VT_DISPATCH := 9
+    return ComValue(VT_DISPATCH, pweb.ptr)
+}
+
+GUID(sGUID) <em>; Converts a string to a binary GUID and returns it in a Buffer.</em>
+{
+    GUID := Buffer(16, 0)
+    if DllCall("ole32\CLSIDFromString", "WStr", sGUID, "Ptr", GUID) &lt; 0
+        throw ValueError("Invalid parameter #1", -1, sGUID)
+    return GUID
+}
+</pre>
+</div>
+
+</body>
+</html>
