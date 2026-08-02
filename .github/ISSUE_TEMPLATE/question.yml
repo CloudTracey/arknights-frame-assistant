@@ -26,7 +26,7 @@ body:
     id: afa_version
     attributes:
       label: AFA 版本号
-      placeholder: 例如：v1.2.1
+      placeholder: 例如：v1.6.2
 
   - type: input
     id: windows_version
