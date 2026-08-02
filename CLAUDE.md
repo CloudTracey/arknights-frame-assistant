@@ -110,7 +110,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 注释使用 `;`（单行）或 `/* */`（多行）
 - 行尾与格式约定：`.gitattributes` 规范文本文件"检出 CRLF、提交 LF"（`.ahk`/`.md` 为 `eol=crlf`，`.github/**` 的 yml/py 保持 LF）；VS Code 配置 4 空格缩进、UTF-8 无 BOM、不自动格式化，写文件时遵循避免 PR 噪音
 - Commit 遵循 Conventional Commits：`feat(scope): subject`，subject部分使用中文。scope 与改动涉及的模块文件名保持一致（如 `game_keys`、`hotkey_actions`），测试清单的 scope 与常规不同，使用 `test` 且类型为 `docs`（如 `docs(test):`）
-- 分支命名：`feat/描述`、`bugfix/描述`、`hotfix/描述`、`ui/描述`、`docs/描述`、`style/描述`、`perf/描述`、`refactor/描述` 等
+- 分支命名：`feat/描述`、`fix/描述`、`ui/描述`、`docs/描述`、`style/描述`、`perf/描述`、`refactor/描述` 等
 - PR 目标分支：`develop`（非 main）
 
 ## AFA版本号
