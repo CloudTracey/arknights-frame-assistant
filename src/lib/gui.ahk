@@ -1630,8 +1630,8 @@ class GuiManager {
                 this.IsOnStrongHoldProtocol := false
                 TrayTip
                 SetTimer HideTrayTip, 0
-                TrayTip("已退出卫戍协议方案", "AFA")
-                SetTimer HideTrayTip, -4000
+                TrayTip("已退出卫戍协议方案", "AFA", "Mute")
+                SetTimer HideTrayTip, -3000
             }
         }
         else if (tabName = "strongHoldProtocol") {
@@ -1640,8 +1640,8 @@ class GuiManager {
                 this.IsOnStrongHoldProtocol := true
                 TrayTip
                 SetTimer HideTrayTip, 0
-                TrayTip("已启用卫戍协议方案", "AFA")
-                SetTimer HideTrayTip, -4000
+                TrayTip("已启用卫戍协议方案", "AFA", "Mute")
+                SetTimer HideTrayTip, -3000
             }
         }
         else if isInitialSwitch {
