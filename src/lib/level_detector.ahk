@@ -37,7 +37,7 @@ class LevelDetector {
         if enabled {
             if (this._PollTimer = "")
                 this._PollTimer := LevelDetector.Poll.Bind(LevelDetector)
-            SetTimer this._PollTimer, 1000
+            SetTimer this._PollTimer, 333
         } else if (this._PollTimer != "") {
             SetTimer this._PollTimer, 0
         }
