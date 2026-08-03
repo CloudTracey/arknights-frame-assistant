@@ -61,7 +61,7 @@ class GuiManager {
     static TabOther := ""             ; "其他设置"标签点击区域
     static TabItems := []              ; 标签描述，数组顺序为管理器中的待保存顺序
     static AppliedTabSettings := {Order: [], Visibility: Map()} ; 已保存或应用的顶部标签状态
-    static TabFontState := Map("keyBind", "c1994d2", "quick", "cDefault", "strongHoldProtocol", "cDefault", "other", "cDefault") ; 各顶部标签当前字体颜色，避免对相同颜色重复 SetFont
+    static TabFontState := Map() ; 各顶部标签当前字体颜色（key -> color）；空 Map 保证首次 _SetTabFontOnce 总会执行 SetFont，避免与控件创建颜色硬编码耦合
     ; 标签管理器（"自定义"页右列）几何布局
     static TabManagerX := 460          ; 管理器列左边缘
     static TabManagerTitleY := 0       ; "顶部标签页"标题的 y（动态对齐左列第一项）
@@ -1180,10 +1180,17 @@ class GuiManager {
             if (this.AppliedTabSettings.Order[index] != id)
                 return false
         }
+        ; 双向比对可见性键集合，使相等性判断对称：既检测新集合相对快照的差异，也检测快照中已不存在的额外 ID
         for id, visible in visibility {
             if !this.AppliedTabSettings.Visibility.Has(id)
                 return false
             if this.AppliedTabSettings.Visibility[id] != visible
+                return false
+        }
+        for id, visible in this.AppliedTabSettings.Visibility {
+            if !visibility.Has(id)
+                return false
+            if visibility[id] != visible
                 return false
         }
         return true
@@ -1428,7 +1435,9 @@ class GuiManager {
     ; 内部：更新标签页UI
     ; 仅当目标颜色与 TabFontState 记录不一致时才 SetFont，避免重复重建字体触发文字重绘闪烁。
     static _SetTabFontOnce(tabName, color) {
-        if (this.TabFontState[tabName] != color) {
+        ; 键缺失视为无历史值，保证首次调用（及未来新增标签）总会执行 SetFont
+        prevColor := this.TabFontState.Has(tabName) ? this.TabFontState[tabName] : ""
+        if (prevColor != color) {
             this.TabFontState[tabName] := color
             switch tabName {
                 case "keyBind":
