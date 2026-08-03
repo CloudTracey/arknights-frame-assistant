@@ -61,6 +61,7 @@ class GuiManager {
     static TabOther := ""             ; "其他设置"标签点击区域
     static TabItems := []              ; 标签描述，数组顺序为管理器中的待保存顺序
     static AppliedTabSettings := {Order: [], Visibility: Map()} ; 已保存或应用的顶部标签状态
+    static TabFontState := Map() ; 各顶部标签当前字体颜色（key -> color）；空 Map 保证首次 _SetTabFontOnce 总会执行 SetFont，避免与控件创建颜色硬编码耦合
     ; 标签管理器（"自定义"页右列）几何布局
     static TabManagerX := 460          ; 管理器列左边缘
     static TabManagerTitleY := 0       ; "顶部标签页"标题的 y（动态对齐左列第一项）
@@ -1150,6 +1151,8 @@ class GuiManager {
     }
 
     ; 将标签管理列表中的待保存顺序与可见性作为一个整体提交。
+    ; 仅当顺序或可见性与已应用快照不一致时才触发界面重建（ApplyTabSettings），
+    ; 避免保存/应用设置时在顶部标签页未变更的情况下无谓地刷新全部控件。
     static CommitTabSettings(refreshUi := true) {
         appliedOrder := []
         appliedVisibility := Map()
@@ -1157,13 +1160,40 @@ class GuiManager {
             appliedOrder.Push(tabItem.Id)
             appliedVisibility[tabItem.Id] := !tabItem.CanHide || tabItem.Visible
         }
+
+        tabSettingsChanged := !this._TabSettingsEqual(appliedOrder, appliedVisibility)
+
         this.AppliedTabSettings := {
             Order: appliedOrder,
             Visibility: appliedVisibility
         }
 
-        if refreshUi
+        if refreshUi && tabSettingsChanged
             this.ApplyTabSettings()
+    }
+
+    ; 判断待提交的标签顺序与可见性与已应用快照是否一致。
+    static _TabSettingsEqual(order, visibility) {
+        if (this.AppliedTabSettings.Order.Length != order.Length)
+            return false
+        for index, id in order {
+            if (this.AppliedTabSettings.Order[index] != id)
+                return false
+        }
+        ; 双向比对可见性键集合，使相等性判断对称：既检测新集合相对快照的差异，也检测快照中已不存在的额外 ID
+        for id, visible in visibility {
+            if !this.AppliedTabSettings.Visibility.Has(id)
+                return false
+            if this.AppliedTabSettings.Visibility[id] != visible
+                return false
+        }
+        for id, visible in this.AppliedTabSettings.Visibility {
+            if !visibility.Has(id)
+                return false
+            if visibility[id] != visible
+                return false
+        }
+        return true
     }
 
     ; 按已应用顺序返回标签对象，并为未来新增标签提供自动追加兜底。
@@ -1185,8 +1215,11 @@ class GuiManager {
         visibleTabs := []
         for tabItem in this.GetTabsInAppliedOrder() {
             isVisible := this.IsTabVisible(tabItem.Id)
-            tabItem.TextControl.Visible := isVisible
-            tabItem.ClickControl.Visible := isVisible
+            ; 仅当可见性实际变化时才赋值，避免切换标签时对相同状态无谓重绘
+            if (tabItem.TextControl.Visible != isVisible)
+                tabItem.TextControl.Visible := isVisible
+            if (tabItem.ClickControl.Visible != isVisible)
+                tabItem.ClickControl.Visible := isVisible
             if isVisible
                 visibleTabs.Push(tabItem)
         }
@@ -1197,13 +1230,23 @@ class GuiManager {
         tabWidth := this.GuiWidth / visibleTabs.Length
         for index, tabItem in visibleTabs {
             tabX := tabWidth * (index - 1)
-            tabItem.TextControl.Move(tabX, 5, tabWidth, 20)
-            tabItem.ClickControl.Move(tabX, 0, tabWidth, 25)
+            ; 仅当位置或尺寸实际变化时才 Move，避免切换标签时对相同布局无谓重绘导致文字闪烁
+            tabItem.TextControl.GetPos(&curX, &curY, &curW, &curH)
+            if (curX != tabX || curY != 5 || curW != tabWidth || curH != 20) {
+                tabItem.TextControl.Move(tabX, 5, tabWidth, 20)
+                ; Move 改变宽度后文字需强制重绘——AHK 对控件变更延迟重绘，
+                ; 可见标签数变化时若不加 Redraw，文字可能按旧宽度绘制出现错位/缺字残影。
+                tabItem.TextControl.Redraw()
+            }
+            tabItem.ClickControl.GetPos(&curX, &curY, &curW, &curH)
+            if (curX != tabX || curY != 0 || curW != tabWidth || curH != 25)
+                tabItem.ClickControl.Move(tabX, 0, tabWidth, 25)
         }
 
         try this.MainGui["DefaultStrongHoldProtocol"].Enabled := this.IsTabVisible("strongHoldProtocol")
-        this.TabIndicator.GetPos(&indicatorX)
-        this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
+        this.TabIndicator.GetPos(&indicatorX, &indicatorY, &indicatorW, &indicatorH)
+        if (indicatorW != tabWidth)
+            this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
     }
 
     ; 解析回退标签：优先功能标签（排除"其他设置"），仅剩"其他设置"时返回它。
@@ -1243,8 +1286,16 @@ class GuiManager {
             }
         }
 
-        if (this.CurrentTab != "")
-            this._UpdateTabUI(this.CurrentTab)
+        if (this.CurrentTab != "") {
+            ; 当前页仍可见：仅刷新顶部标签栏（布局/勾叉/指示线），不重建页面控件，
+            ; 标签设置变更不应导致全部控件无谓刷新。
+            this.LayoutTopTabs()
+            this._UpdateTopTabBar(this.CurrentTab)
+            if !this.IsTabVisible("strongHoldProtocol") {
+                for ctrl in this.StrongHoldConflictHints
+                    try ctrl.Visible := false
+            }
+        }
         else
             this.LayoutTopTabs()
     }
@@ -1382,28 +1433,96 @@ class GuiManager {
     }
 
     ; 内部：更新标签页UI
+    ; 仅当目标颜色与 TabFontState 记录不一致时才 SetFont，避免重复重建字体触发文字重绘闪烁。
+    static _SetTabFontOnce(tabName, color) {
+        ; 键缺失视为无历史值，保证首次调用（及未来新增标签）总会执行 SetFont
+        prevColor := this.TabFontState.Has(tabName) ? this.TabFontState[tabName] : ""
+        if (prevColor != color) {
+            this.TabFontState[tabName] := color
+            switch tabName {
+                case "keyBind":
+                    this.TxtKeybind.SetFont(color)
+                case "quick":
+                    this.TxtQuick.SetFont(color)
+                case "strongHoldProtocol":
+                    this.TxtStrongHoldProtocol.SetFont(color)
+                default:
+                    this.TxtOther.SetFont(color)
+            }
+        }
+    }
+
+    ; 更新顶部标签栏的选中样式、勾叉文本与指示线位置。
+    ; 与页面控件刷新解耦：顶部标签设置变更时可单独调用，避免重建全部页面控件。
+    static _UpdateTopTabBar(tabName) {
+        showModeStatus := this.IsTabVisible("strongHoldProtocol")
+        isStrongHold := tabName = "strongHoldProtocol"
+        isOther := tabName = "other"
+
+        ; 更新标签样式：仅当目标颜色与记录不一致时才 SetFont，
+        ; 避免对相同颜色重复重建字体触发文字重绘闪烁。
+        this._SetTabFontOnce("keyBind", tabName = "keyBind" ? "c1994d2" : "cDefault")
+        this._SetTabFontOnce("quick", tabName = "quick" ? "c1994d2" : "cDefault")
+        this._SetTabFontOnce("strongHoldProtocol", isStrongHold ? "c1994d2" : "cDefault")
+        this._SetTabFontOnce("other", isOther ? "c1994d2" : "cDefault")
+
+        ; 计算目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页。
+        ; 先算后比，仅当实际变化时才赋值，避免相同值触发重绘闪烁。
+        if isStrongHold {
+            keybindText := "常规作战 ×"
+            quickText := "快捷操作 ×"
+            strongHoldText := "卫戍协议 √"
+        } else if isOther {
+            if !showModeStatus {
+                keybindText := "常规作战"
+                quickText := "快捷操作"
+                strongHoldText := "卫戍协议"
+            } else if (this.LastActiveTab = "strongHoldProtocol") {
+                keybindText := "常规作战 ×"
+                quickText := "快捷操作 ×"
+                strongHoldText := "卫戍协议 √"
+            } else {
+                keybindText := "常规作战 √"
+                quickText := "快捷操作 √"
+                strongHoldText := "卫戍协议 ×"
+            }
+        } else {
+            keybindText := showModeStatus ? "常规作战 √" : "常规作战"
+            quickText := showModeStatus ? "快捷操作 √" : "快捷操作"
+            strongHoldText := showModeStatus ? "卫戍协议 ×" : "卫戍协议"
+        }
+        if (this.TxtKeybind.Text != keybindText)
+            this.TxtKeybind.Text := keybindText
+        if (this.TxtQuick.Text != quickText)
+            this.TxtQuick.Text := quickText
+        if (this.TxtStrongHoldProtocol.Text != strongHoldText)
+            this.TxtStrongHoldProtocol.Text := strongHoldText
+
+        ; 移动指示线到当前选中的标签
+        if (tabName = "keyBind") {
+            this.TxtKeybind.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+        } else if (tabName = "quick") {
+            this.TxtQuick.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+        } else if isStrongHold {
+            this.TxtStrongHoldProtocol.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+        } else {
+            this.TxtOther.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
+        }
+    }
+
     static _UpdateTabUI(tabName) {
         ; 首先隐藏所有标签页的控件
         this._HideAllControls()
-        showModeStatus := this.IsTabVisible("strongHoldProtocol")
         this.LayoutTopTabs()
 
         ; 切换到常规作战页
         if (tabName = "keyBind") {
-            ; 更新标签样式
-            this.TxtKeybind.SetFont("c1994d2")  ; 蓝色（选中）
-            this.TxtQuick.SetFont("cDefault")   ; 默认色
-            this.TxtStrongHoldProtocol.SetFont("cDefault")  ; 默认色
-            this.TxtOther.SetFont("cDefault")   ; 默认色
-
-            ; 更新标签文本
-            this.TxtKeybind.text := showModeStatus ? "常规作战 √" : "常规作战"
-            this.TxtQuick.text := showModeStatus ? "快捷操作 √" : "快捷操作"
-            this.TxtStrongHoldProtocol.text := showModeStatus ? "卫戍协议 ×" : "卫戍协议"
-
-            ; 移动指示线
-            this.TxtKeybind.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
+            ; 更新标签样式与指示线
+            this._UpdateTopTabBar("keyBind")
 
             ; 显示常规作战控件
             this._ShowControls(this.KeybindControls)
@@ -1413,83 +1532,25 @@ class GuiManager {
 
         ; 切换到快捷操作页
         else if (tabName = "quick") {
-            ; 更新标签样式
-            this.TxtKeybind.SetFont("cDefault")  ; 默认色
-            this.TxtQuick.SetFont("c1994d2")     ; 蓝色（选中）
-            this.TxtStrongHoldProtocol.SetFont("cDefault")  ; 默认色
-            this.TxtOther.SetFont("cDefault")    ; 默认色
-
-            ; 更新标签文本
-            this.TxtKeybind.text := showModeStatus ? "常规作战 √" : "常规作战"
-            this.TxtQuick.text := showModeStatus ? "快捷操作 √" : "快捷操作"
-            this.TxtStrongHoldProtocol.text := showModeStatus ? "卫戍协议 ×" : "卫戍协议"
-
-            ; 移动指示线
-            this.TxtQuick.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-
-            ; 显示快捷操作控件
+            this._UpdateTopTabBar("quick")
             this._ShowControls(this.QuickControls)
-            ; 显示仅非其他设置控件
             this._ShowControls(this.NotOtherControls)
         }
 
         ; 切换到卫戍协议页
         else if (tabName = "strongHoldProtocol") {
-            ; 更新标签样式
-            this.TxtKeybind.SetFont("cDefault")  ; 默认色
-            this.TxtQuick.SetFont("cDefault")    ; 默认色
-            this.TxtStrongHoldProtocol.SetFont("c1994d2")  ; 蓝色（选中）
-            this.TxtOther.SetFont("cDefault")    ; 默认色
-
-            ; 更新标签文本
-            this.TxtKeybind.text := "常规作战 ×"
-            this.TxtQuick.text := "快捷操作 ×"
-            this.TxtStrongHoldProtocol.text := "卫戍协议 √"
-
-            ; 移动指示线
-            this.TxtStrongHoldProtocol.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-
-            ; 显示卫戍协议控件
+            this._UpdateTopTabBar("strongHoldProtocol")
             this._ShowControls(this.StrongHoldProtocolControls)
-            ; 显示仅非其他设置控件
             this._ShowControls(this.NotOtherControls)
         }
 
         ; 切换到其他设置页
         else if (tabName = "other") {
-            ; 更新标签样式
-            this.TxtKeybind.SetFont("cDefault")  ; 默认色
-            this.TxtQuick.SetFont("cDefault")    ; 默认色
-            this.TxtStrongHoldProtocol.SetFont("cDefault")  ; 默认色
-            this.TxtOther.SetFont("c1994d2")     ; 蓝色（选中）
-
-            ; "其他设置"不切换按键方案，标签状态沿用最后选中的功能页。
-            if !showModeStatus {
-                this.TxtKeybind.text := "常规作战"
-                this.TxtQuick.text := "快捷操作"
-                this.TxtStrongHoldProtocol.text := "卫戍协议"
-            } else if (this.LastActiveTab = "strongHoldProtocol") {
-                this.TxtKeybind.text := "常规作战 ×"
-                this.TxtQuick.text := "快捷操作 ×"
-                this.TxtStrongHoldProtocol.text := "卫戍协议 √"
-            } else {
-                this.TxtKeybind.text := "常规作战 √"
-                this.TxtQuick.text := "快捷操作 √"
-                this.TxtStrongHoldProtocol.text := "卫戍协议 ×"
-            }
-
-            ; 移动指示线
-            this.TxtOther.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-
-            ; 显示其他设置控件（按当前分类）
+            this._UpdateTopTabBar("other")
             this._SwitchOtherCategory(this.CurrentOtherCategory, true)
-            ; 隐藏仅非其他设置控件
             this._HideAllControls("NotOther")
         }
-        if !showModeStatus {
+        if !this.IsTabVisible("strongHoldProtocol") {
             for ctrl in this.StrongHoldConflictHints
                 try ctrl.Visible := false
         }
@@ -1507,11 +1568,18 @@ class GuiManager {
         ; 确保导航元素可见
         this._ShowControls(this.OtherSettingsControls)
 
+        ; _ShowControls 会把所有导航竖线一并点亮，这里紧接收敛为仅目标项可见，
+        ; 避免切换分类时出现"每个分类左侧蓝条快速闪烁一次"的中间状态。
+        info := this.OtherCategories[categoryName]
+        targetIndex := info[2]
+        for i, indicator in this.NavIndicators {
+            try indicator.Visible := (i = targetIndex)
+        }
+
         ; 隐藏所有分类控件
         this._HideOtherCategories()
 
         ; 显示目标分类控件
-        info := this.OtherCategories[categoryName]
         for ctrl in info[1] {
             try ctrl.Visible := true
         }
@@ -1523,7 +1591,6 @@ class GuiManager {
         if (categoryName = "Update") {
             this._OnUpdateSourceChange()
         }
-        targetIndex := info[2]
 
         ; 更新导航项样式
         for i, navItem in this.NavItems {
@@ -1532,11 +1599,6 @@ class GuiManager {
             } else {
                 navItem.SetFont("cDefault")
             }
-        }
-
-        ; 切换竖线指示器
-        for i, indicator in this.NavIndicators {
-            try indicator.Visible := (i = targetIndex)
         }
     }
 
