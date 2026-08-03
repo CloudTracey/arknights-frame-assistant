@@ -1559,11 +1559,18 @@ class GuiManager {
         ; 确保导航元素可见
         this._ShowControls(this.OtherSettingsControls)
 
+        ; _ShowControls 会把所有导航竖线一并点亮，这里紧接收敛为仅目标项可见，
+        ; 避免切换分类时出现"每个分类左侧蓝条快速闪烁一次"的中间状态。
+        info := this.OtherCategories[categoryName]
+        targetIndex := info[2]
+        for i, indicator in this.NavIndicators {
+            try indicator.Visible := (i = targetIndex)
+        }
+
         ; 隐藏所有分类控件
         this._HideOtherCategories()
 
         ; 显示目标分类控件
-        info := this.OtherCategories[categoryName]
         for ctrl in info[1] {
             try ctrl.Visible := true
         }
@@ -1575,7 +1582,6 @@ class GuiManager {
         if (categoryName = "Update") {
             this._OnUpdateSourceChange()
         }
-        targetIndex := info[2]
 
         ; 更新导航项样式
         for i, navItem in this.NavItems {
@@ -1584,11 +1590,6 @@ class GuiManager {
             } else {
                 navItem.SetFont("cDefault")
             }
-        }
-
-        ; 切换竖线指示器
-        for i, indicator in this.NavIndicators {
-            try indicator.Visible := (i = targetIndex)
         }
     }
 
