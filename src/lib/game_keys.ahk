@@ -186,6 +186,20 @@ class GameKeys {
             "keyUp", "Up", "keyDown", "Down",
             "keyLeft", "Left", "keyRight", "Right",
 
+            ; === 鼠标键 ===
+            ; 明日方舟自定义名（设置界面仅图标无文本）：Forward=前进/屏幕侧→XButton2，Back=后退/身体侧→XButton1
+            "mouseLeft", "LButton",
+            "mouseRight", "RButton",
+            "mouseMiddle", "MButton",
+            "mouseForward", "XButton2",     ; 侧键前进（Browser_Forward，第 5 键）
+            "mouseBack", "XButton1",        ; 侧键后退（Browser_Back，第 4 键）
+            ; 标准 Unity KeyCode（防御性）：Mouse0-2=左/右/中，Mouse3-4=第 4/5 键
+            "mouse0", "LButton",
+            "mouse1", "RButton",
+            "mouse2", "MButton",
+            "mouse3", "XButton1",
+            "mouse4", "XButton2",
+
             ; === 小键盘 ===
             "keyAlpha0", "Numpad0", "keyAlpha1", "Numpad1",
             "keyAlpha2", "Numpad2", "keyAlpha3", "Numpad3",
