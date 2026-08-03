@@ -169,20 +169,20 @@ class Config {
         "SwitchView", "",
         "AutoBeginPauseSwitch", "",
         ; 快捷操作
-        "LButtonClick", "z",
+        "LButtonClick", "",
         "CeaseOperations", "",
         "Skip", "",
         "Back", "",
         "Harvest", "",
         "CollectCollectibles", "",
         ; 卫戍协议按键
-        "CheckEnemies", "w",
-        "DispatchCenter", "a",
-        "Freeze", "s",
-        "Refresh", "d",
-        "Upgrade", "g",
-        "Sell", "x",
-        "Ready", "c",
+        "CheckEnemies", "",
+        "DispatchCenter", "",
+        "Freeze", "",
+        "Refresh", "",
+        "Upgrade", "",
+        "Sell", "",
+        "Ready", "",
         "StrongHoldProtocolLButtonClick", "",
         "StrongHoldProtocolRetreat", "",
         "StrongHoldProtocolOneClickRetreat", "",
@@ -212,13 +212,13 @@ class Config {
         "TabOrder", Constants.DefaultTabOrder,
         "HiddenTabs", "",
         "AutoBeginPause", "0",
-        "BackCeaseOperations", "0",
+        "BackCeaseOperations", "1",
         "InLevelGuard", "1"
     )
 
     ; 内部：默认自定义设置
     static _DefaultCustom := Map(
-        "ClickDelay", "50",
+        "ClickDelay", "90",
         "SwitchHotkey", "",
         "FrameSkip16msDelay", "16",
         "FrameSkip33msDelay", "30",
