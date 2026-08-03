@@ -18,11 +18,13 @@ class LevelDetector {
     static Objects := [
         ; 关卡内文本（右下角；白色 V1，低分辨率 <1600×900 时容差放宽到 20）
         {Name: "TextInLevel",
-         Colors: [{C: 0xFFFFFF, V: 1}],
+         Colors: [{C: 0xFFFFFF, V: 3}, {C: 0x9B9B9B, V: 3}],
          LX: 0.9355, RX: 0.9375, UY: 0.7833, DY: 0.8465},
         ; 退出按钮（左上角；灰色两色 + 其他模式深红/黄绿，OR；识别线加长至 65px 并左移到 x=136）
         {Name: "ExitButton",
-         Colors: [{C: 0x868686, V: 3}, {C: 0x8C8C8C, V: 3}, {C: 0xB72518, V: 3}, {C: 0xBF2719, V: 3}, {C: 0xD0CF67, V: 3}, {C: 0xD9D86B, V: 3}],
+         Colors: [{C: 0x868686, V: 3}, {C: 0x8C8C8C, V: 3}, {C: 0xB72518, V: 3}, {C: 0xBF2719, V: 3},
+            {C: 0xD0CF67, V: 3}, {C: 0xD9D86B, V: 3}, {C: 0x555555, V: 3}, {C: 0x515151, V: 3},
+            {C: 0x74180F, V: 3}, {C: 0x6F160F, V: 3}, {C: 0x848341, V: 3}, {C: 0x7E7E3F, V: 3}],
          LX: 0.0531, RX: 0.0535, UY: 0.0299, DY: 0.0750},
         ; 暂停按钮（右上角；白/浅灰两色 OR）
         {Name: "PauseButton",
@@ -35,7 +37,7 @@ class LevelDetector {
         if enabled {
             if (this._PollTimer = "")
                 this._PollTimer := LevelDetector.Poll.Bind(LevelDetector)
-            SetTimer this._PollTimer, 1000
+            SetTimer this._PollTimer, 333
         } else if (this._PollTimer != "") {
             SetTimer this._PollTimer, 0
         }
