@@ -358,13 +358,13 @@ ActionBeginPauseSwitch(ThisHotkey) {
     if (newValue = "1") {
         TrayTip
         SetTimer HideTrayTip, 0
-        TrayTip("已开启开局自动暂停", "AFA")
-        SetTimer HideTrayTip, -4000
+        TrayTip("已开启开局自动暂停", "AFA", "Mute")
+        SetTimer HideTrayTip, -3000
     } else {
         TrayTip
         SetTimer HideTrayTip, 0
-        TrayTip("已关闭开局自动暂停", "AFA")
-        SetTimer HideTrayTip, -4000
+        TrayTip("已关闭开局自动暂停", "AFA", "Mute")
+        SetTimer HideTrayTip, -3000
     }
     if InStr(ThisHotkey, "Wheel")
         return
