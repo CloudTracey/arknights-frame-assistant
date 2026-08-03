@@ -120,4 +120,4 @@ jobs:
           tccli configure set secretKey ${{ secrets.COS_SECRET_KEY }}
           tccli configure set region ${{ secrets.COS_REGION }}
           DOMAIN="${{ secrets.CDN_DOMAIN }}"
-          tccli cdn PurgePathCache --Paths "[\"https://${DOMAIN}/stable/version.json\", \"https://${DOMAIN}/beta/version.json\"]" --FlushType flush
+          tccli cdn PurgeUrlsCache --Urls "[\"https://${DOMAIN}/stable/version.json\", \"https://${DOMAIN}/beta/version.json\"]" --FlushType flush
