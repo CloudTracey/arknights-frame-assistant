@@ -163,8 +163,12 @@ class Logger {
             if (computerName != "")
                 text := StrReplace(text, computerName, "<COMPUTER>")
             userName := EnvGet("USERNAME")
-            if (userName != "")
-                text := StrReplace(text, userName, "<USER>")
+            if (userName != "") {
+                ; 用户名可能很短（如单字符 s），StrReplace 纯子串替换 + 默认大小写不敏感会误伤正常英文单词内部的字母。
+                ; 改用边界感知正则替换：命中位置前后不允许是字母（Unicode \p{L}），只替换"独立出现"的用户名。
+                ; \Q...\E 将用户名作为字面量匹配，避免用户名中的正则特殊字符被解释（Windows 用户名不含反斜杠，不会被截断）。
+                text := RegExReplace(text, "i)(?<!\p{L})\Q" userName "\E(?!\p{L})", "<USER>")
+            }
         }
         return text
     }
