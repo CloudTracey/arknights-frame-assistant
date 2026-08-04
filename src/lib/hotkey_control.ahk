@@ -101,7 +101,7 @@ class HotkeyController {
     ; 激活后不恢复原窗口（焦点留在游戏，由用户自行切换回，避免焦点闪回影响观感）。
     ; 判定层（HotkeyContext）负责判定触发，此处负责副作用（焦点切换），职责分离。
     ; 用嵌套函数（闭包）捕获 fn 作为 Hotkey 回调（AHK 文档：闭包可用于 Hotkey，见 Functions.htm#closures）。
-    ; fn 兼容函数对象或函数名字符串——ActionCallbacks 的 Fn 是函数名字符串（AHK 的 Hotkey 本身也接受函数名字符串）。
+    ; fn 是函数对象——AHK v2 中函数定义即同名只读变量（含 Func 对象），ActionCallbacks 的 Fn 存的是函数引用而非字符串，可直接调用。
     static _WrapAction(fn) {
         Wrapped(ThisHotkey) {
             ; 防御性检查：游戏窗口不存在则跳过（正常触发路径已由判定层保证存在，此处防异常阻塞）
@@ -112,10 +112,10 @@ class HotkeyController {
             if !WinWaitActive("ahk_exe Arknights.exe", , 500)
                 return
             try {
-                action := IsObject(fn) ? fn : Func(fn)
-                action(ThisHotkey)
-            } catch {
-                ; fn 无效（非函数）则跳过动作
+                fn(ThisHotkey)
+            } catch Error as e {
+                ; 记录异常而非静默——动作内部出错需可排查（此前空 catch 会掩盖动作内部真实异常）
+                Logger.Error("Hotkey", "动作执行失败：fn=" (IsObject(fn) ? fn.Name : fn) ", error=" e.Message)
             }
         }
         return Wrapped
