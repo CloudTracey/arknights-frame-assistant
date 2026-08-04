@@ -6,7 +6,10 @@ class KeyForward {
     ; 提取纯键名（去除 ~*$ 前缀、修饰符与 Up 后缀）
     static PureKeyName(ThisHotkey) {
         pureKey := RegExReplace(ThisHotkey, "^[~*$!^+#&<>()]+")
-        return RegExReplace(pureKey, "i) Up$")
+        pureKey := RegExReplace(pureKey, "i) Up$")
+        ; Hotkey 名称大小写不敏感，但 Map 键默认大小写敏感；统一字母键名称，
+        ; 避免同一物理键因首次注册拼写不同（如 Issue #240 的 a/A）而漏掉 Up。
+        return (pureKey == "") ? "" : StrLower(GetKeyName(pureKey))
     }
     ; 透传原热键给游戏（守卫拦截时调用，只拦 AFA 功能不吞原键）
     ; - 带 ~ 前缀的热键按键本就透传，无需补发，避免重复输入
@@ -31,19 +34,37 @@ class KeyForward {
             Send "{" pureKey " Up}"
             return
         }
+        ; 长按自动重复期间只保留一组逻辑 Down/Up。
+        if this.InterceptedKeys.Has(pureKey)
+            return
         this.InterceptedKeys[pureKey] := true
-        Send "{" pureKey " Down}"
+        try {
+            Send "{" pureKey " Down}"
+            Logger.Debug("KeyForward", "透传 Down：key=" pureKey)
+        } catch Error as e {
+            this.InterceptedKeys.Delete(pureKey)
+            Logger.Exception("KeyForward", e, "透传 Down 失败：key=" pureKey)
+            throw
+        }
     }
     ; Up 变体热键统一回调：按下时被守卫拦截补发过 key down 的键，松开时补发 key up
     ; （标志驱动，无需重复关卡检测；补发后清除标志）
     static ActionUpForward(ThisHotkey) {
         pureKey := this.PureKeyName(ThisHotkey)
         if (pureKey != "" && this.InterceptedKeys.Has(pureKey)) {
-            this.InterceptedKeys.Delete(pureKey)
-            Send "{" pureKey " Up}"
-        }
+            try {
+                Send "{" pureKey " Up}"
+                this.InterceptedKeys.Delete(pureKey)
+                Logger.Debug("KeyForward", "透传 Up：key=" pureKey)
+            } catch Error as e {
+                Logger.Exception("KeyForward", e, "透传 Up 失败：key=" pureKey)
+            }
+        } else if (pureKey != "")
+            Logger.Debug("KeyForward", "忽略未跟踪的 Up：key=" pureKey)
     }
 }
+; AHK 热键名称大小写不敏感，状态表采用相同语义。
+KeyForward.InterceptedKeys.CaseSense := false
 
 ; == 功能实现 ==
 ; -- 常规作战 --
