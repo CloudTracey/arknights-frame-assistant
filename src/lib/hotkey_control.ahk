@@ -14,7 +14,7 @@ HotkeyContext(hotkeyName) {
         return false
     ; Up 变体（守卫补发型）：仅当该键的 down 已被 AFA 主热键处理过（DownHandled 有记录，无论守卫放行/拦截）
     ; 才放行补发 key up——覆盖失焦/拖出卡键；游戏外主热键不触发（down 透传）则不放行，物理 up 正常透传（打字不受影响）。
-    if InStr(hotkeyName, " Up", false) {
+    if RegExMatch(hotkeyName, " Up$") {
         ; 补发 up 期间钩子会捕获 Send 注入的 up，若仍放行会递归触发 Up 变体无限循环（游戏外按键失灵）
         if KeyForward.SuppressUp
             return false
@@ -117,7 +117,7 @@ class HotkeyController {
 
     ; 启用热键
     static HotkeyOn(*) {
-        KeyForward.DownHandled := Map()  ; 重建前清空运行时标记
+        KeyForward.DownHandled.Clear()  ; 重建前清空运行时标记（保留 CaseSense）
         HotIf(HotkeyContext)
         pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in Constants.KeyNames {
@@ -141,7 +141,7 @@ class HotkeyController {
                 Logger.Error("Hotkey", "关闭热键失败：" hotkeyValue " - " e.Message)
         }
         HotkeyController.ActiveHotkeys := Map()
-        KeyForward.DownHandled := Map()
+        KeyForward.DownHandled.Clear()
         HotIf
         if !silent
             Logger.Info("Hotkey", "热键已禁用")

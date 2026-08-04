@@ -781,12 +781,13 @@ PureKeyWait(ThisHotkey) {
 ; 守卫关闭（InLevelGuard=0）时 LevelDetector 停止轮询并强制 InLevel=true，此处直接放行，无 I/O
 ; 拦截是预期行为（非异常），用 Info 级别避免刷 critical 轨（WARN/ERROR 5 MiB 留给真正的问题）
 GuardInLevel(actionName, ThisHotkey) {
-    ; 主热键（down）触发即记录该键已被 AFA 处理，Up 变体据此决定补发 up；Up 变体（含 OnUp 型）不记录
-    if !InStr(ThisHotkey, " Up", false)
-        KeyForward.DownHandled[KeyForward.PureKeyName(ThisHotkey)] := true
+    pureKey := KeyForward.PureKeyName(ThisHotkey)
+    ; 主热键（down）触发即记录该键已被 AFA 处理，Up 变体据此决定补发 up；Up 变体（含 OnUp 型）不记录；
+    ; PureKeyName 为空时不记录，避免 DownHandled 出现 "" 键干扰后续逻辑
+    if !RegExMatch(ThisHotkey, " Up$") && pureKey != ""
+        KeyForward.DownHandled[pureKey] := true
     if State.InLevel
         return true
-    pureKey := KeyForward.PureKeyName(ThisHotkey)
     ; 同一按住周期的重复 down（InterceptedKeys 已有，已补发过）不再记日志，避免切走时 key repeat 刷屏；
     ; 滚轮不写 InterceptedKeys，每次独立滚动仍逐条记录（合理）
     if !KeyForward.InterceptedKeys.Has(pureKey)
