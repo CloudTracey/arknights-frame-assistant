@@ -70,6 +70,44 @@
 - [x] 模拟关键日志文件写入/轮换失败，生成诊断包，确认 `LogOrdinaryFileAvailable` 与 `LogCriticalFileAvailable` 分别反映两条日志轨状态
 - [x] 确认诊断统计字段与导出时日志快照的实际文件数量、容量一致
 
+## 追加测试
+
+> 对应更改：修复 Logger.Redact(forExport=true) 的用户名脱敏——将 `StrReplace` 子串替换改为边界感知正则（`\p{L}` 边界），避免过短用户名（如单字符 `s`）在大小写不敏感下误伤正常英文单词内部的 `s`/`S` 字符
+
+- AFA 版本: v1.7.2
+- AutoHotkey 版本: 2.0.26
+- Windows 版本: Windows 11 25H2
+- 测试日期: 2026-08-04
+
+### 功能点 1：导出日志的英文单词完整性
+
+- [x] **前置**：AFA 正常运行，进过一次关卡（使日志含 `LevelDetector`、`PauseButton`、`HotkeyActions` 等英文文本）
+- [x] **操作**：设置 → "日志"页 → 点击"生成日志压缩包" → 保存到桌面 → 解压 → 打开 `logs/afa-*.log`
+- [x] **预期**：英文单词完整可读，`[Startup]`、`ArknightsFrameAssistant`、`PauseButton`、`GameSpeed`、`CeaseOperations`、`reason` 等均不被 `<USER>` 打散
+- [x] **预期**：不再出现 `<U<USER>ERPROFILE>`、`Pau<USER>eButton`、`Game<USER>peed` 这类被污染文本
+- [x] **预期**：日志目录路径以完整占位符 `<USERPROFILE>` 显示，其内部字母不被替换
+
+### 功能点 2：隐私脱敏仍生效
+
+- [x] **操作**：在解压日志、`diagnostics.txt` 中搜索本机 Windows 用户名、计算机名、`%USERPROFILE%` 完整路径
+- [x] **预期**：完整用户目录路径显示为 `<USERPROFILE>`/`<APPDATA>` 占位符，未泄露真实路径；独立出现的用户名仍被替换为 `<USER>`；GitHub Token 仍为 `<REDACTED>`
+
+### 功能点 3：原始落盘日志不受影响（回归）
+
+- [x] **操作**：直接打开 `%AppData%\ArknightsFrameAssistant\PC\logs\afa-*.log`（未导出版）
+- [x] **预期**：原始日志显示真实路径（如 `C:\Users\CloudTrace\...`），英文单词完整，无任何 `<USER>`/`<USERPROFILE>` 占位符（`forExport=false` 不触发环境变量脱敏）
+
+### 功能点 4（可选）：单字符用户名场景复现
+
+> **已跳过**：该场景已通过代码模拟验证（误伤数 222→0）
+
+- [ ] **操作**：`set USERNAME=s` 后启动 AFA，执行一次导出，解压检查
+- [ ] **预期**：`[Startup]`、`PauseButton`、`ArknightsFrameAssistant`、`reason` 等单词完整
+
+### 追加回归测试
+
+- [x] **验证**：配置 GitHub Token 后导出，Token 明文在解压日志/`settings-sanitized.ini` 中仍为 `<REDACTED>`，脱敏未被破坏
+
 ## 测试结果
 
 - [x] 全部通过
