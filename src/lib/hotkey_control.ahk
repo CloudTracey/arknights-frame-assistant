@@ -1,4 +1,33 @@
 ; == 热键控制 ==
+; 热键上下文判定（HotIf 回调）：Up 变体查状态、鼠标键查悬停、键盘键查活动窗口
+; 背景：点击任务栏/桌面等不抢占前台的区域时，游戏仍是"活动窗口"，旧判定 HotIfWinActive
+; 会把窗口外的鼠标按下误判为游戏内操作——绑定在鼠标键上的热键被误触发，且因无 ~ 前缀
+; 在钩子层吞掉点击，导致窗口外右键无法正常到达任务栏/桌面。
+; HotIf.htm：条件不成立时热键执行原生功能（像没有这个热键一样透传给系统）。
+; - Up 变体（守卫拦截补发）：若该键 down 已被 AFA 吞掉（InterceptedKeys 有记录），无条件放行补发 key up
+;   ——与窗口状态无关，解决"按住从游戏内拖出/Alt+Tab 切走后再松开"的卡键（含上次遗留的失焦边界）。
+; - 鼠标键/滚轮：鼠标悬停在游戏窗口上才触发（窗口外点击透传给系统）。
+; - 键盘键：游戏窗口为活动窗口才触发（与旧版行为一致）。
+HotkeyContext(hotkeyName) {
+    pureKey := KeyForward.PureKeyName(hotkeyName)
+    if (pureKey = "")
+        return false
+    ; Up 变体（守卫补发型）：仅当该键的 down 已被 AFA 主热键处理过（DownHandled 有记录，无论守卫放行/拦截）
+    ; 才放行补发 key up——覆盖失焦/拖出卡键；游戏外主热键不触发（down 透传）则不放行，物理 up 正常透传（打字不受影响）。
+    if RegExMatch(hotkeyName, " Up$") {
+        ; 补发 up 期间钩子会捕获 Send 注入的 up，若仍放行会递归触发 Up 变体无限循环（游戏外按键失灵）
+        if KeyForward.SuppressUp
+            return false
+        if KeyForward.DownHandled.Has(pureKey)
+            return true
+    }
+    ; 鼠标键/滚轮：悬停判定
+    if (pureKey ~= "i)^(lbutton|rbutton|mbutton|xbutton1|xbutton2|wheel)")
+        return IsMouseInClient()
+    ; 键盘键：游戏窗口为活动窗口
+    return WinActive("ahk_exe Arknights.exe")
+}
+
 class HotkeyController {
     ; 热键状态
     static HotkeyState := true
@@ -88,7 +117,8 @@ class HotkeyController {
 
     ; 启用热键
     static HotkeyOn(*) {
-        HotIfWinActive("ahk_exe Arknights.exe")
+        KeyForward.DownHandled.Clear()  ; 重建前清空运行时标记（保留 CaseSense）
+        HotIf(HotkeyContext)
         pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in Constants.KeyNames {
             hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
@@ -104,13 +134,14 @@ class HotkeyController {
 
     ; 禁用热键
     static HotkeyOff(silent := false, *) {
-        HotIfWinActive("ahk_exe Arknights.exe")
+        HotIf(HotkeyContext)
         for _ , hotkeyValue in HotkeyController.ActiveHotkeys {
             try Hotkey(hotkeyValue, , "Off")
             catch Error as e
                 Logger.Error("Hotkey", "关闭热键失败：" hotkeyValue " - " e.Message)
         }
         HotkeyController.ActiveHotkeys := Map()
+        KeyForward.DownHandled.Clear()
         HotIf
         if !silent
             Logger.Info("Hotkey", "热键已禁用")
@@ -118,7 +149,7 @@ class HotkeyController {
 
     ; 启用指定组的热键
     static EnableGroup(groupMap) {
-        HotIfWinActive("ahk_exe Arknights.exe")
+        HotIf(HotkeyContext)
         pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in groupMap {
             hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
@@ -133,7 +164,7 @@ class HotkeyController {
 
     ; 禁用指定组的热键
     static DisableGroup(groupMap) {
-        HotIfWinActive("ahk_exe Arknights.exe")
+        HotIf(HotkeyContext)
         pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in groupMap {
             hotkeyValue := Config.ReadHotkeyFromIni(keyVar)
@@ -223,7 +254,7 @@ class HotkeyController {
 
     ; 设置热键启用/禁用快捷键
     static SetSwitchKey() {
-        HotIfWinActive("ahk_exe Arknights.exe")
+        HotIf(HotkeyContext)
         switchKey := Config.ReadCustomFromIni("SwitchHotkey")
         if (switchKey != "") {
             try {
@@ -244,7 +275,7 @@ class HotkeyController {
     static UnsetSwitchKey() {
         switchKey := this.ActiveSwitchHotkey
         if (switchKey != "") {
-            HotIfWinActive("ahk_exe Arknights.exe")
+            HotIf(HotkeyContext)
             try Hotkey(switchKey, this.SwitchHotkey, "Off")
             catch Error as e
                 Logger.Error("Hotkey", "关闭SwitchKey失败：" switchKey " - " e.Message)
