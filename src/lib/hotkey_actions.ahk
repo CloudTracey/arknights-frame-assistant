@@ -2,6 +2,12 @@
 ; 状态与行为内聚为类：InterceptedKeys 记录已补发 key down 的键，Up 变体回调据此补发 key up
 class KeyForward {
     static InterceptedKeys := Map()
+    ; down 已被 AFA 主热键处理过的键（运行时标记，GuardInLevel 记录）：Up 变体据此决定是否放行补发 key up
+    ; ——覆盖守卫放行/拦截两路径的失焦/拖出卡键；游戏外主热键不触发则不记录，Up 变体不放行，物理 up 正常透传（打字不受影响）。
+    static DownHandled := Map()
+    ; 补发 up 期间的递归抑制标志：ActionUpForward 的 Send 补发会被钩子重新捕获触发 Up 变体，
+    ; 若 Up 变体继续放行会无限循环（导致游戏外按键失灵）。置位时 HotkeyContext/ActionUpForward 均不再放行/补发。
+    static SuppressUp := false
 
     ; 提取纯键名（去除 ~*$ 前缀、修饰符与 Up 后缀；保留左右修饰键信息 <SHIFT→LShift、>SHIFT→RShift）
     static PureKeyName(ThisHotkey) {
@@ -69,19 +75,28 @@ class KeyForward {
         pureKey := this.PureKeyName(ThisHotkey)
         if (pureKey == "")
             return
+        ; 防递归：Send 补发的 up 会被钩子重新捕获触发本变体，置位期间直接返回
+        if KeyForward.SuppressUp
+            return
+        KeyForward.SuppressUp := true
         try {
             Send "{" pureKey " Up}"
             ; 关卡内路径未走 ForwardOriginalKey，flag 不存在；Delete 对不存在的键会抛 UnsetItemError，需先检查
             if (this.InterceptedKeys.Has(pureKey))
                 this.InterceptedKeys.Delete(pureKey)
+            if (KeyForward.DownHandled.Has(pureKey))
+                KeyForward.DownHandled.Delete(pureKey)
             Logger.Debug("KeyForward", "透传 Up：key=" pureKey)
         } catch Error as e {
             Logger.Exception("KeyForward", e, "透传 Up 失败：key=" pureKey)
+        } finally {
+            KeyForward.SuppressUp := false
         }
     }
 }
 ; AHK 热键名称大小写不敏感，状态表采用相同语义。
 KeyForward.InterceptedKeys.CaseSense := false
+KeyForward.DownHandled.CaseSense := false
 
 ; == 功能实现 ==
 ; -- 常规作战 --
@@ -128,10 +143,6 @@ Action16ms(ThisHotkey) {
     if !GuardInLevel("Action16ms", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !IsMouseInClient() {
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-        return
-    }
     delay := Integer(Config.ReadCustomFromIni("FrameSkip16msDelay"))
     Send "{ESC Down}"
     USleep(delay)
@@ -151,10 +162,6 @@ Action33ms(ThisHotkey) {
     if !GuardInLevel("Action33ms", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !IsMouseInClient() {
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-        return
-    }
     delay := Integer(Config.ReadCustomFromIni("FrameSkip33msDelay"))
     Send "{ESC Down}"
     USleep(delay)
@@ -174,10 +181,6 @@ Action166ms(ThisHotkey) {
     if !GuardInLevel("Action166ms", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    if !IsMouseInClient() {
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-        return
-    }
     delay := Integer(Config.ReadCustomFromIni("FrameSkip166msDelay"))
     Send "{ESC Down}"
     USleep(delay)
@@ -778,10 +781,17 @@ PureKeyWait(ThisHotkey) {
 ; 守卫关闭（InLevelGuard=0）时 LevelDetector 停止轮询并强制 InLevel=true，此处直接放行，无 I/O
 ; 拦截是预期行为（非异常），用 Info 级别避免刷 critical 轨（WARN/ERROR 5 MiB 留给真正的问题）
 GuardInLevel(actionName, ThisHotkey) {
+    ; 主热键（down）触发即记录该键已被 AFA 处理，Up 变体据此决定补发 up；Up 变体（含 OnUp 型）不记录
+    if !InStr(ThisHotkey, " Up", false)
+        KeyForward.DownHandled[KeyForward.PureKeyName(ThisHotkey)] := true
     if State.InLevel
         return true
+    pureKey := KeyForward.PureKeyName(ThisHotkey)
+    ; 同一按住周期的重复 down（InterceptedKeys 已有，已补发过）不再记日志，避免切走时 key repeat 刷屏；
+    ; 滚轮不写 InterceptedKeys，每次独立滚动仍逐条记录（合理）
+    if !KeyForward.InterceptedKeys.Has(pureKey)
+        Logger.Info("HotkeyActions", actionName " 被关卡检测拦截（不在关卡界面）")
     KeyForward.ForwardOriginalKey(ThisHotkey)
-    Logger.Info("HotkeyActions", actionName " 被关卡检测拦截（不在关卡界面）")
     return false
 }
 ; 判断鼠标是否在Client区域内
