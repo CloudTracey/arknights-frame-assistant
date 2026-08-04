@@ -7,7 +7,8 @@
 ; - Up 变体（守卫拦截补发）：若该键 down 已被 AFA 吞掉（InterceptedKeys 有记录），无条件放行补发 key up
 ;   ——与窗口状态无关，解决"按住从游戏内拖出/Alt+Tab 切走后再松开"的卡键（含上次遗留的失焦边界）。
 ; - 鼠标键/滚轮：鼠标悬停在游戏窗口上才触发（窗口外点击透传给系统）。
-; - 键盘键：游戏窗口为活动窗口才触发（与旧版行为一致）。
+; - 键盘键：游戏窗口为活动窗口，或鼠标悬停在游戏窗口上（#213：失焦时鼠标悬停游戏也能操作）才触发；
+;   动作层统一包装负责激活游戏窗口并恢复原窗口。
 HotkeyContext(hotkeyName) {
     pureKey := KeyForward.PureKeyName(hotkeyName)
     if (pureKey = "")
@@ -24,8 +25,11 @@ HotkeyContext(hotkeyName) {
     ; 鼠标键/滚轮：悬停判定
     if (pureKey ~= "i)^(lbutton|rbutton|mbutton|xbutton1|xbutton2|wheel)")
         return IsMouseInClient()
-    ; 键盘键：游戏窗口为活动窗口
-    return WinActive("ahk_exe Arknights.exe")
+    ; 键盘键：游戏窗口为活动窗口，或鼠标悬停在游戏窗口上（#213：失焦时鼠标悬停游戏也能操作）才触发；
+    ; 动作层统一包装负责激活游戏窗口并恢复原窗口（判定层不做副作用）
+    if WinActive("ahk_exe Arknights.exe")
+        return true
+    return IsMouseInClient()
 }
 
 class HotkeyController {
@@ -63,8 +67,8 @@ class HotkeyController {
         "PauseSkill", {Fn: ActionPauseSkill, Guarded: true},
         "PauseRetreat", {Fn: ActionPauseRetreat, Guarded: true},
         "SwitchView", {Fn: ActionSwitchView, Guarded: true},
-        "BeginPause", {Fn: ActionBeginPauseSwitch},
-        "AutoBeginPauseSwitch", {Fn: ActionBeginPauseSwitch},
+        "BeginPause", {Fn: ActionBeginPauseSwitch, NoActivate: true},  ; 设置开关，不激活游戏窗口（避免焦点跳转）
+        "AutoBeginPauseSwitch", {Fn: ActionBeginPauseSwitch, NoActivate: true},
         ; 快捷操作
         "LButtonClick", {Fn: ActionLButtonClick},
         "CeaseOperations", {Fn: ActionCeaseOperations},
@@ -93,19 +97,43 @@ class HotkeyController {
     ; 已激活启用/禁用热键快捷键
     static ActiveSwitchHotkey := ""
 
+    ; 包装动作回调（#213）：游戏失焦时鼠标悬停游戏即可操作——执行动作前激活游戏窗口（超时跳过）。
+    ; 激活后不恢复原窗口（焦点留在游戏，由用户自行切换回，避免焦点闪回影响观感）。
+    ; 判定层（HotkeyContext）负责判定触发，此处负责副作用（焦点切换），职责分离。
+    ; 用嵌套函数（闭包）捕获 fn 作为 Hotkey 回调（AHK 文档：闭包可用于 Hotkey，见 Functions.htm#closures）。
+    ; fn 兼容函数对象或函数名字符串——ActionCallbacks 的 Fn 是函数名字符串（AHK 的 Hotkey 本身也接受函数名字符串）。
+    static _WrapAction(fn) {
+        Wrapped(ThisHotkey) {
+            ; 防御性检查：游戏窗口不存在则跳过（正常触发路径已由判定层保证存在，此处防异常阻塞）
+            if !WinExist("ahk_exe Arknights.exe")
+                return
+            WinActivate("ahk_exe Arknights.exe")
+            ; 激活超时（游戏窗口异常不可激活）则跳过动作，避免按键发往非游戏窗口
+            if !WinWaitActive("ahk_exe Arknights.exe", , 500)
+                return
+            try {
+                action := IsObject(fn) ? fn : Func(fn)
+                action(ThisHotkey)
+            } catch {
+                ; fn 无效（非函数）则跳过动作
+            }
+        }
+        return Wrapped
+    }
+
     ; 注册单个热键（数据驱动：profile.OnUp=功能在松开时触发；profile.Guarded=拦截键注册 Up 变体补发透传）
     ; 注意：属性访问用 HasOwnProp 判断——profile 无 OnUp/Guarded 属性时直接访问会抛 PropertyError
     static _RegisterOne(hotkeyValue, profile, pattern) {
         if (profile.HasOwnProp("OnUp") && !InStr(hotkeyValue, "Wheel")) {
             ; 松开暂停：功能在松开时触发（Up 变体注册）
             reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
-            Hotkey(reg, profile.Fn, "On")
+            Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
             HotkeyController.ActiveHotkeys.Set(reg, reg)
             return
         }
         intercept := hotkeyValue ~= pattern
         reg := intercept ? hotkeyValue : "~" hotkeyValue
-        Hotkey(reg, profile.Fn, "On")
+        Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
         HotkeyController.ActiveHotkeys.Set(reg, reg)
         ; 有守卫的拦截键（非滚轮）：注册 Up 变体，松开时由 KeyForward.ActionUpForward 补发 key up
         ; 注意：类静态方法引用需 Bind(KeyForward)——方法的 MinParams 含 self，直接传引用 Hotkey 回调验证会失败（Invalid callback function）
