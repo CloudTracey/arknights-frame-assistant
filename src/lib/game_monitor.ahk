@@ -39,7 +39,7 @@ CheckGameStatus() {
             for point in points {
                 if !PixelSearch(&FoundX, &FoundY, point.x, point.y, point.x, point.y, 0x000000, 10) {
                     missCount++
-                    if (missCount > 1) {
+                    if (missCount > 3) {
                         ; ToolTip("并非黑屏")
                         break
                     }

@@ -6,6 +6,8 @@ KeyHistory 0
 ProcessSetPriority "High"
 SendMode "Input"
 SetKeyDelay -1, -1
+; 提高热键触发频率阈值：被拦截的游戏键每个按键触发 down+up 两个热键，极速连打 WASD 等键易超默认 66/2000ms 触发警告弹窗
+A_MaxHotkeysPerInterval := 200
 SetMouseDelay -1
 SetWinDelay -1
 SetDefaultMouseSpeed 0
