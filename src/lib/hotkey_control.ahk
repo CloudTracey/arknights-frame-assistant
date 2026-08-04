@@ -67,8 +67,8 @@ class HotkeyController {
         "PauseSkill", {Fn: ActionPauseSkill, Guarded: true},
         "PauseRetreat", {Fn: ActionPauseRetreat, Guarded: true},
         "SwitchView", {Fn: ActionSwitchView, Guarded: true},
-        "BeginPause", {Fn: ActionBeginPauseSwitch},
-        "AutoBeginPauseSwitch", {Fn: ActionBeginPauseSwitch},
+        "BeginPause", {Fn: ActionBeginPauseSwitch, NoActivate: true},  ; 设置开关，不激活游戏窗口（避免焦点跳转）
+        "AutoBeginPauseSwitch", {Fn: ActionBeginPauseSwitch, NoActivate: true},
         ; 快捷操作
         "LButtonClick", {Fn: ActionLButtonClick},
         "CeaseOperations", {Fn: ActionCeaseOperations},
@@ -104,6 +104,9 @@ class HotkeyController {
     ; fn 兼容函数对象或函数名字符串——ActionCallbacks 的 Fn 是函数名字符串（AHK 的 Hotkey 本身也接受函数名字符串）。
     static _WrapAction(fn) {
         Wrapped(ThisHotkey) {
+            ; 防御性检查：游戏窗口不存在则跳过（正常触发路径已由判定层保证存在，此处防异常阻塞）
+            if !WinExist("ahk_exe Arknights.exe")
+                return
             WinActivate("ahk_exe Arknights.exe")
             ; 激活超时（游戏窗口异常不可激活）则跳过动作，避免按键发往非游戏窗口
             if !WinWaitActive("ahk_exe Arknights.exe", , 500)
@@ -124,13 +127,13 @@ class HotkeyController {
         if (profile.HasOwnProp("OnUp") && !InStr(hotkeyValue, "Wheel")) {
             ; 松开暂停：功能在松开时触发（Up 变体注册）
             reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
-            Hotkey(reg, this._WrapAction(profile.Fn), "On")
+            Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
             HotkeyController.ActiveHotkeys.Set(reg, reg)
             return
         }
         intercept := hotkeyValue ~= pattern
         reg := intercept ? hotkeyValue : "~" hotkeyValue
-        Hotkey(reg, this._WrapAction(profile.Fn), "On")
+        Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
         HotkeyController.ActiveHotkeys.Set(reg, reg)
         ; 有守卫的拦截键（非滚轮）：注册 Up 变体，松开时由 KeyForward.ActionUpForward 补发 key up
         ; 注意：类静态方法引用需 Bind(KeyForward)——方法的 MinParams 含 self，直接传引用 Hotkey 回调验证会失败（Invalid callback function）
