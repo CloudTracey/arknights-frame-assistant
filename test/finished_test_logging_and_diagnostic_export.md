@@ -99,10 +99,10 @@
 
 ### 功能点 4（可选）：单字符用户名场景复现
 
-> **已跳过**：本机用户名为正常长度，无法自然复现"单字符 `s`"场景；该场景已通过代码模拟验证（误伤数 222→5）。如需本机复现可临时 `set USERNAME=s` 后启动 AFA 导出（仅该进程继承，不影响系统）。
+> **已跳过**：该场景已通过代码模拟验证（误伤数 222→0）
 
-- [ ] **操作**（跳过）：`set USERNAME=s` 后启动 AFA，执行一次导出，解压检查
-- [ ] **预期**（跳过）：`[Startup]`、`PauseButton`、`ArknightsFrameAssistant`、`reason` 等单词完整；仅独立单字符 `s`（如热键绑定值 `Freeze=s`、`skill=s`）显示为 `<USER>`，属预期边界行为
+- [ ] **操作**：`set USERNAME=s` 后启动 AFA，执行一次导出，解压检查
+- [ ] **预期**：`[Startup]`、`PauseButton`、`ArknightsFrameAssistant`、`reason` 等单词完整
 
 ### 追加回归测试
 
