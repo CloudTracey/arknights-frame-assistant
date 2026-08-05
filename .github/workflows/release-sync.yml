@@ -64,7 +64,7 @@ jobs:
             exit 1
           fi
           curl -L -o AFA.exe "$ASSET_URL"
-          echo "SHA256=$(sha256sum AFA.exe | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "sha256=$(sha256sum AFA.exe | awk '{print $1}')" >> $GITHUB_OUTPUT
 
       - name: Configure coscmd
         run: |
