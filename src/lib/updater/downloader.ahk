@@ -506,6 +506,7 @@ class UpdateDownloader {
     }
 
     ; 计算文件的 SHA-256（返回小写 hex，失败返回空串）
+    ; 分块流式读取（每块 1MB）喂给 CryptHashData，避免将整个文件一次性读入内存
     static _GetFileSha256(filePath) {
         if !FileExist(filePath)
             return ""
@@ -513,46 +514,44 @@ class UpdateDownloader {
         if !IsObject(file)
             return ""
         try {
-            size := file.Length
-            buf := Buffer(size)
-            ; RawRead 读原始字节到 Buffer（AHK v2 的 Read 只接受 1 参数读字符串）
-            if (file.RawRead(buf, size) != size)
-                return ""
-        } finally {
-            file.Close()
-        }
-        return this._HashBuffer(buf, size)
-    }
-
-    ; 对 Buffer 内容计算 SHA-256（小写 hex，失败返回空串）
-    static _HashBuffer(buf, size) {
-        ; PROV_RSA_AES = 24，CRYPT_VERIFYCONTEXT = 0xF0000000（无需持久化密钥容器）
-        hProv := 0
-        if !DllCall("Advapi32\CryptAcquireContextW", "Ptr*", &hProv, "Ptr", 0, "Ptr", 0, "UInt", 24, "UInt", 0xF0000000)
-            return ""
-        try {
-            hHash := 0
-            ; CALG_SHA_256 = 0x800C
-            if !DllCall("Advapi32\CryptCreateHash", "Ptr", hProv, "UInt", 0x800C, "Ptr", 0, "UInt", 0, "Ptr*", &hHash)
+            ; PROV_RSA_AES = 24，CRYPT_VERIFYCONTEXT = 0xF0000000（无需持久化密钥容器）
+            hProv := 0
+            if !DllCall("Advapi32\CryptAcquireContextW", "Ptr*", &hProv, "Ptr", 0, "Ptr", 0, "UInt", 24, "UInt", 0xF0000000)
                 return ""
             try {
-                if !DllCall("Advapi32\CryptHashData", "Ptr", hHash, "Ptr", buf, "UInt", size, "UInt", 0)
+                hHash := 0
+                ; CALG_SHA_256 = 0x800C
+                if !DllCall("Advapi32\CryptCreateHash", "Ptr", hProv, "UInt", 0x800C, "Ptr", 0, "UInt", 0, "Ptr*", &hHash)
                     return ""
-                ; HP_HASHVAL = 2，SHA-256 输出 32 字节
-                hashBuf := Buffer(32)
-                hashLen := 32
-                if !DllCall("Advapi32\CryptGetHashParam", "Ptr", hHash, "UInt", 2, "Ptr", hashBuf, "UInt*", &hashLen, "UInt", 0)
-                    return ""
-                hex := ""
-                Loop hashLen {
-                    hex .= Format("{:02x}", NumGet(hashBuf, A_Index - 1, "UChar"))
+                try {
+                    ; 分块读取文件，逐块哈希，避免一次性加载整个文件
+                    chunkSize := 1024 * 1024  ; 1MB
+                    buf := Buffer(chunkSize)
+                    while !file.AtEOF {
+                        bytesRead := file.RawRead(buf, chunkSize)
+                        if (bytesRead > 0) {
+                            if !DllCall("Advapi32\CryptHashData", "Ptr", hHash, "Ptr", buf, "UInt", bytesRead, "UInt", 0)
+                                return ""
+                        }
+                    }
+                    ; HP_HASHVAL = 2，SHA-256 输出 32 字节
+                    hashBuf := Buffer(32)
+                    hashLen := 32
+                    if !DllCall("Advapi32\CryptGetHashParam", "Ptr", hHash, "UInt", 2, "Ptr", hashBuf, "UInt*", &hashLen, "UInt", 0)
+                        return ""
+                    hex := ""
+                    Loop hashLen {
+                        hex .= Format("{:02x}", NumGet(hashBuf, A_Index - 1, "UChar"))
+                    }
+                    return hex
+                } finally {
+                    DllCall("Advapi32\CryptDestroyHash", "Ptr", hHash)
                 }
-                return hex
             } finally {
-                DllCall("Advapi32\CryptDestroyHash", "Ptr", hHash)
+                DllCall("Advapi32\CryptReleaseContext", "Ptr", hProv, "UInt", 0)
             }
         } finally {
-            DllCall("Advapi32\CryptReleaseContext", "Ptr", hProv, "UInt", 0)
+            file.Close()
         }
     }
 
