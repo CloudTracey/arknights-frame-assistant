@@ -423,9 +423,9 @@ ActionBeginPause() {
         ; ToolTip("正在识别按钮！")  ; 调试代码
         if PixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBCUY, PosC.PBCLX, PosC.PBCDY, 0xffffff, 10)
         {
-            Send "{ESC Down}"
+            GameKeys.SendDown("pauseBattle")
             USleep(50)
-            Send "{ESC Up}"
+            GameKeys.SendUp("pauseBattle")
             ; ToolTip("已严肃暂停")  ; 调试代码
             ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
             isProxy := false
@@ -446,9 +446,9 @@ ActionBeginPause() {
                 isProxy := false
             }
             if isProxy {
-                Send "{ESC Down}"
+                GameKeys.SendDown("pauseBattle")
                 USleep(50)
-                Send "{ESC Up}"
+                GameKeys.SendUp("pauseBattle")
                 ; ToolTip("是代理指挥，取消暂停")  ; 调试代码
             } else {
                 ; ToolTip("没有找到代理指挥")  ; 调试代码
