@@ -461,6 +461,11 @@ class VersionChecker {
                 remoteVersion := this._ExtractJsonValue(resp.body, "tag_name")
                 downloadUrl := this._ExtractJsonValue(resp.body, "browser_download_url")
 
+                ; 提取 AFA.exe asset 的 SHA-256 摘要（GitHub 格式 sha256:<hex>，剥离前缀；限定 AFA.exe asset，避免多 asset 时命中其他文件）
+                expectedHash := ""
+                if (RegExMatch(resp.body, '"name"\s*:\s*"AFA\.exe".*?"digest"\s*:\s*"sha256:([0-9a-fA-F]{64})"', &hashMatch))
+                    expectedHash := hashMatch[1]
+
                 ; 额外请求全量 releases 用于 changelog
                 allReleases := this._FetchAllReleases(gitHubToken)
                 if (allReleases.Length > 0) {
@@ -484,7 +489,7 @@ class VersionChecker {
 
                 if (compareResult < 0) {
                     this._Log("发现新版本: " remoteVersion)
-                    return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, changelogBody: changelogBody}
+                    return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, expectedHash: expectedHash, changelogBody: changelogBody}
                 } else {
                     this._Log("已是最新版本")
                     return {status: "up_to_date", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: ""}
@@ -516,6 +521,7 @@ class VersionChecker {
 
                 remoteVersion := bestRelease.tag_name
                 downloadUrl := bestRelease.downloadUrl
+                expectedHash := bestRelease.HasProp("expectedHash") ? bestRelease.expectedHash : ""
                 this._Log("解析结果（测试版） - 最高远程版本: " remoteVersion)
                 this._Log("解析结果（测试版） - 下载地址: " downloadUrl)
 
@@ -533,7 +539,7 @@ class VersionChecker {
 
                 if (compareResult < 0) {
                     this._Log("发现新版本: " remoteVersion)
-                    return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, changelogBody: changelogBody}
+                    return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, expectedHash: expectedHash, changelogBody: changelogBody}
                 } else {
                     this._Log("已是最新版本")
                     return {status: "up_to_date", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: ""}
@@ -651,6 +657,7 @@ class VersionChecker {
             ; 解析 version.json
             remoteVersion := this._ExtractJsonValue(resp.body, "version")
             downloadUrl := this._ExtractJsonValue(resp.body, "downloadUrl")
+            expectedHash := this._ExtractJsonValue(resp.body, "sha256")
 
             this._Log("解析结果 - 远程版本: " remoteVersion)
             this._Log("解析结果 - 下载地址: " downloadUrl)
@@ -676,7 +683,7 @@ class VersionChecker {
 
             if (compareResult < 0) {
                 this._Log("国内源发现新版本: " remoteVersion)
-                return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, changelogBody: changelogBody}
+                return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, expectedHash: expectedHash, changelogBody: changelogBody}
             } else {
                 this._Log("已是最新版本（国内源）")
                 return {status: "up_to_date", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: ""}
@@ -805,6 +812,11 @@ class VersionChecker {
                 downloadUrl := urlMatch[1]
             }
 
+            ; 提取 AFA.exe asset 的 SHA-256 摘要（GitHub 格式 sha256:<hex>，剥离前缀；限定 AFA.exe asset）
+            expectedHash := ""
+            if (RegExMatch(searchStr, '"name"\s*:\s*"AFA\.exe".*?"digest"\s*:\s*"sha256:([0-9a-fA-F]{64})"', &digestMatch))
+                expectedHash := digestMatch[1]
+
             ; 提取 body（Release 正文，Markdown 格式）
             body := ""
             q := Chr(34)
@@ -821,7 +833,7 @@ class VersionChecker {
                 date := dateMatch[1]  ; 国内源 version.json 兼容
             }
 
-            releases.Push({tag_name: tagName, prerelease: prerelease, downloadUrl: downloadUrl, body: body, date: date})
+            releases.Push({tag_name: tagName, prerelease: prerelease, downloadUrl: downloadUrl, body: body, date: date, expectedHash: expectedHash})
             pos := tagEnd
         }
 

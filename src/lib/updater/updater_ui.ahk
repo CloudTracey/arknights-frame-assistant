@@ -137,7 +137,8 @@ class UpdateUI {
 
     ; 显示正在下载的提示（带取消按钮和进度条）
     ; retryCount: 重试次数（0表示首次下载，1+表示重试）
-    static ShowDownloadingDialog(retryCount := 0) {
+    ; reason: 上次失败的简要原因（重试时展示给用户，非空才显示）
+    static ShowDownloadingDialog(retryCount := 0, reason := "") {
         ; 关闭已存在的下载对话框
         this.CloseDownloadingDialog()
 
@@ -150,11 +151,18 @@ class UpdateUI {
         hWnd := this.DownloadingDialog.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
 
-        ; 根据重试次数显示不同消息
+        ; 根据重试次数显示不同消息（reason 存在时动态加高窗口，避免按钮被顶出窗口）
+        dialogHeight := 190
         if (retryCount = 0) {
             message := "正在下载更新，请稍候..."
         } else {
             message := "正在下载更新，请稍候...`n（第 " retryCount " 次重试，如多次下载失败请尝试手动下载）"
+            if (reason != "") {
+                message .= "`n上次失败原因: " reason
+                ; 估算 reason 占用的行数（w300 下约每行 22 个中文字符，每行约 20px），动态加高窗口
+                reasonLines := Ceil((StrLen(reason) + 8) / 22)
+                dialogHeight += reasonLines * 18 + 12
+            }
         }
 
         ; 添加文本
@@ -180,8 +188,8 @@ class UpdateUI {
         this.DownloadingCancelBtn.OnEvent("Click", (*) => this.OnDownloadCancel())
         this.DownloadingDialog.OnEvent("Close", (*) => this.OnDownloadCancel())
 
-        ; 显示对话框（非模态，不阻塞）
-        this.DownloadingDialog.Show("w340 h190 Center")
+        ; 显示对话框（非模态，不阻塞；高度按 reason 动态调整）
+        this.DownloadingDialog.Show("w340 h" dialogHeight " Center")
     }
 
     ; 手动下载按钮点击事件
@@ -203,6 +211,13 @@ class UpdateUI {
         }
         ; 发布取消事件
         EventBus.Publish("UpdateDownloadCancelled")
+    }
+
+    ; 显示正在切换更新源的提示（复用下载窗口，非模态，不阻塞降级检查）
+    static ShowFallbackNotice() {
+        if (this.DownloadingDialog != "") {
+            try this.DownloadingDialog["DownloadText"].Value := "正在尝试更换更新源进行更新，请稍候..."
+        }
     }
 
     ; 关闭下载对话框

@@ -142,7 +142,6 @@ class GameAutoStartManager {
 
         settings := taskDefinition.Settings
         settings.Enabled := true
-        settings.Hidden := true
         settings.AllowDemandStart := true
         settings.StartWhenAvailable := false
         settings.DisallowStartIfOnBatteries := false

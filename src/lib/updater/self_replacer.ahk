@@ -73,9 +73,9 @@ class SelfReplacer {
             }
         }
 
-        ; 启动批处理脚本（隐藏窗口）
+        ; 启动批处理脚本（可见窗口，用户可看到更新进度）
         try {
-            Run batchFile,, "Hide"
+            Run batchFile
         } catch Error as e {
             return {
                 success: false,
@@ -200,14 +200,7 @@ class SelfReplacer {
         lines.Push("    goto retry_loop")
         lines.Push(")")
 
-        ; 最终失败处理
-        lines.Push("echo [%date% %time%] 替换失败，请手动替换文件 >> `"%LOG_FILE%`"")
-        lines.Push("echo 替换失败，请手动替换文件")
-        lines.Push("echo 新文件位置: " newFilePath)
-        if (backupPath != "") {
-            lines.Push("echo 备份文件位置: " backupPath)
-        }
-        lines.Push("pause")
+        ; 最终失败处理：提示与还原统一在 cleanup_failed 处理，避免重复提示
         lines.Push("goto cleanup_failed")
 
         ; 启动新版本
@@ -219,12 +212,33 @@ class SelfReplacer {
         lines.Push("echo [%date% %time%] 新版本已启动 >> `"%LOG_FILE%`"")
         lines.Push("goto cleanup")
 
-        ; 失败后的清理（保留备份和更新文件供用户手动处理）
+        ; 失败后的清理：先尝试用备份还原原文件，避免程序从原位置消失
         lines.Push(":cleanup_failed")
-        lines.Push("echo [%date% %time%] 更新失败，保留备份和更新文件供手动恢复 >> `"%LOG_FILE%`"")
-        lines.Push("echo 更新失败，保留备份和更新文件供手动恢复")
+        lines.Push("echo [%date% %time%] 替换失败，正在尝试自动还原原文件... >> `"%LOG_FILE%`"")
+        lines.Push("echo 替换失败，正在尝试自动还原原文件...")
+        if (backupPath != "") {
+            lines.Push("if exist `"" backupPath "`" (")
+            lines.Push("    copy /Y `"" backupPath "`" `"" currentExePath "`" >nul 2>&1")
+            lines.Push("    if errorlevel 1 (")
+            lines.Push("        echo [%date% %time%] 还原原文件失败，请手动从备份恢复 >> `"%LOG_FILE%`"")
+            lines.Push("        echo 还原原文件失败，请手动从备份恢复")
+            lines.Push("    ) else (")
+            lines.Push("        echo [%date% %time%] 原文件已还原 >> `"%LOG_FILE%`"")
+            lines.Push("        echo 原文件已还原")
+            lines.Push("    )")
+            lines.Push(")")
+        }
+        ; 提示用户失败的可能原因（指向新文件：下载的更新文件被删除/损坏，而非原文件）
+        lines.Push("echo [%date% %time%] 复制新文件失败：下载的更新文件可能已损坏或被安全软件删除，请检查后手动处理，或向开发者反馈此问题 >> `"%LOG_FILE%`"")
+        lines.Push("echo 复制新文件失败：下载的更新文件可能已损坏或被安全软件删除，请检查后手动处理，或向开发者反馈此问题")
+        if (backupPath != "") {
+            lines.Push("echo 备份文件位置: `"" backupPath "`"")
+        }
+        lines.Push("echo 新文件位置: `"" newFilePath "`"")
+        ; 暂停让用户看到失败信息，按键后关闭窗口
+        lines.Push("pause")
         ; 只删除批处理自身，保留其他所有文件
-        lines.Push("(goto) 2>nul & del `"" batchFile "`" >nul 2>&1")
+        lines.Push("del /F /Q `"%~f0`" >nul 2>&1")
         lines.Push("exit")
 
         ; 成功后的清理
@@ -283,7 +297,7 @@ class SelfReplacer {
 
         ; 删除批处理文件自身（使用批处理经典自删除方法）
         lines.Push("echo [%date% %time%] 更新流程结束 >> `"%LOG_FILE%`"")
-        lines.Push("(goto) 2>nul & del `"" batchFile "`" >nul 2>&1")
+        lines.Push("del /F /Q `"%~f0`" >nul 2>&1")
         lines.Push("exit")
 
         ; 用换行符连接所有行

@@ -83,6 +83,7 @@ class Updater {
                     localVersion: checkResult.localVersion,
                     remoteVersion: checkResult.remoteVersion,
                     downloadUrl: checkResult.downloadUrl,
+                    expectedHash: checkResult.HasProp("expectedHash") ? checkResult.expectedHash : "",
                     isManual: isManual,
                     changelogBody: checkResult.HasProp("changelogBody") ? checkResult.changelogBody : ""
                 })
@@ -96,6 +97,7 @@ class Updater {
                             localVersion: fallbackResult.localVersion,
                             remoteVersion: fallbackResult.remoteVersion,
                             downloadUrl: fallbackResult.downloadUrl,
+                            expectedHash: fallbackResult.HasProp("expectedHash") ? fallbackResult.expectedHash : "",
                             isManual: isManual,
                             changelogBody: fallbackResult.HasProp("changelogBody") ? fallbackResult.changelogBody : ""
                         })
@@ -117,6 +119,7 @@ class Updater {
                             localVersion: fallbackResult.localVersion,
                             remoteVersion: fallbackResult.remoteVersion,
                             downloadUrl: fallbackResult.downloadUrl,
+                            expectedHash: fallbackResult.HasProp("expectedHash") ? fallbackResult.expectedHash : "",
                             isManual: isManual,
                             changelogBody: fallbackResult.HasProp("changelogBody") ? fallbackResult.changelogBody : ""
                         })
@@ -150,13 +153,17 @@ class Updater {
     }
 
     ; 内部：带重试的单源下载
-    static _TryDownload(params, triedFallback, retryCount := 0) {
-        UpdateUI.ShowDownloadingDialog(retryCount)
+    ; reason: 上次失败的简要原因（透传给 UI 展示）
+    static _TryDownload(params, triedFallback, retryCount := 0, reason := "") {
+        UpdateUI.ShowDownloadingDialog(retryCount, reason)
 
+        ; downloadParams 结构约定：{downloadUrl, expectedHash, localVersion, remoteVersion, ...}
+        ; expectedHash：下载文件的期望 SHA-256（hex，小写；为空时跳过校验）
         downloadParams := {
             downloadUrl: params.downloadUrl,
             localVersion: params.localVersion,
             remoteVersion: params.remoteVersion,
+            expectedHash: params.HasProp("expectedHash") ? params.expectedHash : "",
             onProgress: (data) => UpdateUI.UpdateDownloadProgress(data),
             onComplete: (result) => this.HandleDownloadSuccess(result),
             onError: (error) => this.HandleDownloadRetryOrFallback(error, params, triedFallback, retryCount),
@@ -173,22 +180,27 @@ class Updater {
             return
         }
 
-        ; 同源重试
+        ; 同源重试（把失败原因传给 UI 展示，让用户知道为什么重试）
         if (retryCount < this.DownloadRetries - 1) {
             Sleep(this.DownloadRetryDelay)
-            this._TryDownload(params, triedFallback, retryCount + 1)
+            ; 优先用不含"下载失败:"前缀的原始原因，避免 UI 重复显示
+            reason := error.HasProp("reason") ? error.reason : error.message
+            this._TryDownload(params, triedFallback, retryCount + 1, reason)
             return
         }
 
         ; 同源重试耗尽，尝试降级备选源
         if (!triedFallback) {
-            UpdateUI.CloseDownloadingDialog()
-            fallbackUrl := this._GetFallbackDownloadUrl(params)
-            if (fallbackUrl != "") {
+            ; 降级检查期间更新下载窗口提示，避免用户误以为更新静默失败
+            UpdateUI.ShowFallbackNotice()
+            fallbackInfo := this._GetFallbackDownloadInfo(params)
+            if (fallbackInfo.downloadUrl != "") {
+                UpdateUI.CloseDownloadingDialog()
                 fallbackParams := {
-                    downloadUrl: fallbackUrl,
+                    downloadUrl: fallbackInfo.downloadUrl,
                     localVersion: params.localVersion,
-                    remoteVersion: params.remoteVersion
+                    remoteVersion: params.remoteVersion,
+                    expectedHash: fallbackInfo.expectedHash
                 }
                 this._TryDownload(fallbackParams, true, 0)
                 return
@@ -197,11 +209,14 @@ class Updater {
 
         ; 降级也失败，显示错误
         UpdateUI.CloseDownloadingDialog()
-        UpdateUI.ShowDownloadFailedDialog("下载失败：`n" error.message "`n`n两个更新源均不可用，请稍后重试或手动下载")
+        ; 用不含"下载失败:"前缀的原始原因，避免与弹窗标题/前缀重复
+        reason := error.HasProp("reason") ? error.reason : error.message
+        UpdateUI.ShowDownloadFailedDialog("下载失败：`n" reason "`n`n两个更新源均不可用，请稍后重试或手动下载")
     }
 
-    ; 内部：获取备选源的下载地址（重新用备选源检查版本）
-    static _GetFallbackDownloadUrl(params) {
+    ; 内部：获取备选源的下载信息（重新用备选源检查版本）
+    ; 返回 {downloadUrl, expectedHash}：备选源下载地址 + 期望 SHA-256（为空时跳过校验）
+    static _GetFallbackDownloadInfo(params) {
         updateSource := Config.GetImportant("UpdateSource")
         isGitHubPreferred := (updateSource == "2")
 
@@ -211,9 +226,12 @@ class Updater {
             : VersionChecker._CheckFromGithub(localVersion)
 
         if (fallbackResult.status = "update_available" || fallbackResult.status = "up_to_date") {
-            return fallbackResult.HasProp("downloadUrl") ? fallbackResult.downloadUrl : ""
+            return {
+                downloadUrl: fallbackResult.HasProp("downloadUrl") ? fallbackResult.downloadUrl : "",
+                expectedHash: fallbackResult.HasProp("expectedHash") ? fallbackResult.expectedHash : ""
+            }
         }
-        return ""
+        return {downloadUrl: "", expectedHash: ""}
     }
 
     ; 下载成功处理
