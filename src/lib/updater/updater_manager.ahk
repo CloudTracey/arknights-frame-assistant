@@ -157,6 +157,8 @@ class Updater {
     static _TryDownload(params, triedFallback, retryCount := 0, reason := "") {
         UpdateUI.ShowDownloadingDialog(retryCount, reason)
 
+        ; downloadParams 结构约定：{downloadUrl, expectedHash, localVersion, remoteVersion, ...}
+        ; expectedHash：下载文件的期望 SHA-256（hex，小写；为空时跳过校验）
         downloadParams := {
             downloadUrl: params.downloadUrl,
             localVersion: params.localVersion,
@@ -191,7 +193,7 @@ class Updater {
         if (!triedFallback) {
             ; 降级检查期间更新下载窗口提示，避免用户误以为更新静默失败
             UpdateUI.ShowFallbackNotice()
-            fallbackInfo := this._GetFallbackDownloadUrl(params)
+            fallbackInfo := this._GetFallbackDownloadInfo(params)
             if (fallbackInfo.downloadUrl != "") {
                 UpdateUI.CloseDownloadingDialog()
                 fallbackParams := {
@@ -212,8 +214,9 @@ class Updater {
         UpdateUI.ShowDownloadFailedDialog("下载失败：`n" reason "`n`n两个更新源均不可用，请稍后重试或手动下载")
     }
 
-    ; 内部：获取备选源的下载地址（重新用备选源检查版本）
-    static _GetFallbackDownloadUrl(params) {
+    ; 内部：获取备选源的下载信息（重新用备选源检查版本）
+    ; 返回 {downloadUrl, expectedHash}：备选源下载地址 + 期望 SHA-256（为空时跳过校验）
+    static _GetFallbackDownloadInfo(params) {
         updateSource := Config.GetImportant("UpdateSource")
         isGitHubPreferred := (updateSource == "2")
 
