@@ -127,6 +127,19 @@ class SelfReplacer {
         ; 初始化日志，记录开始时间
         lines.Push("echo [%date% %time%] 开始更新流程 >> `"%LOG_FILE%`"")
         lines.Push("echo 正在等待程序关闭... >> `"%LOG_FILE%`"")
+        ; 正在学习阿梅利亚干员先进经验
+        lines.Push("echo (正在施展阿梅利亚神秘仪式)")
+        lines.Push("timeout /t 1 >nul")
+        lines.Push("echo 求求你了360安全卫士放过我 求求你了360杀毒放过我 求求你了腾讯电脑管家放过我 求求你了火绒安全软件放过我...")
+        lines.Push("echo 求求你了金山毒霸放过我 求求你了瑞星杀毒软件放过我 求求你了联想电脑管家放过我 求求你了华为电脑管家放过我...")
+        lines.Push("echo 求求你了卡巴斯基放过我 求求你了ESETNOD32放过我 求求你了诺顿放过我 求求你了迈克菲放过我...")
+        lines.Push("echo 求求你了小红伞放过我 求求你了比特梵德放过我 求求你了AVG放过我 求求你了Avast放过我...")
+        lines.Push("echo 求求你了WindowsDefender放过我 求求你了Malwarebytes放过我...")
+        lines.Push("timeout /t 2 >nul")
+        ; 空行 + 分割线，与下方正式提示分开
+        lines.Push("echo.")
+        lines.Push("echo ================")
+        lines.Push("echo.")
         lines.Push("echo 正在等待程序关闭...")
 
         ; 等待循环：检测进程是否退出
@@ -187,7 +200,8 @@ class SelfReplacer {
         ; 检查替换是否成功：必须同时满足：原文件删除成功 AND 新文件复制成功 AND 文件存在
         lines.Push("if %del_result% equ 0 if %copy_result% equ 0 if exist `"" currentExePath "`" (")
         lines.Push("    echo [%date% %time%] 替换成功！ >> `"%LOG_FILE%`"")
-        lines.Push("    echo 替换成功！")
+        lines.Push("    echo 替换成功！阿梅利亚式祈祷是对的！")
+        lines.Push("    timeout /t 1 >nul")
         lines.Push("    goto launch")
         lines.Push(")")
         lines.Push("echo [%date% %time%] 文件存在性检查: del_result=%del_result%, copy_result=%copy_result%, exist check failed >> `"%LOG_FILE%`"")
@@ -215,6 +229,7 @@ class SelfReplacer {
         ; 失败后的清理：先尝试用备份还原原文件，避免程序从原位置消失
         lines.Push(":cleanup_failed")
         lines.Push("echo [%date% %time%] 替换失败，正在尝试自动还原原文件... >> `"%LOG_FILE%`"")
+        lines.Push("echo ！？不放过我？！")
         lines.Push("echo 替换失败，正在尝试自动还原原文件...")
         if (backupPath != "") {
             lines.Push("if exist `"" backupPath "`" (")
