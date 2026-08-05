@@ -45,7 +45,7 @@ class LogExporter {
             psStage := this._PowerShellQuote(staging)
             psZip := this._PowerShellQuote(tempZip)
             psCode := "Add-Type -AssemblyName System.IO.Compression.FileSystem; [IO.Compression.ZipFile]::CreateFromDirectory(" psStage "," psZip ",[IO.Compression.CompressionLevel]::Optimal,$false)"
-            command := "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `"" psCode "`""
+            command := "powershell.exe -NoProfile -NonInteractive -Command `"" psCode "`""
             exitCode := RunWait(command, A_ScriptDir, "Hide")
             if (exitCode != 0 || !FileExist(tempZip)) {
                 result.message := "压缩日志失败，PowerShell 返回码：" exitCode
