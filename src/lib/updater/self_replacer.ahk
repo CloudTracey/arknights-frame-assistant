@@ -231,7 +231,9 @@ class SelfReplacer {
         ; 提示用户失败的可能原因（指向新文件：下载的更新文件被删除/损坏，而非原文件）
         lines.Push("echo [%date% %time%] 复制新文件失败：下载的更新文件可能已损坏或被安全软件删除，请检查后手动处理，或向开发者反馈此问题 >> `"%LOG_FILE%`"")
         lines.Push("echo 复制新文件失败：下载的更新文件可能已损坏或被安全软件删除，请检查后手动处理，或向开发者反馈此问题")
-        lines.Push("echo 备份文件位置: `"" backupPath "`"")
+        if (backupPath != "") {
+            lines.Push("echo 备份文件位置: `"" backupPath "`"")
+        }
         lines.Push("echo 新文件位置: `"" newFilePath "`"")
         ; 暂停让用户看到失败信息，按键后关闭窗口
         lines.Push("pause")
