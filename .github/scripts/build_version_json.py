@@ -22,7 +22,7 @@ import tempfile
 from qcloud_cos import CosConfig, CosS3Client
 
 
-def build_version_json(channel, version, date, body, domain, github_releases):
+def build_version_json(channel, version, date, body, domain, github_releases, sha256=""):
     """Build version.json content.
 
     Args:
@@ -87,6 +87,7 @@ def build_version_json(channel, version, date, body, domain, github_releases):
     return {
         "version": version,
         "downloadUrl": download_url,
+        "sha256": sha256,
         "date": date,
         "body": body,
         "releases": releases,
@@ -224,7 +225,7 @@ def load_github_releases(filepath):
 
 
 def _upload_for_channel(cos_client, bucket, channel, version, date, body, domain,
-                        github_releases, is_current):
+                        github_releases, is_current, sha256=""):
     """Build and upload version.json for a single channel.
 
     When *is_current* is True this is the release being published right now;
@@ -233,7 +234,7 @@ def _upload_for_channel(cos_client, bucket, channel, version, date, body, domain
     from the latest matching release found in *github_releases*.
     """
     data = build_version_json(
-        channel, version, date, body, domain, github_releases
+        channel, version, date, body, domain, github_releases, sha256
     )
 
     if github_releases:
@@ -276,6 +277,11 @@ def main():
         action="store_true",
         help="Also update the other channel's version.json with the same full releases array",
     )
+    parser.add_argument(
+        "--sha256",
+        default="",
+        help="SHA-256 digest of the AFA.exe being released (hex, no prefix)",
+    )
     args = parser.parse_args()
 
     # Read body from file if --body-file is provided, otherwise use --body directly
@@ -296,7 +302,7 @@ def main():
     # Always upload for the current (triggering) channel first
     _upload_for_channel(
         cos_client, bucket, args.channel, args.version, args.date, body,
-        args.domain, github_releases, is_current=True,
+        args.domain, github_releases, is_current=True, sha256=args.sha256,
     )
 
     # Optionally sync the other channel so both version.json files carry the

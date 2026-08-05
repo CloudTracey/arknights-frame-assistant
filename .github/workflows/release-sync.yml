@@ -55,6 +55,7 @@ jobs:
           fi
 
       - name: Download release asset
+        id: download
         if: github.event_name != 'workflow_dispatch'
         run: |
           ASSET_URL=$(echo '${{ toJson(github.event.release.assets) }}' | jq -r '.[] | select(.name == "AFA.exe") | .browser_download_url')
@@ -63,6 +64,7 @@ jobs:
             exit 1
           fi
           curl -L -o AFA.exe "$ASSET_URL"
+          echo "SHA256=$(sha256sum AFA.exe | awk '{print $1}')" >> $GITHUB_OUTPUT
 
       - name: Configure coscmd
         run: |
@@ -112,6 +114,7 @@ jobs:
             --body-file /tmp/release_body.txt \
             --domain "${{ secrets.CDN_DOMAIN }}" \
             --releases-file /tmp/all_releases.jsonl \
+            --sha256 "${{ steps.download.outputs.sha256 }}" \
             --sync-both
 
       - name: Refresh CDN cache
