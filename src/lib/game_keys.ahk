@@ -28,6 +28,9 @@ class GameKeys {
             this._ShowWarning()
         }
 
+        ; 输出完整按键映射（Info）
+        this._LogBindings()
+
         ; 启动 10 秒轮询定时器
         SetTimer ObjBindMethod(GameKeys, "_OnPoll"), 10000
     }
@@ -353,7 +356,7 @@ class GameKeys {
                 return Map()
             }
 
-            Logger.Debug("GameKeys", "JSON 前 120 字符：" SubStr(jsonStr, 1, 120))
+            Logger.Debug("GameKeys", "原始 JSON：" jsonStr)
 
             result := this._ParseJson(jsonStr)
             Logger.Debug("GameKeys", "解析完成，共 " result.Count " 个映射")
@@ -387,7 +390,7 @@ class GameKeys {
         }
 
         if (result.Count = 0) {
-            Logger.Warn("GameKeys", "JSON 解析结果为空，原始内容前80字符：" SubStr(jsonStr, 1, 80))
+            Logger.Warn("GameKeys", "JSON 解析结果为空，原始内容：" jsonStr)
         }
 
         return result
@@ -515,6 +518,7 @@ class GameKeys {
             ; 更新绑定
             this._Bindings := newBindings
             this._LastHex := hexStr
+            this._LogBindings()
 
             ; 如果之前是失败状态，现在恢复了
             if (!this._LastReadSuccess) {
@@ -533,11 +537,20 @@ class GameKeys {
         }
     }
 
+    ; ── 输出完整按键映射（Info）——启动首次读取与每次重建/恢复后调用 ──
+    static _LogBindings() {
+        mapText := ""
+        for funcName, key in this._Bindings
+            mapText .= (mapText = "" ? "" : " | ") funcName "=" key
+        Logger.Info("GameKeys", "完整按键映射：" mapText)
+    }
+
     ; ── 弹出读取失败警告 ──
     static _ShowWarning(detail := "") {
         if (this._HasWarned)
             return
         this._HasWarned := true
+        Logger.Warn("GameKeys", "读取失败，回退默认按键" (detail != "" ? "，原因：" detail : ""))
 
         msg := "无法读取游戏按键配置，AFA 将使用默认按键。"
             . "如果您的游戏内按键为自定义设置，可能无法正常工作。"

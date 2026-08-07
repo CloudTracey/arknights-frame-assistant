@@ -13,6 +13,7 @@ class Saver {
 
         ; 检查按键冲突
         if (!this._CheckKeyConflicts()) {
+            Logger.Warn("Saver", "保存中止：检测到按键冲突")
             Exit
         }
 
@@ -24,6 +25,7 @@ class Saver {
                 ; 验证新Token
                 tokenResult := VersionChecker.ValidateToken(SavedObj.GitHubToken)
                 if (!tokenResult.valid) {
+                    Logger.Warn("Saver", "GitHub Token 验证失败：" tokenResult.message)
                     result := MessageBox.Confirm("GitHub Token验证失败：" tokenResult.message "`n`n是否仍要保存此Token？", "Token验证失败")
                     if (result = "No") {
                         Exit
@@ -31,6 +33,7 @@ class Saver {
                 } else {
                     ; Token有效，更新验证状态
                     VersionChecker.TokenValidated := true
+                    Logger.Info("Saver", "GitHub Token 验证成功")
                     MessageBox.Info("GitHub Token验证成功！`n用户: " tokenResult.username "`nAPI配额: " tokenResult.rateLimit, "Token有效")
                 }
             }
@@ -40,6 +43,7 @@ class Saver {
         plainToken := SavedObj.HasProp("GitHubToken") ? SavedObj.GitHubToken : ""
         tokenStorage := Config.PrepareGitHubTokenForStorage(plainToken)
         if (!tokenStorage.success) {
+            Logger.Warn("Saver", "保存中止：GitHub Token 无法安全保存（" tokenStorage.message "）")
             MessageBox.Error("GitHub Token 无法安全保存：`n" tokenStorage.message, "设置保存失败")
             Exit
         }
@@ -49,6 +53,7 @@ class Saver {
             if !FileExist(SavedObj.GamePath) {
                 result := MessageBox.Confirm("游戏路径不存在：`n" SavedObj.GamePath "`n`n是否仍要保存？", "路径不存在")
                 if (result = "No") {
+                    Logger.Warn("Saver", "保存中止：游戏路径不存在")
                     Exit
                 }
             } else {
@@ -57,6 +62,7 @@ class Saver {
                 if (fileName != "Arknights.exe") {
                     result := MessageBox.Confirm("游戏路径不正确：`n" SavedObj.GamePath "`n`n目标文件不是 Arknights.exe，请确保选择正确的游戏可执行文件。`n`n是否仍要保存？", "路径不正确")
                     if (result = "No") {
+                        Logger.Warn("Saver", "保存中止：游戏路径不是 Arknights.exe")
                         Exit
                     }
                 }
@@ -65,6 +71,7 @@ class Saver {
 
         ; 应用“启动游戏时自动启动小助手”设置
         if (!this._ApplyGameAutoStart(SavedObj)) {
+            Logger.Warn("Saver", "保存中止：随游戏自动启动设置应用失败")
             Exit
         }
 

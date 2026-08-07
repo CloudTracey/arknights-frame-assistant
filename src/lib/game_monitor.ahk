@@ -39,16 +39,14 @@ CheckGameStatus() {
             for point in points {
                 if !PixelSearch(&FoundX, &FoundY, point.x, point.y, point.x, point.y, 0x000000, 10) {
                     missCount++
-                    if (missCount > 3) {
-                        ; ToolTip("并非黑屏")
+                    if (missCount > 3)
                         break
-                    }
                 }
             }
             if (missCount <= 1) {
                 State.BlackScreenDetected := true
-                Logger.Debug("GameMonitor", "检测到开局黑屏，开始识别 Loading 状态")
-                SetTimer StopSearchLoading, -8000
+                Logger.Debug("GameMonitor", "检测到黑屏，可能是进入关卡前的加载，开始识别 Loading")
+                SetTimer StopSearchLoadingTimeout, -8000
                 SetTimer CheckGameStatus, 200
             }
             try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -56,7 +54,6 @@ CheckGameStatus() {
         ; 识别 Loading：通过 Loading... 文字区域颜色判断场景类型
         if (State.BlackScreenDetected == true && State.ReadyForPause == false) {
             try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-            ; ToolTip("黑屏了，可能在进关卡？")
             scanLines := LoadingPosition()
             if !scanLines {
                 try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -64,12 +61,12 @@ CheckGameStatus() {
             }
             line1 := scanLines[1]
             if PixelSearch(&FoundX, &FoundY, line1.lx, line1.y, line1.rx, line1.y, 0xA60000, 50) {
-                ; ToolTip("怎么是进入关卡的红色？")
-                SetTimer StopSearchLoading, 0
+                Logger.Debug("GameMonitor", "识别到红色按钮，停止 Loading 搜索")
+                SetTimer StopSearchLoadingTimeout, 0
                 State.BlackScreenDetected := false
             } else if PixelSearch(&FoundX, &FoundY, line1.lx, line1.y, line1.rx, line1.y, 0x0070a3, 50) {
-                ; ToolTip("怎么是进入关卡的蓝色？")
-                SetTimer StopSearchLoading, 0
+                Logger.Debug("GameMonitor", "识别到蓝色按钮，停止 Loading 搜索")
+                SetTimer StopSearchLoadingTimeout, 0
                 State.BlackScreenDetected := false
             } else {
                 allWhite := true
@@ -80,9 +77,9 @@ CheckGameStatus() {
                     }
                 }
                 if (allWhite) {
-                    ; ToolTip("检测到白色！")
+                    Logger.Debug("GameMonitor", "识别到白色 Loading，准备自动暂停")
                     State.ReadyForPause := true
-                    SetTimer StopSearchLoading, 0
+                    SetTimer StopSearchLoadingTimeout, 0
                     SetTimer ActionBeginPause, -2000
                 }
             }
@@ -131,4 +128,9 @@ BlackScreenPoints() {
 StopSearchLoading() {
     SetTimer CheckGameStatus, 400
     State.BlackScreenDetected := false
+}
+; 黑屏识别超时（8秒未确认 Loading 状态），停止搜索并记录提示
+StopSearchLoadingTimeout() {
+    Logger.Info("GameMonitor", "黑屏识别超时（8秒未确认 Loading），并非进关卡，停止搜索")
+    StopSearchLoading()
 }

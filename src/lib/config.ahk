@@ -127,7 +127,8 @@ class Constants {
         "HiddenTabs", "隐藏的标签页",
         "AutoBeginPause", "开局自动暂停",
         "BackCeaseOperations", "使用“返回上级菜单”放弃行动",
-        "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键"
+        "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键",
+        "DebugEnabled", "调试模式"
     )
 
     ; 自定义设置名称映射
@@ -213,7 +214,8 @@ class Config {
         "HiddenTabs", "",
         "AutoBeginPause", "0",
         "BackCeaseOperations", "1",
-        "InLevelGuard", "1"
+        "InLevelGuard", "1",
+        "DebugEnabled", "0"
     )
 
     ; 内部：默认自定义设置
@@ -442,6 +444,10 @@ class Config {
 
     static _SetTokenStorageStatus(status) {
         this.TokenStorageStatus := status
+        if (status = "ok")
+            Logger.Info("Config", "GitHub Token 存储状态：" status)
+        else
+            Logger.Warn("Config", "GitHub Token 存储异常：" status)
     }
 
     ; 获取面向用户的 Token 存储提示，不包含敏感数据。
@@ -496,6 +502,10 @@ class Config {
 
     ; 确保配置文件存在并包含所有配置项
     static _EnsureConfigFileExists() {
+        ; 防御：文件已存在则直接返回（LoadFromIni 调用前已守卫，此处自检以防未来其他调用方绕过）
+        if FileExist(this.IniFile)
+            return
+        Logger.Info("Config", "配置文件不存在，创建默认配置")
         ; 确保目录存在
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
         if !DirExist(configDir)

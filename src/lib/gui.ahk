@@ -80,7 +80,7 @@ class GuiManager {
     static GuiImportantKeys := ["Frame", "AutoExit", "AutoOpenSettings", "ExitOnWindowClose",
         "DefaultStrongHoldProtocol", "TabOrder", "HiddenTabs", "AutoRunGame", "AutoStartWithGame", "GamePath",
         "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause",
-        "BackCeaseOperations", "InLevelGuard"]
+        "BackCeaseOperations", "InLevelGuard", "DebugEnabled"]
 
     ; 初始化GUI（单例模式）
     static Init() {
@@ -646,6 +646,11 @@ class GuiManager {
         btnOpenLogDirectory := this.MainGui.Add("Button", "x" logButtonX " y+8 w160 h28", "打开日志文件夹")
         btnOpenLogDirectory.OnEvent("Click", (*) => LogExporter.OpenLogDirectory())
         this.LogControls.Push(btnOpenLogDirectory)
+
+        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 h24 vDebugEnabled", " 启用调试模式（实时日志窗口，日志额外记录调试信息）")
+        chkDebug.OnEvent("Click", (*) => this.TrackChange("DebugEnabled"))
+        this.MainGui["DebugEnabled"].Value := Config.GetImportant("DebugEnabled")
+        this.LogControls.Push(chkDebug)
 
         ; 分类"关于"
         logoPath := FileExtractor.LogoPath

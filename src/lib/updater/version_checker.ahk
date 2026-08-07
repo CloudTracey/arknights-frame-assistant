@@ -70,16 +70,24 @@ class VersionChecker {
         this.DebugMode := InStr(Version.Get(), "alpha") > 0
     }
 
+    ; 调试日志解锁：alpha 构建恒开，正式版随用户「调试模式」开关
+    ; 直接读 Loader.LoadSettings 已同步的运行时开关，避免每次 INI 重读、并与 Logger.DebugEnabled 保持一致（无双源）
+    static IsDebugLogging() {
+        if (this.DebugMode)
+            return true
+        return Logger.DebugEnabled
+    }
+
     ; 内部：输出调试日志
     static _Log(message) {
-        if (this.DebugMode) {
+        if (this.IsDebugLogging()) {
             Logger.Debug("VersionChecker", message)
         }
     }
 
     ; 内部：输出请求报文日志
     static _LogRequest(type, url, method, headers) {
-        if (!this.DebugMode)
+        if (!this.IsDebugLogging())
             return
 
         this._Log("========== " type " ==========")
@@ -105,7 +113,7 @@ class VersionChecker {
 
     ; 内部：输出响应报文日志
     static _LogResponse(type, statusCode, statusText, headers, body) {
-        if (!this.DebugMode)
+        if (!this.IsDebugLogging())
             return
 
         this._Log("========== " type " ==========")
@@ -489,9 +497,11 @@ class VersionChecker {
 
                 if (compareResult < 0) {
                     this._Log("发现新版本: " remoteVersion)
+                    Logger.Info("VersionChecker", "发现新版本：" remoteVersion)
                     return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, expectedHash: expectedHash, changelogBody: changelogBody}
                 } else {
                     this._Log("已是最新版本")
+                    Logger.Info("VersionChecker", "已是最新版本")
                     return {status: "up_to_date", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: ""}
                 }
             } else {
@@ -539,9 +549,11 @@ class VersionChecker {
 
                 if (compareResult < 0) {
                     this._Log("发现新版本: " remoteVersion)
+                    Logger.Info("VersionChecker", "发现新版本：" remoteVersion)
                     return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, expectedHash: expectedHash, changelogBody: changelogBody}
                 } else {
                     this._Log("已是最新版本")
+                    Logger.Info("VersionChecker", "已是最新版本")
                     return {status: "up_to_date", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: ""}
                 }
             }
@@ -683,9 +695,11 @@ class VersionChecker {
 
             if (compareResult < 0) {
                 this._Log("国内源发现新版本: " remoteVersion)
+                Logger.Info("VersionChecker", "国内源发现新版本：" remoteVersion)
                 return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, expectedHash: expectedHash, changelogBody: changelogBody}
             } else {
                 this._Log("已是最新版本（国内源）")
+                Logger.Info("VersionChecker", "已是最新版本（国内源）")
                 return {status: "up_to_date", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: ""}
             }
         } catch as err {
@@ -739,6 +753,7 @@ class VersionChecker {
         }
 
         this._Log(preferredName " 3 次均失败，降级到 " fallbackName)
+        Logger.Info("VersionChecker", preferredName " 3 次均失败，降级到 " fallbackName)
 
         ; 备选源（最多 3 次重试）
         fallbackResult := this._CheckSingleSource(fallbackFn, fallbackName, localVersion)

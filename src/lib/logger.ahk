@@ -14,6 +14,10 @@ class Logger {
     static FileAvailable := false
     static CriticalFileAvailable := false
     static DebugEnabled := false
+    static ConsoleEnabled := false
+    static ConsoleColorEnabled := true
+    static ConsoleTipShown := false
+    static ConsoleHandle := ""
     static IsWriting := false
     static Secrets := []
     static RecentLines := []
@@ -82,6 +86,103 @@ class Logger {
     static SetDebugEnabled(enabled) {
         this.DebugEnabled := !!enabled
         this.Debug("Logger", "DEBUG 持久化=" (this.DebugEnabled ? "enabled" : "disabled"))
+    }
+
+    ; 启用/停用实时控制台回显。
+    ; enabled 为 true 时创建「AFA 调试日志」控制台窗口；进程已有控制台（如从终端启动）时 AllocConsole 返回 0，
+    ; 静默降级——ConsoleEnabled 仍置 true 但 ConsoleHandle 保持为空，_EchoToConsole 为 no-op，仅持久化 Debug，不弹窗不报错。
+    static SetConsoleEnabled(enabled) {
+        if (enabled) {
+            if (this.ConsoleEnabled)
+                return
+            this.ConsoleEnabled := true
+            try {
+                if (!DllCall("Kernel32\AllocConsole")) {
+                    this.ConsoleEnabled := false  ; 未分配控制台，复位状态，避免 CloseConsole 误调 FreeConsole 脱离调用方终端
+                    return  ; 已有控制台的进程 → 静默降级
+                }
+                DllCall("Kernel32\SetConsoleTitleW", "WStr", "AFA 调试日志")
+                ; 置灰关闭按钮：X 按钮触发 CTRL_CLOSE_EVENT，默认终止进程且无法可靠拦截
+                consoleHwnd := DllCall("Kernel32\GetConsoleWindow", "Ptr")
+                sysMenu := DllCall("User32\GetSystemMenu", "Ptr", consoleHwnd, "UInt", 0, "Ptr")
+                DllCall("User32\EnableMenuItem", "Ptr", sysMenu, "UInt", 0xF060, "UInt", 0x0001)  ; SC_CLOSE | MF_GRAYED
+                ; 忽略 Ctrl+C/Break，防止误按终止 AFA（控制台选中文本复制不受影响）
+                DllCall("Kernel32\SetConsoleCtrlHandler", "Ptr", 0, "UInt", 1)
+                ; 缓存输出句柄，供 WriteConsoleW 直接写入（无缓冲，实时渲染）
+                ; 不使用 FileOpen("CONOUT$") + WriteLine：File 对象内部缓冲，控制台不关闭就不刷新
+                this.ConsoleHandle := DllCall("Kernel32\GetStdHandle", "Int", -11, "Ptr")
+                if (!this.ConsoleHandle)
+                    return  ; 无输出句柄 → 静默降级
+                ; 禁用 QuickEdit 选择模式：点击/框选控制台会进入选择态，阻塞进程控制台 I/O，导致 AFA 卡死
+                ; 独立 try/catch 隔离：QuickEdit 禁用失败不应回滚（CloseConsole 会释放已打开的控制台）
+                try {
+                    consoleInput := DllCall("Kernel32\GetStdHandle", "Int", -10, "Ptr")  ; STD_INPUT_HANDLE
+                    consoleMode := 0
+                    if (consoleInput != 0)
+                        if (DllCall("Kernel32\GetConsoleMode", "Ptr", consoleInput, "UInt*", &consoleMode))
+                            DllCall("Kernel32\SetConsoleMode", "Ptr", consoleInput, "UInt", (consoleMode | 0x0080) & ~0x0040)
+                } catch {
+                    OutputDebug("[Logger] 禁用 QuickEdit 失败（不影响控制台打开）")
+                }
+                ; 控制台启动横幅（亮蓝 0x09）+ 回放此前的最近日志（控制台打开前的内容不再被忽略）
+                this._EchoToConsole("INFO", "", 0x09)
+                this._EchoToConsole("INFO", "===== AFA 调试日志控制台已打开 =====", 0x09)
+                this._EchoToConsole("INFO", "调试模式已启用：日志实时显示并持久化到日志文件", 0x09)
+                this._EchoToConsole("INFO", "如需关闭：设置 → 其他 → 日志，取消勾选「启用调试模式」并应用", 0x09)
+                this._EchoToConsole("INFO", "----- 以下为此前的最近日志 -----")
+                for bufferedLine in this.RecentLines {
+                    lvl := this._ExtractLevelFromLine(bufferedLine)
+                    this._EchoToConsole(lvl, bufferedLine)
+                }
+                this._EchoToConsole("INFO", "----- 控制台就绪，后续日志实时显示 -----")
+                ; 提示如何关闭（当次会话仅首次，跨重启仍提示）
+                if (!this.ConsoleTipShown) {
+                    this.ConsoleTipShown := true
+                    MessageBox.Warning("调试日志控制台已打开。`n如需关闭控制台，请在 AFA 设置中取消勾选「启用调试模式」并应用设置。", "AFA 调试日志")
+                }
+            } catch Error as e {
+                this.CloseConsole()
+                OutputDebug("[Logger] 控制台打开失败：" e.Message)
+            }
+        } else {
+            this.CloseConsole()
+        }
+    }
+
+    ; 关闭并释放控制台（幂等，可从退出流程调用）
+    static CloseConsole() {
+        if (this.ConsoleEnabled) {
+            this.ConsoleHandle := ""
+            this.ConsoleEnabled := false
+            DllCall("Kernel32\FreeConsole")
+        }
+    }
+
+    ; 从已格式化日志行提取级别（用于回放时保持着色），匹配 "时间戳 [LEVEL] [component] message"
+    static _ExtractLevelFromLine(line) {
+        if (RegExMatch(line, "\[(INFO|WARN|ERROR|DEBUG)\]", &m))
+            return m[1]
+        return "INFO"
+    }
+
+    ; 回显一行到控制台（所有级别）。按级别着色；控制台不可用时静默降级，不中断日志。
+    ; 使用 WriteConsoleW 直接写入（无缓冲、UTF-16 原生、实时渲染），不使用 FileOpen 缓冲写入。
+    ; colorOverride：显式指定颜色（如横幅亮蓝 0x09），0 表示按 level 着色。
+    static _EchoToConsole(level, line, colorOverride := 0) {
+        if (!this.ConsoleEnabled || !this.ConsoleHandle)
+            return
+        try {
+            if (this.ConsoleColorEnabled) {
+                color := colorOverride
+                if (!color)
+                    color := level = "ERROR" ? 0x0C : level = "WARN" ? 0x0E : level = "DEBUG" ? 0x08 : 0x07
+                DllCall("Kernel32\SetConsoleTextAttribute", "Ptr", this.ConsoleHandle, "UInt", color)
+            }
+            DllCall("Kernel32\WriteConsoleW", "Ptr", this.ConsoleHandle, "WStr", line "`r`n",
+                "UInt", StrLen(line) + 2, "UInt*", &written := 0, "Ptr", 0)
+        } catch Error as e {
+            this.ConsoleHandle := ""
+        }
     }
 
     static RegisterSecret(value) {
@@ -255,6 +356,7 @@ class Logger {
     static _Write(level, component, message, persist) {
         line := this._BuildLine(level, component, message)
         OutputDebug(line)
+        this._EchoToConsole(level, line)
         if (!persist || this.IsWriting || (!this.FileAvailable && !this.CriticalFileAvailable))
             return
 

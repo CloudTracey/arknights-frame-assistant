@@ -99,6 +99,7 @@ class UpdateDownloader {
         this.DownloadUrl := params.downloadUrl
         this.RemoteVersion := params.remoteVersion
         this.ExpectedHash := params.HasProp("expectedHash") ? params.expectedHash : ""
+        Logger.Info("UpdateDownloader", "开始下载：" this.RemoteVersion "，URL=" this.DownloadUrl "，期望哈希=" this.ExpectedHash)
         if (params.HasProp("onProgress"))
             this.OnProgress := params.onProgress
         if (params.HasProp("onComplete"))
@@ -169,8 +170,10 @@ class UpdateDownloader {
                         this.TotalBytes := Integer(contentLengthStr)
                 }
             }
-        } catch {
+            Logger.Info("UpdateDownloader", "HEAD 成功，文件大小=" this.TotalBytes " 字节")
+        } catch Error as e {
             this.TotalBytes := 0
+            Logger.Warn("UpdateDownloader", "HEAD 请求失败，改用未知大小下载：" e.Message)
         }
 
         ; 创建累积数据的流
@@ -359,6 +362,7 @@ class UpdateDownloader {
             this.ChunkRetries := 0
             this.LastChunkTime := A_TickCount
             this._ReportProgress()
+            Logger.Debug("UpdateDownloader", "分块完成：" this.ChunkIndex "/" this.TotalChunks "，loaded=" this.LoadedBytes "/" this.TotalBytes)
 
             SetTimer(() => UpdateDownloader._DownloadNextChunk(), -10)
 
@@ -400,15 +404,18 @@ class UpdateDownloader {
             if (this.ExpectedHash != "") {
                 actualHash := this._GetFileSha256(this.TempFile)
                 if (actualHash = "" || StrLower(actualHash) != StrLower(this.ExpectedHash)) {
+                    Logger.Error("UpdateDownloader", "SHA-256 校验失败：期望=" this.ExpectedHash "，实际=" actualHash)
                     FileDelete(this.TempFile)
                     this._Cleanup()
                     this._HandleErrorObj(Error("文件哈希校验失败：下载的文件与发布版本不一致，可能被篡改或下载不完整。已中止更新，请重新下载。"))
                     return
                 }
+                Logger.Info("UpdateDownloader", "SHA-256 校验通过")
             }
 
             this.IsDownloading := false
             this._StopProgressTimer()
+            Logger.Info("UpdateDownloader", "下载完成：" this.TempFile)
             this._FireComplete()
         } catch Error as e {
             this._Cleanup()

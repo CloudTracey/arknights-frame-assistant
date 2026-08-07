@@ -88,6 +88,7 @@ class UpdateUI {
     ; 点击"是"按钮
     static OnUpdateYes() {
         params := this.UpdateDialogParams
+        Logger.Info("UpdateUI", "用户确认更新：" params.remoteVersion)
         this.UpdateDialog.Destroy()
         this.UpdateDialog := ""
         this.UpdateDialogParams := ""
@@ -97,6 +98,7 @@ class UpdateUI {
     ; 点击"否"按钮
     static OnUpdateNo() {
         params := this.UpdateDialogParams
+        Logger.Info("UpdateUI", "用户拒绝更新：" params.remoteVersion)
         this.UpdateDialog.Destroy()
         this.UpdateDialog := ""
         this.UpdateDialogParams := ""
@@ -106,6 +108,7 @@ class UpdateUI {
     ; 点击"忽略此版本"按钮
     static OnUpdateIgnore() {
         params := this.UpdateDialogParams
+        Logger.Info("UpdateUI", "用户忽略版本 " params.remoteVersion " 的更新提示")
         this.UpdateDialog.Destroy()
         this.UpdateDialog := ""
         this.UpdateDialogParams := ""
