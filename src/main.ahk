@@ -21,6 +21,7 @@ DllCall("winmm\timeBeginPeriod", "UInt", 1)
 
 HandleAfaExit(exitReason, exitCode) {
     Logger.HandleExit(exitReason, exitCode)
+    Logger.CloseConsole()
     DllCall("winmm\timeEndPeriod", "UInt", 1)
 }
 
@@ -56,6 +57,13 @@ Logger.Info("Startup", "管理员进程启动，脚本=" A_ScriptName)
 
 ; 包含统一消息框
 #Include ./lib/message_box.ahk
+
+; 上一会话异常退出（Logger.PreviousAbnormalFile 在 Logger.Init 已识别）时提示用户。
+; 纯信息通知，不带动作按钮；正常跑过一轮退出后（日志带 Shutdown 标记）自然不再弹出。
+if (Logger.PreviousAbnormalFile != "") {
+    Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
+    MessageBox.Info("检测到上次运行崩溃。`n建议在设置中开启「调试模式」记录日志，并用「生成日志压缩包」导出诊断包反馈给开发者。", "AFA")
+}
 
 ; 包含 GitHub Token 保护模块
 #Include ./lib/token_protector.ahk

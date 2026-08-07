@@ -6,6 +6,10 @@ class Loader {
         Config.MigrateFrameRate()
         Config.MigrateGitHubToken()
         Config.LoadFromIni()
+        ; 调试模式接线：同步 DEBUG 持久化与实时控制台开关（启动/保存/应用/重置均经此路径）
+        debugOn := Config.ReadImportantFromIni("DebugEnabled") == "1"
+        Logger.SetDebugEnabled(debugOn)
+        Logger.SetConsoleEnabled(debugOn)
         State.UpdateDelay()
         State.UpdateClickDelay()
         ; 关卡守卫开关变化时启停关卡检测轮询（关闭守卫→停轮询+强制 InLevel=true；开启守卫→恢复轮询）

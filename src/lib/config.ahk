@@ -127,7 +127,8 @@ class Constants {
         "HiddenTabs", "隐藏的标签页",
         "AutoBeginPause", "开局自动暂停",
         "BackCeaseOperations", "使用“返回上级菜单”放弃行动",
-        "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键"
+        "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键",
+        "DebugEnabled", "调试模式"
     )
 
     ; 自定义设置名称映射
@@ -213,7 +214,8 @@ class Config {
         "HiddenTabs", "",
         "AutoBeginPause", "0",
         "BackCeaseOperations", "1",
-        "InLevelGuard", "1"
+        "InLevelGuard", "1",
+        "DebugEnabled", "0"
     )
 
     ; 内部：默认自定义设置
