@@ -70,16 +70,24 @@ class VersionChecker {
         this.DebugMode := InStr(Version.Get(), "alpha") > 0
     }
 
+    ; 调试日志解锁：alpha 构建恒开，正式版随用户「调试模式」开关
+    ; 直接读 Loader.LoadSettings 已同步的运行时开关，避免每次 INI 重读、并与 Logger.DebugEnabled 保持一致（无双源）
+    static IsDebugLogging() {
+        if (this.DebugMode)
+            return true
+        return Logger.DebugEnabled
+    }
+
     ; 内部：输出调试日志
     static _Log(message) {
-        if (this.DebugMode) {
+        if (this.IsDebugLogging()) {
             Logger.Debug("VersionChecker", message)
         }
     }
 
     ; 内部：输出请求报文日志
     static _LogRequest(type, url, method, headers) {
-        if (!this.DebugMode)
+        if (!this.IsDebugLogging())
             return
 
         this._Log("========== " type " ==========")
@@ -105,7 +113,7 @@ class VersionChecker {
 
     ; 内部：输出响应报文日志
     static _LogResponse(type, statusCode, statusText, headers, body) {
-        if (!this.DebugMode)
+        if (!this.IsDebugLogging())
             return
 
         this._Log("========== " type " ==========")
@@ -461,6 +469,11 @@ class VersionChecker {
                 remoteVersion := this._ExtractJsonValue(resp.body, "tag_name")
                 downloadUrl := this._ExtractJsonValue(resp.body, "browser_download_url")
 
+                ; 提取 AFA.exe asset 的 SHA-256 摘要（GitHub 格式 sha256:<hex>，剥离前缀；限定 AFA.exe asset，避免多 asset 时命中其他文件）
+                expectedHash := ""
+                if (RegExMatch(resp.body, '"name"\s*:\s*"AFA\.exe".*?"digest"\s*:\s*"sha256:([0-9a-fA-F]{64})"', &hashMatch))
+                    expectedHash := hashMatch[1]
+
                 ; 额外请求全量 releases 用于 changelog
                 allReleases := this._FetchAllReleases(gitHubToken)
                 if (allReleases.Length > 0) {
@@ -484,9 +497,11 @@ class VersionChecker {
 
                 if (compareResult < 0) {
                     this._Log("发现新版本: " remoteVersion)
-                    return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, changelogBody: changelogBody}
+                    Logger.Info("VersionChecker", "发现新版本：" remoteVersion)
+                    return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, expectedHash: expectedHash, changelogBody: changelogBody}
                 } else {
                     this._Log("已是最新版本")
+                    Logger.Info("VersionChecker", "已是最新版本")
                     return {status: "up_to_date", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: ""}
                 }
             } else {
@@ -516,6 +531,7 @@ class VersionChecker {
 
                 remoteVersion := bestRelease.tag_name
                 downloadUrl := bestRelease.downloadUrl
+                expectedHash := bestRelease.HasProp("expectedHash") ? bestRelease.expectedHash : ""
                 this._Log("解析结果（测试版） - 最高远程版本: " remoteVersion)
                 this._Log("解析结果（测试版） - 下载地址: " downloadUrl)
 
@@ -533,9 +549,11 @@ class VersionChecker {
 
                 if (compareResult < 0) {
                     this._Log("发现新版本: " remoteVersion)
-                    return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, changelogBody: changelogBody}
+                    Logger.Info("VersionChecker", "发现新版本：" remoteVersion)
+                    return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, expectedHash: expectedHash, changelogBody: changelogBody}
                 } else {
                     this._Log("已是最新版本")
+                    Logger.Info("VersionChecker", "已是最新版本")
                     return {status: "up_to_date", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: ""}
                 }
             }
@@ -651,6 +669,7 @@ class VersionChecker {
             ; 解析 version.json
             remoteVersion := this._ExtractJsonValue(resp.body, "version")
             downloadUrl := this._ExtractJsonValue(resp.body, "downloadUrl")
+            expectedHash := this._ExtractJsonValue(resp.body, "sha256")
 
             this._Log("解析结果 - 远程版本: " remoteVersion)
             this._Log("解析结果 - 下载地址: " downloadUrl)
@@ -676,9 +695,11 @@ class VersionChecker {
 
             if (compareResult < 0) {
                 this._Log("国内源发现新版本: " remoteVersion)
-                return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, changelogBody: changelogBody}
+                Logger.Info("VersionChecker", "国内源发现新版本：" remoteVersion)
+                return {status: "update_available", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: downloadUrl, expectedHash: expectedHash, changelogBody: changelogBody}
             } else {
                 this._Log("已是最新版本（国内源）")
+                Logger.Info("VersionChecker", "已是最新版本（国内源）")
                 return {status: "up_to_date", localVersion: localVersion, remoteVersion: remoteVersion, downloadUrl: ""}
             }
         } catch as err {
@@ -732,6 +753,7 @@ class VersionChecker {
         }
 
         this._Log(preferredName " 3 次均失败，降级到 " fallbackName)
+        Logger.Info("VersionChecker", preferredName " 3 次均失败，降级到 " fallbackName)
 
         ; 备选源（最多 3 次重试）
         fallbackResult := this._CheckSingleSource(fallbackFn, fallbackName, localVersion)
@@ -805,6 +827,11 @@ class VersionChecker {
                 downloadUrl := urlMatch[1]
             }
 
+            ; 提取 AFA.exe asset 的 SHA-256 摘要（GitHub 格式 sha256:<hex>，剥离前缀；限定 AFA.exe asset）
+            expectedHash := ""
+            if (RegExMatch(searchStr, '"name"\s*:\s*"AFA\.exe".*?"digest"\s*:\s*"sha256:([0-9a-fA-F]{64})"', &digestMatch))
+                expectedHash := digestMatch[1]
+
             ; 提取 body（Release 正文，Markdown 格式）
             body := ""
             q := Chr(34)
@@ -821,7 +848,7 @@ class VersionChecker {
                 date := dateMatch[1]  ; 国内源 version.json 兼容
             }
 
-            releases.Push({tag_name: tagName, prerelease: prerelease, downloadUrl: downloadUrl, body: body, date: date})
+            releases.Push({tag_name: tagName, prerelease: prerelease, downloadUrl: downloadUrl, body: body, date: date, expectedHash: expectedHash})
             pos := tagEnd
         }
 

@@ -64,6 +64,7 @@ class KeyBinder {
         if(Newkey != "") {
             pureNewkey := RegExReplace(Newkey, "^[~*$!^+#&<>()]+")
             if(pureNewkey == "Backspace" || pureNewkey == "Delete") {
+                Logger.Debug("KeyBind", "清除按键：" KeyBinder.ControlObj.Name)
                 KeyBinder.ControlObj.Value := ""
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, "")
@@ -75,6 +76,7 @@ class KeyBinder {
                 KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
             }
             else {
+                Logger.Debug("KeyBind", "改键：" KeyBinder.ControlObj.Name " → " realNewkey)
                 KeyBinder.ControlObj.Value := virtualNewkey ; 让GUI显示人能读的东西
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, realNewkey)
@@ -267,7 +269,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
     if (KeyBinder.ControlObj && KeyBinder.ControlObj.Type == "Edit") {
         ; 仅处理设置窗口内的 Edit 控件，排除更新弹窗、更新公告弹窗等
         try {
-            if (KeyBinder.ControlObj.Gui.Hwnd != GuiManager.MainGui.Hwnd)
+            if (GuiManager.MainGui = "" || KeyBinder.ControlObj.Gui.Hwnd != GuiManager.MainGui.Hwnd)
                 return
         }
         ; 排除非按键绑定输入框（使用Set查找，新增时只需加一行）
@@ -326,8 +328,8 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             ; 释放可能存在的Hook
             KeyBinder.StopHook()
         }
-        ; 点击非Edit区域时聚焦取消按钮，取消普通Edit控件的选中状态
-        if (hwnd = GuiManager.MainGui.Hwnd)
+        ; 点击非Edit区域时聚焦取消按钮，取消普通Edit控件的选中状态（MainGui 未初始化时不处理）
+        if (GuiManager.MainGui != "" && hwnd = GuiManager.MainGui.Hwnd)
             GuiManager.FocusCancelButton()
         return
     }

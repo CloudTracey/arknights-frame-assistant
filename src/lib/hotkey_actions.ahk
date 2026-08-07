@@ -5,9 +5,10 @@ class KeyForward {
     ; down 已被 AFA 主热键处理过的键（运行时标记，GuardInLevel 记录）：Up 变体据此决定是否放行补发 key up
     ; ——覆盖守卫放行/拦截两路径的失焦/拖出卡键；游戏外主热键不触发则不记录，Up 变体不放行，物理 up 正常透传（打字不受影响）。
     static DownHandled := Map()
-    ; 补发 up 期间的递归抑制标志：ActionUpForward 的 Send 补发会被钩子重新捕获触发 Up 变体，
-    ; 若 Up 变体继续放行会无限循环（导致游戏外按键失灵）。置位时 HotkeyContext/ActionUpForward 均不再放行/补发。
-    static SuppressUp := false
+    ; 补发 up 期间的递归抑制记录（按键级，pureKey→true）：ActionUpForward 的 Send 补发会被钩子重新捕获触发同名 Up 变体，
+    ; 若继续放行会无限循环（导致游戏外按键失灵）。仅抑制正在补发的同名键，不误挡同时松开的其它键——
+    ; 全局布尔会把其它键的物理 Up 也挡掉（HotkeyContext 条件失败→被吞→卡键，见多键同松竞态）。
+    static SuppressUp := Map()
 
     ; 提取纯键名（去除 ~*$ 前缀、修饰符与 Up 后缀；保留左右修饰键信息 <SHIFT→LShift、>SHIFT→RShift）
     static PureKeyName(ThisHotkey) {
@@ -75,10 +76,10 @@ class KeyForward {
         pureKey := this.PureKeyName(ThisHotkey)
         if (pureKey == "")
             return
-        ; 防递归：Send 补发的 up 会被钩子重新捕获触发本变体，置位期间直接返回
-        if KeyForward.SuppressUp
+        ; 防递归：Send 补发的 up 会被钩子重新捕获触发本变体，补发期间同名键直接返回（键级作用域，不挡其它键）
+        if KeyForward.SuppressUp.Has(pureKey)
             return
-        KeyForward.SuppressUp := true
+        KeyForward.SuppressUp[pureKey] := true
         try {
             Send "{" pureKey " Up}"
             ; 关卡内路径未走 ForwardOriginalKey，flag 不存在；Delete 对不存在的键会抛 UnsetItemError，需先检查
@@ -90,13 +91,14 @@ class KeyForward {
         } catch Error as e {
             Logger.Exception("KeyForward", e, "透传 Up 失败：key=" pureKey)
         } finally {
-            KeyForward.SuppressUp := false
+            KeyForward.SuppressUp.Delete(pureKey)
         }
     }
 }
 ; AHK 热键名称大小写不敏感，状态表采用相同语义。
 KeyForward.InterceptedKeys.CaseSense := false
 KeyForward.DownHandled.CaseSense := false
+KeyForward.SuppressUp.CaseSense := false
 
 ; == 功能实现 ==
 ; -- 常规作战 --
@@ -105,6 +107,7 @@ ActionPressPause(ThisHotkey) {
     if !GuardInLevel("ActionPressPause", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    Logger.Debug("HotkeyActions", "ActionPressPause 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     Send "{ESC Down}"
     USleep(50)
     Send "{ESC Up}"
@@ -120,6 +123,7 @@ ActionReleasePause(ThisHotkey) {
     if !GuardInLevel("ActionReleasePause", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    Logger.Debug("HotkeyActions", "ActionReleasePause 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("pauseBattle")
     try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
 }
@@ -128,6 +132,7 @@ ActionGameSpeed(ThisHotkey) {
     if !GuardInLevel("ActionGameSpeed", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    Logger.Debug("HotkeyActions", "ActionGameSpeed 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.SendDown("changeSpeed")
     USleep(50)
     GameKeys.SendUp("changeSpeed")
@@ -143,6 +148,7 @@ Action16ms(ThisHotkey) {
     if !GuardInLevel("Action16ms", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    Logger.Debug("HotkeyActions", "Action16ms 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     delay := Integer(Config.ReadCustomFromIni("FrameSkip16msDelay"))
     Send "{ESC Down}"
     USleep(delay)
@@ -162,6 +168,7 @@ Action33ms(ThisHotkey) {
     if !GuardInLevel("Action33ms", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    Logger.Debug("HotkeyActions", "Action33ms 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     delay := Integer(Config.ReadCustomFromIni("FrameSkip33msDelay"))
     Send "{ESC Down}"
     USleep(delay)
@@ -181,6 +188,7 @@ Action166ms(ThisHotkey) {
     if !GuardInLevel("Action166ms", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    Logger.Debug("HotkeyActions", "Action166ms 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     delay := Integer(Config.ReadCustomFromIni("FrameSkip166msDelay"))
     Send "{ESC Down}"
     USleep(delay)
@@ -201,15 +209,18 @@ ActionPauseSelect(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionPauseSelect 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
     if !PosL || !PosR {
+        Logger.Warn("HotkeyActions", "ActionPauseSelect 跳过：游戏窗口不存在")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionPauseSelect 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
@@ -229,6 +240,7 @@ ActionSkill(ThisHotkey) {
     if !GuardInLevel("ActionSkill", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    Logger.Debug("HotkeyActions", "ActionSkill 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("releaseSkill")
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -242,6 +254,7 @@ ActionRetreat(ThisHotkey) {
     if !GuardInLevel("ActionRetreat", ThisHotkey)
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+    Logger.Debug("HotkeyActions", "ActionRetreat 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("retreatChar")
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -256,9 +269,11 @@ ActionOneClickSkill(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionOneClickSkill 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionOneClickSkill 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     Send "{LButton Down}"
     Send "{LButton Up}"
     USleep(State.ClickDelay)
@@ -276,9 +291,11 @@ ActionOneClickRetreat(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionOneClickRetreat 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionOneClickRetreat 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     Send "{LButton Down}"
     Send "{LButton Up}"
     USleep(State.ClickDelay)
@@ -296,15 +313,18 @@ ActionPauseSkill(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionPauseSkill 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
     if !PosL || !PosR {
+        Logger.Warn("HotkeyActions", "ActionPauseSkill 跳过：游戏窗口不存在")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionPauseSkill 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
@@ -329,15 +349,18 @@ ActionPauseRetreat(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionPauseRetreat 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
     if !PosL || !PosR {
+        Logger.Warn("HotkeyActions", "ActionPauseRetreat 跳过：游戏窗口不存在")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionPauseRetreat 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
@@ -363,15 +386,18 @@ ActionSwitchView(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionSwitchView 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
     PosL := PauseButtonPositionLeft()
     PosR := PauseButtonPositionRight()
     if !PosL || !PosR {
+        Logger.Warn("HotkeyActions", "ActionSwitchView 跳过：游戏窗口不存在")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionSwitchView 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
@@ -396,6 +422,7 @@ ActionBeginPauseSwitch(ThisHotkey) {
     IniWrite(newValue, Config.IniFile, "Main", "AutoBeginPause")
     Loader.LoadSettings()
     HotkeyController.EnableByTab(GuiManager.LastActiveTab)
+    Logger.Info("HotkeyActions", "切换开局自动暂停 → " (newValue = "1" ? "开" : "关"))
     if (newValue = "1") {
         TrayTip
         SetTimer HideTrayTip, 0
@@ -416,21 +443,23 @@ ActionBeginPause() {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     PosC := SpeedButtonPositionColor()
     if !PosC {
+        Logger.Warn("HotkeyActions", "自动暂停：游戏窗口不存在")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "自动暂停：等待倍速按钮")
     while(true) {
-        ; ToolTip("正在识别按钮！")  ; 调试代码
         if PixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBCUY, PosC.PBCLX, PosC.PBCDY, 0xffffff, 10)
         {
-            Send "{ESC Down}"
+            GameKeys.SendDown("pauseBattle")
             USleep(50)
-            Send "{ESC Up}"
-            ; ToolTip("已严肃暂停")  ; 调试代码
+            GameKeys.SendUp("pauseBattle")
+            Logger.Debug("HotkeyActions", "自动暂停：已暂停")
             ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
             isProxy := false
             TobC := TakeOverButtonPositions()
             if !TobC {
+                Logger.Warn("HotkeyActions", "自动暂停：游戏窗口不存在（代理指挥识别）")
                 State.BlackScreenDetected := false
                 State.ReadyForPause := false
                 SetTimer CheckGameStatus, 400
@@ -442,16 +471,16 @@ ActionBeginPause() {
             }
             ; 接管代理按钮“手”图标拇指
             if !ImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.HLX, TobC.ImageRegion.HUY, TobC.ImageRegion.HRX, TobC.ImageRegion.HDY, "*90 " FileExtractor.TakeOver3Path) {
-                ; ToolTip("图2识别失败")
+                Logger.Debug("HotkeyActions", "代理指挥判定：手图标识别失败")
                 isProxy := false
             }
             if isProxy {
-                Send "{ESC Down}"
+                GameKeys.SendDown("pauseBattle")
                 USleep(50)
-                Send "{ESC Up}"
-                ; ToolTip("是代理指挥，取消暂停")  ; 调试代码
+                GameKeys.SendUp("pauseBattle")
+                Logger.Debug("HotkeyActions", "代理指挥，取消暂停")
             } else {
-                ; ToolTip("没有找到代理指挥")  ; 调试代码
+                Logger.Debug("HotkeyActions", "非代理指挥，保持暂停")
             }
 
             State.BlackScreenDetected := false
@@ -468,9 +497,11 @@ ActionBeginPause() {
 ActionLButtonClick(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionLButtonClick 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionLButtonClick 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     Send "{LButton Down}"
     if InStr(ThisHotkey, "Wheel") {
         Send "{LButton Up}"
@@ -483,6 +514,7 @@ ActionLButtonClick(ThisHotkey) {
 }
 ; 放弃行动
 ActionCeaseOperations(ThisHotkey) {
+    Logger.Debug("HotkeyActions", "ActionCeaseOperations 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.SendDown("battleLeftPopup")
     USleep(50)
     GameKeys.SendUp("battleLeftPopup")
@@ -494,14 +526,17 @@ ActionCeaseOperations(ThisHotkey) {
 ActionSkip(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionSkip 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
     Pos := SkipButtonPosition()
     if !Pos {
+        Logger.Warn("HotkeyActions", "ActionSkip 跳过：游戏窗口不存在")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionSkip 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
     MouseMove Pos.PBX, Pos.PBY
@@ -520,6 +555,7 @@ ActionSkip(ThisHotkey) {
 }
 ; 返回上级菜单
 ActionBack(ThisHotkey) {
+    Logger.Debug("HotkeyActions", "ActionBack 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     Send "{ESC Down}"
     ; 勾选"使用“返回上级菜单”放弃行动"时，ESC 后补发 battleLeftPopup（还原旧版放弃行动行为）
     if (Config.ReadImportantFromIni("BackCeaseOperations") = "1") {
@@ -609,14 +645,17 @@ ActionBack(ThisHotkey) {
 ActionHarvest(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionHarvest 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
     Pos := HarvestButtonPosition()
     if !Pos {
+        Logger.Warn("HotkeyActions", "ActionHarvest 跳过：游戏窗口不存在")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionHarvest 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
     MouseMove Pos.PBX, Pos.PBY
@@ -637,14 +676,17 @@ ActionHarvest(ThisHotkey) {
 ActionCollectCollectibles(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionCollectCollectibles 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
     Pos := CollectButtonPosition()
     if !Pos {
+        Logger.Warn("HotkeyActions", "ActionCollectCollectibles 跳过：游戏窗口不存在")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionCollectCollectibles 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
     BlockInput "MouseMove"
     MouseMove Pos.PBX, Pos.PBY
@@ -664,6 +706,7 @@ ActionCollectCollectibles(ThisHotkey) {
 ; -- 卫戍协议 --
 ; 查看敌人
 ActionCheckEnemies(ThisHotkey) {
+    Logger.Debug("HotkeyActions", "ActionCheckEnemies 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("autochessViewEnemy")
     if InStr(ThisHotkey, "Wheel")
         return
@@ -671,6 +714,7 @@ ActionCheckEnemies(ThisHotkey) {
 }
 ; 调度中心
 ActionDispatchCenter(ThisHotkey) {
+    Logger.Debug("HotkeyActions", "ActionDispatchCenter 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("autochessShop")
     if InStr(ThisHotkey, "Wheel")
         return
@@ -678,6 +722,7 @@ ActionDispatchCenter(ThisHotkey) {
 }
 ; 冻结
 ActionFreeze(ThisHotkey) {
+    Logger.Debug("HotkeyActions", "ActionFreeze 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("autochessFreeze")
     if InStr(ThisHotkey, "Wheel")
         return
@@ -685,6 +730,7 @@ ActionFreeze(ThisHotkey) {
 }
 ; 刷新
 ActionRefresh(ThisHotkey) {
+    Logger.Debug("HotkeyActions", "ActionRefresh 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("autochessRefresh")
     if InStr(ThisHotkey, "Wheel")
         return
@@ -692,6 +738,7 @@ ActionRefresh(ThisHotkey) {
 }
 ; 升级
 ActionUpgrade(ThisHotkey) {
+    Logger.Debug("HotkeyActions", "ActionUpgrade 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("autochessLevelUp")
     if InStr(ThisHotkey, "Wheel")
         return
@@ -699,6 +746,7 @@ ActionUpgrade(ThisHotkey) {
 }
 ; 出售/销毁
 ActionSell(ThisHotkey) {
+    Logger.Debug("HotkeyActions", "ActionSell 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("autochessSale")
     if InStr(ThisHotkey, "Wheel")
         return
@@ -706,6 +754,7 @@ ActionSell(ThisHotkey) {
 }
 ; 准备就绪
 ActionReady(ThisHotkey) {
+    Logger.Debug("HotkeyActions", "ActionReady 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     GameKeys.Tap("autochessReady")
     if InStr(ThisHotkey, "Wheel")
         return
@@ -715,9 +764,11 @@ ActionReady(ThisHotkey) {
 ActionOneClickSell(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionOneClickSell 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionOneClickSell 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     Send "{LButton Down}"
     Send "{LButton Up}"
     USleep(State.ClickDelay)
@@ -733,9 +784,11 @@ ActionOneClickSell(ThisHotkey) {
 ActionOneClickPurchase(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     if !IsMouseInClient() {
+        Logger.Debug("HotkeyActions", "ActionOneClickPurchase 跳过：鼠标不在客户端")
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
     }
+    Logger.Debug("HotkeyActions", "ActionOneClickPurchase 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     Send "{LButton Down}"
     Send "{LButton Up}"
     USleep(60)

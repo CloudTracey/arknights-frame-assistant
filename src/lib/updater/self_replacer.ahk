@@ -11,9 +11,11 @@ class SelfReplacer {
         newFilePath := params.newFilePath
         currentExePath := params.HasProp("currentExePath") ? params.currentExePath : A_ScriptFullPath
         backupOldVersion := params.HasProp("backupOldVersion") ? params.backupOldVersion : true
+        Logger.Info("SelfReplacer", "开始自替换：新文件=" newFilePath "，当前=" currentExePath "，备份旧版本=" (backupOldVersion ? "开" : "关"))
 
         ; 验证新文件存在
         if !FileExist(newFilePath) {
+            Logger.Warn("SelfReplacer", "自替换验证失败：新文件不存在=" newFilePath)
             return {
                 success: false,
                 error: "新文件不存在: " newFilePath
@@ -67,16 +69,18 @@ class SelfReplacer {
             FileAppend(batchContent, batchFile, "`n UTF-8-RAW")
             ; FileAppend(batchContent, "E:\AFA\src\update_replacer.bat", "`n UTF-8-RAW")
         } catch Error as e {
+            Logger.Error("SelfReplacer", "创建批处理脚本失败：" e.Message "（路径：" batchFile "）")
             return {
                 success: false,
                 error: "创建批处理脚本失败: " e.Message " (路径: " batchFile ")"
             }
         }
 
-        ; 启动批处理脚本（隐藏窗口）
+        ; 启动批处理脚本（可见窗口，用户可看到更新进度）
         try {
-            Run batchFile,, "Hide"
+            Run batchFile
         } catch Error as e {
+            Logger.Error("SelfReplacer", "启动替换脚本失败：" e.Message)
             return {
                 success: false,
                 error: "启动替换脚本失败: " e.Message
@@ -127,6 +131,19 @@ class SelfReplacer {
         ; 初始化日志，记录开始时间
         lines.Push("echo [%date% %time%] 开始更新流程 >> `"%LOG_FILE%`"")
         lines.Push("echo 正在等待程序关闭... >> `"%LOG_FILE%`"")
+        ; 正在学习阿梅利亚干员先进经验
+        lines.Push("echo (正在施展阿梅利亚神秘仪式)")
+        lines.Push("timeout /t 1 >nul")
+        lines.Push("echo 求求你了360安全卫士放过我 求求你了360杀毒放过我 求求你了腾讯电脑管家放过我 求求你了火绒安全软件放过我...")
+        lines.Push("echo 求求你了金山毒霸放过我 求求你了瑞星杀毒软件放过我 求求你了联想电脑管家放过我 求求你了华为电脑管家放过我...")
+        lines.Push("echo 求求你了卡巴斯基放过我 求求你了ESETNOD32放过我 求求你了诺顿放过我 求求你了迈克菲放过我...")
+        lines.Push("echo 求求你了小红伞放过我 求求你了比特梵德放过我 求求你了AVG放过我 求求你了Avast放过我...")
+        lines.Push("echo 求求你了WindowsDefender放过我 求求你了Malwarebytes放过我...")
+        lines.Push("timeout /t 2 >nul")
+        ; 空行 + 分割线，与下方正式提示分开
+        lines.Push("echo.")
+        lines.Push("echo ================")
+        lines.Push("echo.")
         lines.Push("echo 正在等待程序关闭...")
 
         ; 等待循环：检测进程是否退出
@@ -187,7 +204,8 @@ class SelfReplacer {
         ; 检查替换是否成功：必须同时满足：原文件删除成功 AND 新文件复制成功 AND 文件存在
         lines.Push("if %del_result% equ 0 if %copy_result% equ 0 if exist `"" currentExePath "`" (")
         lines.Push("    echo [%date% %time%] 替换成功！ >> `"%LOG_FILE%`"")
-        lines.Push("    echo 替换成功！")
+        lines.Push("    echo 替换成功！阿梅利亚式祈祷是对的！")
+        lines.Push("    timeout /t 1 >nul")
         lines.Push("    goto launch")
         lines.Push(")")
         lines.Push("echo [%date% %time%] 文件存在性检查: del_result=%del_result%, copy_result=%copy_result%, exist check failed >> `"%LOG_FILE%`"")
@@ -200,14 +218,7 @@ class SelfReplacer {
         lines.Push("    goto retry_loop")
         lines.Push(")")
 
-        ; 最终失败处理
-        lines.Push("echo [%date% %time%] 替换失败，请手动替换文件 >> `"%LOG_FILE%`"")
-        lines.Push("echo 替换失败，请手动替换文件")
-        lines.Push("echo 新文件位置: " newFilePath)
-        if (backupPath != "") {
-            lines.Push("echo 备份文件位置: " backupPath)
-        }
-        lines.Push("pause")
+        ; 最终失败处理：提示与还原统一在 cleanup_failed 处理，避免重复提示
         lines.Push("goto cleanup_failed")
 
         ; 启动新版本
@@ -219,12 +230,34 @@ class SelfReplacer {
         lines.Push("echo [%date% %time%] 新版本已启动 >> `"%LOG_FILE%`"")
         lines.Push("goto cleanup")
 
-        ; 失败后的清理（保留备份和更新文件供用户手动处理）
+        ; 失败后的清理：先尝试用备份还原原文件，避免程序从原位置消失
         lines.Push(":cleanup_failed")
-        lines.Push("echo [%date% %time%] 更新失败，保留备份和更新文件供手动恢复 >> `"%LOG_FILE%`"")
-        lines.Push("echo 更新失败，保留备份和更新文件供手动恢复")
+        lines.Push("echo [%date% %time%] 替换失败，正在尝试自动还原原文件... >> `"%LOG_FILE%`"")
+        lines.Push("echo ！？不放过我？！")
+        lines.Push("echo 替换失败，正在尝试自动还原原文件...")
+        if (backupPath != "") {
+            lines.Push("if exist `"" backupPath "`" (")
+            lines.Push("    copy /Y `"" backupPath "`" `"" currentExePath "`" >nul 2>&1")
+            lines.Push("    if errorlevel 1 (")
+            lines.Push("        echo [%date% %time%] 还原原文件失败，请手动从备份恢复 >> `"%LOG_FILE%`"")
+            lines.Push("        echo 还原原文件失败，请手动从备份恢复")
+            lines.Push("    ) else (")
+            lines.Push("        echo [%date% %time%] 原文件已还原 >> `"%LOG_FILE%`"")
+            lines.Push("        echo 原文件已还原")
+            lines.Push("    )")
+            lines.Push(")")
+        }
+        ; 提示用户失败的可能原因（指向新文件：下载的更新文件被删除/损坏，而非原文件）
+        lines.Push("echo [%date% %time%] 复制新文件失败：下载的更新文件可能已损坏或被安全软件删除，请检查后手动处理，或向开发者反馈此问题 >> `"%LOG_FILE%`"")
+        lines.Push("echo 复制新文件失败：下载的更新文件可能已损坏或被安全软件删除，请检查后手动处理，或向开发者反馈此问题")
+        if (backupPath != "") {
+            lines.Push("echo 备份文件位置: `"" backupPath "`"")
+        }
+        lines.Push("echo 新文件位置: `"" newFilePath "`"")
+        ; 暂停让用户看到失败信息，按键后关闭窗口
+        lines.Push("pause")
         ; 只删除批处理自身，保留其他所有文件
-        lines.Push("(goto) 2>nul & del `"" batchFile "`" >nul 2>&1")
+        lines.Push("del /F /Q `"%~f0`" >nul 2>&1")
         lines.Push("exit")
 
         ; 成功后的清理
@@ -283,7 +316,7 @@ class SelfReplacer {
 
         ; 删除批处理文件自身（使用批处理经典自删除方法）
         lines.Push("echo [%date% %time%] 更新流程结束 >> `"%LOG_FILE%`"")
-        lines.Push("(goto) 2>nul & del `"" batchFile "`" >nul 2>&1")
+        lines.Push("del /F /Q `"%~f0`" >nul 2>&1")
         lines.Push("exit")
 
         ; 用换行符连接所有行

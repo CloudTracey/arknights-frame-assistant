@@ -127,7 +127,8 @@ class Constants {
         "HiddenTabs", "隐藏的标签页",
         "AutoBeginPause", "开局自动暂停",
         "BackCeaseOperations", "使用“返回上级菜单”放弃行动",
-        "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键"
+        "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键",
+        "DebugEnabled", "调试模式"
     )
 
     ; 自定义设置名称映射
@@ -136,7 +137,8 @@ class Constants {
         "SwitchHotkey", "启用/禁用热键",
         "FrameSkip16msDelay", "前进16ms延迟",
         "FrameSkip33msDelay", "前进33ms延迟",
-        "FrameSkip166msDelay", "前进166ms延迟"
+        "FrameSkip166msDelay", "前进166ms延迟",
+        "HoverOperate", "游戏窗口未激活时允许鼠标悬停在窗口上触发热键"
     )
 }
 
@@ -213,7 +215,8 @@ class Config {
         "HiddenTabs", "",
         "AutoBeginPause", "0",
         "BackCeaseOperations", "1",
-        "InLevelGuard", "1"
+        "InLevelGuard", "1",
+        "DebugEnabled", "0"
     )
 
     ; 内部：默认自定义设置
@@ -222,7 +225,8 @@ class Config {
         "SwitchHotkey", "",
         "FrameSkip16msDelay", "16",
         "FrameSkip33msDelay", "30",
-        "FrameSkip166msDelay", "165"
+        "FrameSkip166msDelay", "165",
+        "HoverOperate", "1"
     )
 
     ; 配置文件路径
@@ -442,6 +446,10 @@ class Config {
 
     static _SetTokenStorageStatus(status) {
         this.TokenStorageStatus := status
+        if (status = "ok")
+            Logger.Info("Config", "GitHub Token 存储状态：" status)
+        else
+            Logger.Warn("Config", "GitHub Token 存储异常：" status)
     }
 
     ; 获取面向用户的 Token 存储提示，不包含敏感数据。
@@ -486,16 +494,39 @@ class Config {
             this._CustomSettings[keyVar] := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
         }
 
-        ; 如果配置文件不存在，创建并写入默认值
+        ; 如果配置文件不存在，创建并写入默认值；已存在则回填新增的默认键（老用户升级自动补齐，如 HoverOperate）
         if (!fileExists) {
             this._EnsureConfigFileExists()
+        } else {
+            this._BackfillMissingCustomDefaults()
         }
 
         this._IsLoaded := true
     }
 
+    ; 回填配置文件中缺失的自定义设置默认键（仅针对已存在的配置文件；全新文件由 _EnsureConfigFileExists 全量写入）
+    static _BackfillMissingCustomDefaults() {
+        if this.IniFile = ""
+            this.InitPath()
+        if !FileExist(this.IniFile)
+            return
+        ; 哨兵值不会作为正常配置出现，用于区分"键不存在"与"键存在但值为空"
+        sentinel := "__AFA_MISSING_KEY__"
+        for keyVar, defaultVal in this._DefaultCustom {
+            if IniRead(this.IniFile, "Custom", keyVar, sentinel) = sentinel {
+                try IniWrite(defaultVal, this.IniFile, "Custom", keyVar)
+                catch Error as e
+                    Logger.Warn("Config", "回填自定义设置失败：" keyVar " - " e.Message)
+            }
+        }
+    }
+
     ; 确保配置文件存在并包含所有配置项
     static _EnsureConfigFileExists() {
+        ; 防御：文件已存在则直接返回（LoadFromIni 调用前已守卫，此处自检以防未来其他调用方绕过）
+        if FileExist(this.IniFile)
+            return
+        Logger.Info("Config", "配置文件不存在，创建默认配置")
         ; 确保目录存在
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
         if !DirExist(configDir)
@@ -748,6 +779,9 @@ class State {
 
     ; 关卡检测状态（LevelDetector 投票状态机维护；守卫/自动暂停二次确认消费）
     static InLevel := false
+
+    ; 游戏失焦时鼠标悬停游戏即可操作热键（#213；由 Loader.LoadSettings 从配置同步，运行时供 HotkeyContext 消费）
+    static HoverOperate := true
 
     ; 根据帧数设置更新延迟
     static UpdateDelay() {

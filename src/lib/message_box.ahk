@@ -80,6 +80,7 @@ class MessageBox {
 
     ; 内部：创建对话框
     static _CreateDialog(message, title, options, callback) {
+        Logger.Debug("MessageBox", "弹窗 title=" title " message=" message)
         ; 如果已有对话框存在，先关闭
         if (this.CurrentDialog != "") {
             try this.CurrentDialog.Destroy()
