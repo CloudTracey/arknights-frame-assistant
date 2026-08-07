@@ -230,10 +230,10 @@ class Updater {
             : VersionChecker._CheckFromGithub(localVersion)
 
         if (fallbackResult.status = "update_available" || fallbackResult.status = "up_to_date") {
-            fbUrl := fallbackResult.HasProp("downloadUrl") ? fallbackResult.downloadUrl : ""
-            Logger.Info("Updater", "备选源检查成功 status=" fallbackResult.status "，downloadUrl=" fbUrl)
+            fallbackUrl := fallbackResult.HasProp("downloadUrl") ? fallbackResult.downloadUrl : ""
+            Logger.Info("Updater", "备选源检查成功 status=" fallbackResult.status "，downloadUrl=" fallbackUrl)
             return {
-                downloadUrl: fbUrl,
+                downloadUrl: fallbackUrl,
                 expectedHash: fallbackResult.HasProp("expectedHash") ? fallbackResult.expectedHash : ""
             }
         }
