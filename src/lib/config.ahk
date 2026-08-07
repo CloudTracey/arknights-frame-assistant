@@ -137,7 +137,8 @@ class Constants {
         "SwitchHotkey", "启用/禁用热键",
         "FrameSkip16msDelay", "前进16ms延迟",
         "FrameSkip33msDelay", "前进33ms延迟",
-        "FrameSkip166msDelay", "前进166ms延迟"
+        "FrameSkip166msDelay", "前进166ms延迟",
+        "HoverOperate", "游戏窗口未激活时允许鼠标悬停在窗口上触发热键"
     )
 }
 
@@ -224,7 +225,8 @@ class Config {
         "SwitchHotkey", "",
         "FrameSkip16msDelay", "16",
         "FrameSkip33msDelay", "30",
-        "FrameSkip166msDelay", "165"
+        "FrameSkip166msDelay", "165",
+        "HoverOperate", "1"
     )
 
     ; 配置文件路径
@@ -758,6 +760,9 @@ class State {
 
     ; 关卡检测状态（LevelDetector 投票状态机维护；守卫/自动暂停二次确认消费）
     static InLevel := false
+
+    ; 游戏失焦时鼠标悬停游戏即可操作热键（#213；由 Loader.LoadSettings 从配置同步，运行时供 HotkeyContext 消费）
+    static HoverOperate := true
 
     ; 根据帧数设置更新延迟
     static UpdateDelay() {
