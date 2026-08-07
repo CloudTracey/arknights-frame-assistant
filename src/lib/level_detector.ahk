@@ -9,7 +9,7 @@ class LevelDetector {
     static VoteThreshold := 2
 
     static _PollTimer := ""  ; 轮询定时器回调引用（SetTimer 启停需用同一对象匹配，故缓存）
-    static _PollCount := 0   ; 轮询计数（节流 debug 明细用，每 10 次或状态变化记一条）
+    static _PollCount := 0   ; 轮询计数（节流 debug 明细用，每 20 次或状态变化记一条）
     static _GuardActive := false  ; 守卫轮询当前是否开启（守卫开关切换日志去重用）
 
     ; 对象配置（PixelSearch 颜色检测：区域用相对比例定位，LX/RX = ww 比例，UY/DY = wh 比例）
