@@ -284,7 +284,7 @@ class GuiManager {
         this.QuickControls.Push(checkboxBackCease)
 
         ; 仅在常规作战场景启用常规作战热键（控制 GuardInLevel 关卡检测守卫，仅"常规作战"页显示）
-        checkboxCombatGuard := this.MainGui.Add("Checkbox", "x75 y+12 h24 vInLevelGuard", " 仅在常规作战场景启用常规作战热键")
+        checkboxCombatGuard := this.MainGui.Add("Checkbox", "x75 y+12 h24 vInLevelGuard", " 仅在关卡内启用常规作战热键（实验性）")
         checkboxCombatGuard.OnEvent("Click", (*) => this.TrackChange("InLevelGuard"))
         this.MainGui["InLevelGuard"].Value := Config.GetImportant("InLevelGuard")
         this.KeybindControls.Push(checkboxCombatGuard)
