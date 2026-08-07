@@ -4,7 +4,7 @@
 ; 会把窗口外的鼠标按下误判为游戏内操作——绑定在鼠标键上的热键被误触发，且因无 ~ 前缀
 ; 在钩子层吞掉点击，导致窗口外右键无法正常到达任务栏/桌面。
 ; HotIf.htm：条件不成立时热键执行原生功能（像没有这个热键一样透传给系统）。
-; - Up 变体（守卫拦截补发）：若该键 down 已被 AFA 吞掉（InterceptedKeys 有记录），无条件放行补发 key up
+; - Up 变体（守卫拦截补发）：若该键 down 已被 AFA 主热键处理过（DownHandled 有记录），放行补发 key up
 ;   ——与窗口状态无关，解决"按住从游戏内拖出/Alt+Tab 切走后再松开"的卡键（含上次遗留的失焦边界）。
 ; - 鼠标键/滚轮：鼠标悬停在游戏窗口上才触发（窗口外点击透传给系统）。
 ; - 键盘键：游戏窗口为活动窗口，或鼠标悬停在游戏窗口上（#213：失焦时鼠标悬停游戏也能操作）才触发；
@@ -16,8 +16,9 @@ HotkeyContext(hotkeyName) {
     ; Up 变体（守卫补发型）：仅当该键的 down 已被 AFA 主热键处理过（DownHandled 有记录，无论守卫放行/拦截）
     ; 才放行补发 key up——覆盖失焦/拖出卡键；游戏外主热键不触发（down 透传）则不放行，物理 up 正常透传（打字不受影响）。
     if RegExMatch(hotkeyName, " Up$") {
-        ; 补发 up 期间钩子会捕获 Send 注入的 up，若仍放行会递归触发 Up 变体无限循环（游戏外按键失灵）
-        if KeyForward.SuppressUp
+        ; 补发 up 期间钩子会捕获 Send 注入的 up，若仍放行会递归触发 Up 变体无限循环（游戏外按键失灵）。
+        ; 仅抑制同名键（键级作用域）——全局布尔会在多键同松时误挡其它键的 Up 变体（卡键），须按键判断。
+        if KeyForward.SuppressUp.Has(pureKey)
             return false
         if KeyForward.DownHandled.Has(pureKey)
             return true
@@ -146,6 +147,7 @@ class HotkeyController {
     ; 启用热键
     static HotkeyOn(*) {
         KeyForward.DownHandled.Clear()  ; 重建前清空运行时标记（保留 CaseSense）
+        KeyForward.SuppressUp.Clear()
         HotIf(HotkeyContext)
         pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in Constants.KeyNames {
@@ -170,6 +172,7 @@ class HotkeyController {
         }
         HotkeyController.ActiveHotkeys := Map()
         KeyForward.DownHandled.Clear()
+        KeyForward.SuppressUp.Clear()
         HotIf
         if !silent
             Logger.Info("Hotkey", "热键已禁用")
