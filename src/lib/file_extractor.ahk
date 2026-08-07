@@ -91,5 +91,6 @@ class FileExtractor {
             FileInstall "resources\images\PauseButton_4.png", FileExtractor.PauseButton4Path, 1
         if (!FileExist(FileExtractor.PauseButton5Path))
             FileInstall "resources\images\PauseButton_5.png", FileExtractor.PauseButton5Path, 1
+        Logger.Debug("FileExtractor", "嵌入资源提取完成：" FileExtractor.ResourcesDir)
     }
 }

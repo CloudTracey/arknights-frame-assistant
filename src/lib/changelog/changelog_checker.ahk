@@ -10,11 +10,14 @@ class ChangelogChecker {
         currentVersion := Version.Get()
         dismissedVersion := Config.GetImportant("DismissedChangelogVersion")
 
-        if (dismissedVersion = currentVersion)
+        if (dismissedVersion = currentVersion) {
+            Logger.Debug("Changelog", "已忽略当前版本 " currentVersion " 的公告，跳过")
             return
+        }
 
         if (!FileExist(this.ChangelogFile)) {
             ; 首次启动 / 从旧版本升级：changelog.json 不存在，自动获取
+            Logger.Info("Changelog", "changelog.json 不存在，自动获取公告缓存")
             VersionChecker.FetchChangelogCache()
         }
 
@@ -26,6 +29,7 @@ class ChangelogChecker {
         if (body = "")
             return
 
+        Logger.Info("Changelog", "显示更新公告，当前版本 " currentVersion)
         ChangelogUI.Show(currentVersion, body)
     }
 
