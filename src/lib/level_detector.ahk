@@ -8,10 +8,9 @@ class LevelDetector {
     ; 投票阈值（3 个对象命中 ≥2 置位）
     static VoteThreshold := 2
 
-    ; 调试模式：测试时在屏幕中央显示投票 ToolTip + 记录详细日志（测试完成，关闭）
-    static DebugMode := false
-    static _ToolTipActive := false
     static _PollTimer := ""  ; 轮询定时器回调引用（SetTimer 启停需用同一对象匹配，故缓存）
+    static _PollCount := 0   ; 轮询计数（节流 debug 明细用，每 10 次或状态变化记一条）
+    static _GuardActive := false  ; 守卫轮询当前是否开启（守卫开关切换日志去重用）
 
     ; 对象配置（PixelSearch 颜色检测：区域用相对比例定位，LX/RX = ww 比例，UY/DY = wh 比例）
     ; Colors: [{C: 0xRRGGBB 目标颜色, V: 容差 0-255}]，多个颜色 OR；任一命中即算对象命中
@@ -34,6 +33,11 @@ class LevelDetector {
 
     ; 守卫开关：开启→启动每秒轮询；关闭→停止轮询（不消耗像素检测）
     static SetGuardEnabled(enabled) {
+        ; 状态未变化则跳过（Init 与 SyncGuardSetting 会在启动时重复调用同一状态）
+        if (this._GuardActive = enabled)
+            return
+        this._GuardActive := enabled
+        Logger.Info("LevelDetector", "关卡守卫 " (enabled ? "开启" : "关闭"))
         if enabled {
             if (this._PollTimer = "")
                 this._PollTimer := LevelDetector.Poll.Bind(LevelDetector)
@@ -68,6 +72,7 @@ class LevelDetector {
 
     ; 轮询投票
     static Poll() {
+        this._PollCount += 1
         ; 游戏进程不存在 → 复位关卡状态
         if !ProcessExist("Arknights.exe") {
             State.InLevel := false
@@ -91,18 +96,12 @@ class LevelDetector {
                 detail .= obj.Name ": " (matched ? "✓" : "✗") "  "
             }
             newVal := hitCount >= this.VoteThreshold
-            ; 日志只在状态变化时记录（含各对象识别详情），避免每秒刷屏
+            ; 状态切换：Info（含各对象识别详情）
             if (newVal != State.InLevel)
-                Logger.Info("LevelDetector", "关卡状态切换：" (newVal ? "进入关卡" : "退出关卡") "（投票 " hitCount "/" this.Objects.Length " " detail "）")
-            ; 调试模式：ToolTip 直观实时显示各对象识别情况；关闭时清除 ToolTip
-            ; ToolTip 放屏幕中央，避开四角/顶部的检测区域（否则会读到 ToolTip 像素干扰识别）
-            if (this.DebugMode) {
-                this._ToolTipActive := true
-                ToolTip("AFA 关卡检测  " (newVal ? "●关卡内" : "○关卡外") "  " hitCount "/" this.Objects.Length "`n" detail, A_ScreenWidth // 2 - 160, A_ScreenHeight // 2 - 60, 2)
-            } else if (this._ToolTipActive) {
-                this._ToolTipActive := false
-                ToolTip(, , , 2)
-            }
+                Logger.Info("LevelDetector", "关卡状态切换：" (newVal ? "进入关卡" : "退出关卡") "（识别结果 " hitCount "/" this.Objects.Length " " detail "）")
+            ; 轮询明细：节流 Debug（每 10 次轮询或状态变化时记一条，保护 debug 文件不被 180 条/分钟刷掉）
+            if (newVal != State.InLevel || Mod(this._PollCount, 20) = 0)
+                Logger.Debug("LevelDetector", "识别结果 " hitCount "/" this.Objects.Length " " detail)
             State.InLevel := newVal
         } finally {
             if (oldCtx)
