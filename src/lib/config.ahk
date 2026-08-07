@@ -502,6 +502,9 @@ class Config {
 
     ; 确保配置文件存在并包含所有配置项
     static _EnsureConfigFileExists() {
+        ; 防御：文件已存在则直接返回（LoadFromIni 调用前已守卫，此处自检以防未来其他调用方绕过）
+        if FileExist(this.IniFile)
+            return
         Logger.Info("Config", "配置文件不存在，创建默认配置")
         ; 确保目录存在
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
