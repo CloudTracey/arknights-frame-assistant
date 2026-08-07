@@ -45,7 +45,7 @@ CheckGameStatus() {
             }
             if (missCount <= 1) {
                 State.BlackScreenDetected := true
-                Logger.Debug("GameMonitor", "检测到黑屏，可能是进入关卡前的加载，开始识别 Loading")
+                Logger.Info("GameMonitor", "检测到黑屏，可能是进入关卡前的加载，开始识别 Loading")
                 SetTimer StopSearchLoadingTimeout, -8000
                 SetTimer CheckGameStatus, 200
             }
