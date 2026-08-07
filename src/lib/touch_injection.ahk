@@ -132,8 +132,8 @@ class TouchInjector {
 }
 
 ; == 初始化 ==
-; if !TouchInjector.Init(3, 1)
-    ; Logger.Error("TouchInjector", "触控注入初始化失败，错误码=" TouchInjector.LastError)
+; 触控注入初始化：当前该功能存在兼容性问题（Init 可能失败），失败处理待后续完善
+TouchInjector.Init(3, 1)
 MouseGetPos &xpos, &ypos
 TouchInjector.Move(xpos, ypos)
 MouseMove xpos, ypos
