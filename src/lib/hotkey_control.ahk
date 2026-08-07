@@ -7,8 +7,9 @@
 ; - Up 变体（守卫拦截补发）：若该键 down 已被 AFA 主热键处理过（DownHandled 有记录），放行补发 key up
 ;   ——与窗口状态无关，解决"按住从游戏内拖出/Alt+Tab 切走后再松开"的卡键（含上次遗留的失焦边界）。
 ; - 鼠标键/滚轮：鼠标悬停在游戏窗口上才触发（窗口外点击透传给系统）。
-; - 键盘键：游戏窗口为活动窗口，或鼠标悬停在游戏窗口上（#213：失焦时鼠标悬停游戏也能操作）才触发；
-;   动作层统一包装负责激活游戏窗口并恢复原窗口。
+; - 键盘键：游戏窗口为活动窗口，或（启用失焦悬停操作时）鼠标悬停在游戏窗口上才触发——失焦悬停开关
+;   （State.HoverOperate，由"自定义"页复选框控制，保存/应用后生效）关闭后键盘键仅当游戏为活动窗口时才触发；
+;   动作层统一包装负责激活游戏窗口并恢复原窗口。鼠标键/滚轮不受开关影响，仍只受悬停判定约束。
 HotkeyContext(hotkeyName) {
     pureKey := KeyForward.PureKeyName(hotkeyName)
     if (pureKey = "")
@@ -26,11 +27,11 @@ HotkeyContext(hotkeyName) {
     ; 鼠标键/滚轮：悬停判定
     if (pureKey ~= "i)^(lbutton|rbutton|mbutton|xbutton1|xbutton2|wheel)")
         return IsMouseInClient()
-    ; 键盘键：游戏窗口为活动窗口，或鼠标悬停在游戏窗口上（#213：失焦时鼠标悬停游戏也能操作）才触发；
+    ; 键盘键：游戏窗口为活动窗口，或（启用失焦悬停操作时）鼠标悬停在游戏窗口上才触发；
     ; 动作层统一包装负责激活游戏窗口并恢复原窗口（判定层不做副作用）
     if WinActive("ahk_exe Arknights.exe")
         return true
-    return IsMouseInClient()
+    return State.HoverOperate && IsMouseInClient()
 }
 
 class HotkeyController {

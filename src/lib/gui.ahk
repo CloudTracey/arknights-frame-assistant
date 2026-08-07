@@ -284,7 +284,7 @@ class GuiManager {
         this.QuickControls.Push(checkboxBackCease)
 
         ; 仅在常规作战场景启用常规作战热键（控制 GuardInLevel 关卡检测守卫，仅"常规作战"页显示）
-        checkboxCombatGuard := this.MainGui.Add("Checkbox", "x75 y+12 h24 vInLevelGuard", " 仅在常规作战场景启用常规作战热键")
+        checkboxCombatGuard := this.MainGui.Add("Checkbox", "x75 y+12 h24 vInLevelGuard", " 仅在关卡内启用常规作战热键（实验性）")
         checkboxCombatGuard.OnEvent("Click", (*) => this.TrackChange("InLevelGuard"))
         this.MainGui["InLevelGuard"].Value := Config.GetImportant("InLevelGuard")
         this.KeybindControls.Push(checkboxCombatGuard)
@@ -599,6 +599,12 @@ class GuiManager {
         editFrameSkip3.OnEvent("Change", (*) => this.TrackChange("FrameSkip166msDelay"))
         this.CustomControls.Push(txtFrameSkip3)
         this.CustomControls.Push(editFrameSkip3)
+
+        ; 失焦悬停操作热键开关（#213 功能开关，默认开启；保存/应用后生效）。整行通栏 w290，标签不换行。
+        checkboxHoverOperate := this.MainGui.Add("Checkbox", "xs y+14 w290 h24 vHoverOperate", " 游戏窗口未激活时允许鼠标悬停在窗口上触发热键")
+        checkboxHoverOperate.OnEvent("Click", (*) => this.TrackChange("HoverOperate"))
+        this.MainGui["HoverOperate"].Value := Config.GetCustom("HoverOperate")
+        this.CustomControls.Push(checkboxHoverOperate)
 
         ; 标签页可见性与顺序（右列标题动态对齐左列第一项）
         tabManagerTitle := this.MainGui.Add("Text", "x" this.TabManagerX " y" this.TabManagerTitleY " w" this.TabManagerRowWidth
@@ -978,6 +984,10 @@ class GuiManager {
                 this._InitialValues[key] := this.MainGui[key].Value
             }
         }
+        ; 失焦悬停操作开关
+        try {
+            this._InitialValues["HoverOperate"] := this.MainGui["HoverOperate"].Value
+        }
     }
 
     ; 跟踪控件变更——与初始快照对比，决定按钮启用/禁用
@@ -1025,6 +1035,10 @@ class GuiManager {
                     if (this.MainGui[key].Value != this._InitialValues[key])
                         return
                 }
+            }
+            try {
+                if (this.MainGui["HoverOperate"].Value != this._InitialValues["HoverOperate"])
+                    return
             }
             ; 全部一致
             this.SetIsModifiedFalse()
