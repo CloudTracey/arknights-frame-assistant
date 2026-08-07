@@ -444,6 +444,10 @@ class Config {
 
     static _SetTokenStorageStatus(status) {
         this.TokenStorageStatus := status
+        if (status = "ok")
+            Logger.Info("Config", "GitHub Token 存储状态：" status)
+        else
+            Logger.Warn("Config", "GitHub Token 存储异常：" status)
     }
 
     ; 获取面向用户的 Token 存储提示，不包含敏感数据。
@@ -498,6 +502,7 @@ class Config {
 
     ; 确保配置文件存在并包含所有配置项
     static _EnsureConfigFileExists() {
+        Logger.Info("Config", "配置文件不存在，创建默认配置")
         ; 确保目录存在
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
         if !DirExist(configDir)
