@@ -70,14 +70,12 @@ class VersionChecker {
         this.DebugMode := InStr(Version.Get(), "alpha") > 0
     }
 
-    ; 调试日志解锁：alpha 构建恒开，正式版随用户「调试模式」开关（动态读 INI，配置变更后即时生效）
+    ; 调试日志解锁：alpha 构建恒开，正式版随用户「调试模式」开关
+    ; 直接读 Loader.LoadSettings 已同步的运行时开关，避免每次 INI 重读、并与 Logger.DebugEnabled 保持一致（无双源）
     static IsDebugLogging() {
         if (this.DebugMode)
             return true
-        try {
-            return Config.ReadImportantFromIni("DebugEnabled") == "1"
-        } catch
-            return false
+        return Logger.DebugEnabled
     }
 
     ; 内部：输出调试日志
