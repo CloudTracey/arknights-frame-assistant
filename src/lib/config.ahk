@@ -494,12 +494,31 @@ class Config {
             this._CustomSettings[keyVar] := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
         }
 
-        ; 如果配置文件不存在，创建并写入默认值
+        ; 如果配置文件不存在，创建并写入默认值；已存在则回填新增的默认键（老用户升级自动补齐，如 HoverOperate）
         if (!fileExists) {
             this._EnsureConfigFileExists()
+        } else {
+            this._BackfillMissingCustomDefaults()
         }
 
         this._IsLoaded := true
+    }
+
+    ; 回填配置文件中缺失的自定义设置默认键（仅针对已存在的配置文件；全新文件由 _EnsureConfigFileExists 全量写入）
+    static _BackfillMissingCustomDefaults() {
+        if this.IniFile = ""
+            this.InitPath()
+        if !FileExist(this.IniFile)
+            return
+        ; 哨兵值不会作为正常配置出现，用于区分"键不存在"与"键存在但值为空"
+        sentinel := "__AFA_MISSING_KEY__"
+        for keyVar, defaultVal in this._DefaultCustom {
+            if IniRead(this.IniFile, "Custom", keyVar, sentinel) = sentinel {
+                try IniWrite(defaultVal, this.IniFile, "Custom", keyVar)
+                catch Error as e
+                    Logger.Warn("Config", "回填自定义设置失败：" keyVar " - " e.Message)
+            }
+        }
     }
 
     ; 确保配置文件存在并包含所有配置项
