@@ -79,6 +79,7 @@ class Updater {
                 }
 
                 ; 发布更新可用事件
+                Logger.Info("Updater", "发布更新可用：新版本 " checkResult.remoteVersion "，manual=" isManual)
                 EventBus.Publish("UpdateAvailable", {
                     localVersion: checkResult.localVersion,
                     remoteVersion: checkResult.remoteVersion,
@@ -93,6 +94,7 @@ class Updater {
                 if (!isManual) {
                     fallbackResult := VersionChecker._CheckFromDomestic(checkResult.localVersion)
                     if (fallbackResult.status = "update_available") {
+                        Logger.Info("Updater", "自动降级到国内源成功，发现新版本 " fallbackResult.remoteVersion)
                         EventBus.Publish("UpdateAvailable", {
                             localVersion: fallbackResult.localVersion,
                             remoteVersion: fallbackResult.remoteVersion,
@@ -115,6 +117,7 @@ class Updater {
                 if (!isManual) {
                     fallbackResult := VersionChecker._CheckFromDomestic(checkResult.localVersion)
                     if (fallbackResult.status = "update_available") {
+                        Logger.Info("Updater", "自动降级到国内源成功，发现新版本 " fallbackResult.remoteVersion)
                         EventBus.Publish("UpdateAvailable", {
                             localVersion: fallbackResult.localVersion,
                             remoteVersion: fallbackResult.remoteVersion,
@@ -195,6 +198,7 @@ class Updater {
             UpdateUI.ShowFallbackNotice()
             fallbackInfo := this._GetFallbackDownloadInfo(params)
             if (fallbackInfo.downloadUrl != "") {
+                Logger.Info("Updater", "同源重试耗尽，降级备选源下载")
                 UpdateUI.CloseDownloadingDialog()
                 fallbackParams := {
                     downloadUrl: fallbackInfo.downloadUrl,
@@ -226,11 +230,14 @@ class Updater {
             : VersionChecker._CheckFromGithub(localVersion)
 
         if (fallbackResult.status = "update_available" || fallbackResult.status = "up_to_date") {
+            fbUrl := fallbackResult.HasProp("downloadUrl") ? fallbackResult.downloadUrl : ""
+            Logger.Info("Updater", "备选源检查成功 status=" fallbackResult.status "，downloadUrl=" fbUrl)
             return {
-                downloadUrl: fallbackResult.HasProp("downloadUrl") ? fallbackResult.downloadUrl : "",
+                downloadUrl: fbUrl,
                 expectedHash: fallbackResult.HasProp("expectedHash") ? fallbackResult.expectedHash : ""
             }
         }
+        Logger.Warn("Updater", "备选源检查失败 status=" fallbackResult.status)
         return {downloadUrl: "", expectedHash: ""}
     }
 
@@ -267,13 +274,16 @@ class Updater {
         })
 
         if (!replaceResult.success) {
+            Logger.Error("Updater", "自替换启动失败：" replaceResult.error)
             MessageBox.Error("启动更新失败：`n" replaceResult.error, "更新失败")
+        } else {
+            Logger.Info("Updater", "自替换已启动，即将退出程序")
         }
-        ; 成功时会自动退出程序
     }
 
     ; 处理忽略此版本
     static HandleUpdateIgnored(data) {
+        Logger.Info("Updater", "用户忽略版本 " data.remoteVersion " 的更新提示")
         ; 记录忽略的版本号
         Config.SetImportant("LastDismissedVersion", data.remoteVersion)
         saveResult := Config.SaveAllToIni()

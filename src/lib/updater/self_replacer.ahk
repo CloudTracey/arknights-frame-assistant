@@ -11,9 +11,11 @@ class SelfReplacer {
         newFilePath := params.newFilePath
         currentExePath := params.HasProp("currentExePath") ? params.currentExePath : A_ScriptFullPath
         backupOldVersion := params.HasProp("backupOldVersion") ? params.backupOldVersion : true
+        Logger.Info("SelfReplacer", "开始自替换：新文件=" newFilePath "，当前=" currentExePath "，备份旧版本=" (backupOldVersion ? "开" : "关"))
 
         ; 验证新文件存在
         if !FileExist(newFilePath) {
+            Logger.Warn("SelfReplacer", "自替换验证失败：新文件不存在=" newFilePath)
             return {
                 success: false,
                 error: "新文件不存在: " newFilePath
@@ -67,6 +69,7 @@ class SelfReplacer {
             FileAppend(batchContent, batchFile, "`n UTF-8-RAW")
             ; FileAppend(batchContent, "E:\AFA\src\update_replacer.bat", "`n UTF-8-RAW")
         } catch Error as e {
+            Logger.Error("SelfReplacer", "创建批处理脚本失败：" e.Message "（路径：" batchFile "）")
             return {
                 success: false,
                 error: "创建批处理脚本失败: " e.Message " (路径: " batchFile ")"
@@ -77,6 +80,7 @@ class SelfReplacer {
         try {
             Run batchFile
         } catch Error as e {
+            Logger.Error("SelfReplacer", "启动替换脚本失败：" e.Message)
             return {
                 success: false,
                 error: "启动替换脚本失败: " e.Message
