@@ -50,6 +50,7 @@ class TouchInjector {
         result := DllCall("User32.dll\InjectTouchInput", "UInt", 1, "Ptr", buf, "Int")
         if (!result) {
             this.LastError := A_LastError
+            Logger.Warn("TouchInjector", "InjectTouchInput 失败，错误码=" this.LastError)
             return false
         }
         this.LastError := 0
@@ -73,10 +74,12 @@ class TouchInjector {
     static Down(x?, y?) {
         if (!this._Initialized) {
             this.LastError := 87
+            Logger.Warn("TouchInjector", "Down 失败：未初始化")
             return false
         }
         if (this._Down) {
             this.LastError := 87
+            Logger.Warn("TouchInjector", "Down 失败：重复按下")
             return false
         }
         this._ResolveCoord(x?, y?)
@@ -90,6 +93,7 @@ class TouchInjector {
     static Up(x?, y?) {
         if (!this._Initialized) {
             this.LastError := 87
+            Logger.Warn("TouchInjector", "Up 失败：未初始化")
             return false
         }
 
@@ -113,6 +117,7 @@ class TouchInjector {
     static Move(x?, y?) {
         if (!this._Initialized) {
             this.LastError := 87
+            Logger.Warn("TouchInjector", "Move 失败：未初始化")
             return false
         }
 
