@@ -5,9 +5,10 @@ class KeyForward {
     ; down 已被 AFA 主热键处理过的键（运行时标记，GuardInLevel 记录）：Up 变体据此决定是否放行补发 key up
     ; ——覆盖守卫放行/拦截两路径的失焦/拖出卡键；游戏外主热键不触发则不记录，Up 变体不放行，物理 up 正常透传（打字不受影响）。
     static DownHandled := Map()
-    ; 补发 up 期间的递归抑制标志：ActionUpForward 的 Send 补发会被钩子重新捕获触发 Up 变体，
-    ; 若 Up 变体继续放行会无限循环（导致游戏外按键失灵）。置位时 HotkeyContext/ActionUpForward 均不再放行/补发。
-    static SuppressUp := false
+    ; 补发 up 期间的递归抑制记录（按键级，pureKey→true）：ActionUpForward 的 Send 补发会被钩子重新捕获触发同名 Up 变体，
+    ; 若继续放行会无限循环（导致游戏外按键失灵）。仅抑制正在补发的同名键，不误挡同时松开的其它键——
+    ; 全局布尔会把其它键的物理 Up 也挡掉（HotkeyContext 条件失败→被吞→卡键，见多键同松竞态）。
+    static SuppressUp := Map()
 
     ; 提取纯键名（去除 ~*$ 前缀、修饰符与 Up 后缀；保留左右修饰键信息 <SHIFT→LShift、>SHIFT→RShift）
     static PureKeyName(ThisHotkey) {
@@ -75,10 +76,10 @@ class KeyForward {
         pureKey := this.PureKeyName(ThisHotkey)
         if (pureKey == "")
             return
-        ; 防递归：Send 补发的 up 会被钩子重新捕获触发本变体，置位期间直接返回
-        if KeyForward.SuppressUp
+        ; 防递归：Send 补发的 up 会被钩子重新捕获触发本变体，补发期间同名键直接返回（键级作用域，不挡其它键）
+        if KeyForward.SuppressUp.Has(pureKey)
             return
-        KeyForward.SuppressUp := true
+        KeyForward.SuppressUp[pureKey] := true
         try {
             Send "{" pureKey " Up}"
             ; 关卡内路径未走 ForwardOriginalKey，flag 不存在；Delete 对不存在的键会抛 UnsetItemError，需先检查
@@ -90,13 +91,14 @@ class KeyForward {
         } catch Error as e {
             Logger.Exception("KeyForward", e, "透传 Up 失败：key=" pureKey)
         } finally {
-            KeyForward.SuppressUp := false
+            KeyForward.SuppressUp.Delete(pureKey)
         }
     }
 }
 ; AHK 热键名称大小写不敏感，状态表采用相同语义。
 KeyForward.InterceptedKeys.CaseSense := false
 KeyForward.DownHandled.CaseSense := false
+KeyForward.SuppressUp.CaseSense := false
 
 ; == 功能实现 ==
 ; -- 常规作战 --
