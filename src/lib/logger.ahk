@@ -97,8 +97,10 @@ class Logger {
                 return
             this.ConsoleEnabled := true
             try {
-                if (!DllCall("Kernel32\AllocConsole"))
+                if (!DllCall("Kernel32\AllocConsole")) {
+                    this.ConsoleEnabled := false  ; 未分配控制台，复位状态，避免 CloseConsole 误调 FreeConsole 脱离调用方终端
                     return  ; 已有控制台的进程 → 静默降级
+                }
                 DllCall("Kernel32\SetConsoleTitleW", "WStr", "AFA 调试日志")
                 ; 置灰关闭按钮：X 按钮触发 CTRL_CLOSE_EVENT，默认终止进程且无法可靠拦截
                 consoleHwnd := DllCall("Kernel32\GetConsoleWindow", "Ptr")
