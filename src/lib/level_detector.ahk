@@ -99,7 +99,7 @@ class LevelDetector {
             ; 状态切换：Info（含各对象识别详情）
             if (newVal != State.InLevel)
                 Logger.Info("LevelDetector", "关卡状态切换：" (newVal ? "进入关卡" : "退出关卡") "（识别结果 " hitCount "/" this.Objects.Length " " detail "）")
-            ; 轮询明细：节流 Debug（每 10 次轮询或状态变化时记一条，保护 debug 文件不被 180 条/分钟刷掉）
+            ; 轮询明细：节流 Debug（每 20 次轮询或状态变化时记一条）
             if (newVal != State.InLevel || Mod(this._PollCount, 20) = 0)
                 Logger.Debug("LevelDetector", "识别结果 " hitCount "/" this.Objects.Length " " detail)
             State.InLevel := newVal
