@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Win32文档**: `docs/win_docs/` 目录包含项目所需的Windows API 文档，开发时优先读取 `win_docs/` 下的对应 `.md` 文件
 - **入口文件**: `src/main.ahk`
 - 没有编译步骤 — AHK 脚本可直接运行。发布时用 AutoHotkey 编译器打包为 exe。
-- 不要尝试自己编译或者启动脚本，如有需要测试验证的项请告知用户，由用户操作并反馈
+- 默认不编译或启动 AFA；只有用户明确要求构建时才使用已验证的本地 AutoHotkey/Ahk2Exe 工具。涉及 GUI、提权、计划任务和真实游戏联动的验收仍由用户操作并反馈
 - 没有自动化测试框架，所有测试为手工验证。每次完成工作后，调用 `test-checklist` skill 生成测试清单，逐项引导用户完成手工验证。测试清单放在 `test/` 目录，格式参考 `test/template/test_template.md`。
 - 不使用worktree进行开发
 - 提前查看.gitignore，以确认哪些更改不需要commit
@@ -63,7 +63,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `updater/` | 自动更新全流程：version_checker（GitHub API + 国内源 CDN 双源检查，含降级机制）→ downloader → self_replacer（生成批处理自替换）→ updater_manager（协调器，含下载降级逻辑）→ updater_ui。`VersionChecker` 在检查更新时从 GitHub Releases API 提取版本 body 和发布日期，缓存到 `changelog.json`，并构建 changelogBody 通过 `UpdateAvailable` 事件传递 |
 | `changelog/` | 更新公告检查和显示。`changelog_checker.ahk` 从 `changelog.json` 缓存读取所有 release 内容（按版本降序），`changelog_ui.ahk` 用只读 Edit 控件显示原始 Markdown。`changelog.ahk` 的 `ChangelogData` 类已清空，保留骨架仅用于向后兼容 |
 | `game_launcher.ahk` | 随 AFA 自动启动游戏。`CheckGamePath()` 识别游戏路径，`ProcessGetPath` 失败时降级到 WMI 查询（`_GetProcessPathByWmi`） |
-| `game_auto_start.ahk` | 随明日方舟启动自动启动小助手（`GameAutoStartManager` 类）。`Enable()` 先用 auditpol 开启 Windows"进程创建"安全审核，再通过 Task Scheduler（`Schedule.Service` COM）注册隐藏计划任务——监听 Security 日志 4688 事件（`NewProcessName` 匹配游戏完整路径 + `SubjectUserSid` 匹配当前用户 SID），触发时以交互式令牌运行 AFA（参数 `--game-autostart`）。`Disable()` 删除当前用户的计划任务（保留审核开启状态）。`Reconcile()` 启动时校准审核与任务状态。任务按用户 SID 独立命名（`ArknightsFrameAssistant-AutoStartWithGame-{SID}`） |
+| `game_auto_start.ahk` | 随明日方舟启动自动启动小助手（`GameAutoStartManager` 类）。审核事务临时启用 `SeSecurityPrivilege`，通过 `AuditQuerySystemPolicy` 读取优先，仅在成功审核缺失时调用 `AuditSetSystemPolicy`，复查后恢复令牌权限原状态；错误 1450 按 250/750ms 有限重试。计划任务按动作、参数、工作目录、事件订阅、主体和设置做语义比较，一致时不重写，缺失或漂移时才修复。手动启动执行校准；`--game-autostart` 触发启动在配置开启时跳过校准，配置关闭时尽力删除遗留任务后退出。启动校准失败保留配置和任务，仅在 GUI 就绪后显示一次托盘通知；设置页显式保存仍严格失败且不持久化。`Disable()` 只删除当前用户任务并保留系统审核。任务按 SID 独立命名（`ArknightsFrameAssistant-AutoStartWithGame-{SID}`） |
 | `message_box.ahk` | 自定义消息框（`MessageBox` 类），替代原生 `MsgBox`。支持同步/异步模式、多种图标和按钮组合，窗口通过忙等循环实现同步 |
 | `level_detector.ahk` | 关卡检测投票状态机（`LevelDetector` 类）。每 333ms 轮询对 3 个关卡内专属对象（关卡内文本/退出按钮/暂停按钮）做 PixelSearch 颜色检测（区域用相对比例定位，低分辨率时文本容差放宽到 20），命中 ≥2 个 → `State.InLevel=true`，<2 → `false`。维护守卫判定依据；守卫关闭（`InLevelGuard=0`）时停止轮询并强制 `InLevel=true` |
 | `game_monitor.ahk` | 三合一游戏状态监控：(1) **自动退出**：游戏进程退出时自动退出 AFA；(2) **自动开局暂停**：通过 17 点全屏黑屏检测 → 三条扫描线 Loading 识别 → 暂停按钮颜色识别的三阶段状态机，在进关卡时自动暂停；(3) 定时器频率随状态动态调整（400ms → 黑屏后 200ms → 8 秒超时恢复 400ms）。包含 `LoadingPosition()`、`BlackScreenPoints()`、`StopSearchLoading()` 三个辅助函数 |
