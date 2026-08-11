@@ -128,7 +128,7 @@ class Logger {
                 this._EchoToConsole("INFO", "", 0x09)
                 this._EchoToConsole("INFO", "===== AFA 调试日志控制台已打开 =====", 0x09)
                 this._EchoToConsole("INFO", "调试模式已启用：日志实时显示并持久化到日志文件", 0x09)
-                this._EchoToConsole("INFO", "如需关闭：设置 → 其他 → 日志，取消勾选「启用调试模式」并应用", 0x09)
+                this._EchoToConsole("INFO", "如需关闭：其他设置 → 日志，取消勾选「启用调试模式」并应用", 0x09)
                 this._EchoToConsole("INFO", "----- 以下为此前的最近日志 -----")
                 for bufferedLine in this.RecentLines {
                     lvl := this._ExtractLevelFromLine(bufferedLine)

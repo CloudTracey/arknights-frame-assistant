@@ -45,7 +45,7 @@ CheckGameStatus() {
             }
             if (missCount <= 1) {
                 State.BlackScreenDetected := true
-                Logger.Debug("GameMonitor", "检测到黑屏，可能是进入关卡前的加载，开始识别 Loading")
+                Logger.Info("GameMonitor", "检测到黑屏，可能是进入关卡前的加载，开始识别 Loading")
                 SetTimer StopSearchLoadingTimeout, -8000
                 SetTimer CheckGameStatus, 200
             }
@@ -61,11 +61,11 @@ CheckGameStatus() {
             }
             line1 := scanLines[1]
             if PixelSearch(&FoundX, &FoundY, line1.lx, line1.y, line1.rx, line1.y, 0xA60000, 50) {
-                Logger.Debug("GameMonitor", "识别到红色按钮，停止 Loading 搜索")
+                Logger.Info("GameMonitor", "识别到红色按钮，停止 Loading 搜索")
                 SetTimer StopSearchLoadingTimeout, 0
                 State.BlackScreenDetected := false
             } else if PixelSearch(&FoundX, &FoundY, line1.lx, line1.y, line1.rx, line1.y, 0x0070a3, 50) {
-                Logger.Debug("GameMonitor", "识别到蓝色按钮，停止 Loading 搜索")
+                Logger.Info("GameMonitor", "识别到蓝色按钮，停止 Loading 搜索")
                 SetTimer StopSearchLoadingTimeout, 0
                 State.BlackScreenDetected := false
             } else {
@@ -77,7 +77,7 @@ CheckGameStatus() {
                     }
                 }
                 if (allWhite) {
-                    Logger.Debug("GameMonitor", "识别到白色 Loading，准备自动暂停")
+                    Logger.Info("GameMonitor", "识别到白色 Loading，准备自动暂停")
                     State.ReadyForPause := true
                     SetTimer StopSearchLoadingTimeout, 0
                     SetTimer ActionBeginPause, -2000
