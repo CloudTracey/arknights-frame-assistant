@@ -81,7 +81,7 @@ jobs:
       - name: Upload AFA.exe and sha256.txt to /latest (stable only)
         if: github.event_name != 'workflow_dispatch' && steps.channel.outputs.name == 'stable'
         run: |
-          coscmd upload AFA.exe /latest/AFA.exe
+          coscmd upload AFA.exe /latest/AFA.exe -H "{'Content-Disposition':'attachment; filename=\"AFA.exe\"'}"
           printf '%s\n' "${{ steps.download.outputs.sha256 }}" > sha256.txt
           coscmd upload sha256.txt /latest/sha256.txt
 
@@ -131,7 +131,7 @@ jobs:
           tccli configure set region ${{ secrets.COS_REGION }}
           DOMAIN="${{ secrets.CDN_DOMAIN }}"
           if [ "${{ steps.channel.outputs.name }}" = "stable" ]; then
-            PATHS="[\"https://${DOMAIN}/latest\", \"https://${DOMAIN}/latest/AFA.exe\", \"https://${DOMAIN}/latest/sha256.txt\", \"https://${DOMAIN}/stable/version.json\", \"https://${DOMAIN}/beta/version.json\"]"
+            PATHS="[\"https://${DOMAIN}/latest\", \"https://${DOMAIN}/latest/AFA.exe\", \"https://${DOMAIN}/latest/sha256.txt\", \"https://${DOMAIN}/sha256\", \"https://${DOMAIN}/stable/version.json\", \"https://${DOMAIN}/beta/version.json\"]"
           else
             PATHS="[\"https://${DOMAIN}/stable/version.json\", \"https://${DOMAIN}/beta/version.json\"]"
           fi
