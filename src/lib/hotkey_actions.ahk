@@ -108,11 +108,9 @@ ActionPressPause(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Logger.Debug("HotkeyActions", "ActionPressPause 执行，key=" KeyForward.PureKeyName(ThisHotkey))
-    Critical
     Send "{ESC Down}"
     USleep(50)
     Send "{ESC Up}"
-    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -135,11 +133,9 @@ ActionGameSpeed(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Logger.Debug("HotkeyActions", "ActionGameSpeed 执行，key=" KeyForward.PureKeyName(ThisHotkey))
-    Critical
     GameKeys.SendDown("changeSpeed")
     USleep(50)
     GameKeys.SendUp("changeSpeed")
-    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
