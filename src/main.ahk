@@ -121,13 +121,14 @@ Logger.Info("Startup", "配置加载完成，版本=" Version.Get())
 State.StartedByGameAutoStart := startedByGameAutoStart
 autoStartResult := GameAutoStartManager.Reconcile()
 if (!autoStartResult.success) {
+    autoStartResult.degraded := true
     Logger.Error("GameAutoStart", "启动时校准失败：" autoStartResult.message)
     if (!State.StartedByGameAutoStart && Config.GetImportant("AutoStartWithGame") = "1")
-        MessageBox.Warning(autoStartResult.message, "随游戏自动启动校准失败")
+        pendingAutoStartWarning := autoStartResult.message
 }
 
 ; 关闭功能后若有遗留事件触发，只清理任务，不启动小助手主体
-if (State.StartedByGameAutoStart && Config.GetImportant("AutoStartWithGame") != "1")
+if (autoStartResult.HasProp("shouldExit") && autoStartResult.shouldExit)
     ExitApp
 
 ; 确保嵌入文件已提取到 AppData
@@ -149,6 +150,10 @@ ChangelogChecker.CheckAndShow()
 ; 包含GUI
 #Include ./lib/gui.ahk
 #Include ./lib/updater/updater_ui.ahk
+
+; 启动校准失败只在 GUI 就绪后用托盘提示一次，不阻塞主流程，也不改变已保存配置。
+if (IsSet(pendingAutoStartWarning))
+    TrayTip(pendingAutoStartWarning, "随游戏自动启动校准失败", 2)
 
 tokenStorageWarning := Config.GetTokenStorageWarning()
 if (tokenStorageWarning != "")
