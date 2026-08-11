@@ -108,9 +108,11 @@ ActionPressPause(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Logger.Debug("HotkeyActions", "ActionPressPause 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+    Critical
     Send "{ESC Down}"
     USleep(50)
     Send "{ESC Up}"
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -133,9 +135,11 @@ ActionGameSpeed(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Logger.Debug("HotkeyActions", "ActionGameSpeed 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+    Critical
     GameKeys.SendDown("changeSpeed")
     USleep(50)
     GameKeys.SendUp("changeSpeed")
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -150,12 +154,14 @@ Action16ms(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Logger.Debug("HotkeyActions", "Action16ms 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     delay := Integer(Config.ReadCustomFromIni("FrameSkip16msDelay"))
+    Critical
     Send "{ESC Down}"
     USleep(delay)
     GameKeys.SendDown("pauseBattle")
     USleep(50)
     Send "{ESC Up}"
     GameKeys.SendUp("pauseBattle")
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -170,12 +176,14 @@ Action33ms(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Logger.Debug("HotkeyActions", "Action33ms 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     delay := Integer(Config.ReadCustomFromIni("FrameSkip33msDelay"))
+    Critical
     Send "{ESC Down}"
     USleep(delay)
     GameKeys.SendDown("pauseBattle")
     USleep(50)
     Send "{ESC Up}"
     GameKeys.SendUp("pauseBattle")
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -190,12 +198,14 @@ Action166ms(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Logger.Debug("HotkeyActions", "Action166ms 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     delay := Integer(Config.ReadCustomFromIni("FrameSkip166msDelay"))
+    Critical
     Send "{ESC Down}"
     USleep(delay)
     GameKeys.SendDown("pauseBattle")
     USleep(50)
     Send "{ESC Up}"
     GameKeys.SendUp("pauseBattle")
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -222,12 +232,14 @@ ActionPauseSelect(ThisHotkey) {
     }
     Logger.Debug("HotkeyActions", "ActionPauseSelect 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
+    Critical
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
     TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
     USleep(State.CurrentDelay * 1.5)
     TouchInjector.Move(xpos, ypos)
     MouseMove xpos, ypos
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -274,10 +286,12 @@ ActionOneClickSkill(ThisHotkey) {
         return
     }
     Logger.Debug("HotkeyActions", "ActionOneClickSkill 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+    Critical
     Send "{LButton Down}"
     Send "{LButton Up}"
     USleep(State.ClickDelay)
     GameKeys.Tap("releaseSkill")
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -296,10 +310,12 @@ ActionOneClickRetreat(ThisHotkey) {
         return
     }
     Logger.Debug("HotkeyActions", "ActionOneClickRetreat 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+    Critical
     Send "{LButton Down}"
     Send "{LButton Up}"
     USleep(State.ClickDelay)
     GameKeys.Tap("retreatChar")
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -326,6 +342,7 @@ ActionPauseSkill(ThisHotkey) {
     }
     Logger.Debug("HotkeyActions", "ActionPauseSkill 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
+    Critical
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
     TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
@@ -336,6 +353,7 @@ ActionPauseSkill(ThisHotkey) {
     MouseMove xpos, ypos
     USleep(50)
     GameKeys.SendUp("releaseSkill")
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -362,6 +380,7 @@ ActionPauseRetreat(ThisHotkey) {
     }
     Logger.Debug("HotkeyActions", "ActionPauseRetreat 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
+    Critical
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
     TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
@@ -372,6 +391,7 @@ ActionPauseRetreat(ThisHotkey) {
     MouseMove xpos, ypos
     USleep(50)
     GameKeys.SendUp("retreatChar")
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -399,10 +419,12 @@ ActionSwitchView(ThisHotkey) {
     }
     Logger.Debug("HotkeyActions", "ActionSwitchView 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
+    Critical
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
     TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
     TouchInjector.Tap(xpos, ypos)
+    Critical "Off"
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -822,6 +844,11 @@ USleep(delay_ms) {
         if (remaining > 4)
             DllCall("Sleep", "UInt", 1)
     }
+    ; 诊断：到期时超出 target 的时长（换算毫秒）。正常忙等退出 overshoot 应 <1ms；
+    ; 若被 LevelDetector 等定时器中断，或 Sleep(1) 粒度过大（系统 tick 默认 15.6ms），会显著增大——用于定位过帧时序波动
+    overshoot := (current - target) * 1000.0 / freq
+    if (overshoot >= 1.0)
+        Logger.Debug("USleep", Format("USleep 超时 {:.1f}ms，delay={}ms", overshoot, delay_ms))
 }
 ; 去除修饰符前缀
 PureKeyWait(ThisHotkey) {
