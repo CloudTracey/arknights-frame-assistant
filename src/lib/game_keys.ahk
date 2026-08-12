@@ -63,9 +63,11 @@ class GameKeys {
     static Tap(gameFunc, delay := 50) {
         key := this.Get(gameFunc)
         if (key != "") {
+            Thread "NoTimers"
             Send "{" key " Down}"
             USleep(delay)
             Send "{" key " Up}"
+            Thread "NoTimers", false
         }
     }
 
