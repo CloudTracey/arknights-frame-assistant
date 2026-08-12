@@ -108,9 +108,11 @@ ActionPressPause(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Logger.Debug("HotkeyActions", "ActionPressPause 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+    Thread "NoTimers"
     Send "{ESC Down}"
     USleep(50)
     Send "{ESC Up}"
+    Thread "NoTimers", false
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -133,9 +135,11 @@ ActionGameSpeed(ThisHotkey) {
         return
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
     Logger.Debug("HotkeyActions", "ActionGameSpeed 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+    Thread "NoTimers"
     GameKeys.SendDown("changeSpeed")
     USleep(50)
     GameKeys.SendUp("changeSpeed")
+    Thread "NoTimers", false
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         return
@@ -228,7 +232,6 @@ ActionPauseSelect(ThisHotkey) {
     }
     Logger.Debug("HotkeyActions", "ActionPauseSelect 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     MouseGetPos &xpos, &ypos
-    ; NoTimers 挡定时器轮询的时序干扰，允许其他热键中断（Critical 会连热键一起挡）
     Thread "NoTimers"
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
@@ -283,7 +286,6 @@ ActionOneClickSkill(ThisHotkey) {
         return
     }
     Logger.Debug("HotkeyActions", "ActionOneClickSkill 执行，key=" KeyForward.PureKeyName(ThisHotkey))
-    ; NoTimers 挡定时器轮询的时序干扰，允许其他热键中断（Critical 会连热键一起挡）
     Thread "NoTimers"
     Send "{LButton Down}"
     Send "{LButton Up}"
