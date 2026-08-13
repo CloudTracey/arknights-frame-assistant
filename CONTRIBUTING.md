@@ -260,7 +260,7 @@ git checkout -b feature/your-feature-name
 2. 文件名格式：`test_[更改主题].md`（英文，如 `test_download_progress_bar.md`）
 3. 文件内每小步添加复选框，方便逐项标记
 
-> 测试清单模板说明：可以交由 AI 根据模板生成测试清单以节约工作量（本项目使用 Claude Code 的 `test-checklist` skill 工作流，已同步至.claude/skills目录内，开发时可沿用）。
+> 测试清单模板说明：可以交由 AI 根据模板生成测试清单以节约工作量（项目使用 `test-checklist` skill 生成，技能位于 `.dsh/skills/test-checklist`，由 DeepSeek Harness 等编码 Agent 自动发现调用）。
 
 ### 测试完成标记
 
