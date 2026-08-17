@@ -15,6 +15,7 @@ other/
 # 本地维护的上下文文件与未定稿文档（如 ADR 记录）
 CONTEXT.md
 docs/adr
+docs/architecture
 
 # DSH 项目根：忽略本地运行状态，保留 skills 目录
 .dsh/*

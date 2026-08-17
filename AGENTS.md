@@ -16,13 +16,23 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - 没有编译步骤 — AHK 脚本可直接运行。发布时用 AutoHotkey 编译器打包为 exe。
 - 默认不编译或启动 AFA；只有用户明确要求构建时才使用已验证的本地 AutoHotkey/Ahk2Exe 工具。涉及 GUI、提权、计划任务和真实游戏联动的验收仍由用户操作并反馈
 - 没有自动化测试框架，所有测试为手工验证。每次完成工作后，调用 `test-checklist` skill 生成测试清单，逐项引导用户完成手工验证。测试清单放在 `test/` 目录，格式参考 `test/template/test_template.md`。
+
+- 架构迁移目标包含静态分层检查 `tools/layer_check.py` 与纯逻辑冒烟脚本 `test/smoke_test.ahk`（按 `docs/architecture/coupling-improvement-roadmap.md` 阶段 1/3 落地）。落地后，涉及跨模块引用或 include 顺序的改动必须先跑 `layer_check.py`；当前尚未落地时不要假设该工具存在。
 - 不使用worktree进行开发
 - 提前查看.gitignore，以确认哪些更改不需要commit
 - 用户没有要求的话，不要擅自commit，不要擅自Push，不创建PR，不创建或改变branch，这些操作由用户自行进行
 
 ## 架构概览
 
-### 启动流程
+> **迁移状态（2026-08-17）**：以下「当前实现」章节在架构迁移完成前仍是对现状的准确描述。同时，已确认的目标架构约束对新代码立即生效：
+> 1. 四层单向依赖 `bootstrap → ui → core → base`；core 不得引用 ui，base 不得引用 core/ui。
+> 2. 所有 `.ahk` 只定义、零顶层副作用；启动由 `main.ahk` 显式 `App.Bootstrap()` 执行。
+> 3. 事件命名统一 `XxxRequested`（命令）/ `XxxChanged`/`Started`/`Completed`（事实）；唯一契约表在 `docs/adr/2026-08-17-event-contract-and-naming.md`。
+> 4. 配置写入只经 `SettingsService`；热键元数据只来自 `base/hotkey_schema.ahk`；`State` 类将被删除，字段归唯一 owner。
+>
+> 决策全文与实施顺序：`docs/adr/2026-08-17-four-layer-dependency-and-explicit-bootstrap.md`、`docs/adr/2026-08-17-settings-write-port-hotkey-schema-state-ownership.md`、`docs/architecture/coupling-improvement-roadmap.md`。
+
+### 启动流程（当前实现，迁移前）
 
 `main.ahk` 的 #Include 顺序就是启动顺序，不可随意调整：
 
@@ -42,7 +52,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 14. `game_monitor.ahk` — 最后加载，启动 400ms 定时器监控游戏进程（含自动退出 + 自动开局暂停检测）
 14. 发布 `SetSwitchKey` 事件初始化按键，随后发布 `GuiUpdateHotkeyControls`、`GuiUpdateImportantControls`、`GuiUpdateCustomControls` 刷新 GUI 显示
 
-### 模块职责
+### 模块职责（当前实现，迁移前）
 
 | 模块 | 职责 |
 |------|------|
@@ -75,7 +85,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - **实时调试控制台**（v1.9.0+，logger.ahk）：`SetConsoleEnabled` 经 `AllocConsole` 创建「AFA 调试日志」窗口。输出**必须用 `WriteConsoleW` DllCall 直接写入**——`FileOpen("CONOUT$")`+`WriteLine` 因 File 对象内部缓冲、控制台不关闭不刷新而空屏。`SetConsoleTextAttribute` 按级别着色（ERROR红/WARN黄/DEBUG灰/INFO白）；打开时显示亮蓝横幅并回放 `RecentLines` 最近日志。安全措施：X 按钮置灰、`SetConsoleCtrlHandler(NULL, TRUE)` 忽略 Ctrl+C/Break、`SetConsoleMode` 清除 `ENABLE_QUICK_EDIT_MODE(0x0040)` 并置 `ENABLE_EXTENDED_FLAGS(0x0080)`（否则点击控制台进入选择态、阻塞进程控制台 I/O 卡死 AFA）。`AllocConsole` 失败（进程已有控制台，如从终端启动）→ 静默降级并**复位 `ConsoleEnabled=false`**（避免 `CloseConsole` 误 `FreeConsole` 脱离调用方终端）。`ConsoleTipShown` 内存标志控"当次会话仅首次"提示。`DebugEnabled`（Important）经 `Loader.LoadSettings()` 接线同时控制持久化与控制台；`version_checker.IsDebugLogging()` 直接读 `Logger.DebugEnabled`（单源，勿重读 INI 造成双源）。
 - **Config 读写分离与工作副本**（v1.5.10+）：`GetHotkey()`/`GetImportant()`/`GetCustom()` 返回内存工作副本（`_HotkeySettings`/`_ImportantSettings`/`_CustomSettings`），供 GUI 显示和冲突检测使用。`SetHotkey()`/`SetImportant()`/`SetCustom()` 仅写内存。`LoadFromIni()` 一次性从 INI 重载全部三组设置，用于显式丢弃内存中的未保存修改（取消设置时）。热键注册和运行时逻辑不应触碰工作副本，应使用 `ReadHotkeyFromIni()`/`ReadImportantFromIni()`/`ReadCustomFromIni()` 直接从 INI 读取——这三个方法不会修改内存 Map。`AllHotkeys`/`AllImportant`/`AllCustom` 三个属性直接返回内存 Map 的引用，供遍历使用——注意 `AllHotkeys` 的值是"真实键值"（`RealNewkeyFormat`），而 GUI 显示的是 `VirtualNewkeyFormat` 后的可读值。`TrackChange()` 在检测控件变更时同步将新值写入 Config 内存（确保切换标签页后编辑不丢失）。`SetImportant("Frame", value)` 内部自动同步 `Frame155`，调用方无需手动双写。`UpdateSource`（`"1"` = 国内源默认，`"2"` = GitHub）为 v1.5.6+ 新增的 Important 配置项。三组设置分别通过 `GetHotkey`/`GetImportant`/`GetCustom` 懒加载，各自对应 `_DefaultHotkeys`/`_DefaultImportant`/`_DefaultCustom` 默认值 Map
 - **State 类**：运行时状态。`CurrentDelay` 根据游戏帧率设置计算（30/60/90/120/144/165/180/240+ 帧对应不同的 ms 延迟值），引用 `Constants.Delay*` 常量。`GameHasStarted` 跟踪游戏是否曾运行过（用于自动退出判断）。`ReadyForPause` 和 `BlackScreenDetected` 是自动开局暂停状态机的两个标志位。`InLevel` 是关卡检测投票状态机（`LevelDetector`）的输出，守卫消费。
-- **EventBus 事件命名约定**：事件名遵循前缀模式 — `GuiUpdate*`（GUI 控件刷新）、`Settings*`（设置保存/应用/取消/重置）、`Update*`（更新检查/下载/确认）、`Set*`/`Unset*`（开关类操作，如 `SetSwitchKey`/`UnsetSwitchKey`）。新增事件时遵循此前缀约定以保持一致性。
+- **EventBus 事件命名约定（目标，新代码必须遵守）**：命令用 `XxxRequested`，事实用 `XxxChanged`/`XxxStarted`/`XxxCompleted`/`XxxAvailable`；每个事件只有一个发布者，payload 字段以契约表为准。旧前缀名（`GuiUpdate*`、`Settings*`、`Update*`、`Set*`/`Unset*`）为迁移前遗留，映射见 `docs/adr/2026-08-17-event-contract-and-naming.md`。
 - **自动开局暂停流程**（v1.5.3+）：三阶段状态机 — 全屏黑屏检测 → Loading 扫描线识别（排除红/蓝进关）→ 暂停按钮颜色确认后 ESC 暂停，再用代理作战按钮图像确认避免重复暂停；8 秒超时自动取消，定时器频率随状态动态调整（400ms → 200ms → 超时恢复 400ms）。细节见 `game_monitor.ahk`。
 - **热键注册与拦截**：用 `HotIf(HotkeyContext)` 回调（hotkey_control.ahk 顶部）限制热键作用域——鼠标键/滚轮（LButton/RButton/MButton/XButton1/2/Wheel*）返回 `IsMouseInClient()`（悬停在游戏窗口上才触发，修复窗口外任务栏/桌面点击被吞）；键盘键返回 `WinActive("ahk_exe Arknights.exe")` **或** `IsMouseInClient()`（#213：游戏失焦时鼠标悬停游戏窗口也能操作，动作层负责激活游戏；该失焦悬停路径受「自定义」页开关 `State.HoverOperate` 门控，保存/应用后生效，关闭后键盘键仅活动窗口触发，鼠标键/滚轮不受影响）。**动作包装**（#213，`_WrapAction` 于 `_RegisterOne` 注册时套用）：主热键与 OnUp 型动作执行前 `WinActivate` 游戏 + `WinWaitActive`（超时 500ms 则跳过动作，避免按键发往非游戏窗口），激活后不恢复原窗口（焦点留在游戏）；守卫补发 Up 变体（`ActionUpForward`）与 SwitchKey 切换键**不包装**。通过 `GameKeys.GetInterceptPattern()` 动态生成拦截正则——从注册表读取所有游戏按键 + `Escape|RButton|MButton`。AFA 热键绑定的按键若匹配拦截正则，不加 `~` 前缀（阻止原键传递到游戏），否则加 `~` 前缀（透传）。用户自定义游戏按键后，轮询检测到注册表变更自动重建热键，拦截列表随之更新。
 - **常规作战关卡守卫与按键透传**（v1.5.12+，hotkey_actions.ahk + hotkey_control.ahk）：常规作战 14 个功能经 `GuardInLevel(actionName, ThisHotkey)` 守卫——关卡内放行、关卡外拦截。拦截时由 `KeyForward` 类透传原键：`ForwardOriginalKey()` 补发 key down 并记录 `InterceptedKeys` 标志（带 `~` 前缀的键本就透传不补发；Up 型热键只补发 key up；滚轮发完整事件）；`ActionUpForward()` 为 Up 变体回调——**补发 key up**（对未按下的键是无害 no-op）：AHK Send 对物理按住的修饰键会“释放-重注入”，被拦截（无 `~`）的修饰键物理 up 也被吞。**Up 变体放行依据**是 `KeyForward.DownHandled`（运行时标记，`GuardInLevel` 在主热键触发时记录，无论守卫放行/拦截）——仅 down 被 AFA 处理过才放行补发 up；游戏外主热键不触发（down 透传）则不放行，物理 up 正常透传（打字不受影响）。`SuppressUp` 标志（**键级 Map**，按 pureKey 记录，非全局布尔）防 Send 注入的 up 被钩子重新捕获触发 Up 变体导致无限递归。键名规范化：`PureKeyName` 保留左右修饰键（`<SHIFT`→`lshift`、`>SHIFT`→`rshift`）且统一大小写（防 `a/A` 拼写不一致漏发 Up），`InterceptedKeys` 关闭大小写敏感。`_RegisterOne()` 为守卫拦截键（非滚轮）注册 `X Up` 变体（类静态方法引用需 `.Bind(KeyForward)`），`DisableGroup()` 同规则注销。失焦边界（按住修饰键 Alt+Tab 切走再松开）已由 DownHandled 机制解决。守卫判定读 `State.InLevel`（无像素检测、无 DPI 切换），拦截日志用 Info 级别（同一按住周期经 `InterceptedKeys` 去重，避免 key repeat 刷屏）。位置函数统一用 `SafeWinGetClientPos(&ww,&wh)`（窗口关闭返回 false 而非抛 TargetError）。
