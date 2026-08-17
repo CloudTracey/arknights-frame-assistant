@@ -125,5 +125,3 @@ class LevelDetector {
     }
 }
 
-; 初始化关卡检测投票定时器
-LevelDetector.Init()

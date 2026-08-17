@@ -316,5 +316,3 @@ class HotkeyController {
         A_TrayMenu.Rename("2&", "启用/禁用热键")
     }
 }
-; 初始化热键控制器
-HotkeyController.Init()
