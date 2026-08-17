@@ -24,7 +24,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 
 ## 架构概览
 
-> **迁移状态（2026-08-17）**：阶段 1（工具/门禁基线）与阶段 2（base 层建设）已完成；以下「当前实现」章节在剩余迁移完成前仍是对现状的准确描述。同时，已确认的目标架构约束对新代码立即生效：
+> **迁移状态（2026-08-17）**：阶段 1-6 已完成；以下「当前实现」章节在剩余迁移完成前仍是对现状的准确描述。同时，已确认的目标架构约束对新代码立即生效：
 > 1. 四层单向依赖 `bootstrap → ui → core → base`；core 不得引用 ui，base 不得引用 core/ui。
 > 2. 所有 `.ahk` 只定义、零顶层副作用；启动由 `main.ahk` 显式 `App.Bootstrap()` 执行。
 > 3. 事件命名统一 `XxxRequested`（命令）/ `XxxChanged`/`Started`/`Completed`（事实）；唯一契约表在 `docs/adr/2026-08-17-event-contract-and-naming.md`。
@@ -38,7 +38,8 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 > - ✅ 阶段 3：`App.Bootstrap()` 显式启动、全部 `.ahk` 零顶层副作用、`test/scripts/smoke_test.ahk` 骨架
 > - ✅ 阶段 4：State 删除，字段收归 LevelDetector/GameMonitor/TimingService/HotkeyService/AppContext
 > - ✅ 阶段 5：热键域重构，HotkeyService/HotkeyActions 落位 core/hotkey，GameKeys 事件化，修复禁用后被注册表变更恢复
-> - ⏳ 阶段 6+：设置/更新/UI 重构
+> - ✅ 阶段 6：设置域重构，SettingsService 唯一写口落位 core/settings，业务层直接 IniWrite 清零
+> - ⏳ 阶段 7+：更新/公告域重构、UI 层收尾
 
 ### 启动流程（当前实现）
 
@@ -51,10 +52,10 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 3. `base/eventbus.ahk`（事件总线，模块间解耦通信）
 4. `base/file_extractor.ahk`（文件提取模块，管理编译时嵌入资源的运行时提取——logo.png、3 张 TakeOverButton 图片及关卡检测模板）
 5. `core/hotkey/game_keys.ahk`（游戏按键注册表识别，内部无运行时执行代码，纯类定义）→ `core/hotkey/hotkey_actions.ahk`（触控注入初始化已移入 `App.Bootstrap()` 的 `HotkeyActionsStart()`）→ `key_bind.ahk` → `core/hotkey/hotkey_service.ahk`（热键四件套）
-6. `settings/settings_manager.ahk`（依赖 config + eventbus，内部链式包含 loader → saver → actions）
+6. `core/settings/hotkey_conflict_validator.ahk` → `core/settings/settings_service.ahk`（依赖 config + eventbus，唯一配置写口）
 7. `updater/` 模块（依赖 eventbus）
 8. `game_launcher.ahk`（依赖 config + eventbus）
-9. 调用 `Loader.LoadSettings()` + `FileExtractor.EnsureExtracted()`（提取嵌入资源到 AppData）+ `GameKeys.Init()`（读取注册表游戏按键 + 启动 10s 轮询定时器，**必须在 HotkeyOn 之前**）+ `HotkeyService.HotkeyOn()` — 加载配置、提取资源、初始化按键识别并激活热键
+9. 调用 `SettingsService.Initialize()` + `FileExtractor.EnsureExtracted()`（提取嵌入资源到 AppData）+ `GameKeys.Init()`（读取注册表游戏按键 + 启动 10s 轮询定时器，**必须在 HotkeyOn 之前**）+ `HotkeyService.HotkeyOn()` — 加载配置、提取资源、初始化按键识别并激活热键
 10. `changelog/` 模块（依赖 eventbus），随后调用 `ChangelogChecker.CheckAndShow()` 检查并显示更新公告
 11. `gui.ahk` + `updater_ui.ahk`（依赖所有配置和管理器就绪）
 12. `EventBus.Publish("AppStartCompleted")` — 触发自动更新检查 & 游戏自动启动
@@ -68,7 +69,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 |------|------|
 | `base/config.ahk`（含 `base/constants.ahk`、`base/hotkey_schema.ahk`） | 全局配置管理（Config/State/Constants 三个类）。配置持久化到 `%AppData%\ArknightsFrameAssistant\PC\Settings.ini`。Config 用懒加载模式（`_IsLoaded` 标志位） |
 | `base/token_protector.ahk` | GitHub Token 的 Windows DPAPI 加密保护（`TokenProtector` 类）。`Protect()` 用 `CryptProtectData`（CurrentUser）加密并 Base64 编码，返回带 `dpapi:v1:` 前缀的存储值；`Unprotect()` 解密，无前缀值按旧版明文处理（供迁移）。内存缓冲用 `_SecureZero` 清零。由 `config.ahk` 的 `_ReadGitHubToken`/`_MigrateLegacyToken` 调用，加密值存于 `[Main]` 的 `GitHubTokenProtected` 键 |
-| `base/eventbus.ahk` | 发布/订阅事件总线，模块间解耦。核心事件：`AppStartCompleted`（启动完成）、`HotkeyOn`/`HotkeyOff`/`SwitchHotkey`（热键开关）、`SetSwitchKey`/`UnsetSwitchKey`（切换键管理）、`GuiUpdate*` 系列（GUI 刷新）、`SettingsSave`/`SettingsApply`/`SettingsCancel`/`SettingsReset`（设置操作）、`UpdateAvailable`/`UpdateConfirmed`/`UpdateDownloadComplete`（更新流程）、`KeyBindFocusSave`（按键绑定保存）、`HotkeyBindingsChanged`（按键绑定变更，触发冲突检测刷新） |
+| `base/eventbus.ahk` | 发布/订阅事件总线，模块间解耦。核心事件：`AppStartCompleted`（启动完成）、`HotkeyOn`/`HotkeyOff`/`SwitchHotkey`（热键开关）、`SetSwitchKey`/`UnsetSwitchKey`（切换键管理）、`GuiUpdate*` 系列（GUI 刷新）、`SettingsSaveRequested`/`SettingsApplyRequested`/`SettingsCancelRequested`/`SettingsResetRequested`（设置命令）与 `SettingsSaved`/`SettingsApplied`/`SettingsCancelled`/`SettingsReset`（设置事实）、`SettingsChanged`（单键设置变更）、`SettingsSaveStarting`（保存前通知）、`UpdateAvailable`/`UpdateConfirmed`/`UpdateDownloadComplete`（更新流程）、`KeyBindFocusSave`（按键绑定保存）、`HotkeyBindingsChanged`（按键绑定变更，触发冲突检测刷新） |
 | `base/file_extractor.ahk` | 管理编译时 `FileInstall` 嵌入资源的运行时提取。`EnsureExtracted()` 将 `logo.ico`（含大小校验防旧版残留）、三张 `TakeOverButton_*.png`（代理作战按钮图像）和关卡检测模板（保留备用，PixelSearch 方案不依赖）统一提取到 `%AppData%\ArknightsFrameAssistant\PC\resources\` |
 | `core/hotkey/game_keys.ahk` | 游戏按键注册表识别（`GameKeys` 类）。从 `HKCU\Software\HyperGryph\Arknights` 读取 `KEYBOARD_SETTING_V2_h*`（REG_BINARY→hex→JSON），将 Unity KeyId 映射为 AHK 键名。提供 `SendDown`/`SendUp`/`Tap(gameFunc)` 封装方法，供 `core/hotkey/hotkey_actions.ahk` 调用。`GetInterceptPattern()` 动态生成热键拦截正则。每 10 秒轮询注册表检测变更，自动重建热键。六层 fallback 防御（精确→小写→numX→alphaX→char*→单字符），读取失败回退默认值并弹警告 |
 | `core/hotkey/hotkey_service.ahk`（`HotkeyService`） | 热键注册/注销/分组切换。三组热键：CombatHotkeys（常规作战）、QuickHotkeys（快捷操作）、StrongHoldHotkeys（卫戍协议）。按标签页启用对应组，组间互斥。拦截正则由 `GameKeys.GetInterceptPattern()` 动态生成。`ActionCallbacks` 数据化（`{Fn, Guarded}`）声明守卫标志，为守卫拦截键注册 Up 变体补发透传 |
@@ -78,8 +79,8 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 | `gui.ahk` | 设置窗口 GUI 全部逻辑（标签页切换、控件事件、托盘菜单）。`UpdateSaveButtonState()` 根据 `IsModified` 和 `HasHotkeyConflicts` 决定保存/应用按钮状态。`RefreshHotkeyConflicts()` 调用 `HotkeyConflictValidator` 进行增量字体标红（仅更新冲突状态变化的控件，使用 `_PrevConflictedControls` 做 diff）。`SwitchTab()` 确认放弃修改后调用 `Config.LoadFromIni()` 显式丢弃内存修改 |
 | `base/logger.ahk` | 双轨日志系统（`Logger` 类）。普通日志（15 MiB）和关键日志 WARN/ERROR（5 MiB）分轨滚动存储到 `%AppData%\ArknightsFrameAssistant\PC\logs\`。支持会话级文件命名（`afa-{timestamp}-{pid}-{tick}.log`）、7 天过期清理、敏感值脱敏（`RegisterSecret`/`Redact`）、异常退出检测（启动时检查上一会话是否含 Shutdown 标记）、全局未处理异常回调。所有模块通过 `Logger.Info`/`Warn`/`Error`/`Debug`/`Exception` 写日志 |
 | `log_exporter.ahk` | 诊断压缩包导出（`LogExporter` 类）。`CreateArchiveInteractive()` 弹出文件保存对话框，收集所有日志 + 脱敏后的设置文件 + 诊断信息，通过 PowerShell 打包为 ZIP。`OpenLogDirectory()` 打开日志目录 |
-| `settings/hotkey_conflict_validator.ahk` | 热键冲突验证器（`HotkeyConflictValidator` 类）。`FindAll(hotkeys, customSettings)` 在同时启用的热键组内检测按键重复，返回 `{HasConflicts, Items, ByControl}`。SwitchHotkey 在全部两组中各检测一次。`GetDisplayName()` 查找 KeyNames/CustomNames 用于错误提示。供 GUI 实时提示和 saver 保存阶段校验共享 |
-| `settings/` | 设置读/写/操作。loader.ahk 加载配置，saver.ahk 含验证逻辑（复用 `HotkeyConflictValidator`），actions.ahk 处理重置/保存/应用/取消 |
+| `core/settings/hotkey_conflict_validator.ahk` | 热键冲突验证器（`HotkeyConflictValidator` 类）。`FindAll(hotkeys, customSettings)` 在同时启用的热键组内检测按键重复，返回 `{HasConflicts, Items, ByControl}`。SwitchHotkey 在全部两组中各检测一次。`GetDisplayName()` 查找 KeyNames/CustomNames 用于错误提示。供 GUI 实时提示和 SettingsService 保存阶段校验共享 |
+| `core/settings/settings_service.ahk`（`SettingsService`） | 唯一配置写口。合并原 loader/saver/actions：`Initialize()` 启动加载，`Save/Apply/Cancel/Reset()` 处理 GUI 命令，`UpdatePersistedValue(key, value)` 单键原子写入并发布 `SettingsChanged`。保存/应用/重置后通过 `SettingsSaved/Applied/Reset` 驱动 HotkeyService/TimingService/LevelDetector/GuiManager 刷新 |
 | `updater/` | 自动更新全流程：version_checker（GitHub API + 国内源 CDN 双源检查，含降级机制）→ downloader → self_replacer（生成批处理自替换）→ updater_manager（协调器，含下载降级逻辑）→ updater_ui。`VersionChecker` 在检查更新时从 GitHub Releases API 提取版本 body 和发布日期，缓存到 `changelog.json`，并构建 changelogBody 通过 `UpdateAvailable` 事件传递 |
 | `changelog/` | 更新公告检查和显示。`changelog_checker.ahk` 从 `changelog.json` 缓存读取所有 release 内容（按版本降序），`changelog_ui.ahk` 用只读 Edit 控件显示原始 Markdown。`changelog.ahk` 的 `ChangelogData` 类已清空，保留骨架仅用于向后兼容 |
 | `core/launch/game_launcher.ahk` | 随 AFA 自动启动游戏。`CheckGamePath()` 识别游戏路径，`ProcessGetPath` 失败时降级到 WMI 查询（`_GetProcessPathByWmi`） |
@@ -94,7 +95,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 
 - **Constants 类**：常量定义。`Delay30`~`Delay240` 是各帧率对应的延迟毫秒值（取 `ceil(1000/fps)`，例外：`Delay144=8` 多 1ms 余量），`TimingService.GetCurrentDelay()` 依此计算。`FrameOptions` 定义下拉框选项数组，`FrameTextToOldIndex`/`FrameOldIndexToText` 用于 Frame155 双写转换。`KeyNames` 是一个 `Map(keyName, displayName)`，定义所有热键 key 到 GUI 中文显示名的映射——新增热键功能时**必须**在此 Map 中同步添加条目。`CustomNames` 对应自定义设置的显示名，新增自定义配置项时也需同步添加，否则设置无法保存；同时需在 `Config._DefaultCustom` 加默认值——老用户已有 INI 缺新键时由 `LoadFromIni` 的 `_BackfillMissingCustomDefaults()`（v1.9.0+）自动补齐，无需手工迁移。
 - **Logger 日志系统**（v1.5.10+）：双轨滚动存储，普通日志（`afa-*.log`）保留 15 MiB，关键日志 WARN/ERROR（`critical-*.log`）单独保留 5 MiB，总容量 20 MiB。按会话隔离（文件名含时间戳+PID+tick），支持 7 天过期清理和容量驱动的分段轮换。`RegisterSecret(value)` 注册敏感值，`_BuildLine` 自动调用 `Redact` 脱敏。启动时检测上一会话是否异常退出（无 Shutdown 标记的上一会话日志文件受保护不被清理）。`SetDebugEnabled(enabled)` 控制 DEBUG 级别是否持久化。所有日志通过 `OutputDebug` 同步输出到 DebugView。容量清理依赖缓存指标（`CachedOrdinaryFiles`/`CachedOrdinaryBytes` 等），每 64 次写入或有容量压力时触发。
-- **实时调试控制台**（v1.9.0+，logger.ahk）：`SetConsoleEnabled` 经 `AllocConsole` 创建「AFA 调试日志」窗口。输出**必须用 `WriteConsoleW` DllCall 直接写入**——`FileOpen("CONOUT$")`+`WriteLine` 因 File 对象内部缓冲、控制台不关闭不刷新而空屏。`SetConsoleTextAttribute` 按级别着色（ERROR红/WARN黄/DEBUG灰/INFO白）；打开时显示亮蓝横幅并回放 `RecentLines` 最近日志。安全措施：X 按钮置灰、`SetConsoleCtrlHandler(NULL, TRUE)` 忽略 Ctrl+C/Break、`SetConsoleMode` 清除 `ENABLE_QUICK_EDIT_MODE(0x0040)` 并置 `ENABLE_EXTENDED_FLAGS(0x0080)`（否则点击控制台进入选择态、阻塞进程控制台 I/O 卡死 AFA）。`AllocConsole` 失败（进程已有控制台，如从终端启动）→ 静默降级并**复位 `ConsoleEnabled=false`**（避免 `CloseConsole` 误 `FreeConsole` 脱离调用方终端）。`ConsoleTipShown` 内存标志控"当次会话仅首次"提示。`DebugEnabled`（Important）经 `Loader.LoadSettings()` 接线同时控制持久化与控制台；`version_checker.IsDebugLogging()` 直接读 `Logger.DebugEnabled`（单源，勿重读 INI 造成双源）。
+- **实时调试控制台**（v1.9.0+，logger.ahk）：`SetConsoleEnabled` 经 `AllocConsole` 创建「AFA 调试日志」窗口。输出**必须用 `WriteConsoleW` DllCall 直接写入**——`FileOpen("CONOUT$")`+`WriteLine` 因 File 对象内部缓冲、控制台不关闭不刷新而空屏。`SetConsoleTextAttribute` 按级别着色（ERROR红/WARN黄/DEBUG灰/INFO白）；打开时显示亮蓝横幅并回放 `RecentLines` 最近日志。安全措施：X 按钮置灰、`SetConsoleCtrlHandler(NULL, TRUE)` 忽略 Ctrl+C/Break、`SetConsoleMode` 清除 `ENABLE_QUICK_EDIT_MODE(0x0040)` 并置 `ENABLE_EXTENDED_FLAGS(0x0080)`（否则点击控制台进入选择态、阻塞进程控制台 I/O 卡死 AFA）。`AllocConsole` 失败（进程已有控制台，如从终端启动）→ 静默降级并**复位 `ConsoleEnabled=false`**（避免 `CloseConsole` 误 `FreeConsole` 脱离调用方终端）。`ConsoleTipShown` 内存标志控"当次会话仅首次"提示。`DebugEnabled`（Important）经 `SettingsService.Initialize()` 接线同时控制持久化与控制台；`version_checker.IsDebugLogging()` 直接读 `Logger.DebugEnabled`（单源，勿重读 INI 造成双源）。
 - **Config 读写分离与工作副本**（v1.5.10+）：`GetHotkey()`/`GetImportant()`/`GetCustom()` 返回内存工作副本（`_HotkeySettings`/`_ImportantSettings`/`_CustomSettings`），供 GUI 显示和冲突检测使用。`SetHotkey()`/`SetImportant()`/`SetCustom()` 仅写内存。`LoadFromIni()` 一次性从 INI 重载全部三组设置，用于显式丢弃内存中的未保存修改（取消设置时）。热键注册和运行时逻辑不应触碰工作副本，应使用 `ReadHotkeyFromIni()`/`ReadImportantFromIni()`/`ReadCustomFromIni()` 直接从 INI 读取——这三个方法不会修改内存 Map。`AllHotkeys`/`AllImportant`/`AllCustom` 三个属性直接返回内存 Map 的引用，供遍历使用——注意 `AllHotkeys` 的值是"真实键值"（`RealNewkeyFormat`），而 GUI 显示的是 `VirtualNewkeyFormat` 后的可读值。`TrackChange()` 在检测控件变更时同步将新值写入 Config 内存（确保切换标签页后编辑不丢失）。`SetImportant("Frame", value)` 内部自动同步 `Frame155`，调用方无需手动双写。`UpdateSource`（`"1"` = 国内源默认，`"2"` = GitHub）为 v1.5.6+ 新增的 Important 配置项。三组设置分别通过 `GetHotkey`/`GetImportant`/`GetCustom` 懒加载，各自对应 `_DefaultHotkeys`/`_DefaultImportant`/`_DefaultCustom` 默认值 Map
 - **State 类（已删除，阶段 4）**：原运行时字段已收归唯一 owner：`CurrentDelay`/`ClickDelay` → `TimingService`；`InLevel` → `LevelDetector.IsInLevel()`；`GameHasStarted`/`ReadyForPause`/`BlackScreenDetected` → `GameMonitor` 私有；`HoverOperate` → `HotkeyService`；`StartedByGameAutoStart` → `AppContext`；`GuiWindowName` 删除。
 - **EventBus 事件命名约定（目标，新代码必须遵守）**：命令用 `XxxRequested`，事实用 `XxxChanged`/`XxxStarted`/`XxxCompleted`/`XxxAvailable`；每个事件只有一个发布者，payload 字段以契约表为准。旧前缀名（`GuiUpdate*`、`Settings*`、`Update*`、`Set*`/`Unset*`）为迁移前遗留，映射见 `docs/adr/2026-08-17-event-contract-and-naming.md`。
@@ -108,7 +109,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - **配置文件**：INI 格式，三个 Section：`[Hotkeys]`、`[Main]`、`[Custom]`。`GitHubToken` 使用 Windows DPAPI（`token_protector.ahk` 的 `TokenProtector` 类）按当前 Windows 用户加密，加密值存于 `[Main]` 的 `GitHubTokenProtected` 键（带 `dpapi:v1:` 前缀），读取经 `_ReadGitHubToken()` 解密。旧版明文 `GitHubToken` 键在启动时自动迁移为加密格式并删除明文（迁移失败会保留原配置并提示恢复写入权限）。
 - **数据文件**：`%AppData%\ArknightsFrameAssistant\PC\changelog.json` 存储从 GitHub Releases API 拉取的所有版本发布内容，每次版本检查时更新。由 `VersionChecker._SaveChangelogCache()` 写入，`ChangelogChecker` 读取。
 - **GUI 脏值对比**：`GuiManager` 维护 `_InitialValues` 快照和 `_IsModified` 标志。`CaptureInitialSnapshot()` 在设置加载/保存/应用后保存所有控件当前值，`TrackChange(key)` 在控件变更时将当前值与快照对比，同时将新值同步写入 Config 内存（热键控件和 SwitchHotkey 已由 `KeyBinder.EndChange` 提前写入，`TrackChange` 负责其余控件）。新增可修改控件时需在 `CaptureInitialSnapshot` 中添加对应 key，并在控件事件中调用 `TrackChange`。
-- **热键冲突实时检测**（v1.5.10+）：`HotkeyConflictValidator.FindAll()` 在 CombatHotkeys+QuickHotkeys 组和 StrongHoldHotkeys 组内分别检测重复（组间不互检）。`GuiManager.RefreshHotkeyConflicts()` 用增量字体更新——仅对新进入冲突的控件标红 `cD93025`、离开冲突的恢复 `cDefault`，避免全页闪烁。`UpdateSaveButtonState()` 据 `IsModified && !HasHotkeyConflicts` 决定按钮启用。`key_bind.ahk` 的 `NotifyBindingChanged` 发布 `HotkeyBindingsChanged` 触发刷新。切换标签页不丢弃修改，冲突状态跨标签页保持。`saver.ahk._CheckKeyConflicts()` 复用同一 validator 作为保存前最后防线
+- **热键冲突实时检测**（v1.5.10+）：`HotkeyConflictValidator.FindAll()` 在 CombatHotkeys+QuickHotkeys 组和 StrongHoldHotkeys 组内分别检测重复（组间不互检）。`GuiManager.RefreshHotkeyConflicts()` 用增量字体更新——仅对新进入冲突的控件标红 `cD93025`、离开冲突的恢复 `cDefault`，避免全页闪烁。`UpdateSaveButtonState()` 据 `IsModified && !HasHotkeyConflicts` 决定按钮启用。`key_bind.ahk` 的 `NotifyBindingChanged` 发布 `HotkeyBindingsChanged` 触发刷新。切换标签页不丢弃修改，冲突状态跨标签页保持。`SettingsService._CheckKeyConflicts()` 复用同一 validator 作为保存前最后防线
 - **key_bind.ahk 的 WM_LBUTTONDOWN 处理**：`OnMessage(0x0201, WM_LBUTTONDOWN)` 是进程级回调，会在所有 GUI 的 Edit 控件点击时触发。为防止非设置窗口的 Edit 控件误触发按键录制，回调开头有父窗口检查：`if (KeyBinder.ControlObj.Gui.Hwnd != GuiManager.MainGui.Hwnd) return`。新增 Edit 控件且不需要按键录制功能时，确保其父窗口不是 `GuiManager.MainGui`。点击非 Edit 区域时自动聚焦取消按钮（`GuiManager.FocusCancelButton()`），取消普通 Edit 控件的选中状态。
 - **Alt+F4 始终退出**：通过 `GuiManager.Start()` 中的 `HotIf` + `Hotkey("!F4", ...)` 动态注册拦截设置窗口的 Alt+F4，始终彻底退出 AFA。标题栏 X 按钮仍由 `ExitOnWindowClose` 设置控制（关闭窗口 or 退出）。
 - **AHK v2 GUI 布局要点**：`xs`/`ys` 引用**最近**的 `Section`（叠加布局中会追到前一个分类的 Section 导致偏移，每组首控件应用绝对坐标如 `x160 y45`）。Text 的 `Center` 仅水平居中，文字要填满控件需去掉固定高度自适应（`hp`）而非依赖 Center。
