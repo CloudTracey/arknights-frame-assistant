@@ -1687,17 +1687,17 @@ class GuiManager {
         else
             MessageBox.Info("暂无更新公告。", "提示")
     }
+
+    ; 启动 GUI 并注册 Alt+F4 退出热键（原为文件末尾顶层副作用）
+    static Start() {
+        this.Init()
+        HotIf((*) => WinActive("ahk_id" this.MainGui.Hwnd))
+        Hotkey("!F4", (*) => ExitApp(), "On")
+        HotIf
+    }
 }
 
 ; 处理GUI隐藏时停止Hook的事件
 HandleGuiHideStopHook(*) {
     KeyBinder.StopHook()
 }
-; 初始化GUI
-GuiManager.Init()
-
-; Alt+F4 始终退出 AFA（与"关闭窗口时退出"设置独立）
-; 使用 ahk_id 精确限定范围，避免同名窗口的潜在冲突
-#HotIf WinActive("ahk_id" GuiManager.MainGui.Hwnd)
-!F4:: ExitApp()
-#HotIf
