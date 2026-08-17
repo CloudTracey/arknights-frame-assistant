@@ -1,0 +1,88 @@
+# AFA 耦合治理迁移基线（由 tools/layer_check.py --update-baseline 生成）
+# 每阶段只允许删除条目，不允许新增条目。
+[cross] src/lib/changelog/changelog_checker.ahk:33 -> ChangelogUI.Show (ui)
+[cross] src/lib/game_keys.ahk:532 -> GuiManager.LastActiveTab (ui)
+[cross] src/lib/game_launcher.ahk:28 -> GuiManager.SetControlValue (ui)
+[cross] src/lib/game_launcher.ahk:29 -> GuiManager.TrackChange (ui)
+[cross] src/lib/game_launcher.ahk:36 -> GuiManager.SetControlValue (ui)
+[cross] src/lib/game_launcher.ahk:37 -> GuiManager.TrackChange (ui)
+[cross] src/lib/hotkey_actions.ahk:445 -> GuiManager.SetControlValue (ui)
+[cross] src/lib/hotkey_actions.ahk:450 -> GuiManager.LastActiveTab (ui)
+[cross] src/lib/hotkey_control.ahk:262 -> GuiManager.IsOnStrongHoldProtocol (ui)
+[cross] src/lib/hotkey_control.ahk:274 -> GuiManager.LastActiveTab (ui)
+[cross] src/lib/hotkey_control.ahk:275 -> GuiManager.LastActiveTab (ui)
+[cross] src/lib/hotkey_control.ahk:276 -> GuiManager.IsOnStrongHoldProtocol (ui)
+[cross] src/lib/settings/actions.ahk:22 -> GuiManager.LastActiveTab (ui)
+[cross] src/lib/settings/actions.ahk:26 -> GuiManager.SetIsModifiedFalse (ui)
+[cross] src/lib/settings/actions.ahk:27 -> GuiManager.CaptureInitialSnapshot (ui)
+[cross] src/lib/settings/actions.ahk:37 -> GuiManager.CommitTabSettings (ui)
+[cross] src/lib/settings/actions.ahk:40 -> GuiManager.LastActiveTab (ui)
+[cross] src/lib/settings/actions.ahk:46 -> GuiManager.SetIsModifiedFalse (ui)
+[cross] src/lib/settings/actions.ahk:47 -> GuiManager.CaptureInitialSnapshot (ui)
+[cross] src/lib/settings/actions.ahk:57 -> GuiManager.CommitTabSettings (ui)
+[cross] src/lib/settings/actions.ahk:60 -> GuiManager.LastActiveTab (ui)
+[cross] src/lib/settings/actions.ahk:65 -> GuiManager.SetIsModifiedFalse (ui)
+[cross] src/lib/settings/actions.ahk:66 -> GuiManager.CaptureInitialSnapshot (ui)
+[cross] src/lib/settings/actions.ahk:79 -> GuiManager.SetIsModifiedFalse (ui)
+[cross] src/lib/settings/actions.ahk:80 -> GuiManager.CaptureInitialSnapshot (ui)
+[cross] src/lib/settings/saver.ahk:6 -> GuiManager.Submit (ui)
+[cross] src/lib/settings/saver.ahk:102 -> GuiManager.SetControlValue (ui)
+[cross] src/lib/updater/updater_manager.ahk:57 -> UpdateUI.ShowUpToDateDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:112 -> UpdateUI.ShowCheckFailedDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:137 -> GuiManager.Show (ui)
+[cross] src/lib/updater/updater_manager.ahk:142 -> UpdateUI.ShowCheckFailedDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:161 -> UpdateUI.ShowDownloadingDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:170 -> UpdateUI.UpdateDownloadProgress (ui)
+[cross] src/lib/updater/updater_manager.ahk:198 -> UpdateUI.ShowFallbackNotice (ui)
+[cross] src/lib/updater/updater_manager.ahk:202 -> UpdateUI.CloseDownloadingDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:215 -> UpdateUI.CloseDownloadingDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:218 -> UpdateUI.ShowDownloadFailedDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:248 -> UpdateUI.CloseDownloadingDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:249 -> UpdateUI.ShowDownloadCompleteDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:264 -> UpdateUI.CloseDownloadingDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:266 -> UpdateUI.ShowDownloadCancelledDialog (ui)
+[cross] src/lib/updater/updater_manager.ahk:300 -> UpdateUI.ShowUpdateDialog (ui)
+[state] src/lib/game_auto_start.ahk:123 -> State.StartedByGameAutoStart
+[state] src/lib/game_monitor.ahk:12 -> State.GameHasStarted
+[state] src/lib/game_monitor.ahk:20 -> State.GameHasStarted
+[state] src/lib/game_monitor.ahk:23 -> State.GameHasStarted
+[state] src/lib/game_monitor.ahk:33 -> State.BlackScreenDetected
+[state] src/lib/game_monitor.ahk:47 -> State.BlackScreenDetected
+[state] src/lib/game_monitor.ahk:55 -> State.BlackScreenDetected
+[state] src/lib/game_monitor.ahk:55 -> State.ReadyForPause
+[state] src/lib/game_monitor.ahk:66 -> State.BlackScreenDetected
+[state] src/lib/game_monitor.ahk:70 -> State.BlackScreenDetected
+[state] src/lib/game_monitor.ahk:81 -> State.ReadyForPause
+[state] src/lib/game_monitor.ahk:130 -> State.BlackScreenDetected
+[state] src/lib/gui.ahk:92 -> State.GuiWindowName
+[state] src/lib/hotkey_actions.ahk:239 -> State.CurrentDelay
+[state] src/lib/hotkey_actions.ahk:292 -> State.ClickDelay
+[state] src/lib/hotkey_actions.ahk:317 -> State.ClickDelay
+[state] src/lib/hotkey_actions.ahk:351 -> State.ClickDelay
+[state] src/lib/hotkey_actions.ahk:353 -> State.ClickDelay
+[state] src/lib/hotkey_actions.ahk:353 -> State.CurrentDelay
+[state] src/lib/hotkey_actions.ahk:390 -> State.ClickDelay
+[state] src/lib/hotkey_actions.ahk:392 -> State.ClickDelay
+[state] src/lib/hotkey_actions.ahk:392 -> State.CurrentDelay
+[state] src/lib/hotkey_actions.ahk:489 -> State.BlackScreenDetected
+[state] src/lib/hotkey_actions.ahk:490 -> State.ReadyForPause
+[state] src/lib/hotkey_actions.ahk:512 -> State.BlackScreenDetected
+[state] src/lib/hotkey_actions.ahk:513 -> State.ReadyForPause
+[state] src/lib/hotkey_actions.ahk:800 -> State.ClickDelay
+[state] src/lib/hotkey_actions.ahk:848 -> State.InLevel
+[state] src/lib/hotkey_control.ahk:34 -> State.HoverOperate
+[state] src/lib/key_bind.ahk:188 -> State.GuiWindowName
+[state] src/lib/level_detector.ahk:56 -> State.InLevel
+[state] src/lib/level_detector.ahk:67 -> State.InLevel
+[state] src/lib/level_detector.ahk:78 -> State.InLevel
+[state] src/lib/level_detector.ahk:88 -> State.InLevel
+[state] src/lib/level_detector.ahk:100 -> State.InLevel
+[state] src/lib/level_detector.ahk:103 -> State.InLevel
+[state] src/lib/level_detector.ahk:105 -> State.InLevel
+[state] src/lib/log_exporter.ahk:101 -> State.StartedByGameAutoStart
+[state] src/lib/settings/loader.ahk:13 -> State.UpdateDelay
+[state] src/lib/settings/loader.ahk:14 -> State.UpdateClickDelay
+[state] src/lib/settings/loader.ahk:16 -> State.HoverOperate
+[state] src/lib/settings/saver.ahk:154 -> State.GameHasStarted
+[state] src/main.ahk:128 -> State.StartedByGameAutoStart
+[state] src/main.ahk:133 -> State.StartedByGameAutoStart
