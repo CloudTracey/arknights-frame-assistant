@@ -22,10 +22,12 @@
 #Include ../../src/lib/base/version_utils.ahk
 #Include ../../src/lib/base/touch_injection.ahk
 #Include ../../src/lib/log_exporter.ahk
-#Include ../../src/lib/game_auto_start.ahk
+#Include ../../src/lib/core/launch/app_context.ahk
+#Include ../../src/lib/core/launch/game_auto_start.ahk
+#Include ../../src/lib/core/hotkey/timing_service.ahk
 #Include ../../src/lib/game_keys.ahk
 #Include ../../src/lib/hotkey_actions.ahk
-#Include ../../src/lib/level_detector.ahk
+#Include ../../src/lib/core/monitor/level_detector.ahk
 #Include ../../src/lib/key_bind.ahk
 #Include ../../src/lib/hotkey_control.ahk
 #Include ../../src/lib/settings/settings_manager.ahk
@@ -34,12 +36,12 @@
 #Include ../../src/lib/updater/self_replacer.ahk
 #Include ../../src/lib/updater/updater_manager.ahk
 #Include ../../src/lib/updater/updater_ui.ahk
-#Include ../../src/lib/game_launcher.ahk
+#Include ../../src/lib/core/launch/game_launcher.ahk
 #Include ../../src/lib/changelog/changelog.ahk
 #Include ../../src/lib/changelog/changelog_ui.ahk
 #Include ../../src/lib/changelog/changelog_checker.ahk
 #Include ../../src/lib/gui.ahk
-#Include ../../src/lib/game_monitor.ahk
+#Include ../../src/lib/core/monitor/game_monitor.ahk
 
 ; 骨架断言：关键类/函数应已定义（类名在 AHK v2 中可作为值访问）
 if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema)
