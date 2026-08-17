@@ -25,11 +25,11 @@
 #Include ../../src/lib/core/launch/app_context.ahk
 #Include ../../src/lib/core/launch/game_auto_start.ahk
 #Include ../../src/lib/core/hotkey/timing_service.ahk
-#Include ../../src/lib/game_keys.ahk
-#Include ../../src/lib/hotkey_actions.ahk
+#Include ../../src/lib/core/hotkey/game_keys.ahk
+#Include ../../src/lib/core/hotkey/hotkey_actions.ahk
 #Include ../../src/lib/core/monitor/level_detector.ahk
 #Include ../../src/lib/key_bind.ahk
-#Include ../../src/lib/hotkey_control.ahk
+#Include ../../src/lib/core/hotkey/hotkey_service.ahk
 #Include ../../src/lib/settings/settings_manager.ahk
 #Include ../../src/lib/updater/version_checker.ahk
 #Include ../../src/lib/updater/downloader.ahk
@@ -46,9 +46,9 @@
 ; 骨架断言：关键类/函数应已定义（类名在 AHK v2 中可作为值访问）
 if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema)
     ExitApp 1
-if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyController)
+if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyService)
     ExitApp 1
-if !IsSet(GameMonitor) || !IsSet(VersionUtils) || !IsSet(KeyFormat)
+if !IsSet(GameMonitor) || !IsSet(VersionUtils) || !IsSet(KeyFormat) || !IsSet(HotkeyActions)
     ExitApp 1
 
 ; 探针：确认没有顶层副作用把 Config.IniFile 提前初始化（应仍为空）
