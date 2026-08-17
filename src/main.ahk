@@ -1,31 +1,48 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Ignore
 #Warn All, Off
-ListLines False
-KeyHistory 0
-ProcessSetPriority "High"
-SendMode "Input"
-SetKeyDelay -1, -1
-; 提高热键触发频率阈值：被拦截的游戏键每个按键触发 down+up 两个热键，极速连打 WASD 等键易超默认 66/2000ms 触发警告弹窗
-A_MaxHotkeysPerInterval := 200
-SetMouseDelay -1
-SetWinDelay -1
-SetDefaultMouseSpeed 0
-SetTitleMatchMode 3
-CoordMode "Mouse", "Client"
-DllCall("winmm\timeBeginPeriod", "UInt", 1)
 
-; 统一日志和版本定义需要在提权前可用，便于后续启动流程记录。
+; 所有模块只定义、零顶层副作用；启动由下方 App.Bootstrap() 显式执行。
 #Include ./lib/base/logger.ahk
 #Include ./lib/base/version.ahk
+#Include ./lib/base/message_box.ahk
+#Include ./lib/base/token_protector.ahk
+#Include ./lib/base/hotkey_schema.ahk
+#Include ./lib/base/constants.ahk
+#Include ./lib/base/config.ahk
+#Include ./lib/base/eventbus.ahk
+#Include ./lib/base/file_extractor.ahk
+#Include ./lib/base/timing.ahk
+#Include ./lib/base/window.ahk
+#Include ./lib/base/key_format.ahk
+#Include ./lib/base/tray.ahk
+#Include ./lib/base/version_utils.ahk
+#Include ./lib/base/touch_injection.ahk
+#Include ./lib/log_exporter.ahk
+#Include ./lib/game_auto_start.ahk
+#Include ./lib/game_keys.ahk
+#Include ./lib/hotkey_actions.ahk
+#Include ./lib/level_detector.ahk
+#Include ./lib/key_bind.ahk
+#Include ./lib/hotkey_control.ahk
+#Include ./lib/settings/settings_manager.ahk
+#Include ./lib/updater/version_checker.ahk
+#Include ./lib/updater/downloader.ahk
+#Include ./lib/updater/self_replacer.ahk
+#Include ./lib/updater/updater_manager.ahk
+#Include ./lib/updater/updater_ui.ahk
+#Include ./lib/game_launcher.ahk
+#Include ./lib/changelog/changelog.ahk
+#Include ./lib/changelog/changelog_ui.ahk
+#Include ./lib/changelog/changelog_checker.ahk
+#Include ./lib/gui.ahk
+#Include ./lib/game_monitor.ahk
 
 HandleAfaExit(exitReason, exitCode) {
     Logger.HandleExit(exitReason, exitCode)
     Logger.CloseConsole()
     DllCall("winmm\timeEndPeriod", "UInt", 1)
 }
-
-OnExit HandleAfaExit
 
 ; 判断是否由游戏启动事件触发
 HasLaunchArgument(argument) {
@@ -36,146 +53,122 @@ HasLaunchArgument(argument) {
     return false
 }
 
-startedByGameAutoStart := HasLaunchArgument("--game-autostart")
+class App {
+    static Bootstrap() {
+        ; ---- 环境初始化 ----
+        ListLines False
+        KeyHistory 0
+        ProcessSetPriority "High"
+        SendMode "Input"
+        SetKeyDelay -1, -1
+        ; 提高热键触发频率阈值：被拦截的游戏键每个按键触发 down+up 两个热键，极速连打 WASD 等键易超默认 66/2000ms 触发警告弹窗
+        A_MaxHotkeysPerInterval := 200
+        SetMouseDelay -1
+        SetWinDelay -1
+        SetDefaultMouseSpeed 0
+        SetTitleMatchMode 3
+        CoordMode "Mouse", "Client"
+        DllCall("winmm\timeBeginPeriod", "UInt", 1)
 
-; 获取权限
-if not A_IsAdmin {
-    try
-    {
-        launchContextArgs := startedByGameAutoStart ? " --game-autostart" : ""
-        if A_IsCompiled
-            Run '*RunAs "' A_ScriptFullPath '" /restart' launchContextArgs
-        else
-            Run '*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '"' launchContextArgs
+        OnExit HandleAfaExit
+
+        startedByGameAutoStart := HasLaunchArgument("--game-autostart")
+
+        ; ---- 提权 ----
+        if not A_IsAdmin {
+            try
+            {
+                launchContextArgs := startedByGameAutoStart ? " --game-autostart" : ""
+                if A_IsCompiled
+                    Run '*RunAs "' A_ScriptFullPath '" /restart' launchContextArgs
+                else
+                    Run '*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '"' launchContextArgs
+            }
+            ExitApp
+        }
+
+        ; ---- 管理员进程日志 ----
+        Logger.Init()
+        Logger.Info("Startup", "管理员进程启动，脚本=" A_ScriptName)
+
+        ; 上一会话异常退出（Logger.PreviousAbnormalFile 在 Logger.Init 已识别）时提示用户。
+        if (Logger.PreviousAbnormalFile != "") {
+            Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
+            MessageBox.Info("检测到上次运行崩溃。`n建议在设置中开启「调试模式」记录日志，并用「生成日志压缩包」导出诊断包反馈给开发者。", "AFA")
+        }
+
+        ; ---- 原 include 时执行的初始化（按原 include 顺序） ----
+        Config.InitPath()
+        HotkeyActionsStart()
+        LevelDetector.Init()
+        KeyBinder.Start()
+        HotkeyController.Init()
+        SettingsActionsStart()
+        VersionChecker.Init()
+        Updater.Init()
+        GameLauncher.Init()
+
+        ; ---- 加载设置 ----
+        Loader.LoadSettings()
+        Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
+        Logger.RegisterSecret(Config.GetImportant("GamePath"))
+        Logger.RegisterSecret(A_ScriptFullPath)
+        Logger.Info("Startup", "配置加载完成，版本=" Version.Get())
+
+        ; 写入启动来源状态，并校准随游戏自动启动的 Windows 审核和计划任务
+        State.StartedByGameAutoStart := startedByGameAutoStart
+        autoStartResult := GameAutoStartManager.Reconcile()
+        if (!autoStartResult.success) {
+            autoStartResult.degraded := true
+            Logger.Error("GameAutoStart", "启动时校准失败：" autoStartResult.message)
+            if (!State.StartedByGameAutoStart && Config.GetImportant("AutoStartWithGame") = "1")
+                pendingAutoStartWarning := autoStartResult.message
+        }
+
+        ; 关闭功能后若有遗留事件触发，只清理任务，不启动小助手主体
+        if (autoStartResult.HasProp("shouldExit") && autoStartResult.shouldExit)
+            ExitApp
+
+        ; 确保嵌入文件已提取到 AppData
+        FileExtractor.EnsureExtracted()
+
+        ; 初始化游戏按键识别（必须在 HotkeyOn 之前）
+        GameKeys.Init()
+
+        HotkeyController.HotkeyOn()
+
+        ; 检查并显示更新公告
+        ChangelogChecker.CheckAndShow()
+
+        ; 初始化 GUI（含 Alt+F4 退出热键注册）
+        GuiManager.Start()
+
+        ; 初始化更新 UI（原 updater_ui.ahk 在 GUI 之后 include）
+        UpdateUI.Init()
+
+        ; 启动校准失败只在 GUI 就绪后用托盘提示一次，不阻塞主流程，也不改变已保存配置。
+        if (IsSet(pendingAutoStartWarning))
+            ShowTrayTip(pendingAutoStartWarning, "随游戏自动启动校准失败", 2)
+
+        tokenStorageWarning := Config.GetTokenStorageWarning()
+        if (tokenStorageWarning != "")
+            MessageBox.Warning(tokenStorageWarning, "GitHub Token 存储提示")
+
+        ; 触发应用启动事件（触发自动更新检查和游戏自动启动）
+        EventBus.Publish("AppStartCompleted")
+
+        ; 启动游戏监控定时器
+        GameMonitor.Start()
+
+        ; 初始化按键
+        EventBus.Publish("SetSwitchKey")
+
+        ; 刷新 GUI 以正确应用文本
+        EventBus.Publish("GuiUpdateHotkeyControls")
+        EventBus.Publish("GuiUpdateImportantControls")
+        EventBus.Publish("GuiUpdateCustomControls")
     }
-    ExitApp
 }
 
-; 管理员进程开始记录持久化日志。
-Logger.Init()
-Logger.Info("Startup", "管理员进程启动，脚本=" A_ScriptName)
-
-; 包含统一消息框
-#Include ./lib/base/message_box.ahk
-
-; 上一会话异常退出（Logger.PreviousAbnormalFile 在 Logger.Init 已识别）时提示用户。
-; 纯信息通知，不带动作按钮；正常跑过一轮退出后（日志带 Shutdown 标记）自然不再弹出。
-if (Logger.PreviousAbnormalFile != "") {
-    Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
-    MessageBox.Info("检测到上次运行崩溃。`n建议在设置中开启「调试模式」记录日志，并用「生成日志压缩包」导出诊断包反馈给开发者。", "AFA")
-}
-
-; 包含 GitHub Token 保护模块
-#Include ./lib/base/token_protector.ahk
-
-; 包含配置管理
-#Include ./lib/base/hotkey_schema.ahk
-#Include ./lib/base/constants.ahk
-#Include ./lib/base/config.ahk
-
-; 包含日志压缩包导出
-#Include ./lib/log_exporter.ahk
-
-; 包含随游戏自动启动模块
-#Include ./lib/game_auto_start.ahk
-
-; 包含事件总线
-#Include ./lib/base/eventbus.ahk
-
-; 包含文件提取模块
-#Include ./lib/base/file_extractor.ahk
-#Include ./lib/base/timing.ahk
-#Include ./lib/base/window.ahk
-#Include ./lib/base/key_format.ahk
-#Include ./lib/base/tray.ahk
-#Include ./lib/base/version_utils.ahk
-
-; 包含游戏按键注册表识别
-#Include ./lib/game_keys.ahk
-
-; 包含功能实现
-#Include ./lib/hotkey_actions.ahk
-
-; 包含关卡检测投票状态机（依赖 SafeWinGetClientPos，须在 hotkey_actions 之后）
-#Include ./lib/level_detector.ahk
-
-; 包含按键绑定
-#Include ./lib/key_bind.ahk
-
-; 包含热键控制
-#Include ./lib/hotkey_control.ahk
-
-; 包含设置管理
-#Include ./lib/settings/settings_manager.ahk
-
-; 包含更新模块
-#Include ./lib/updater/version_checker.ahk
-#Include ./lib/updater/downloader.ahk
-#Include ./lib/updater/self_replacer.ahk
-#Include ./lib/updater/updater_manager.ahk
-
-; 包含游戏启动器
-#Include ./lib/game_launcher.ahk
-
-; 加载设置
-Loader.LoadSettings()
-Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
-Logger.RegisterSecret(Config.GetImportant("GamePath"))
-Logger.RegisterSecret(A_ScriptFullPath)
-Logger.Info("Startup", "配置加载完成，版本=" Version.Get())
-
-; 写入启动来源状态，并校准随游戏自动启动的 Windows 审核和计划任务
-State.StartedByGameAutoStart := startedByGameAutoStart
-autoStartResult := GameAutoStartManager.Reconcile()
-if (!autoStartResult.success) {
-    autoStartResult.degraded := true
-    Logger.Error("GameAutoStart", "启动时校准失败：" autoStartResult.message)
-    if (!State.StartedByGameAutoStart && Config.GetImportant("AutoStartWithGame") = "1")
-        pendingAutoStartWarning := autoStartResult.message
-}
-
-; 关闭功能后若有遗留事件触发，只清理任务，不启动小助手主体
-if (autoStartResult.HasProp("shouldExit") && autoStartResult.shouldExit)
-    ExitApp
-
-; 确保嵌入文件已提取到 AppData
-FileExtractor.EnsureExtracted()
-
-; 初始化游戏按键识别（必须在 HotkeyOn 之前）
-GameKeys.Init()
-
-HotkeyController.HotkeyOn()
-
-; 包含更新公告模块
-#Include ./lib/changelog/changelog.ahk
-#Include ./lib/changelog/changelog_ui.ahk
-#Include ./lib/changelog/changelog_checker.ahk
-
-; 检查并显示更新公告
-ChangelogChecker.CheckAndShow()
-
-; 包含GUI
-#Include ./lib/gui.ahk
-#Include ./lib/updater/updater_ui.ahk
-
-; 启动校准失败只在 GUI 就绪后用托盘提示一次，不阻塞主流程，也不改变已保存配置。
-if (IsSet(pendingAutoStartWarning))
-    ShowTrayTip(pendingAutoStartWarning, "随游戏自动启动校准失败", 2)
-
-tokenStorageWarning := Config.GetTokenStorageWarning()
-if (tokenStorageWarning != "")
-    MessageBox.Warning(tokenStorageWarning, "GitHub Token 存储提示")
-
-; 触发应用启动事件（触发自动更新检查和游戏自动启动）
-EventBus.Publish("AppStarted")
-
-; 包含游戏监控
-#Include ./lib/game_monitor.ahk
-
-; 初始化按键
-EventBus.Publish("SetSwitchKey")
-
-; 刷新GUI以正确应用文本
-EventBus.Publish("GuiUpdateHotkeyControls")
-EventBus.Publish("GuiUpdateImportantControls")
-EventBus.Publish("GuiUpdateCustomControls")
+; 启动
+App.Bootstrap()
