@@ -11,6 +11,7 @@ logs/
 backup/
 other/
 .scratch
+.jspace
 
 # 本地维护的上下文文件与未定稿文档（如 ADR 记录）
 CONTEXT.md
