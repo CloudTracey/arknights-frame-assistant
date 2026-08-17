@@ -1,17 +1,17 @@
 # AFA 耦合治理迁移基线（由 tools/layer_check.py --update-baseline 生成）
 # 每阶段只允许删除条目，不允许新增条目。
 [cross] src/lib/changelog/changelog_checker.ahk:33 -> ChangelogUI.Show (ui)
+[cross] src/lib/core/launch/game_launcher.ahk:28 -> GuiManager.SetControlValue (ui)
+[cross] src/lib/core/launch/game_launcher.ahk:29 -> GuiManager.TrackChange (ui)
+[cross] src/lib/core/launch/game_launcher.ahk:36 -> GuiManager.SetControlValue (ui)
+[cross] src/lib/core/launch/game_launcher.ahk:37 -> GuiManager.TrackChange (ui)
 [cross] src/lib/game_keys.ahk:532 -> GuiManager.LastActiveTab (ui)
-[cross] src/lib/game_launcher.ahk:28 -> GuiManager.SetControlValue (ui)
-[cross] src/lib/game_launcher.ahk:29 -> GuiManager.TrackChange (ui)
-[cross] src/lib/game_launcher.ahk:36 -> GuiManager.SetControlValue (ui)
-[cross] src/lib/game_launcher.ahk:37 -> GuiManager.TrackChange (ui)
 [cross] src/lib/hotkey_actions.ahk:441 -> GuiManager.SetControlValue (ui)
 [cross] src/lib/hotkey_actions.ahk:446 -> GuiManager.LastActiveTab (ui)
-[cross] src/lib/hotkey_control.ahk:262 -> GuiManager.IsOnStrongHoldProtocol (ui)
-[cross] src/lib/hotkey_control.ahk:274 -> GuiManager.LastActiveTab (ui)
-[cross] src/lib/hotkey_control.ahk:275 -> GuiManager.LastActiveTab (ui)
-[cross] src/lib/hotkey_control.ahk:276 -> GuiManager.IsOnStrongHoldProtocol (ui)
+[cross] src/lib/hotkey_control.ahk:273 -> GuiManager.IsOnStrongHoldProtocol (ui)
+[cross] src/lib/hotkey_control.ahk:285 -> GuiManager.LastActiveTab (ui)
+[cross] src/lib/hotkey_control.ahk:286 -> GuiManager.LastActiveTab (ui)
+[cross] src/lib/hotkey_control.ahk:287 -> GuiManager.IsOnStrongHoldProtocol (ui)
 [cross] src/lib/settings/actions.ahk:24 -> GuiManager.LastActiveTab (ui)
 [cross] src/lib/settings/actions.ahk:28 -> GuiManager.SetIsModifiedFalse (ui)
 [cross] src/lib/settings/actions.ahk:29 -> GuiManager.CaptureInitialSnapshot (ui)
@@ -42,47 +42,3 @@
 [cross] src/lib/updater/updater_manager.ahk:264 -> UpdateUI.CloseDownloadingDialog (ui)
 [cross] src/lib/updater/updater_manager.ahk:266 -> UpdateUI.ShowDownloadCancelledDialog (ui)
 [cross] src/lib/updater/updater_manager.ahk:300 -> UpdateUI.ShowUpdateDialog (ui)
-[state] src/lib/game_auto_start.ahk:123 -> State.StartedByGameAutoStart
-[state] src/lib/game_monitor.ahk:36 -> State.GameHasStarted
-[state] src/lib/game_monitor.ahk:44 -> State.GameHasStarted
-[state] src/lib/game_monitor.ahk:47 -> State.GameHasStarted
-[state] src/lib/game_monitor.ahk:57 -> State.BlackScreenDetected
-[state] src/lib/game_monitor.ahk:71 -> State.BlackScreenDetected
-[state] src/lib/game_monitor.ahk:79 -> State.BlackScreenDetected
-[state] src/lib/game_monitor.ahk:79 -> State.ReadyForPause
-[state] src/lib/game_monitor.ahk:90 -> State.BlackScreenDetected
-[state] src/lib/game_monitor.ahk:94 -> State.BlackScreenDetected
-[state] src/lib/game_monitor.ahk:105 -> State.ReadyForPause
-[state] src/lib/game_monitor.ahk:155 -> State.BlackScreenDetected
-[state] src/lib/gui.ahk:92 -> State.GuiWindowName
-[state] src/lib/hotkey_actions.ahk:235 -> State.CurrentDelay
-[state] src/lib/hotkey_actions.ahk:288 -> State.ClickDelay
-[state] src/lib/hotkey_actions.ahk:313 -> State.ClickDelay
-[state] src/lib/hotkey_actions.ahk:347 -> State.ClickDelay
-[state] src/lib/hotkey_actions.ahk:349 -> State.ClickDelay
-[state] src/lib/hotkey_actions.ahk:349 -> State.CurrentDelay
-[state] src/lib/hotkey_actions.ahk:386 -> State.ClickDelay
-[state] src/lib/hotkey_actions.ahk:388 -> State.ClickDelay
-[state] src/lib/hotkey_actions.ahk:388 -> State.CurrentDelay
-[state] src/lib/hotkey_actions.ahk:485 -> State.BlackScreenDetected
-[state] src/lib/hotkey_actions.ahk:486 -> State.ReadyForPause
-[state] src/lib/hotkey_actions.ahk:508 -> State.BlackScreenDetected
-[state] src/lib/hotkey_actions.ahk:509 -> State.ReadyForPause
-[state] src/lib/hotkey_actions.ahk:796 -> State.ClickDelay
-[state] src/lib/hotkey_actions.ahk:844 -> State.InLevel
-[state] src/lib/hotkey_control.ahk:34 -> State.HoverOperate
-[state] src/lib/key_bind.ahk:213 -> State.GuiWindowName
-[state] src/lib/level_detector.ahk:56 -> State.InLevel
-[state] src/lib/level_detector.ahk:67 -> State.InLevel
-[state] src/lib/level_detector.ahk:78 -> State.InLevel
-[state] src/lib/level_detector.ahk:88 -> State.InLevel
-[state] src/lib/level_detector.ahk:100 -> State.InLevel
-[state] src/lib/level_detector.ahk:103 -> State.InLevel
-[state] src/lib/level_detector.ahk:105 -> State.InLevel
-[state] src/lib/log_exporter.ahk:101 -> State.StartedByGameAutoStart
-[state] src/lib/settings/loader.ahk:13 -> State.UpdateDelay
-[state] src/lib/settings/loader.ahk:14 -> State.UpdateClickDelay
-[state] src/lib/settings/loader.ahk:16 -> State.HoverOperate
-[state] src/lib/settings/saver.ahk:154 -> State.GameHasStarted
-[state] src/main.ahk:119 -> State.StartedByGameAutoStart
-[state] src/main.ahk:124 -> State.StartedByGameAutoStart
