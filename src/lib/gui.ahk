@@ -730,7 +730,7 @@ class GuiManager {
     static _UpdateHotkeyControlsFromConfig() {
         for key, value in Config.AllHotkeys {
             try {
-                value := KeyBinder.VirtualNewkeyFormat(value)
+                value := KeyFormat.VirtualNewkeyFormat(value)
                 this.MainGui[key].Value := value
             }
         }
@@ -788,7 +788,7 @@ class GuiManager {
     static _UpdateCustomControlsFromConfig() {
         for key, value in Config.AllCustom {
             try {
-                value := KeyBinder.VirtualNewkeyFormat(value)
+                value := KeyFormat.VirtualNewkeyFormat(value)
                 this.MainGui[key].Value := value
             }
         }
@@ -1647,9 +1647,9 @@ class GuiManager {
             HotkeyController.EnableByTab("keyBind")
             if (this.IsOnStrongHoldProtocol == true) {
                 this.IsOnStrongHoldProtocol := false
-                TrayTip
+                HideTrayTip()
                 SetTimer HideTrayTip, 0
-                TrayTip("已退出卫戍协议方案", "AFA", "Mute")
+                ShowTrayTip("已退出卫戍协议方案", "AFA", "Mute")
                 SetTimer HideTrayTip, -3000
             }
         }
@@ -1657,9 +1657,9 @@ class GuiManager {
             HotkeyController.EnableByTab("strongHoldProtocol")
             if (this.IsOnStrongHoldProtocol == false) {
                 this.IsOnStrongHoldProtocol := true
-                TrayTip
+                HideTrayTip()
                 SetTimer HideTrayTip, 0
-                TrayTip("已启用卫戍协议方案", "AFA", "Mute")
+                ShowTrayTip("已启用卫戍协议方案", "AFA", "Mute")
                 SetTimer HideTrayTip, -3000
             }
         }
@@ -1693,12 +1693,6 @@ class GuiManager {
 HandleGuiHideStopHook(*) {
     KeyBinder.StopHook()
 }
-
-; 隐藏TrayTip
-HideTrayTip() {
-    TrayTip
-}
-
 ; 初始化GUI
 GuiManager.Init()
 

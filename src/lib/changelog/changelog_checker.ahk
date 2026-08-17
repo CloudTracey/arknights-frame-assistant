@@ -72,7 +72,7 @@ class ChangelogChecker {
             ; 降序排列
             Loop bodies.Length - 1 {
                 Loop bodies.Length - A_Index {
-                    if (VersionChecker._CompareVersions(bodies[A_Index].tag_name, bodies[A_Index + 1].tag_name) < 0) {
+                    if (VersionUtils.CompareVersions(bodies[A_Index].tag_name, bodies[A_Index + 1].tag_name) < 0) {
                         temp := bodies[A_Index]
                         bodies[A_Index] := bodies[A_Index + 1]
                         bodies[A_Index + 1] := temp
@@ -83,7 +83,7 @@ class ChangelogChecker {
             ; 拼接 body，反转义 JSON 转义
             result := ""
             for i, entry in bodies {
-                unescapedBody := VersionChecker._UnescapeJsonString(entry.body)
+                unescapedBody := VersionUtils.UnescapeJsonString(entry.body)
                 dateHeaderPattern := "m)^## (\d{4}-\d{2}-\d{2})"
                 cleanBody := RegExReplace(unescapedBody, dateHeaderPattern, "## " entry.tag_name " ($1)")
                 if (i > 1)

@@ -450,14 +450,14 @@ ActionBeginPauseSwitch(ThisHotkey) {
     HotkeyController.EnableByTab(GuiManager.LastActiveTab)
     Logger.Info("HotkeyActions", "切换开局自动暂停 → " (newValue = "1" ? "开" : "关"))
     if (newValue = "1") {
-        TrayTip
+        HideTrayTip()
         SetTimer HideTrayTip, 0
-        TrayTip("已开启开局自动暂停", "AFA", "Mute")
+        ShowTrayTip("已开启开局自动暂停", "AFA", "Mute")
         SetTimer HideTrayTip, -3000
     } else {
-        TrayTip
+        HideTrayTip()
         SetTimer HideTrayTip, 0
-        TrayTip("已关闭开局自动暂停", "AFA", "Mute")
+        ShowTrayTip("已关闭开局自动暂停", "AFA", "Mute")
         SetTimer HideTrayTip, -3000
     }
     if InStr(ThisHotkey, "Wheel")
@@ -829,31 +829,6 @@ ActionOneClickPurchase(ThisHotkey) {
 }
 
 ; == 工具函数 ==
-; 高精度延迟
-USleep(delay_ms) {
-    if (delay_ms <= 0)
-        return
-    static freq := 0
-    if (freq = 0)
-        DllCall("QueryPerformanceFrequency", "Int64*", &freq)
-    start := 0
-    DllCall("QueryPerformanceCounter", "Int64*", &start)
-    target := start + (delay_ms * freq / 1000)
-    current := 0
-    Loop {
-        DllCall("QueryPerformanceCounter", "Int64*", &current)
-        if (current >= target)
-            break
-        remaining := (target - current) * 1000 / freq
-        if (remaining > 4)
-            DllCall("Sleep", "UInt", 1)
-    }
-    ; 诊断：到期时超出 target 的时长（换算毫秒）。正常忙等退出 overshoot 应 <1ms；
-    ; 若被 LevelDetector 等定时器中断，或 Sleep(1) 粒度过大（系统 tick 默认 15.6ms），会显著增大——用于定位过帧时序波动
-    overshoot := (current - target) * 1000.0 / freq
-    if (overshoot >= 1.0)
-        Logger.Debug("USleep", Format("USleep 超时 {:.1f}ms，delay={}ms", overshoot, delay_ms))
-}
 ; 去除修饰符前缀
 PureKeyWait(ThisHotkey) {
     if (ThisHotkey == "")
@@ -878,17 +853,6 @@ GuardInLevel(actionName, ThisHotkey) {
         Logger.Info("HotkeyActions", actionName " 被关卡检测拦截（不在关卡界面）")
     KeyForward.ForwardOriginalKey(ThisHotkey)
     return false
-}
-; 判断鼠标是否在Client区域内
-IsMouseInClient() {
-    MouseGetPos , &ypos, &hwnd
-    gameHwnd := WinExist("ahk_exe Arknights.exe")
-    if !(hwnd == gameHwnd)
-        return false
-    ; 简单判断会不会点到最小化或者关闭窗口
-    if ypos < 0
-        return false
-    return true
 }
 ; 获取放弃按钮位置
 AbandonButtonPosition() {
@@ -973,14 +937,4 @@ SkipButtonPosition() {
     PButtonY := wh * 0.05
     return {PBX: PButtonX, PBY: PButtonY}
 }
-
-; 安全获取明日方舟窗口 Client 区域尺寸，窗口不存在时返回 false 而非抛出 TargetError
-SafeWinGetClientPos(&ww, &wh) {
-    try {
-        WinGetClientPos ,, &ww, &wh, "ahk_exe Arknights.exe"
-        return true
-    } catch TargetError {
-        return false
-    }
-}
-#Include ./touch_injection.ahk
+#Include ./base/touch_injection.ahk

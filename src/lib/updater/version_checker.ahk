@@ -226,7 +226,7 @@ class VersionChecker {
 
             ; 解析结果
             if (resp.statusCode = 200) {
-                username := this._ExtractJsonValue(resp.body, "login")
+                username := VersionUtils.ExtractJsonValue(resp.body, "login")
                 this.TokenValidated := true
                 this._Log("Token验证成功")
                 return {valid: true, message: "Token有效", username: username, rateLimit: rateInfo.remaining "/" rateInfo.limit}
@@ -328,29 +328,7 @@ class VersionChecker {
         return {code: "N/A", desc: desc}
     }
 
-    ; 内部：反转义 JSON 字符串
-    static _UnescapeJsonString(str) {
-        placeholder := Chr(1)
-        result := StrReplace(str, "\\", placeholder)
-        result := StrReplace(result, '\"', Chr(34))
-        result := StrReplace(result, "\/", "/")
-        result := StrReplace(result, "\n", "`n")
-        result := StrReplace(result, "\r", "`r")
-        result := StrReplace(result, "\t", "`t")
-        result := StrReplace(result, placeholder, "\")
-        return result
-    }
 
-    ; 内部：转义字符串为 JSON 字符串值
-    static _EscapeJsonString(str) {
-        result := StrReplace(str, "\", "\\")
-        result := StrReplace(result, Chr(34), '\"')
-        result := StrReplace(result, "`r`n", "\r\n")
-        result := StrReplace(result, "`n", "\n")
-        result := StrReplace(result, "`r", "\r")
-        result := StrReplace(result, "`t", "\t")
-        return result
-    }
 
     ; 检查更新（主入口）
     ; 返回: {status, localVersion, remoteVersion, downloadUrl, message}
@@ -466,8 +444,8 @@ class VersionChecker {
             ; 根据渠道解析响应
             if (isStable) {
                 ; 正式版：/releases/latest 返回单个对象
-                remoteVersion := this._ExtractJsonValue(resp.body, "tag_name")
-                downloadUrl := this._ExtractJsonValue(resp.body, "browser_download_url")
+                remoteVersion := VersionUtils.ExtractJsonValue(resp.body, "tag_name")
+                downloadUrl := VersionUtils.ExtractJsonValue(resp.body, "browser_download_url")
 
                 ; 提取 AFA.exe asset 的 SHA-256 摘要（GitHub 格式 sha256:<hex>，剥离前缀；限定 AFA.exe asset，避免多 asset 时命中其他文件）
                 expectedHash := ""
@@ -492,7 +470,7 @@ class VersionChecker {
                 this._SaveToCache(remoteVersion, downloadUrl)
 
                 ; 比较版本
-                compareResult := this._CompareVersions(localVersion, remoteVersion)
+                compareResult := VersionUtils.CompareVersions(localVersion, remoteVersion)
                 this._Log("版本比较结果: " compareResult " (-1=需更新, 0=相同, 1=本地更新)")
 
                 if (compareResult < 0) {
@@ -506,7 +484,7 @@ class VersionChecker {
                 }
             } else {
                 ; 测试版：/releases 返回数组，解析所有发布并找到最高版本
-                releases := this._ParseReleasesArray(resp.body)
+                releases := VersionUtils.ParseReleasesArray(resp.body)
 
                 ; 保存 changelog 缓存
                 if (releases.Length > 0) {
@@ -524,7 +502,7 @@ class VersionChecker {
                 bestIndex := 1
                 Loop releases.Length - 1 {
                     idx := A_Index + 1
-                    if (this._CompareVersions(releases[bestIndex].tag_name, releases[idx].tag_name) < 0)
+                    if (VersionUtils.CompareVersions(releases[bestIndex].tag_name, releases[idx].tag_name) < 0)
                         bestIndex := idx
                 }
                 bestRelease := releases[bestIndex]
@@ -544,7 +522,7 @@ class VersionChecker {
                 this._SaveToCache(remoteVersion, downloadUrl)
 
                 ; 比较版本
-                compareResult := this._CompareVersions(localVersion, remoteVersion)
+                compareResult := VersionUtils.CompareVersions(localVersion, remoteVersion)
                 this._Log("版本比较结果: " compareResult " (-1=需更新, 0=相同, 1=本地更新)")
 
                 if (compareResult < 0) {
@@ -617,7 +595,7 @@ class VersionChecker {
         }
 
         ; 两个都成功 → 取版本号更高者
-        if (this._CompareVersions(betaResult.remoteVersion, stableResult.remoteVersion) >= 0) {
+        if (VersionUtils.CompareVersions(betaResult.remoteVersion, stableResult.remoteVersion) >= 0) {
             this._Log("测试版渠道: beta=" betaResult.remoteVersion " >= stable=" stableResult.remoteVersion "，使用 beta")
             return betaResult
         } else {
@@ -667,9 +645,9 @@ class VersionChecker {
             }
 
             ; 解析 version.json
-            remoteVersion := this._ExtractJsonValue(resp.body, "version")
-            downloadUrl := this._ExtractJsonValue(resp.body, "downloadUrl")
-            expectedHash := this._ExtractJsonValue(resp.body, "sha256")
+            remoteVersion := VersionUtils.ExtractJsonValue(resp.body, "version")
+            downloadUrl := VersionUtils.ExtractJsonValue(resp.body, "downloadUrl")
+            expectedHash := VersionUtils.ExtractJsonValue(resp.body, "sha256")
 
             this._Log("解析结果 - 远程版本: " remoteVersion)
             this._Log("解析结果 - 下载地址: " downloadUrl)
@@ -680,7 +658,7 @@ class VersionChecker {
             }
 
             ; 解析 releases 数组用于 changelog 缓存
-            releases := this._ParseReleasesArray(resp.body)
+            releases := VersionUtils.ParseReleasesArray(resp.body)
             if (releases.Length > 0) {
                 this._SaveChangelogCache(releases)
             }
@@ -690,7 +668,7 @@ class VersionChecker {
             this._SaveToCache(remoteVersion, downloadUrl)
 
             ; 比较版本
-            compareResult := this._CompareVersions(localVersion, remoteVersion)
+            compareResult := VersionUtils.CompareVersions(localVersion, remoteVersion)
             this._Log("版本比较结果: " compareResult)
 
             if (compareResult < 0) {
@@ -788,72 +766,12 @@ class VersionChecker {
             if (resp.statusCode != 200)
                 return []
 
-            return this._ParseReleasesArray(resp.body)
+            return VersionUtils.ParseReleasesArray(resp.body)
         } catch {
             return []
         }
     }
 
-    ; 内部：解析GitHub Releases JSON数组，提取所有发布版本
-    static _ParseReleasesArray(json) {
-        releases := []
-        pos := 1
-
-        Loop {
-            pos := RegExMatch(json, '"tag_name"\s*:\s*"([^"]*)"', &tagMatch, pos)
-            if (pos == 0)
-                break
-
-            tagName := tagMatch[1]
-            tagEnd := pos + StrLen(tagMatch[0])
-
-            ; 确定当前release对象的结束位置（下一个tag_name之前或JSON结尾）
-            nextTagPos := RegExMatch(json, '"tag_name"', , tagEnd)
-            if (nextTagPos == 0)
-                nextTagPos := StrLen(json) + 1
-
-            searchEnd := nextTagPos - 1
-            searchStr := SubStr(json, tagEnd, searchEnd - tagEnd + 1)
-
-            ; 提取prerelease状态
-            prerelease := false
-            if (RegExMatch(searchStr, '"prerelease"\s*:\s*(true|false)', &preMatch)) {
-                prerelease := (preMatch[1] == "true")
-            }
-
-            ; 提取下载地址
-            downloadUrl := ""
-            if (RegExMatch(searchStr, '"browser_download_url"\s*:\s*"([^"]*)"', &urlMatch)) {
-                downloadUrl := urlMatch[1]
-            }
-
-            ; 提取 AFA.exe asset 的 SHA-256 摘要（GitHub 格式 sha256:<hex>，剥离前缀；限定 AFA.exe asset）
-            expectedHash := ""
-            if (RegExMatch(searchStr, '"name"\s*:\s*"AFA\.exe".*?"digest"\s*:\s*"sha256:([0-9a-fA-F]{64})"', &digestMatch))
-                expectedHash := digestMatch[1]
-
-            ; 提取 body（Release 正文，Markdown 格式）
-            body := ""
-            q := Chr(34)
-            bodyPattern := q "body" q "\s*:\s*" q "((?:[^" q "\\]|\\.)*)" q
-            if (RegExMatch(searchStr, bodyPattern, &bodyMatch)) {
-                body := this._UnescapeJsonString(bodyMatch[1])
-            }
-
-            ; 提取发布日期（优先 published_at，回退 date）
-            date := ""
-            if (RegExMatch(searchStr, '"published_at"\s*:\s*"([^"]*)"', &dateMatch)) {
-                date := SubStr(dateMatch[1], 1, 10)  ; 提取 YYYY-MM-DD
-            } else if (RegExMatch(searchStr, '"date"\s*:\s*"([^"]*)"', &dateMatch)) {
-                date := dateMatch[1]  ; 国内源 version.json 兼容
-            }
-
-            releases.Push({tag_name: tagName, prerelease: prerelease, downloadUrl: downloadUrl, body: body, date: date, expectedHash: expectedHash})
-            pos := tagEnd
-        }
-
-        return releases
-    }
 
     ; 内部：从缓存加载
     ; 返回: {version, url} 或 false（缓存无效或过期）
@@ -865,8 +783,8 @@ class VersionChecker {
             content := FileRead(this.CacheFile)
 
             ; 解析缓存JSON
-            version := this._ExtractJsonValue(content, "latestVersion")
-            url := this._ExtractJsonValue(content, "downloadUrl")
+            version := VersionUtils.ExtractJsonValue(content, "latestVersion")
+            url := VersionUtils.ExtractJsonValue(content, "downloadUrl")
 
             if (version = "" || url = "")
                 return false
@@ -933,7 +851,7 @@ class VersionChecker {
                     continue
                 if (firstAdded)
                     json .= ","
-                escapedBody := this._EscapeJsonString(release.body)
+                escapedBody := VersionUtils.EscapeJsonString(release.body)
                 json .= '{"tag_name":"' release.tag_name '","body":"' escapedBody '","date":"' release.date '"}'
                 firstAdded := true
             }
@@ -953,7 +871,7 @@ class VersionChecker {
         for release in releases {
             if (release.body = "")
                 continue
-            if (this._CompareVersions(localVersion, release.tag_name) < 0) {
+            if (VersionUtils.CompareVersions(localVersion, release.tag_name) < 0) {
                 newerReleases.Push(release)
             }
         }
@@ -964,7 +882,7 @@ class VersionChecker {
         ; 降序排列（最高版本在前）
         Loop newerReleases.Length - 1 {
             Loop newerReleases.Length - A_Index {
-                if (this._CompareVersions(newerReleases[A_Index].tag_name, newerReleases[A_Index + 1].tag_name) < 0) {
+                if (VersionUtils.CompareVersions(newerReleases[A_Index].tag_name, newerReleases[A_Index + 1].tag_name) < 0) {
                     temp := newerReleases[A_Index]
                     newerReleases[A_Index] := newerReleases[A_Index + 1]
                     newerReleases[A_Index + 1] := temp
@@ -983,194 +901,11 @@ class VersionChecker {
         return body
     }
 
-    ; 内部：比较版本号（支持语义化版本规范 SemVer 2.0.0）
-    ; 返回: -1(本地<远程), 0(相等), 1(本地>远程)
-    static _CompareVersions(localVersion, remoteVersion) {
-        localParsed := this._ParseVersion(localVersion)
-        remoteParsed := this._ParseVersion(remoteVersion)
 
-        ; 比较主版本、次版本、修订号
-        Loop 3 {
-            localNum := localParsed.numbers[A_Index]
-            remoteNum := remoteParsed.numbers[A_Index]
 
-            if (localNum < remoteNum)
-                return -1
-            if (localNum > remoteNum)
-                return 1
-        }
 
-        ; 主版本号相同时，比较预发布标识符
-        ; 规则：正式版本 > 预发布版本（如 v1.0.0 > v1.0.0-alpha）
-        localHasPre := localParsed.prerelease.Length > 0
-        remoteHasPre := remoteParsed.prerelease.Length > 0
 
-        if (!localHasPre && !remoteHasPre) {
-            return 0  ; 都是正式版本且主版本号相同
-        }
-        if (!localHasPre && remoteHasPre) {
-            return 1  ; 本地是正式版本，远程是预发布版本
-        }
-        if (localHasPre && !remoteHasPre) {
-            return -1  ; 本地是预发布版本，远程是正式版本
-        }
 
-        ; 都是预发布版本，逐个比较标识符
-        return this._ComparePrerelease(localParsed.prerelease, remoteParsed.prerelease)
-    }
-
-    ; 内部：解析版本号 vX.Y.Z[-prerelease][+metadata]
-    ; 返回: {numbers: [X, Y, Z], prerelease: [ident1, ident2, ...], metadata: ""}
-    static _ParseVersion(versionStr) {
-        ; 移除前缀 'v' 或 'V'
-        cleanVersion := RegExReplace(versionStr, "^[vV]", "")
-
-        ; 分离构建元数据（+号后的内容，不参与版本比较）
-        metadata := ""
-        plusPos := InStr(cleanVersion, "+")
-        if (plusPos > 0) {
-            metadata := SubStr(cleanVersion, plusPos + 1)
-            cleanVersion := SubStr(cleanVersion, 1, plusPos - 1)
-        }
-
-        ; 分离预发布标识符（-号后的内容）
-        prerelease := []
-        hyphenPos := InStr(cleanVersion, "-")
-        versionCore := cleanVersion
-        if (hyphenPos > 0) {
-            versionCore := SubStr(cleanVersion, 1, hyphenPos - 1)
-            prereleaseStr := SubStr(cleanVersion, hyphenPos + 1)
-            prerelease := StrSplit(prereleaseStr, ".")
-        }
-
-        ; 解析主版本号、次版本号、修订号
-        parts := StrSplit(versionCore, ".")
-        numbers := []
-        Loop 3 {
-            if (A_Index <= parts.Length) {
-                ; 尝试转换为整数，如果失败则使用 0
-                try {
-                    numbers.Push(Integer(parts[A_Index]))
-                } catch {
-                    numbers.Push(0)
-                }
-            } else {
-                numbers.Push(0)
-            }
-        }
-
-        return {numbers: numbers, prerelease: prerelease, metadata: metadata}
-    }
-
-    ; 内部：比较预发布标识符
-    ; 按照 SemVer 规范：数字标识符按数值比较，字母标识符按 ASCII 比较
-    ; 数字标识符优先级低于字母标识符
-    static _ComparePrerelease(localPre, remotePre) {
-        maxLen := Max(localPre.Length, remotePre.Length)
-
-        Loop maxLen {
-            ; 获取当前位置的标识符（避免使用三元表达式，确保类型正确）
-            localIdent := ""
-            remoteIdent := ""
-
-            if (A_Index <= localPre.Length)
-                localIdent := localPre[A_Index]
-            if (A_Index <= remotePre.Length)
-                remoteIdent := remotePre[A_Index]
-
-            ; 如果一个版本有更多标识符，则另一个版本缺少标识符意味着优先级更低
-            if (localIdent == "")
-                return -1
-            if (remoteIdent == "")
-                return 1
-
-            ; 判断标识符类型
-            localIsNum := this._IsNumeric(localIdent)
-            remoteIsNum := this._IsNumeric(remoteIdent)
-
-            ; 数字标识符优先级低于字母标识符
-            if (localIsNum && !remoteIsNum)
-                return -1
-            if (!localIsNum && remoteIsNum)
-                return 1
-
-            ; 同类型比较
-            if (localIsNum && remoteIsNum) {
-                ; 都是数字，按数值比较
-                localVal := Integer(localIdent)
-                remoteVal := Integer(remoteIdent)
-                if (localVal < remoteVal)
-                    return -1
-                if (localVal > remoteVal)
-                    return 1
-            } else {
-                ; 都是字母（或混合），按 ASCII 顺序比较
-                cmpResult := StrCompare(localIdent, remoteIdent)
-                if (cmpResult < 0)
-                    return -1
-                if (cmpResult > 0)
-                    return 1
-            }
-        }
-
-        return 0  ; 所有标识符相同
-    }
-
-    ; 内部：检查字符串是否为纯数字
-    static _IsNumeric(str) {
-        if (str == "")
-            return false
-
-        Loop Parse str {
-            charCode := Ord(A_LoopField)
-            if (charCode < 48 || charCode > 57)  ; ASCII '0'=48, '9'=57
-                return false
-        }
-        return true
-    }
-
-    ; 内部：转义正则表达式中的特殊字符
-    static _EscapeRegex(str) {
-        ; 需要转义的正则元字符: \ . ^ $ | ? * + ( ) { } [ ]
-        result := str
-        result := StrReplace(result, "\", "\\")
-        result := StrReplace(result, ".", "\.")
-        result := StrReplace(result, "^", "\^")
-        result := StrReplace(result, "$", "\$")
-        result := StrReplace(result, "|", "\|")
-        result := StrReplace(result, "?", "\?")
-        result := StrReplace(result, "*", "\*")
-        result := StrReplace(result, "+", "\+")
-        result := StrReplace(result, "(", "\(")
-        result := StrReplace(result, ")", "\)")
-        result := StrReplace(result, "{", "\{")
-        result := StrReplace(result, "}", "\}")
-        result := StrReplace(result, "[", "\[")
-        result := StrReplace(result, "]", "\]")
-        return result
-    }
-
-    ; 内部：从JSON字符串中提取字段值
-    static _ExtractJsonValue(json, key) {
-        ; 匹配 "key":"value" 格式
-        ; 使用Chr构建正则表达式避免引号问题
-        q := Chr(34)  ; 双引号
-        notQ := Chr(94) Chr(34)  ; [^"]
-        ; 对key中的正则元字符进行转义
-        escapedKey := this._EscapeRegex(key)
-        pattern := q escapedKey q ":\s*" q "([" notQ "]*)" q
-        if (RegExMatch(json, pattern, &match)) {
-            return match[1]
-        }
-
-        ; 尝试匹配数字
-        pattern := q escapedKey q ":\s*(\d+)"
-        if (RegExMatch(json, pattern, &match)) {
-            return match[1]
-        }
-
-        return ""
-    }
 }
 
 ; 初始化

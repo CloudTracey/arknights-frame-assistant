@@ -16,8 +16,8 @@ CoordMode "Mouse", "Client"
 DllCall("winmm\timeBeginPeriod", "UInt", 1)
 
 ; 统一日志和版本定义需要在提权前可用，便于后续启动流程记录。
-#Include ./lib/logger.ahk
-#Include ./lib/version.ahk
+#Include ./lib/base/logger.ahk
+#Include ./lib/base/version.ahk
 
 HandleAfaExit(exitReason, exitCode) {
     Logger.HandleExit(exitReason, exitCode)
@@ -56,7 +56,7 @@ Logger.Init()
 Logger.Info("Startup", "管理员进程启动，脚本=" A_ScriptName)
 
 ; 包含统一消息框
-#Include ./lib/message_box.ahk
+#Include ./lib/base/message_box.ahk
 
 ; 上一会话异常退出（Logger.PreviousAbnormalFile 在 Logger.Init 已识别）时提示用户。
 ; 纯信息通知，不带动作按钮；正常跑过一轮退出后（日志带 Shutdown 标记）自然不再弹出。
@@ -66,10 +66,12 @@ if (Logger.PreviousAbnormalFile != "") {
 }
 
 ; 包含 GitHub Token 保护模块
-#Include ./lib/token_protector.ahk
+#Include ./lib/base/token_protector.ahk
 
 ; 包含配置管理
-#Include ./lib/config.ahk
+#Include ./lib/base/hotkey_schema.ahk
+#Include ./lib/base/constants.ahk
+#Include ./lib/base/config.ahk
 
 ; 包含日志压缩包导出
 #Include ./lib/log_exporter.ahk
@@ -78,10 +80,15 @@ if (Logger.PreviousAbnormalFile != "") {
 #Include ./lib/game_auto_start.ahk
 
 ; 包含事件总线
-#Include ./lib/eventbus.ahk
+#Include ./lib/base/eventbus.ahk
 
 ; 包含文件提取模块
-#Include ./lib/file_extractor.ahk
+#Include ./lib/base/file_extractor.ahk
+#Include ./lib/base/timing.ahk
+#Include ./lib/base/window.ahk
+#Include ./lib/base/key_format.ahk
+#Include ./lib/base/tray.ahk
+#Include ./lib/base/version_utils.ahk
 
 ; 包含游戏按键注册表识别
 #Include ./lib/game_keys.ahk
@@ -153,7 +160,7 @@ ChangelogChecker.CheckAndShow()
 
 ; 启动校准失败只在 GUI 就绪后用托盘提示一次，不阻塞主流程，也不改变已保存配置。
 if (IsSet(pendingAutoStartWarning))
-    TrayTip(pendingAutoStartWarning, "随游戏自动启动校准失败", 2)
+    ShowTrayTip(pendingAutoStartWarning, "随游戏自动启动校准失败", 2)
 
 tokenStorageWarning := Config.GetTokenStorageWarning()
 if (tokenStorageWarning != "")

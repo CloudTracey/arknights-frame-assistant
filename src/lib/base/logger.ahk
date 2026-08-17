@@ -138,7 +138,7 @@ class Logger {
                 ; 提示如何关闭（当次会话仅首次，跨重启仍提示）
                 if (!this.ConsoleTipShown) {
                     this.ConsoleTipShown := true
-                    MessageBox.Warning("调试日志控制台已打开。`n如需关闭控制台，请在 AFA 设置中取消勾选「启用调试模式」并应用设置。", "AFA 调试日志")
+                    EventBus.Publish("ConsoleOpened")
                 }
             } catch Error as e {
                 this.CloseConsole()

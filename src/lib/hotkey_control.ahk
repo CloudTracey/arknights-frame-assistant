@@ -260,9 +260,9 @@ class HotkeyController {
             HotkeyController.HotkeyOff()
             HotkeyController.HotkeyState := false
             GuiManager.IsOnStrongHoldProtocol := false
-            TrayTip
+            HideTrayTip()
             SetTimer HideTrayTip, 0
-            TrayTip("热键已禁用", "AFA", "Mute")
+            ShowTrayTip("热键已禁用", "AFA", "Mute")
             SetTimer HideTrayTip, -3000
             Logger.Info("Hotkey", "用户禁用热键")
             A_IconTip := "AFA`n热键已禁用"
@@ -274,9 +274,9 @@ class HotkeyController {
             HotkeyController.EnableByTab(GuiManager.LastActiveTab)
             if (GuiManager.LastActiveTab == "strongHoldProtocol")
                 GuiManager.IsOnStrongHoldProtocol := true
-            TrayTip
+            HideTrayTip()
             SetTimer HideTrayTip, 0
-            TrayTip("热键已启用", "AFA", "Mute")
+            ShowTrayTip("热键已启用", "AFA", "Mute")
             SetTimer HideTrayTip, -3000
             Logger.Info("Hotkey", "用户启用热键")
             A_IconTip := "AFA`n热键已启用"
@@ -301,7 +301,7 @@ class HotkeyController {
             A_TrayMenu.Rename("2&", "启用/禁用热键")
             return
         }
-        A_TrayMenu.Rename("2&", "启用/禁用热键(" KeyBinder.VirtualNewkeyFormat(switchKey) ")")
+        A_TrayMenu.Rename("2&", "启用/禁用热键(" KeyFormat.VirtualNewkeyFormat(switchKey) ")")
     }
     ; 解除设置热键启用/禁用快捷键
     static UnsetSwitchKey() {
