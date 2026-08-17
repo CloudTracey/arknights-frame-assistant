@@ -95,10 +95,6 @@ class KeyForward {
         }
     }
 }
-; AHK 热键名称大小写不敏感，状态表采用相同语义。
-KeyForward.InterceptedKeys.CaseSense := false
-KeyForward.DownHandled.CaseSense := false
-KeyForward.SuppressUp.CaseSense := false
 
 ; == 功能实现 ==
 ; -- 常规作战 --
@@ -488,7 +484,7 @@ ActionBeginPause() {
                 Logger.Warn("HotkeyActions", "自动暂停：游戏窗口不存在（代理指挥识别）")
                 State.BlackScreenDetected := false
                 State.ReadyForPause := false
-                SetTimer CheckGameStatus, 400
+                GameMonitor.SetPollInterval(400)
                 break
             }
             ; 接管代理按钮右侧边缘
@@ -511,7 +507,7 @@ ActionBeginPause() {
 
             State.BlackScreenDetected := false
             State.ReadyForPause := false
-            SetTimer CheckGameStatus, 400
+            GameMonitor.SetPollInterval(400)
             break
         }
     }
@@ -937,4 +933,14 @@ SkipButtonPosition() {
     PButtonY := wh * 0.05
     return {PBX: PButtonX, PBY: PButtonY}
 }
-#Include ./base/touch_injection.ahk
+; 启动热键动作域：初始化触控注入（原 touch_injection.ahk 顶层副作用）
+HotkeyActionsStart() {
+    ; AHK 热键名称大小写不敏感，状态表采用相同语义。
+    KeyForward.InterceptedKeys.CaseSense := false
+    KeyForward.DownHandled.CaseSense := false
+    KeyForward.SuppressUp.CaseSense := false
+    TouchInjector.Init(3, 1)
+    MouseGetPos &xpos, &ypos
+    TouchInjector.Move(xpos, ypos)
+    MouseMove xpos, ypos
+}
