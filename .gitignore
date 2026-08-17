@@ -16,6 +16,7 @@ other/
 CONTEXT.md
 docs/adr
 docs/architecture
+docs/aegis
 
 # DSH 项目根：忽略本地运行状态，保留 skills 目录
 .dsh/*
@@ -24,3 +25,7 @@ docs/architecture
 .agents/*
 !.agents/skills/
 !.agents/skills/**
+
+# Python 工具缓存
+__pycache__/
+*.pyc
