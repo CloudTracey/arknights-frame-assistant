@@ -71,7 +71,7 @@ class VersionChecker {
     }
 
     ; 调试日志解锁：alpha 构建恒开，正式版随用户「调试模式」开关
-    ; 直接读 Loader.LoadSettings 已同步的运行时开关，避免每次 INI 重读、并与 Logger.DebugEnabled 保持一致（无双源）
+    ; 直接读 SettingsService 已同步的运行时开关，避免每次 INI 重读、并与 Logger.DebugEnabled 保持一致（无双源）
     static IsDebugLogging() {
         if (this.DebugMode)
             return true

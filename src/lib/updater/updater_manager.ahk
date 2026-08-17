@@ -59,8 +59,7 @@ class Updater {
                 ; 清除已忽略版本记录（当前已是最新）
                 dismissedVersion := Config.GetImportant("LastDismissedVersion")
                 if (dismissedVersion != "") {
-                    Config.SetImportant("LastDismissedVersion", "")
-                    saveResult := Config.SaveAllToIni()
+                    saveResult := SettingsService.UpdatePersistedValue("LastDismissedVersion", "")
                     if (!saveResult.success) {
                         ; 保存失败时恢复内存值，避免配置文件与当前状态不一致。
                         Config.SetImportant("LastDismissedVersion", dismissedVersion)
@@ -284,9 +283,8 @@ class Updater {
     ; 处理忽略此版本
     static HandleUpdateIgnored(data) {
         Logger.Info("Updater", "用户忽略版本 " data.remoteVersion " 的更新提示")
-        ; 记录忽略的版本号
-        Config.SetImportant("LastDismissedVersion", data.remoteVersion)
-        saveResult := Config.SaveAllToIni()
+        ; 记录忽略的版本号（单键写入，不触碰其他未保存设置）
+        saveResult := SettingsService.UpdatePersistedValue("LastDismissedVersion", data.remoteVersion)
 
         ; 显示提示
         if (saveResult.success)

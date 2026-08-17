@@ -528,6 +528,115 @@ class Config {
         }
     }
 
+    ; 单键原子写入：仅修改目标键所在 section，保留其他键。
+    ; 供 SettingsService.UpdatePersistedValue 调用，是业务层单键配置变更的底层持久化。
+    static _PersistSingleValue(key, value) {
+        if this.IniFile = ""
+            this.InitPath()
+
+        targetIniFile := this.IniFile
+        tempIniFile := ""
+        Critical "On"
+        try {
+            ; 先在同目录临时文件中完成写入，成功后再替换正式配置。
+            tempIniFile := targetIniFile ".tmp-" A_TickCount "-" Random(1000, 9999)
+            if FileExist(targetIniFile)
+                FileCopy(targetIniFile, tempIniFile, true)
+            else {
+                tempHandle := FileOpen(tempIniFile, "w")
+                tempHandle.Close()
+            }
+            this.IniFile := tempIniFile
+
+            if (key = "Frame") {
+                ; Frame 双写兼容：Frame155 存文本值，Frame 存旧版索引
+                IniWrite(value, this.IniFile, "Main", "Frame155")
+                frameIndex := Constants.FrameTextToOldIndex.Has(value) ? Constants.FrameTextToOldIndex[value] : "3"
+                IniWrite(frameIndex, this.IniFile, "Main", "Frame")
+            } else if (key = "GitHubToken") {
+                tokenStorage := this.PrepareGitHubTokenForStorage(value)
+                if !tokenStorage.success
+                    return tokenStorage
+                if (tokenStorage.storedValue != "")
+                    IniWrite(tokenStorage.storedValue, this.IniFile, "Main", this.GITHUB_TOKEN_PROTECTED_KEY)
+                else
+                    try IniDelete(this.IniFile, "Main", this.GITHUB_TOKEN_PROTECTED_KEY)
+            } else {
+                section := this._SectionForKey(key)
+                if (section = "")
+                    throw Error("未知配置键：" key)
+                IniWrite(value, this.IniFile, section, key)
+            }
+
+            this.IniFile := targetIniFile
+            this._CommitIniTemp(tempIniFile, targetIniFile)
+            tempIniFile := ""
+            return {success: true, message: ""}
+        } catch Error as e {
+            Logger.Error("Config", "单键配置写入失败：" e.Message)
+            return {success: false, message: "配置文件写入失败：" e.Message}
+        } finally {
+            this.IniFile := targetIniFile
+            if (tempIniFile != "" && FileExist(tempIniFile))
+                try FileDelete(tempIniFile)
+            Critical "Off"
+        }
+    }
+
+    ; 根据配置键名返回所属 INI section。
+    static _SectionForKey(key) {
+        if this._DefaultHotkeys.Has(key)
+            return "Hotkeys"
+        if this._DefaultImportant.Has(key)
+            return "Main"
+        if this._DefaultCustom.Has(key)
+            return "Custom"
+        return ""
+    }
+
+    ; 仅持久化热键相关设置（Hotkeys section + SwitchHotkey），保留其他 section/键不变。
+    ; 供 SettingsService.Reset 使用：重置按键不应把未保存的非热键设置一起保存。
+    static SaveHotkeysToIni() {
+        if this.IniFile = ""
+            this.InitPath()
+
+        targetIniFile := this.IniFile
+        tempIniFile := ""
+        Critical "On"
+        try {
+            tempIniFile := targetIniFile ".tmp-" A_TickCount "-" Random(1000, 9999)
+            if FileExist(targetIniFile)
+                FileCopy(targetIniFile, tempIniFile, true)
+            else {
+                tempHandle := FileOpen(tempIniFile, "w")
+                tempHandle.Close()
+            }
+            this.IniFile := tempIniFile
+
+            ; 只替换热键 section 和 SwitchHotkey 键，其他键原样保留
+            try IniDelete(this.IniFile, "Hotkeys")
+            try IniDelete(this.IniFile, "Custom", "SwitchHotkey")
+            for keyVar, value in this._HotkeySettings {
+                IniWrite(value, this.IniFile, "Hotkeys", keyVar)
+            }
+            if this._CustomSettings.Has("SwitchHotkey")
+                IniWrite(this._CustomSettings["SwitchHotkey"], this.IniFile, "Custom", "SwitchHotkey")
+
+            this.IniFile := targetIniFile
+            this._CommitIniTemp(tempIniFile, targetIniFile)
+            tempIniFile := ""
+            return {success: true, message: ""}
+        } catch Error as e {
+            Logger.Error("Config", "热键设置写入失败：" e.Message)
+            return {success: false, message: "配置文件写入失败：" e.Message}
+        } finally {
+            this.IniFile := targetIniFile
+            if (tempIniFile != "" && FileExist(tempIniFile))
+                try FileDelete(tempIniFile)
+            Critical "Off"
+        }
+    }
+
     ; 将已完整写入的临时配置文件替换为正式配置文件。
     static _CommitIniTemp(tempIniFile, targetIniFile) {
         if !FileExist(targetIniFile) {

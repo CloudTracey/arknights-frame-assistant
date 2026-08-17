@@ -139,7 +139,7 @@ class GuiManager {
             ExitApp()
             return
         }
-        EventBus.Publish("SettingsCancel")
+        EventBus.Publish("SettingsCancelRequested")
     }
 
     ; 内部：创建所有控件
@@ -709,15 +709,15 @@ class GuiManager {
 
         this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " ys+15 w" this.BtnW " h32",
             "重置按键") ; 仅在按键相关标签下显示
-        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsReset"))
+        this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsResetRequested"))
         this.NotOtherControls.Push(this.BtnDefaultHotkeys)
 
         this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default Disabled", "保存并关闭")
-        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSave"))
+        this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSaveRequested"))
         this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default Disabled", "应用设置")
-        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApply"))
+        this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApplyRequested"))
         this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
-        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancel"))
+        this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancelRequested"))
         this.HintUnsaved := this.MainGui.Add("Text", "x" (BtnX_Save - 155) " yp+8 w140 h24 Right cFF0000 Hidden",
         "修改尚未保存或应用！")
 
@@ -808,6 +808,12 @@ class GuiManager {
         EventBus.Subscribe("HotkeyStateChanged", (data) => this._OnHotkeyStateChanged(data))
         EventBus.Subscribe("HotkeyGroupChanged", (data) => this._OnHotkeyGroupChanged(data))
         EventBus.Subscribe("SwitchKeyChanged", (data) => this._OnSwitchKeyChanged(data))
+        EventBus.Subscribe("SettingsSaved", (*) => this._OnSettingsSaved())
+        EventBus.Subscribe("SettingsApplied", (*) => this._OnSettingsApplied())
+        EventBus.Subscribe("SettingsCancelled", (*) => this._OnSettingsCancelled())
+        EventBus.Subscribe("SettingsReset", (*) => this._OnSettingsReset())
+        EventBus.Subscribe("SettingsChanged", (data) => this._OnSettingsChanged(data))
+        EventBus.Subscribe("GamePathNormalized", (data) => this.SetControlValue("GamePath", data.path))
     }
 
     ; 处理热键总开关状态变化（托盘文案/提示由 UI 负责）
@@ -848,6 +854,63 @@ class GuiManager {
             A_TrayMenu.Rename("2&", "启用/禁用热键")
         else
             A_TrayMenu.Rename("2&", "启用/禁用热键(" KeyFormat.VirtualNewkeyFormat(data.key) ")")
+    }
+
+    ; 处理设置已保存
+    static _OnSettingsSaved() {
+        this.CommitTabSettings()
+        this.SetIsModifiedFalse()
+        this.CaptureInitialSnapshot()
+        this.Hide()
+    }
+
+    ; 处理设置已应用
+    static _OnSettingsApplied() {
+        this.CommitTabSettings()
+        this.SetIsModifiedFalse()
+        this.CaptureInitialSnapshot()
+    }
+
+    ; 处理设置已取消
+    static _OnSettingsCancelled() {
+        this._UpdateHotkeyControlsFromConfig()
+        this._UpdateImportantControlsFromConfig()
+        this._UpdateCustomControlsFromConfig()
+        this.SetIsModifiedFalse()
+        this.CaptureInitialSnapshot()
+        this.Hide()
+    }
+
+    ; 处理按键已重置
+    static _OnSettingsReset() {
+        ; 重置只持久化热键相关项；非热键未保存修改应继续保持“已修改”状态。
+        this._UpdateHotkeyControlsFromConfig()
+        this._UpdateCustomControlsFromConfig()
+        ; 仅把热键与 SwitchHotkey 的初始快照更新为已保存的默认值
+        for key in Config.AllHotkeys {
+            try this._InitialValues[key] := this.MainGui[key].Value
+        }
+        try this._InitialValues["SwitchHotkey"] := this.MainGui["SwitchHotkey"].Value
+        ; 重新评估脏状态：若还有其他未保存的非热键修改，保持 IsModified=true
+        this.TrackChange("SwitchHotkey")
+    }
+
+    ; 处理单键设置变更（外部写入后同步对应控件，不标记脏值）
+    static _OnSettingsChanged(data) {
+        try {
+            if (data.key = "Frame") {
+                this.MainGui["Frame"].Value := this._FrameTextToIndex(data.value)
+                return
+            }
+            if (data.key = "AutoBeginPause") {
+                this.MainGui["AutoBeginPause"].Value := (data.value = "1" || data.value = 1) ? 1 : 0
+                return
+            }
+            value := data.value
+            if (Config.AllHotkeys.Has(data.key) || data.key = "SwitchHotkey")
+                value := KeyFormat.VirtualNewkeyFormat(value)
+            this.MainGui[data.key].Value := value
+        }
     }
 
     ; 点击"手动检查更新"按钮

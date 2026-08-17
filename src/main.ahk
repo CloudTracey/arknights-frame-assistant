@@ -27,7 +27,8 @@
 #Include ./lib/core/monitor/level_detector.ahk
 #Include ./lib/key_bind.ahk
 #Include ./lib/core/hotkey/hotkey_service.ahk
-#Include ./lib/settings/settings_manager.ahk
+#Include ./lib/core/settings/hotkey_conflict_validator.ahk
+#Include ./lib/core/settings/settings_service.ahk
 #Include ./lib/updater/version_checker.ahk
 #Include ./lib/updater/downloader.ahk
 #Include ./lib/updater/self_replacer.ahk
@@ -105,13 +106,14 @@ class App {
         LevelDetector.Init()
         KeyBinder.Start()
         HotkeyService.Init()
-        SettingsActionsStart()
+        TimingService.Init()
+        SettingsService.Init()
         VersionChecker.Init()
         Updater.Init()
         GameLauncher.Init()
 
         ; ---- 加载设置 ----
-        Loader.LoadSettings()
+        SettingsService.Initialize()
         Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
         Logger.RegisterSecret(Config.GetImportant("GamePath"))
         Logger.RegisterSecret(A_ScriptFullPath)

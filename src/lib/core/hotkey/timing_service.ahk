@@ -13,6 +13,20 @@ class TimingService {
         return this._ClickDelay
     }
 
+    ; 订阅设置变更事件（由 bootstrap 调用，避免顶层副作用）
+    static Init() {
+        EventBus.Subscribe("SettingsChanged", (data) => this._HandleSettingsChanged(data))
+        EventBus.Subscribe("SettingsSaved", (*) => this.Refresh())
+        EventBus.Subscribe("SettingsApplied", (*) => this.Refresh())
+        EventBus.Subscribe("SettingsReset", (*) => this.Refresh())
+    }
+
+    ; 处理单键设置变更：帧率/点击延迟变化时刷新缓存
+    static _HandleSettingsChanged(data) {
+        if (data.key = "Frame" || data.key = "ClickDelay")
+            this.Refresh()
+    }
+
     ; 根据当前配置刷新延迟缓存（由 SettingsService/Loader 在配置变更后调用）
     static Refresh() {
         frame := Config.GetImportant("Frame")

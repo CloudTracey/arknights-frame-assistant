@@ -71,6 +71,9 @@ class HotkeyService {
         EventBus.Subscribe("ActiveTabChangeRequested", (data) => this._HandleActiveTabChangeRequested(data))
         EventBus.Subscribe("HotkeyToggleRequested", (*) => this.SwitchHotkey())
         EventBus.Subscribe("SettingsChanged", (data) => this._HandleSettingsChanged(data))
+        EventBus.Subscribe("SettingsSaved", (*) => this._HandleSettingsSavedOrApplied())
+        EventBus.Subscribe("SettingsApplied", (*) => this._HandleSettingsSavedOrApplied())
+        EventBus.Subscribe("SettingsReset", (*) => this._HandleSettingsSavedOrApplied())
     }
 
     ; 处理游戏按键变更：总开关开启时才重建，修复“禁用后被注册表变更恢复”的 bug
@@ -103,6 +106,16 @@ class HotkeyService {
             this.SetHoverOperate(data.value == "1")
         else if (data.key = "SwitchHotkey")
             this.SetSwitchKey()
+        else if (Config.AllHotkeys.Has(data.key) && this.HotkeyState)
+            this.EnableByTab(this._ActiveTab)
+    }
+
+    ; 处理保存/应用/重置完成：从 INI 刷新热键相关配置并重建热键
+    static _HandleSettingsSavedOrApplied() {
+        this.SetHoverOperate(Config.ReadCustomFromIni("HoverOperate") == "1")
+        if (this.HotkeyState)
+            this.EnableByTab(this._ActiveTab)
+        this.SetSwitchKey()
     }
 
     ; 当前激活的功能标签页（供设置域临时处理器重建热键）

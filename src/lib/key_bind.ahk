@@ -41,7 +41,7 @@ class KeyBinder {
     }
 
     ; 处理设置保存前事件
-    static HandleSettingsWillSave(*) {
+    static HandleSettingsSaveStarting(*) {
         KeyBinder.StopHook()
     }
 
@@ -101,7 +101,7 @@ class KeyBinder {
     ; 启动按键绑定：注册窗口鼠标监听、设置保存前订阅与录制热键（原为文件末尾顶层副作用）
     static Start() {
         OnMessage(0x0201, WM_LBUTTONDOWN)
-        EventBus.Subscribe("SettingsWillSave", KeyBinder.HandleSettingsWillSave)
+        EventBus.Subscribe("SettingsSaveStarting", KeyBinder.HandleSettingsSaveStarting)
         HotIf((*) => KeyBinder.WaitingModify)
         Hotkey("*RButton", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
         Hotkey("*MButton", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")

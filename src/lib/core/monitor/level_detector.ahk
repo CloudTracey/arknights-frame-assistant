@@ -61,7 +61,7 @@ class LevelDetector {
         }
     }
 
-    ; 守卫开关同步（设置保存/应用/取消/重置后由 Loader.LoadSettings 调用）
+    ; 守卫开关同步（设置保存/应用/取消/重置后由 SettingsService/事件调用）
     ; 关闭守卫→停止轮询并强制 InLevel=true（守卫直接放行，无需维护真实关卡状态）
     ; 开启守卫→恢复轮询（下轮 Poll 依据像素检测自动校正 InLevel）
     static SyncGuardSetting() {
@@ -76,12 +76,23 @@ class LevelDetector {
     ; 启动投票定时器（每秒轮询）
     ; 类静态方法引用作回调需 Bind(LevelDetector)——直接传引用回调验证失败（Invalid callback function），同 KeyForward.ActionUpForward 模式
     static Init() {
+        ; 订阅设置变更，守卫开关变化时即时同步
+        EventBus.Subscribe("SettingsChanged", (data) => this._HandleSettingsChanged(data))
+        EventBus.Subscribe("SettingsSaved", (*) => this.SyncGuardSetting())
+        EventBus.Subscribe("SettingsApplied", (*) => this.SyncGuardSetting())
+        EventBus.Subscribe("SettingsReset", (*) => this.SyncGuardSetting())
         ; 未开启关卡守卫时不轮询，强制 InLevel=true（守卫直接放行，避免无谓的像素检测）
         if (Config.ReadImportantFromIni("InLevelGuard") != "1") {
             this._SetInLevel(true)
             return
         }
         this.SetGuardEnabled(true)
+    }
+
+    ; 处理单键设置变更：InLevelGuard 变化时同步守卫开关
+    static _HandleSettingsChanged(data) {
+        if (data.key = "InLevelGuard")
+            this.SyncGuardSetting()
     }
 
     ; 轮询投票
