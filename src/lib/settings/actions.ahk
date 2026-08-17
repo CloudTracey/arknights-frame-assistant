@@ -1,10 +1,12 @@
 ; == 设置操作 ==
 
-; 初始化：订阅事件
-EventBus.Subscribe("SettingsReset", HandleSettingsReset)
-EventBus.Subscribe("SettingsSave", HandleSettingsSave)
-EventBus.Subscribe("SettingsApply", HandleSettingsApply)
-EventBus.Subscribe("SettingsCancel", HandleSettingsCancel)
+; 初始化：订阅设置操作事件（由 bootstrap 调用，避免顶层副作用）
+SettingsActionsStart() {
+    EventBus.Subscribe("SettingsReset", HandleSettingsReset)
+    EventBus.Subscribe("SettingsSave", HandleSettingsSave)
+    EventBus.Subscribe("SettingsApply", HandleSettingsApply)
+    EventBus.Subscribe("SettingsCancel", HandleSettingsCancel)
+}
 
 ; 处理重置按键设置事件
 HandleSettingsReset(*) {
