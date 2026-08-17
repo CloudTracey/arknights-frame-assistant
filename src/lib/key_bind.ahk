@@ -98,10 +98,35 @@ class KeyBinder {
         EventBus.Publish("HotkeyBindingsChanged")
     }
 
+    ; 启动按键绑定：注册窗口鼠标监听、设置保存前订阅与录制热键（原为文件末尾顶层副作用）
+    static Start() {
+        OnMessage(0x0201, WM_LBUTTONDOWN)
+        EventBus.Subscribe("SettingsWillSave", KeyBinder.HandleSettingsWillSave)
+        HotIf((*) => KeyBinder.WaitingModify)
+        Hotkey("*RButton", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
+        Hotkey("*MButton", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
+        Hotkey("*XButton1", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
+        Hotkey("*XButton2", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
+        Hotkey("*WheelUp", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
+        Hotkey("*WheelDown", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
+        Hotkey("~LAlt", KeyBinder.HandleModifyAlt.Bind(KeyBinder), "On")
+        Hotkey("~RAlt", KeyBinder.HandleModifyAlt.Bind(KeyBinder), "On")
+        HotIf
+    }
+
+    ; 鼠标录制热键回调（原 #HotIf 块内的鼠标键/滚轮处理）
+    static HandleModifyMouseHotkey(ThisHotkey) {
+        pureKey := RegExReplace(ThisHotkey, "^[~*$!^+#&<>()]+")
+        KeyBinder.ModifyHook.OnEnd := (*) => KeyBinder.EndChange(KeyBinder.ModifyHook.EndMods . pureKey)
+        KeyBinder.ModifyHook.Stop()
+    }
+
+    ; 避免触发 GUI 菜单导致卡死（原 ~LAlt/~RAlt 热键）
+    static HandleModifyAlt(ThisHotkey) {
+        Send "{Blind}{vkE8}"
+    }
 }
 
-; 在设置窗口监听鼠标左键
-OnMessage(0x0201, WM_LBUTTONDOWN)
 
 ; 左键点击判定
 WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
@@ -199,26 +224,3 @@ WatchActiveWindow(){
     }
 }
 
-; 订阅设置保存前事件
-EventBus.Subscribe("SettingsWillSave", KeyBinder.HandleSettingsWillSave)
-
-; 鼠标录制
-#HotIf KeyBinder.WaitingModify
-*RButton::
-*MButton::
-*XButton1::
-*XButton2::
-*WheelUp::
-*WheelDown::
-{
-    pureKey := RegExReplace(A_ThisHotkey, "^[~*$!^+#&<>()]+")
-    KeyBinder.ModifyHook.OnEnd := (*) => KeyBinder.EndChange(KeyBinder.ModifyHook.EndMods . pureKey)
-    KeyBinder.ModifyHook.Stop()
-}
-; 避免触发GUI菜单导致卡死
-~LAlt::
-~RAlt::
-{
-    Send "{Blind}{vkE8}"
-}
-#HotIf
