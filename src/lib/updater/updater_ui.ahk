@@ -308,8 +308,6 @@ class UpdateUI {
     }
 }
 
-; 初始化更新UI
-UpdateUI.Init()
 
 ; 格式化文件大小
 FormatSize(bytes) {

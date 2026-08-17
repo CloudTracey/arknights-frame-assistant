@@ -3,7 +3,7 @@
 class GameLauncher {
     ; 初始化启动器
     static Init() {
-        EventBus.Subscribe("AppStarted", (*) => this.OnAppStarted())
+        EventBus.Subscribe("AppStartCompleted", (*) => this.OnAppStarted())
         EventBus.Subscribe("CheckGamePathClick", (*) => this.CheckGamePath())
     }
 
@@ -110,4 +110,3 @@ class GameLauncher {
     }
 }
 
-GameLauncher.Init()

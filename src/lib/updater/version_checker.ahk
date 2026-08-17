@@ -908,5 +908,3 @@ class VersionChecker {
 
 }
 
-; 初始化
-VersionChecker.Init()

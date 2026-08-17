@@ -12,7 +12,7 @@ class Updater {
     ; 初始化：订阅事件
     static Init() {
         ; 订阅应用启动事件（自动检查）
-        EventBus.Subscribe("AppStarted", (*) => this.CheckOnStartup())
+        EventBus.Subscribe("AppStartCompleted", (*) => this.CheckOnStartup())
         ; 订阅手动检查更新事件
         EventBus.Subscribe("CheckUpdateClick", (*) => this.CheckManual())
         ; 订阅更新可用事件
@@ -301,5 +301,3 @@ class Updater {
     }
 }
 
-; 初始化协调器
-Updater.Init()
