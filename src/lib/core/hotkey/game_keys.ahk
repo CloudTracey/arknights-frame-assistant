@@ -526,12 +526,9 @@ class GameKeys {
                 Logger.Info("GameKeys", "注册表读取已恢复")
             }
 
-            ; 重建热键（按当前标签页重新注册，新拦截正则生效）
-            Logger.Info("GameKeys", "检测到按键变更，重建热键")
-            HotkeyController.HotkeyOff()
-            HotkeyController.EnableByTab(GuiManager.LastActiveTab)
-            ; 重新设置切换键
-            EventBus.Publish("SetSwitchKey")
+            ; 只发布变更事实，由 HotkeyService 决定是否重建（热键总开关关闭时不恢复热键）
+            Logger.Info("GameKeys", "检测到按键变更，发布 GameKeysChanged")
+            EventBus.Publish("GameKeysChanged", {bindings: this._Bindings})
         } catch Error as e {
             Logger.Error("GameKeys", "轮询异常：" e.Message)
         }

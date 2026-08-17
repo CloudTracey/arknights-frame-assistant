@@ -6,6 +6,34 @@ SettingsActionsStart() {
     EventBus.Subscribe("SettingsSave", HandleSettingsSave)
     EventBus.Subscribe("SettingsApply", HandleSettingsApply)
     EventBus.Subscribe("SettingsCancel", HandleSettingsCancel)
+    EventBus.Subscribe("SettingsValueChangeRequested", HandleSettingsValueChangeRequested)
+}
+
+; 临时处理器：承接热键动作发布的单键设置变更请求（阶段 6 将由 SettingsService 接管）
+HandleSettingsValueChangeRequested(data) {
+    if (data.key != "AutoBeginPause")
+        return
+    newValue := data.value
+    Config.SetImportant("AutoBeginPause", newValue)
+    try {
+        GuiManager.SetControlValue("AutoBeginPause", newValue = "1")
+    }
+    EventBus.Publish("HotkeyOff")
+    IniWrite(newValue, Config.IniFile, "Main", "AutoBeginPause")
+    Loader.LoadSettings()
+    HotkeyService.EnableByTab(HotkeyService.GetActiveTab())
+    Logger.Info("Settings", "切换开局自动暂停 → " (newValue = "1" ? "开" : "关"))
+    if (newValue = "1") {
+        HideTrayTip()
+        SetTimer HideTrayTip, 0
+        ShowTrayTip("已开启开局自动暂停", "AFA", "Mute")
+        SetTimer HideTrayTip, -3000
+    } else {
+        HideTrayTip()
+        SetTimer HideTrayTip, 0
+        ShowTrayTip("已关闭开局自动暂停", "AFA", "Mute")
+        SetTimer HideTrayTip, -3000
+    }
 }
 
 ; 处理重置按键设置事件
@@ -20,8 +48,8 @@ HandleSettingsReset(*) {
         Saver.SettingsIniWrite()
         Loader.LoadSettings()
         Logger.Info("Settings", "已重置按键并保存默认设置")
-        if(HotkeyController.HotkeyState == true) {
-            HotkeyController.EnableByTab(GuiManager.LastActiveTab)
+        if(HotkeyService.HotkeyState == true) {
+            HotkeyService.EnableByTab(HotkeyService.GetActiveTab())
         }
         EventBus.Publish("SetSwitchKey")
         ; 清除GUI的已修改状态
@@ -38,8 +66,8 @@ HandleSettingsSave(*) {
     Loader.LoadSettings()
     GuiManager.CommitTabSettings()
     Logger.Info("Settings", "设置已保存并关闭")
-    if(HotkeyController.HotkeyState == true) {
-        HotkeyController.EnableByTab(GuiManager.LastActiveTab)
+    if(HotkeyService.HotkeyState == true) {
+        HotkeyService.EnableByTab(HotkeyService.GetActiveTab())
     }
     EventBus.Publish("SetSwitchKey")
     Saver.ResetGameStateIfNeeded()
@@ -58,8 +86,8 @@ HandleSettingsApply(*) {
     Loader.LoadSettings()
     GuiManager.CommitTabSettings()
     Logger.Info("Settings", "设置已应用")
-    if(HotkeyController.HotkeyState == true) {
-        HotkeyController.EnableByTab(GuiManager.LastActiveTab)
+    if(HotkeyService.HotkeyState == true) {
+        HotkeyService.EnableByTab(HotkeyService.GetActiveTab())
     }
     EventBus.Publish("SetSwitchKey")
     Saver.ResetGameStateIfNeeded()

@@ -22,11 +22,11 @@
 #Include ./lib/core/launch/app_context.ahk
 #Include ./lib/core/launch/game_auto_start.ahk
 #Include ./lib/core/hotkey/timing_service.ahk
-#Include ./lib/game_keys.ahk
-#Include ./lib/hotkey_actions.ahk
+#Include ./lib/core/hotkey/game_keys.ahk
+#Include ./lib/core/hotkey/hotkey_actions.ahk
 #Include ./lib/core/monitor/level_detector.ahk
 #Include ./lib/key_bind.ahk
-#Include ./lib/hotkey_control.ahk
+#Include ./lib/core/hotkey/hotkey_service.ahk
 #Include ./lib/settings/settings_manager.ahk
 #Include ./lib/updater/version_checker.ahk
 #Include ./lib/updater/downloader.ahk
@@ -104,7 +104,7 @@ class App {
         HotkeyActionsStart()
         LevelDetector.Init()
         KeyBinder.Start()
-        HotkeyController.Init()
+        HotkeyService.Init()
         SettingsActionsStart()
         VersionChecker.Init()
         Updater.Init()
@@ -137,7 +137,7 @@ class App {
         ; 初始化游戏按键识别（必须在 HotkeyOn 之前）
         GameKeys.Init()
 
-        HotkeyController.HotkeyOn()
+        HotkeyService.HotkeyOn()
 
         ; 检查并显示更新公告
         ChangelogChecker.CheckAndShow()

@@ -122,7 +122,7 @@ class GuiManager {
         A_IconTip := "AFA`n热键已启用"
         A_TrayMenu.Delete
         A_TrayMenu.Add("打开设置界面", (*) => this.Show())
-        A_TrayMenu.Add("启用/禁用热键", (*) => EventBus.Publish("SwitchHotkey"))
+        A_TrayMenu.Add("启用/禁用热键", (*) => EventBus.Publish("HotkeyToggleRequested"))
         A_TrayMenu.Add("重启小助手", (*) => Reload())
         A_TrayMenu.Add("退出", (*) => ExitApp())
         A_TrayMenu.Default := "打开设置界面"
@@ -805,6 +805,49 @@ class GuiManager {
         EventBus.Subscribe("GuiHideStopHook", HandleGuiHideStopHook)
         EventBus.Subscribe("CheckUpdateComplete", (*) => this.OnCheckUpdateComplete())
         EventBus.Subscribe("CheckUpdateStart", (*) => this.OnCheckUpdateStart())
+        EventBus.Subscribe("HotkeyStateChanged", (data) => this._OnHotkeyStateChanged(data))
+        EventBus.Subscribe("HotkeyGroupChanged", (data) => this._OnHotkeyGroupChanged(data))
+        EventBus.Subscribe("SwitchKeyChanged", (data) => this._OnSwitchKeyChanged(data))
+    }
+
+    ; 处理热键总开关状态变化（托盘文案/提示由 UI 负责）
+    static _OnHotkeyStateChanged(data) {
+        HideTrayTip()
+        SetTimer HideTrayTip, 0
+        if (data.enabled) {
+            A_IconTip := "AFA`n热键已启用"
+            ShowTrayTip("热键已启用", "AFA", "Mute")
+        } else {
+            A_IconTip := "AFA`n热键已禁用"
+            ShowTrayTip("热键已禁用", "AFA", "Mute")
+        }
+        SetTimer HideTrayTip, -3000
+    }
+
+    ; 处理热键组变化（卫戍协议/常规作战切换提示）
+    static _OnHotkeyGroupChanged(data) {
+        isStrongHold := data.group = "strongHoldProtocol"
+        if (this.IsOnStrongHoldProtocol != isStrongHold) {
+            this.IsOnStrongHoldProtocol := isStrongHold
+            ; 热键禁用时不弹提示（与旧逻辑一致）
+            if (!HotkeyService.HotkeyState)
+                return
+            HideTrayTip()
+            SetTimer HideTrayTip, 0
+            if (isStrongHold)
+                ShowTrayTip("已启用卫戍协议方案", "AFA", "Mute")
+            else
+                ShowTrayTip("已退出卫戍协议方案", "AFA", "Mute")
+            SetTimer HideTrayTip, -3000
+        }
+    }
+
+    ; 处理切换键变化（托盘菜单文案）
+    static _OnSwitchKeyChanged(data) {
+        if (data.key = "")
+            A_TrayMenu.Rename("2&", "启用/禁用热键")
+        else
+            A_TrayMenu.Rename("2&", "启用/禁用热键(" KeyFormat.VirtualNewkeyFormat(data.key) ")")
     }
 
     ; 点击"手动检查更新"按钮
@@ -1299,8 +1342,7 @@ class GuiManager {
             if (fallbackTab != "") {
                 this.LastActiveTab := fallbackTab
                 this.IsOnStrongHoldProtocol := fallbackTab = "strongHoldProtocol"
-                if HotkeyController.HotkeyState
-                    HotkeyController.EnableByTab(fallbackTab)
+                EventBus.Publish("ActiveTabChangeRequested", {tabName: fallbackTab})
             }
         }
 
@@ -1635,38 +1677,8 @@ class GuiManager {
             this.LastActiveTab := tabName
         }
 
-        ; 如果当前处于热键禁用状态，只更新UI，不切换热键
-        if (!HotkeyController.HotkeyState) {
-            this._UpdateTabUI(tabName)
-            return
-        }
-
-        ; 根据标签页切换热键组
-        if (tabName = "keyBind" || tabName = "quick") {
-            HotkeyController.EnableByTab("keyBind")
-            if (this.IsOnStrongHoldProtocol == true) {
-                this.IsOnStrongHoldProtocol := false
-                HideTrayTip()
-                SetTimer HideTrayTip, 0
-                ShowTrayTip("已退出卫戍协议方案", "AFA", "Mute")
-                SetTimer HideTrayTip, -3000
-            }
-        }
-        else if (tabName = "strongHoldProtocol") {
-            HotkeyController.EnableByTab("strongHoldProtocol")
-            if (this.IsOnStrongHoldProtocol == false) {
-                this.IsOnStrongHoldProtocol := true
-                HideTrayTip()
-                SetTimer HideTrayTip, 0
-                ShowTrayTip("已启用卫戍协议方案", "AFA", "Mute")
-                SetTimer HideTrayTip, -3000
-            }
-        }
-        else if isInitialSwitch {
-            ; 仅剩“其他设置”时仍按默认的常规作战方案初始化热键。
-            HotkeyController.EnableByTab(this.LastActiveTab)
-        }
-        ; "other"标签页不改变热键
+        ; 通知 HotkeyService 更新内部 ActiveTab/Group（热键禁用时也只记录不重建）
+        EventBus.Publish("ActiveTabChangeRequested", {tabName: tabName})
 
         ; 更新UI
         this._UpdateTabUI(tabName)

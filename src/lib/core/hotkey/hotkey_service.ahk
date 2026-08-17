@@ -8,7 +8,7 @@
 ;   ——与窗口状态无关，解决"按住从游戏内拖出/Alt+Tab 切走后再松开"的卡键（含上次遗留的失焦边界）。
 ; - 鼠标键/滚轮：鼠标悬停在游戏窗口上才触发（窗口外点击透传给系统）。
 ; - 键盘键：游戏窗口为活动窗口，或（启用失焦悬停操作时）鼠标悬停在游戏窗口上才触发——失焦悬停开关
-;   （HotkeyController._HoverOperate，由"自定义"页复选框控制，保存/应用后生效）关闭后键盘键仅当游戏为活动窗口时才触发；
+;   （HotkeyService._HoverOperate，由"自定义"页复选框控制，保存/应用后生效）关闭后键盘键仅当游戏为活动窗口时才触发；
 ;   动作层统一包装负责激活游戏窗口并恢复原窗口。鼠标键/滚轮不受开关影响，仍只受悬停判定约束。
 HotkeyContext(hotkeyName) {
     pureKey := KeyForward.PureKeyName(hotkeyName)
@@ -31,10 +31,10 @@ HotkeyContext(hotkeyName) {
     ; 动作层统一包装负责激活游戏窗口并恢复原窗口（判定层不做副作用）
     if WinActive("ahk_exe Arknights.exe")
         return true
-    return HotkeyController.GetHoverOperate() && IsMouseInClient()
+    return HotkeyService.GetHoverOperate() && IsMouseInClient()
 }
 
-class HotkeyController {
+class HotkeyService {
     ; 热键状态
     static HotkeyState := true
 
@@ -49,59 +49,103 @@ class HotkeyController {
         return this._HoverOperate
     }
 
-    ; 初始化热键控制器
+    ; 热键域内部状态（从 GuiManager/State 收归）
+    static _ActiveTab := "keyBind"
+    static _Group := "combatQuick"
+    static _SwitchKey := ""
+
+    ; 初始化热键服务
     static Init() {
-        HotkeyController._SubscribeEvents()
+        HotkeyService._SubscribeEvents()
     }
 
-    ; 内部：订阅热键事件
+    ; 内部：订阅热键事件（保留旧事件兼容，同时接入新事件契约）
     static _SubscribeEvents() {
         EventBus.Subscribe("HotkeyOff", (*) => this.HotkeyOff())
         EventBus.Subscribe("UnsetSwitchKey", (*) => this.UnsetSwitchKey())
         EventBus.Subscribe("HotkeyOn", (*) => this.HotkeyOn())
         EventBus.Subscribe("SetSwitchKey", (*) => this.SetSwitchKey())
         EventBus.Subscribe("SwitchHotkey", (*) => this.SwitchHotkey())
+        ; 新事件契约
+        EventBus.Subscribe("GameKeysChanged", (data) => this._HandleGameKeysChanged(data))
+        EventBus.Subscribe("ActiveTabChangeRequested", (data) => this._HandleActiveTabChangeRequested(data))
+        EventBus.Subscribe("HotkeyToggleRequested", (*) => this.SwitchHotkey())
+        EventBus.Subscribe("SettingsChanged", (data) => this._HandleSettingsChanged(data))
+    }
+
+    ; 处理游戏按键变更：总开关开启时才重建，修复“禁用后被注册表变更恢复”的 bug
+    static _HandleGameKeysChanged(data) {
+        if (!this.HotkeyState)
+            return
+        Logger.Info("Hotkey", "收到 GameKeysChanged，重建热键")
+        this.EnableByTab(this._ActiveTab)
+        this.SetSwitchKey()
+    }
+
+    ; 处理 UI 标签页切换请求
+    static _HandleActiveTabChangeRequested(data) {
+        this._ActiveTab := data.tabName
+        if (this._ActiveTab = "strongHoldProtocol")
+            this._Group := "strongHoldProtocol"
+        else
+            this._Group := "combatQuick"
+        if (this.HotkeyState)
+            this.EnableByTab(this._ActiveTab)
+        EventBus.Publish("HotkeyGroupChanged", {group: this._Group})
+    }
+
+    ; 处理设置变更：HoverOperate/SwitchHotkey 等热键相关配置即时刷新
+    static _HandleSettingsChanged(data) {
+        if (data.key = "HoverOperate")
+            this.SetHoverOperate(data.value == "1")
+        else if (data.key = "SwitchHotkey")
+            this.SetSwitchKey()
+    }
+
+    ; 当前激活的功能标签页（供设置域临时处理器重建热键）
+    static GetActiveTab() {
+        return this._ActiveTab
     }
 
     ; 热键回调映射表（profile.Fn 回调；profile.Guarded 有关卡守卫——拦截键注册 Up 变体补发透传；profile.OnUp 功能在松开时触发）
     static ActionCallbacks := Map(
         ; 常规作战（有守卫）
-        "PressPause", {Fn: ActionPressPause, Guarded: true},
-        "ReleasePause", {Fn: ActionReleasePause, OnUp: true},  ; 松开时触发（Up 变体注册）
-        "GameSpeed", {Fn: ActionGameSpeed, Guarded: true},
-        "16ms", {Fn: Action16ms, Guarded: true},
-        "33ms", {Fn: Action33ms, Guarded: true},
-        "166ms", {Fn: Action166ms, Guarded: true},
-        "PauseSelect", {Fn: ActionPauseSelect, Guarded: true},
-        "Skill", {Fn: ActionSkill, Guarded: true},
-        "Retreat", {Fn: ActionRetreat, Guarded: true},
-        "OneClickSkill", {Fn: ActionOneClickSkill, Guarded: true},
-        "OneClickRetreat", {Fn: ActionOneClickRetreat, Guarded: true},
-        "PauseSkill", {Fn: ActionPauseSkill, Guarded: true},
-        "PauseRetreat", {Fn: ActionPauseRetreat, Guarded: true},
-        "SwitchView", {Fn: ActionSwitchView, Guarded: true},
-        "BeginPause", {Fn: ActionBeginPauseSwitch, NoActivate: true},  ; 设置开关，不激活游戏窗口（避免焦点跳转）
-        "AutoBeginPauseSwitch", {Fn: ActionBeginPauseSwitch, NoActivate: true},
+        "PressPause", {Fn: HotkeyActions.ActionPressPause.Bind(HotkeyActions), Guarded: true},
+        "ReleasePause", {Fn: HotkeyActions.ActionReleasePause.Bind(HotkeyActions), OnUp: true},  ; 松开时触发（Up 变体注册）
+        "GameSpeed", {Fn: HotkeyActions.ActionGameSpeed.Bind(HotkeyActions), Guarded: true},
+        "16ms", {Fn: HotkeyActions.Action16ms.Bind(HotkeyActions), Guarded: true},
+        "33ms", {Fn: HotkeyActions.Action33ms.Bind(HotkeyActions), Guarded: true},
+        "166ms", {Fn: HotkeyActions.Action166ms.Bind(HotkeyActions), Guarded: true},
+        "PauseSelect", {Fn: HotkeyActions.ActionPauseSelect.Bind(HotkeyActions), Guarded: true},
+        "Skill", {Fn: HotkeyActions.ActionSkill.Bind(HotkeyActions), Guarded: true},
+        "Retreat", {Fn: HotkeyActions.ActionRetreat.Bind(HotkeyActions), Guarded: true},
+        "OneClickSkill", {Fn: HotkeyActions.ActionOneClickSkill.Bind(HotkeyActions), Guarded: true},
+        "OneClickRetreat", {Fn: HotkeyActions.ActionOneClickRetreat.Bind(HotkeyActions), Guarded: true},
+        "PauseSkill", {Fn: HotkeyActions.ActionPauseSkill.Bind(HotkeyActions), Guarded: true},
+        "PauseRetreat", {Fn: HotkeyActions.ActionPauseRetreat.Bind(HotkeyActions), Guarded: true},
+        "SwitchView", {Fn: HotkeyActions.ActionSwitchView.Bind(HotkeyActions), Guarded: true},
+        "BeginPause", {Fn: HotkeyActions.ActionBeginPauseSwitch.Bind(HotkeyActions), NoActivate: true},  ; 设置开关，不激活游戏窗口（避免焦点跳转）
+        "AutoBeginPauseSwitch", {Fn: HotkeyActions.ActionBeginPauseSwitch.Bind(HotkeyActions), NoActivate: true},
         ; 快捷操作
-        "LButtonClick", {Fn: ActionLButtonClick},
-        "CeaseOperations", {Fn: ActionCeaseOperations},
-        "Skip", {Fn: ActionSkip},
-        "Back", {Fn: ActionBack},
-        "Harvest", {Fn: ActionHarvest},
-        "CollectCollectibles", {Fn: ActionCollectCollectibles},
+        "LButtonClick", {Fn: HotkeyActions.ActionLButtonClick.Bind(HotkeyActions)},
+        "CeaseOperations", {Fn: HotkeyActions.ActionCeaseOperations.Bind(HotkeyActions)},
+        "Skip", {Fn: HotkeyActions.ActionSkip.Bind(HotkeyActions)},
+        "Back", {Fn: HotkeyActions.ActionBack.Bind(HotkeyActions)},
+        "Harvest", {Fn: HotkeyActions.ActionHarvest.Bind(HotkeyActions)},
+        "CollectCollectibles", {Fn: HotkeyActions.ActionCollectCollectibles.Bind(HotkeyActions)},
         ; 卫戍协议
-        "CheckEnemies", {Fn: ActionCheckEnemies},
-        "DispatchCenter", {Fn: ActionDispatchCenter},
-        "Freeze", {Fn: ActionFreeze},
-        "Refresh", {Fn: ActionRefresh},
-        "Upgrade", {Fn: ActionUpgrade},
-        "Sell", {Fn: ActionSell},
-        "Ready", {Fn: ActionReady},
-        "StrongHoldProtocolLButtonClick", {Fn: ActionLButtonClick},
-        "StrongHoldProtocolRetreat", {Fn: ActionRetreat},
-        "StrongHoldProtocolOneClickRetreat", {Fn: ActionOneClickRetreat},
-        "OneClickSell", {Fn: ActionOneClickSell},
-        "OneClickPurchase", {Fn: ActionOneClickPurchase}
+        "CheckEnemies", {Fn: HotkeyActions.ActionCheckEnemies.Bind(HotkeyActions)},
+        "DispatchCenter", {Fn: HotkeyActions.ActionDispatchCenter.Bind(HotkeyActions)},
+        "Freeze", {Fn: HotkeyActions.ActionFreeze.Bind(HotkeyActions)},
+        "Refresh", {Fn: HotkeyActions.ActionRefresh.Bind(HotkeyActions)},
+        "Upgrade", {Fn: HotkeyActions.ActionUpgrade.Bind(HotkeyActions)},
+        "Sell", {Fn: HotkeyActions.ActionSell.Bind(HotkeyActions)},
+        "Ready", {Fn: HotkeyActions.ActionReady.Bind(HotkeyActions)},
+        "StrongHoldProtocolLButtonClick", {Fn: HotkeyActions.ActionLButtonClick.Bind(HotkeyActions)},
+        "StrongHoldProtocolRetreat", {Fn: HotkeyActions.ActionRetreat.Bind(HotkeyActions)},
+        "StrongHoldProtocolOneClickRetreat", {Fn: HotkeyActions.ActionOneClickRetreat.Bind(HotkeyActions)},
+        "OneClickSell", {Fn: HotkeyActions.ActionOneClickSell.Bind(HotkeyActions)},
+        "OneClickPurchase", {Fn: HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions)}
     )
 
     ; 已激活热键映射表
@@ -141,18 +185,18 @@ class HotkeyController {
             ; 松开暂停：功能在松开时触发（Up 变体注册）
             reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
             Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
-            HotkeyController.ActiveHotkeys.Set(reg, reg)
+            HotkeyService.ActiveHotkeys.Set(reg, reg)
             return
         }
         intercept := hotkeyValue ~= pattern
         reg := intercept ? hotkeyValue : "~" hotkeyValue
         Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
-        HotkeyController.ActiveHotkeys.Set(reg, reg)
+        HotkeyService.ActiveHotkeys.Set(reg, reg)
         ; 有守卫的拦截键（非滚轮）：注册 Up 变体，松开时由 KeyForward.ActionUpForward 补发 key up
         ; 注意：类静态方法引用需 Bind(KeyForward)——方法的 MinParams 含 self，直接传引用 Hotkey 回调验证会失败（Invalid callback function）
         if (profile.HasOwnProp("Guarded") && intercept && !InStr(hotkeyValue, "Wheel")) {
             Hotkey(hotkeyValue " Up", KeyForward.ActionUpForward.Bind(KeyForward), "On")
-            HotkeyController.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
+            HotkeyService.ActiveHotkeys.Set(hotkeyValue " Up", hotkeyValue " Up")
         }
     }
 
@@ -177,12 +221,12 @@ class HotkeyController {
     ; 禁用热键
     static HotkeyOff(silent := false, *) {
         HotIf(HotkeyContext)
-        for _ , hotkeyValue in HotkeyController.ActiveHotkeys {
+        for _ , hotkeyValue in HotkeyService.ActiveHotkeys {
             try Hotkey(hotkeyValue, , "Off")
             catch Error as e
                 Logger.Error("Hotkey", "关闭热键失败：" hotkeyValue " - " e.Message)
         }
-        HotkeyController.ActiveHotkeys := Map()
+        HotkeyService.ActiveHotkeys := Map()
         KeyForward.DownHandled.Clear()
         KeyForward.SuppressUp.Clear()
         HotIf
@@ -265,32 +309,21 @@ class HotkeyController {
         Logger.Info("Hotkey", "热键已重建，数量=" this.ActiveHotkeys.Count ", 标签页=" tabName ", 明细: " this._BuildDetailForActiveTab(tabName))
     }
 
-    ; 切换热键启用/禁用
-    static SwitchHotkey() {
-        if(HotkeyController.HotkeyState == true) {
-            HotkeyController.HotkeyOff()
-            HotkeyController.HotkeyState := false
-            GuiManager.IsOnStrongHoldProtocol := false
-            HideTrayTip()
-            SetTimer HideTrayTip, 0
-            ShowTrayTip("热键已禁用", "AFA", "Mute")
-            SetTimer HideTrayTip, -3000
+    ; 切换热键启用/禁用（只发布事实，托盘文案/图标由 UI 订阅更新）
+    static SwitchHotkey(*) {
+        if(this.HotkeyState == true) {
+            this.HotkeyOff()
+            this.HotkeyState := false
+            EventBus.Publish("HotkeyStateChanged", {enabled: false})
             Logger.Info("Hotkey", "用户禁用热键")
-            A_IconTip := "AFA`n热键已禁用"
             return
         }
-        if(HotkeyController.HotkeyState == false) {
-            HotkeyController.HotkeyState := true
-            ; 根据最后选中的标签页启用对应热键组
-            HotkeyController.EnableByTab(GuiManager.LastActiveTab)
-            if (GuiManager.LastActiveTab == "strongHoldProtocol")
-                GuiManager.IsOnStrongHoldProtocol := true
-            HideTrayTip()
-            SetTimer HideTrayTip, 0
-            ShowTrayTip("热键已启用", "AFA", "Mute")
-            SetTimer HideTrayTip, -3000
+        if(this.HotkeyState == false) {
+            this.HotkeyState := true
+            ; 根据内部保存的标签页启用对应热键组
+            this.EnableByTab(this._ActiveTab)
+            EventBus.Publish("HotkeyStateChanged", {enabled: true})
             Logger.Info("Hotkey", "用户启用热键")
-            A_IconTip := "AFA`n热键已启用"
             return
         }
     }
@@ -301,29 +334,27 @@ class HotkeyController {
         switchKey := Config.ReadCustomFromIni("SwitchHotkey")
         if (switchKey != "") {
             try {
-                Hotkey(switchKey, this.SwitchHotkey, "On")
+                Hotkey(switchKey, HotkeyService.SwitchHotkey.Bind(HotkeyService), "On")
                 this.ActiveSwitchHotkey := switchKey
             } catch Error as e {
                 Logger.Error("Hotkey", "注册SwitchKey失败：key=" switchKey ", callback=" this.SwitchHotkey.Name ", error=" e.Message)
             }
         }
         HotIf
-        if (switchKey == "") {
-            A_TrayMenu.Rename("2&", "启用/禁用热键")
-            return
-        }
-        A_TrayMenu.Rename("2&", "启用/禁用热键(" KeyFormat.VirtualNewkeyFormat(switchKey) ")")
+        this._SwitchKey := switchKey
+        EventBus.Publish("SwitchKeyChanged", {key: switchKey})
     }
     ; 解除设置热键启用/禁用快捷键
     static UnsetSwitchKey() {
         switchKey := this.ActiveSwitchHotkey
         if (switchKey != "") {
             HotIf(HotkeyContext)
-            try Hotkey(switchKey, this.SwitchHotkey, "Off")
+            try Hotkey(switchKey, HotkeyService.SwitchHotkey.Bind(HotkeyService), "Off")
             catch Error as e
                 Logger.Error("Hotkey", "关闭SwitchKey失败：" switchKey " - " e.Message)
             HotIf
         }
-        A_TrayMenu.Rename("2&", "启用/禁用热键")
+        this._SwitchKey := ""
+        EventBus.Publish("SwitchKeyChanged", {key: ""})
     }
 }
