@@ -1,12 +1,10 @@
-PT_TOUCH := 2
-
-POINTER_FLAG_INRANGE    := 0x00000002
-POINTER_FLAG_INCONTACT  := 0x00000004
-POINTER_FLAG_DOWN       := 0x00010000
-POINTER_FLAG_UPDATE     := 0x00020000
-POINTER_FLAG_UP         := 0x00040000
-
 class TouchInjector {
+    static PT_TOUCH := 2
+    static POINTER_FLAG_INRANGE := 0x00000002
+    static POINTER_FLAG_INCONTACT := 0x00000004
+    static POINTER_FLAG_DOWN := 0x00010000
+    static POINTER_FLAG_UPDATE := 0x00020000
+    static POINTER_FLAG_UP := 0x00040000
     static _Initialized := false
     static _Down := false
     static _LastX := 0
@@ -25,7 +23,7 @@ class TouchInjector {
     }
 
     static _WriteFields(buf, x, y, flags) {
-        NumPut("UInt", PT_TOUCH, buf, 0)
+        NumPut("UInt", TouchInjector.PT_TOUCH, buf, 0)
         NumPut("UInt", 0, buf, 4)
         NumPut("UInt", flags, buf, 12)
         NumPut("Int", x, buf, 32)
@@ -83,7 +81,7 @@ class TouchInjector {
             return false
         }
         this._ResolveCoord(x?, y?)
-        if (!this._Inject(POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT | POINTER_FLAG_DOWN))
+        if (!this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_DOWN))
             return false
         this._Down := true
         return true
@@ -98,9 +96,9 @@ class TouchInjector {
         }
 
         this._ResolveCoord(x?, y?)
-        if (!this._Inject(POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT | POINTER_FLAG_UPDATE))
+        if (!this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_UPDATE))
             return false
-        if (!this._Inject(POINTER_FLAG_UP))
+        if (!this._Inject(TouchInjector.POINTER_FLAG_UP))
             return false
         this._Down := false
         return true
@@ -122,18 +120,12 @@ class TouchInjector {
         }
 
         this._ResolveCoord(x?, y?)
-        if (!this._Inject(POINTER_FLAG_INRANGE | POINTER_FLAG_UPDATE))
+        if (!this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_UPDATE))
             return false
-        if (!this._Inject(POINTER_FLAG_UP))
+        if (!this._Inject(TouchInjector.POINTER_FLAG_UP))
             return false
         this._Down := false
         return true
     }
 }
 
-; == 初始化 ==
-; 触控注入初始化：当前该功能存在兼容性问题（Init 可能失败），失败处理待后续完善
-TouchInjector.Init(3, 1)
-MouseGetPos &xpos, &ypos
-TouchInjector.Move(xpos, ypos)
-MouseMove xpos, ypos

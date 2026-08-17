@@ -630,5 +630,3 @@ class State {
     }
 }
 
-; 初始化配置路径
-Config.InitPath()
