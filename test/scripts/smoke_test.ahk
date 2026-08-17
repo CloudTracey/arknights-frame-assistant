@@ -30,7 +30,8 @@
 #Include ../../src/lib/core/monitor/level_detector.ahk
 #Include ../../src/lib/key_bind.ahk
 #Include ../../src/lib/core/hotkey/hotkey_service.ahk
-#Include ../../src/lib/settings/settings_manager.ahk
+#Include ../../src/lib/core/settings/hotkey_conflict_validator.ahk
+#Include ../../src/lib/core/settings/settings_service.ahk
 #Include ../../src/lib/updater/version_checker.ahk
 #Include ../../src/lib/updater/downloader.ahk
 #Include ../../src/lib/updater/self_replacer.ahk
@@ -49,6 +50,8 @@ if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema)
 if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyService)
     ExitApp 1
 if !IsSet(GameMonitor) || !IsSet(VersionUtils) || !IsSet(KeyFormat) || !IsSet(HotkeyActions)
+    ExitApp 1
+if !IsSet(SettingsService) || !IsSet(HotkeyConflictValidator)
     ExitApp 1
 
 ; 探针：确认没有顶层副作用把 Config.IniFile 提前初始化（应仍为空）
