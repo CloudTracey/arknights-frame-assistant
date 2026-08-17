@@ -84,6 +84,9 @@ class HotkeyService {
 
     ; 处理 UI 标签页切换请求
     static _HandleActiveTabChangeRequested(data) {
+        ; “其他设置”页不是功能标签页，不改变热键组/不重建热键
+        if (data.tabName = "other")
+            return
         this._ActiveTab := data.tabName
         if (this._ActiveTab = "strongHoldProtocol")
             this._Group := "strongHoldProtocol"
