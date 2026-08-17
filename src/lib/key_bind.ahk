@@ -210,7 +210,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
 ; 窗口活动监控
 WatchActiveWindow(){
     ; 当窗口失去焦点时
-    if(WinActive(State.GuiWindowName) == 0) {
+    if(WinActive("ahk_id " GuiManager.MainGui.Hwnd) == 0) {
         ; 如果上次点击的是edit控件
         if(KeyBinder.LastEditObject != "") {
             ; 将上次点击的edit控件还原至点击前的状态

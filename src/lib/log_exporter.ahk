@@ -98,7 +98,7 @@ class LogExporter {
         lines.Push("OS64=" A_Is64bitOS)
         lines.Push("Compiled=" A_IsCompiled)
         lines.Push("Admin=" A_IsAdmin)
-        lines.Push("StartedByGameAutoStart=" State.StartedByGameAutoStart)
+        lines.Push("StartedByGameAutoStart=" AppContext.GetStartedByGameAutoStart())
         lines.Push("GamePathConfigured=" (gamePath != ""))
         lines.Push("GameFileExists=" ((gamePath != "" && FileExist(gamePath)) ? "true" : "false"))
         lines.Push("GameRunning=" (ProcessExist("Arknights.exe") ? "true" : "false"))

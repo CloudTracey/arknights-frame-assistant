@@ -120,7 +120,7 @@ class GameAutoStartManager {
     ; 启动时校准审核和计划任务
     static Reconcile() {
         enabled := (Config.GetImportant("AutoStartWithGame") = "1")
-        if (State.StartedByGameAutoStart) {
+        if (AppContext.GetStartedByGameAutoStart()) {
             if (enabled) {
                 Logger.Info("GameAutoStart", "触发启动已跳过审核与计划任务校准")
                 return this._Result(true, {message: "触发启动无需校准。", skipped: true})

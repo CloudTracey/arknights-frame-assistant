@@ -19,10 +19,12 @@
 #Include ./lib/base/version_utils.ahk
 #Include ./lib/base/touch_injection.ahk
 #Include ./lib/log_exporter.ahk
-#Include ./lib/game_auto_start.ahk
+#Include ./lib/core/launch/app_context.ahk
+#Include ./lib/core/launch/game_auto_start.ahk
+#Include ./lib/core/hotkey/timing_service.ahk
 #Include ./lib/game_keys.ahk
 #Include ./lib/hotkey_actions.ahk
-#Include ./lib/level_detector.ahk
+#Include ./lib/core/monitor/level_detector.ahk
 #Include ./lib/key_bind.ahk
 #Include ./lib/hotkey_control.ahk
 #Include ./lib/settings/settings_manager.ahk
@@ -31,12 +33,12 @@
 #Include ./lib/updater/self_replacer.ahk
 #Include ./lib/updater/updater_manager.ahk
 #Include ./lib/updater/updater_ui.ahk
-#Include ./lib/game_launcher.ahk
+#Include ./lib/core/launch/game_launcher.ahk
 #Include ./lib/changelog/changelog.ahk
 #Include ./lib/changelog/changelog_ui.ahk
 #Include ./lib/changelog/changelog_checker.ahk
 #Include ./lib/gui.ahk
-#Include ./lib/game_monitor.ahk
+#Include ./lib/core/monitor/game_monitor.ahk
 
 HandleAfaExit(exitReason, exitCode) {
     Logger.HandleExit(exitReason, exitCode)
@@ -116,12 +118,12 @@ class App {
         Logger.Info("Startup", "配置加载完成，版本=" Version.Get())
 
         ; 写入启动来源状态，并校准随游戏自动启动的 Windows 审核和计划任务
-        State.StartedByGameAutoStart := startedByGameAutoStart
+        AppContext.SetStartedByGameAutoStart(startedByGameAutoStart)
         autoStartResult := GameAutoStartManager.Reconcile()
         if (!autoStartResult.success) {
             autoStartResult.degraded := true
             Logger.Error("GameAutoStart", "启动时校准失败：" autoStartResult.message)
-            if (!State.StartedByGameAutoStart && Config.GetImportant("AutoStartWithGame") = "1")
+            if (!AppContext.GetStartedByGameAutoStart() && Config.GetImportant("AutoStartWithGame") = "1")
                 pendingAutoStartWarning := autoStartResult.message
         }
 

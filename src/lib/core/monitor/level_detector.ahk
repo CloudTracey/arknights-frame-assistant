@@ -1,5 +1,5 @@
 ; == 关卡检测投票状态机 ==
-; 通过 3 个关卡内专属对象的颜色检测投票，维护 State.InLevel（守卫消费）
+; 通过 3 个关卡内专属对象的颜色检测投票，维护私有 InLevel（守卫消费）
 ; 每秒轮询：命中 ≥2 个对象 → 置位 InLevel=true；命中 <2 个 → 复位 InLevel=false
 ; PixelSearch 颜色检测：区域用相对比例定位（LX/RX/UY/DY = ww/wh 比例，同项目其他位置函数），检测区域内目标颜色，不依赖模板尺寸
 ; 3 个对象：关卡内文本 / 退出按钮 / 暂停按钮
@@ -11,6 +11,7 @@ class LevelDetector {
     static _PollTimer := ""  ; 轮询定时器回调引用（SetTimer 启停需用同一对象匹配，故缓存）
     static _PollCount := 0   ; 轮询计数（节流 debug 明细用，每 20 次或状态变化记一条）
     static _GuardActive := false  ; 守卫轮询当前是否开启（守卫开关切换日志去重用）
+    static _InLevel := false        ; 关卡状态私有字段
 
     ; 对象配置（PixelSearch 颜色检测：区域用相对比例定位，LX/RX = ww 比例，UY/DY = wh 比例）
     ; Colors: [{C: 0xRRGGBB 目标颜色, V: 容差 0-255}]，多个颜色 OR；任一命中即算对象命中
@@ -30,6 +31,19 @@ class LevelDetector {
          Colors: [{C: 0xFFFFFF, V: 2}, {C: 0xF5F5F5, V: 2}],
          LX: 0.9297, RX: 0.9453, UY: 0.0590, DY: 0.0590}
     ]
+
+    ; 关卡状态 getter
+    static IsInLevel() {
+        return this._InLevel
+    }
+
+    ; 设置关卡状态并发布事实事件（守卫消费走 getter，观察者可订阅 InLevelChanged）
+    static _SetInLevel(newVal) {
+        if (this._InLevel = newVal)
+            return
+        this._InLevel := newVal
+        EventBus.Publish("InLevelChanged", {inLevel: newVal})
+    }
 
     ; 守卫开关：开启→启动每秒轮询；关闭→停止轮询（不消耗像素检测）
     static SetGuardEnabled(enabled) {
@@ -53,7 +67,7 @@ class LevelDetector {
     static SyncGuardSetting() {
         if (Config.ReadImportantFromIni("InLevelGuard") != "1") {
             this.SetGuardEnabled(false)
-            State.InLevel := true
+            this._SetInLevel(true)
             return
         }
         this.SetGuardEnabled(true)
@@ -64,7 +78,7 @@ class LevelDetector {
     static Init() {
         ; 未开启关卡守卫时不轮询，强制 InLevel=true（守卫直接放行，避免无谓的像素检测）
         if (Config.ReadImportantFromIni("InLevelGuard") != "1") {
-            State.InLevel := true
+            this._SetInLevel(true)
             return
         }
         this.SetGuardEnabled(true)
@@ -75,7 +89,7 @@ class LevelDetector {
         this._PollCount += 1
         ; 游戏进程不存在 → 复位关卡状态
         if !ProcessExist("Arknights.exe") {
-            State.InLevel := false
+            this._SetInLevel(false)
             return
         }
         ; 游戏窗口未激活 → 跳过（保持现有状态，回前台自愈）
@@ -85,7 +99,7 @@ class LevelDetector {
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
         try {
             if !SafeWinGetClientPos(&ww, &wh) {
-                State.InLevel := false
+                this._SetInLevel(false)
             }
             hitCount := 0
             detail := ""
@@ -97,12 +111,12 @@ class LevelDetector {
             }
             newVal := hitCount >= this.VoteThreshold
             ; 状态切换：Info（含各对象识别详情）
-            if (newVal != State.InLevel)
+            if (newVal != this._InLevel)
                 Logger.Info("LevelDetector", "关卡状态切换：" (newVal ? "进入关卡" : "退出关卡") "（识别结果 " hitCount "/" this.Objects.Length " " detail "）")
             ; 轮询明细：节流 Debug（每 20 次轮询或状态变化时记一条）
-            if (newVal != State.InLevel || Mod(this._PollCount, 20) = 0)
+            if (newVal != this._InLevel || Mod(this._PollCount, 20) = 0)
                 Logger.Debug("LevelDetector", "识别结果 " hitCount "/" this.Objects.Length " " detail)
-            State.InLevel := newVal
+            this._SetInLevel(newVal)
         } finally {
             if (oldCtx)
                 DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")

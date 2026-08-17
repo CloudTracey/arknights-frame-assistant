@@ -89,7 +89,6 @@ class GuiManager {
 
         ; 窗口设置
         this.WindowName := "明日方舟帧操小助手 ArknightsFrameAssistant - " Version.Get()
-        State.GuiWindowName := this.WindowName
         this.MainGui := Gui(, this.WindowName)
         this.MainGui.MarginX := 0
         this.MainGui.Opt("+MinimizeBox")

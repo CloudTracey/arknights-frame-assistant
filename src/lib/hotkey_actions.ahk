@@ -232,7 +232,7 @@ ActionPauseSelect(ThisHotkey) {
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
     TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
-    USleep(State.CurrentDelay * 1.5)
+    USleep(TimingService.GetCurrentDelay() * 1.5)
     TouchInjector.Move(xpos, ypos)
     MouseMove xpos, ypos
     Thread "NoTimers", false
@@ -285,7 +285,7 @@ ActionOneClickSkill(ThisHotkey) {
     Thread "NoTimers"
     Send "{LButton Down}"
     Send "{LButton Up}"
-    USleep(State.ClickDelay)
+    USleep(TimingService.GetClickDelay())
     GameKeys.Tap("releaseSkill")
     Thread "NoTimers", false
     if InStr(ThisHotkey, "Wheel") {
@@ -310,7 +310,7 @@ ActionOneClickRetreat(ThisHotkey) {
     Thread "NoTimers"
     Send "{LButton Down}"
     Send "{LButton Up}"
-    USleep(State.ClickDelay)
+    USleep(TimingService.GetClickDelay())
     GameKeys.Tap("retreatChar")
     Thread "NoTimers", false
     if InStr(ThisHotkey, "Wheel") {
@@ -344,9 +344,9 @@ ActionPauseSkill(ThisHotkey) {
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
     TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
-    USleep(State.ClickDelay)
+    USleep(TimingService.GetClickDelay())
     GameKeys.SendDown("releaseSkill")
-    USleep(Max(State.CurrentDelay * 1.5 - State.ClickDelay, 0))
+    USleep(Max(TimingService.GetCurrentDelay() * 1.5 - TimingService.GetClickDelay(), 0))
     TouchInjector.Move(xpos, ypos)
     MouseMove xpos, ypos
     USleep(50)
@@ -383,9 +383,9 @@ ActionPauseRetreat(ThisHotkey) {
     TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
     TouchInjector.Tap(xpos, ypos)
     TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
-    USleep(State.ClickDelay)
+    USleep(TimingService.GetClickDelay())
     GameKeys.SendDown("retreatChar")
-    USleep(Max(State.CurrentDelay * 1.5 - State.ClickDelay, 0))
+    USleep(Max(TimingService.GetCurrentDelay() * 1.5 - TimingService.GetClickDelay(), 0))
     TouchInjector.Move(xpos, ypos)
     MouseMove xpos, ypos
     USleep(50)
@@ -460,61 +460,7 @@ ActionBeginPauseSwitch(ThisHotkey) {
         return
     PureKeyWait(ThisHotkey)
 }
-; 开局暂停
-ActionBeginPause() {
-    try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-    PosC := SpeedButtonPositionColor()
-    if !PosC {
-        Logger.Warn("HotkeyActions", "自动暂停：游戏窗口不存在")
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-        return
-    }
-    Logger.Debug("HotkeyActions", "自动暂停：等待倍速按钮")
-    while(true) {
-        if PixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBCUY, PosC.PBCLX, PosC.PBCDY, 0xffffff, 10)
-        {
-            GameKeys.SendDown("pauseBattle")
-            USleep(50)
-            GameKeys.SendUp("pauseBattle")
-            Logger.Debug("HotkeyActions", "自动暂停：已暂停")
-            ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
-            isProxy := false
-            TobC := TakeOverButtonPositions()
-            if !TobC {
-                Logger.Warn("HotkeyActions", "自动暂停：游戏窗口不存在（代理指挥识别）")
-                State.BlackScreenDetected := false
-                State.ReadyForPause := false
-                GameMonitor.SetPollInterval(400)
-                break
-            }
-            ; 接管代理按钮右侧边缘
-            if ImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver1Path) or ImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver2Path) { ; 0 帧暂停接管按钮半透明导致至少需要 90 容错
-                isProxy := true
-            }
-            ; 接管代理按钮“手”图标拇指
-            if !ImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.HLX, TobC.ImageRegion.HUY, TobC.ImageRegion.HRX, TobC.ImageRegion.HDY, "*90 " FileExtractor.TakeOver3Path) {
-                Logger.Debug("HotkeyActions", "代理指挥判定：手图标识别失败")
-                isProxy := false
-            }
-            if isProxy {
-                GameKeys.SendDown("pauseBattle")
-                USleep(50)
-                GameKeys.SendUp("pauseBattle")
-                Logger.Debug("HotkeyActions", "代理指挥，取消暂停")
-            } else {
-                Logger.Debug("HotkeyActions", "非代理指挥，保持暂停")
-            }
 
-            State.BlackScreenDetected := false
-            State.ReadyForPause := false
-            GameMonitor.SetPollInterval(400)
-            break
-        }
-    }
-    try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-}
-
-; -- 快捷操作 --
 ; 模拟鼠标左键点击
 ActionLButtonClick(ThisHotkey) {
     try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
@@ -793,7 +739,7 @@ ActionOneClickSell(ThisHotkey) {
     Logger.Debug("HotkeyActions", "ActionOneClickSell 执行，key=" KeyForward.PureKeyName(ThisHotkey))
     Send "{LButton Down}"
     Send "{LButton Up}"
-    USleep(State.ClickDelay)
+    USleep(TimingService.GetClickDelay())
     GameKeys.Tap("autochessSale")
     if InStr(ThisHotkey, "Wheel") {
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -832,7 +778,7 @@ PureKeyWait(ThisHotkey) {
     KeyWait(KeyForward.PureKeyName(ThisHotkey))
 }
 ; 关卡守卫：在关卡内返回 true；拦截时透传原键并记录日志，返回 false
-; 判定依据：LevelDetector 投票状态机维护的 State.InLevel（读内存标志，无像素检测、无 DPI 切换）
+; 判定依据：LevelDetector 投票状态机维护的 LevelDetector.IsInLevel()（读内存标志，无像素检测、无 DPI 切换）
 ; 守卫关闭（InLevelGuard=0）时 LevelDetector 停止轮询并强制 InLevel=true，此处直接放行，无 I/O
 ; 拦截是预期行为（非异常），用 Info 级别避免刷 critical 轨（WARN/ERROR 5 MiB 留给真正的问题）
 GuardInLevel(actionName, ThisHotkey) {
@@ -841,7 +787,7 @@ GuardInLevel(actionName, ThisHotkey) {
     ; PureKeyName 为空时不记录，避免 DownHandled 出现 "" 键干扰后续逻辑
     if !RegExMatch(ThisHotkey, " Up$") && pureKey != ""
         KeyForward.DownHandled[pureKey] := true
-    if State.InLevel
+    if LevelDetector.IsInLevel()
         return true
     ; 同一按住周期的重复 down（InterceptedKeys 已有，已补发过）不再记日志，避免切走时 key repeat 刷屏；
     ; 滚轮不写 InterceptedKeys，每次独立滚动仍逐条记录（合理）

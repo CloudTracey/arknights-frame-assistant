@@ -151,7 +151,7 @@ class Saver {
     ; 重置游戏状态
     static ResetGameStateIfNeeded(*) {
         if (Config.GetImportant("AutoExit") == "1" && !WinExist("ahk_exe Arknights.exe")) {
-            State.GameHasStarted := false
+            GameMonitor.ResetRunRecord()
         }
     }
 }
