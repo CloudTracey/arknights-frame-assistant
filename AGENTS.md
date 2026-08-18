@@ -17,7 +17,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - 默认不编译或启动 AFA；只有用户明确要求构建时才使用已验证的本地 AutoHotkey/Ahk2Exe 工具。涉及 GUI、提权、计划任务和真实游戏联动的验收仍由用户操作并反馈
 - 没有自动化测试框架，所有测试为手工验证。每次完成工作后，调用 `test-checklist` skill 生成测试清单，逐项引导用户完成手工验证。测试清单放在 `test/` 目录，格式参考 `test/template/test_template.md`。
 
-- 架构迁移已落地静态分层检查 `tools/layer_check.py` 与基线 `KNOWN_VIOLATIONS`（阶段 1 完成）。涉及跨模块引用或 include 顺序的改动必须先跑 `python3 tools/layer_check.py --baseline KNOWN_VIOLATIONS`；`test/scripts/smoke_test.ahk` 已落地（阶段 3 完成），用于 include 全模块后验证无顶层副作用。
+- 架构迁移已落地静态分层检查 `tools/layer_check.py` 与基线 `KNOWN_VIOLATIONS`（阶段 1 完成）。涉及跨模块引用或 include 顺序的改动必须先跑 `python3 tools/layer_check.py --baseline KNOWN_VIOLATIONS`；`test/scripts/smoke_test.ahk` 已落地（阶段 3 完成），用于 include 全模块后验证无顶层副作用；事件契约检查器 `test/scripts/event_contract_check.py` 已落地并接入 CI，涉及 `EventBus.Publish/Subscribe` 的改动需运行 `python3 test/scripts/event_contract_check.py`。
 - 不使用worktree进行开发
 - 提前查看.gitignore，以确认哪些更改不需要commit
 - 用户没有要求的话，不要擅自commit，不要擅自Push，不创建PR，不创建或改变branch，这些操作由用户自行进行
@@ -79,7 +79,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 | `ui/key_bind.ahk` | 按键绑定捕获（InputHook），处理用户在设置界面的按键录制 |
 | `ui/gui.ahk` | 设置窗口 GUI 全部逻辑（标签页切换、控件事件、托盘菜单）。`UpdateSaveButtonState()` 根据 `IsModified` 和 `HasHotkeyConflicts` 决定保存/应用按钮状态。`RefreshHotkeyConflicts()` 调用 `HotkeyConflictValidator` 进行增量字体标红（仅更新冲突状态变化的控件，使用 `_PrevConflictedControls` 做 diff）。`SwitchTab()` 确认放弃修改后调用 `Config.LoadFromIni()` 显式丢弃内存修改 |
 | `base/logger.ahk` | 双轨日志系统（`Logger` 类）。普通日志（15 MiB）和关键日志 WARN/ERROR（5 MiB）分轨滚动存储到 `%AppData%\ArknightsFrameAssistant\PC\logs\`。支持会话级文件命名（`afa-{timestamp}-{pid}-{tick}.log`）、7 天过期清理、敏感值脱敏（`RegisterSecret`/`Redact`）、异常退出检测（启动时检查上一会话是否含 Shutdown 标记）、全局未处理异常回调。所有模块通过 `Logger.Info`/`Warn`/`Error`/`Debug`/`Exception` 写日志 |
-| `log_exporter.ahk` | 诊断压缩包导出（`LogExporter` 类）。`CreateArchiveInteractive()` 弹出文件保存对话框，收集所有日志 + 脱敏后的设置文件 + 诊断信息，通过 PowerShell 打包为 ZIP。`OpenLogDirectory()` 打开日志目录 |
+| `core/diagnostics/log_exporter.ahk` | 诊断压缩包导出（`LogExporter` 类）。`CreateArchiveInteractive()` 弹出文件保存对话框，收集所有日志 + 脱敏后的设置文件 + 诊断信息，通过 PowerShell 打包为 ZIP。`OpenLogDirectory()` 打开日志目录 |
 | `core/settings/hotkey_conflict_validator.ahk` | 热键冲突验证器（`HotkeyConflictValidator` 类）。`FindAll(hotkeys, customSettings)` 在同时启用的热键组内检测按键重复，返回 `{HasConflicts, Items, ByControl}`。SwitchHotkey 在全部两组中各检测一次。`GetDisplayName()` 查找 KeyNames/CustomNames 用于错误提示。供 GUI 实时提示和 SettingsService 保存阶段校验共享 |
 | `core/settings/settings_service.ahk`（`SettingsService`） | 唯一配置写口。合并原 loader/saver/actions：`Initialize()` 启动加载，`Save/Apply/Cancel/Reset()` 处理 GUI 命令，`UpdatePersistedValue(key, value)` 单键原子写入并发布 `SettingsChanged`。保存/应用/重置后通过 `SettingsSaved/Applied/Reset` 驱动 HotkeyService/TimingService/LevelDetector/GuiManager 刷新 |
 | `core/updater/` | 自动更新全流程：`release_repository.ahk`（GitHub/国内源检查与 changelog 缓存）→ `version_checker.ahk`（门面：首选源/重试/降级）→ `downloader.ahk` → `self_replacer.ahk` → `updater_manager.ahk`（协调器，事件化）；`github_token_service.ahk` 提供 Token 验证。`ui/updater_ui.ahk` 仅通过事件与 Updater 交互 |
