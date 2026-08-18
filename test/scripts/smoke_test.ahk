@@ -28,7 +28,7 @@
 #Include ../../src/lib/core/hotkey/game_keys.ahk
 #Include ../../src/lib/core/hotkey/hotkey_actions.ahk
 #Include ../../src/lib/core/monitor/level_detector.ahk
-#Include ../../src/lib/key_bind.ahk
+#Include ../../src/lib/ui/key_bind.ahk
 #Include ../../src/lib/core/hotkey/hotkey_service.ahk
 #Include ../../src/lib/core/settings/hotkey_conflict_validator.ahk
 #Include ../../src/lib/core/settings/settings_service.ahk
@@ -38,11 +38,11 @@
 #Include ../../src/lib/core/updater/downloader.ahk
 #Include ../../src/lib/core/updater/self_replacer.ahk
 #Include ../../src/lib/core/updater/updater_manager.ahk
-#Include ../../src/lib/updater/updater_ui.ahk
+#Include ../../src/lib/ui/updater_ui.ahk
 #Include ../../src/lib/core/launch/game_launcher.ahk
-#Include ../../src/lib/changelog/changelog_ui.ahk
+#Include ../../src/lib/ui/changelog_ui.ahk
 #Include ../../src/lib/core/changelog/changelog_checker.ahk
-#Include ../../src/lib/gui.ahk
+#Include ../../src/lib/ui/gui.ahk
 #Include ../../src/lib/core/monitor/game_monitor.ahk
 
 ; 骨架断言：关键类/函数应已定义（类名在 AHK v2 中可作为值访问）
