@@ -20,7 +20,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 
 _PUB_RE = re.compile(r'EventBus\.Publish\(\s*["\']([A-Za-z_][A-Za-z0-9_]*)["\']')

@@ -80,10 +80,10 @@
 
 ### 流程：事件契约检查器与 CI
 
-> 涉及模块：`test/scripts/event_contract_check.py`、`.github/workflows/architecture-check.yml`
+> 涉及模块：`tools/event_contract_check.py`、`.github/workflows/architecture-check.yml`
 
 - [ ] **前置**：本地有 Python 3
-- [ ] **操作**：在仓库根目录运行 `python3 test/scripts/event_contract_check.py`
+- [ ] **操作**：在仓库根目录运行 `python3 tools/event_contract_check.py`
 - [ ] **预期**：输出 `PASS: event contract check passed`
 - [ ] **操作**：运行 `python3 tools/layer_check.py --baseline KNOWN_VIOLATIONS`
 - [ ] **预期**：输出 `PASS`（0/0）

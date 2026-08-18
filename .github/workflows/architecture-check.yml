@@ -20,4 +20,4 @@ jobs:
         run: python3 tools/layer_check.py --baseline KNOWN_VIOLATIONS
 
       - name: Run event contract check
-        run: python3 test/scripts/event_contract_check.py
+        run: python3 tools/event_contract_check.py
