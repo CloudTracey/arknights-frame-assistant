@@ -21,7 +21,7 @@
 #Include ../../src/lib/base/tray.ahk
 #Include ../../src/lib/base/version_utils.ahk
 #Include ../../src/lib/base/touch_injection.ahk
-#Include ../../src/lib/log_exporter.ahk
+#Include ../../src/lib/core/diagnostics/log_exporter.ahk
 #Include ../../src/lib/core/launch/app_context.ahk
 #Include ../../src/lib/core/launch/game_auto_start.ahk
 #Include ../../src/lib/core/hotkey/timing_service.ahk

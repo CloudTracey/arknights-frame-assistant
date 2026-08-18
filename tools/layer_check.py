@@ -51,7 +51,6 @@ LEGACY_LAYER: dict[str, str] = {
     "src/lib/game_monitor.ahk": "core",
     "src/lib/game_launcher.ahk": "core",
     "src/lib/game_auto_start.ahk": "core",
-    "src/lib/log_exporter.ahk": "core",
     "src/lib/settings/settings_manager.ahk": "core",
     "src/lib/settings/loader.ahk": "core",
     "src/lib/settings/saver.ahk": "core",
