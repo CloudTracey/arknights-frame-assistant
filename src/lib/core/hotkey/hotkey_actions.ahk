@@ -146,55 +146,24 @@ class HotkeyActions {
     }
     ; 前进16ms
     static Action16ms(ThisHotkey) {
-        if !GuardInLevel("Action16ms", ThisHotkey)
-            return
-        try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-        Logger.Debug("HotkeyActions", "Action16ms 执行，key=" KeyForward.PureKeyName(ThisHotkey))
-        delay := Integer(Config.ReadCustomFromIni("FrameSkip16msDelay"))
-        Critical
-        Send "{ESC Down}"
-        USleep(delay)
-        GameKeys.SendDown("pauseBattle")
-        USleep(50)
-        Send "{ESC Up}"
-        GameKeys.SendUp("pauseBattle")
-        Critical "Off"
-        if InStr(ThisHotkey, "Wheel") {
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        PureKeyWait(ThisHotkey)
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        this._FrameSkip("Action16ms", "FrameSkip16msDelay", ThisHotkey)
     }
     ; 前进33ms，由于波动，过帧间隔设置为30ms，避免一次过两帧
     static Action33ms(ThisHotkey) {
-        if !GuardInLevel("Action33ms", ThisHotkey)
-            return
-        try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-        Logger.Debug("HotkeyActions", "Action33ms 执行，key=" KeyForward.PureKeyName(ThisHotkey))
-        delay := Integer(Config.ReadCustomFromIni("FrameSkip33msDelay"))
-        Critical
-        Send "{ESC Down}"
-        USleep(delay)
-        GameKeys.SendDown("pauseBattle")
-        USleep(50)
-        Send "{ESC Up}"
-        GameKeys.SendUp("pauseBattle")
-        Critical "Off"
-        if InStr(ThisHotkey, "Wheel") {
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        PureKeyWait(ThisHotkey)
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        this._FrameSkip("Action33ms", "FrameSkip33msDelay", ThisHotkey)
     }
     ; 前进166ms
     static Action166ms(ThisHotkey) {
-        if !GuardInLevel("Action166ms", ThisHotkey)
+        this._FrameSkip("Action166ms", "FrameSkip166msDelay", ThisHotkey)
+    }
+
+    ; 过帧通用实现：ESC 触发暂停后按配置延迟发送 pauseBattle
+    static _FrameSkip(actionName, delayConfigKey, ThisHotkey) {
+        if !GuardInLevel(actionName, ThisHotkey)
             return
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-        Logger.Debug("HotkeyActions", "Action166ms 执行，key=" KeyForward.PureKeyName(ThisHotkey))
-        delay := Integer(Config.ReadCustomFromIni("FrameSkip166msDelay"))
+        Logger.Debug("HotkeyActions", actionName " 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+        delay := Integer(Config.ReadCustomFromIni(delayConfigKey))
         Critical
         Send "{ESC Down}"
         USleep(delay)
@@ -475,34 +444,7 @@ class HotkeyActions {
     }
     ; 跳过招募动画/剧情
     static ActionSkip(ThisHotkey) {
-        try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-        if !IsMouseInClient() {
-            Logger.Debug("HotkeyActions", "ActionSkip 跳过：鼠标不在客户端")
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        Pos := SkipButtonPosition()
-        if !Pos {
-            Logger.Warn("HotkeyActions", "ActionSkip 跳过：游戏窗口不存在")
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        Logger.Debug("HotkeyActions", "ActionSkip 执行，key=" KeyForward.PureKeyName(ThisHotkey))
-        MouseGetPos &xpos, &ypos
-        BlockInput "MouseMove"
-        MouseMove Pos.PBX, Pos.PBY
-        Send "{Lbutton Down}"
-        MouseMove Pos.PBX, Pos.PBY
-        Send "{LButton Up}"
-        USleep(40)
-        MouseMove xpos, ypos
-        BlockInput "MouseMoveOff"
-        if InStr(ThisHotkey, "Wheel") {
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        PureKeyWait(ThisHotkey)
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        this._ClickButton("ActionSkip", SkipButtonPosition, ThisHotkey)
     }
     ; 返回上级菜单
     static ActionBack(ThisHotkey) {
@@ -522,122 +464,30 @@ class HotkeyActions {
             return
         PureKeyWait(ThisHotkey)
     }
-    /* ActionBack(ThisHotkey) {
-        try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-        if !IsMouseInClient() {
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        foundBack := false
-        Pos := BackButtonPosition()
-        ; 寻找箭头时的步进量
-        step := 10
-        ; 黑底返回按钮
-        ; 寻找黑底左上角
-        PixelSearch(&FoundX, &FoundY, 0, 0, Pos.PBLX, Pos.PBUY, 0x313131, 5)
-        ; MouseMove FoundX, FoundY
-        try {
-            ; 寻找白色箭头右上角
-            PixelSearch(&FoundX, &FoundY, Pos.PBRX, FoundY, FoundX, Pos.PBDY, 0xffffff, 10)
-            ; MouseMove FoundX, FoundY
-            ; 向左下方向寻找白色，再向右寻找黑色，以确认是否为箭头形状
-            if PixelSearch(&FoundX, &FoundY, FoundX - step - 1, FoundY + step - 1, FoundX - step + 1, FoundY + step + 1, 0xffffff, 10) and PixelSearch(&FoundX, &FoundY, FoundX + step - 1, FoundY - 1, FoundX + step + 1, FoundY + 1, 0x313131, 10) {
-                foundBack := true
-            }
-        }
-        ; 白底返回按钮
-        if !foundBack {
-            PixelSearch(&FoundX, &FoundY, 0, 0, Pos.PBLX, Pos.PBUY, 0xfafafa, 10)
-            try {
-                PixelSearch(&FoundX, &FoundY, Pos.PBRX, FoundY, FoundX, Pos.PBDY, 0x4c4c4c, 10)
-                if PixelSearch(&FoundX, &FoundY, FoundX - step - 1, FoundY + step - 1, FoundX - step + 1, FoundY + step + 1, 0x4c4c4c, 10) and PixelSearch(&FoundX, &FoundY, FoundX + step - 1, FoundY - 1, FoundX + step + 1, FoundY + 1, 0xfafafa, 10) {
-                    foundBack := true
-                }
-            }
-        }
-        ; 局内放弃按钮
-        if !foundBack {
-            AbdC := AbandonButtonPosition()
-            if PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0x8c8c8c, 0) or PixelSearch(&FoundX, &FoundY, AbdC.PBRX, AbdC.PBDY, AbdC.PBLX, AbdC.PBUY, 0x868686, 0) {
-                foundBack := true
-            }
-        }
-        ; 集成战略大退红底按钮
-        if !foundBack {
-            ; 寻找红底左上角
-            PixelSearch(&FoundX, &FoundY, 0, 0, Pos.PBLX, Pos.PBUY, 0x5a0000, 10)
-            ; 红底左上角右下方寻找白色
-            try {
-                if PixelSearch(&FoundX, &FoundY, Pos.PBRX, FoundY, FoundX, Pos.PBDY, 0xfafafa, 10) {
-                    foundBack := true
-                }
-            }
-        }
-        if foundBack {
-            MouseGetPos &xpos, &ypos
-            BlockInput "MouseMove"
-            MouseMove FoundX, FoundY
-            Send "{Lbutton Down}"
-            USleep(40)
-            MouseMove FoundX, FoundY
-            Send "{LButton Up}"
-            USleep(40)
-            MouseMove xpos, ypos
-            BlockInput "MouseMoveOff"
-        }
-        if InStr(ThisHotkey, "Wheel") {
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        PureKeyWait(ThisHotkey)
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-    } */
     ; 基建快速收取
     static ActionHarvest(ThisHotkey) {
-        try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
-        if !IsMouseInClient() {
-            Logger.Debug("HotkeyActions", "ActionHarvest 跳过：鼠标不在客户端")
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        Pos := HarvestButtonPosition()
-        if !Pos {
-            Logger.Warn("HotkeyActions", "ActionHarvest 跳过：游戏窗口不存在")
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        Logger.Debug("HotkeyActions", "ActionHarvest 执行，key=" KeyForward.PureKeyName(ThisHotkey))
-        MouseGetPos &xpos, &ypos
-        BlockInput "MouseMove"
-        MouseMove Pos.PBX, Pos.PBY
-        Send "{Lbutton Down}"
-        MouseMove Pos.PBX, Pos.PBY
-        Send "{LButton Up}"
-        USleep(40)
-        MouseMove xpos, ypos
-        BlockInput "MouseMoveOff"
-        if InStr(ThisHotkey, "Wheel") {
-            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
-            return
-        }
-        PureKeyWait(ThisHotkey)
-        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+        this._ClickButton("ActionHarvest", HarvestButtonPosition, ThisHotkey)
     }
     ; 肉鸽收集藏品
     static ActionCollectCollectibles(ThisHotkey) {
+        this._ClickButton("ActionCollectCollectibles", CollectButtonPosition, ThisHotkey)
+    }
+
+    ; 通用按钮点击实现：移动鼠标到按钮位置点击后恢复原鼠标位置
+    static _ClickButton(actionName, posGetter, ThisHotkey) {
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
         if !IsMouseInClient() {
-            Logger.Debug("HotkeyActions", "ActionCollectCollectibles 跳过：鼠标不在客户端")
+            Logger.Debug("HotkeyActions", actionName " 跳过：鼠标不在客户端")
             try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
             return
         }
-        Pos := CollectButtonPosition()
+        Pos := posGetter()
         if !Pos {
-            Logger.Warn("HotkeyActions", "ActionCollectCollectibles 跳过：游戏窗口不存在")
+            Logger.Warn("HotkeyActions", actionName " 跳过：游戏窗口不存在")
             try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
             return
         }
-        Logger.Debug("HotkeyActions", "ActionCollectCollectibles 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+        Logger.Debug("HotkeyActions", actionName " 执行，key=" KeyForward.PureKeyName(ThisHotkey))
         MouseGetPos &xpos, &ypos
         BlockInput "MouseMove"
         MouseMove Pos.PBX, Pos.PBY
