@@ -57,6 +57,57 @@ if !IsSet(SettingsService) || !IsSet(HotkeyConflictValidator)
 if !IsSet(ReleaseRepository) || !IsSet(GitHubTokenService) || !IsSet(ChangelogChecker)
     ExitApp 1
 
+; ---- HotkeySchema 完整性校验 ----
+HotkeyService._BuildActionCallbacks()
+
+; id 唯一 + 行为标志为布尔
+seenIds := Map()
+for item in HotkeySchema.Items {
+    if seenIds.Has(item.id)
+        ExitApp 1
+    seenIds[item.id] := true
+    if (item.guarded != true && item.guarded != false)
+        ExitApp 1
+    if (item.onUp != true && item.onUp != false)
+        ExitApp 1
+    if (item.noActivate != true && item.noActivate != false)
+        ExitApp 1
+}
+
+; ActionBindings 与 Schema 双向覆盖
+for id, _ in HotkeyService.ActionBindings {
+    if (HotkeySchema.GetItem(id) = "")
+        ExitApp 1
+}
+for item in HotkeySchema.Items {
+    if !HotkeyService.ActionBindings.Has(item.id)
+        ExitApp 1
+}
+
+; ActionCallbacks 数量与绑定一致，且行为标志与 Schema 一致
+if (HotkeyService.ActionCallbacks.Count != HotkeyService.ActionBindings.Count)
+    ExitApp 1
+for item in HotkeySchema.Items {
+    profile := HotkeyService.ActionCallbacks[item.id]
+    if (profile.HasOwnProp("Guarded") != item.guarded)
+        ExitApp 1
+    if (profile.HasOwnProp("OnUp") != item.onUp)
+        ExitApp 1
+    if (profile.HasOwnProp("NoActivate") != item.noActivate)
+        ExitApp 1
+}
+
+; 分组 Map 与 Schema 一致
+for group, constantsMap in Map("combat", Constants.CombatHotkeys, "quick", Constants.QuickHotkeys, "strongHold", Constants.StrongHoldHotkeys) {
+    schemaMap := HotkeySchema.GetGroupMap(group)
+    if (schemaMap.Count != constantsMap.Count)
+        ExitApp 1
+    for id, _ in schemaMap {
+        if !constantsMap.Has(id)
+            ExitApp 1
+    }
+}
+
 ; 探针：确认没有顶层副作用把 Config.IniFile 提前初始化（应仍为空）
 if (Config.IniFile != "")
     ExitApp 1
