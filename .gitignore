@@ -18,6 +18,7 @@ CONTEXT.md
 docs/adr
 docs/architecture
 docs/aegis
+docs/plan
 
 # DSH 项目根：忽略本地运行状态，保留 skills 目录
 .dsh/*
