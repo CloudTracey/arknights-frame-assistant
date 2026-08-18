@@ -122,13 +122,15 @@
 
 ### 单元测试：Schema 生成 GUI 热键行
 
-- [ ] **操作**：打开设置窗口，检查「常规作战」「快捷操作」「卫戍协议」三页的热键行
-- [ ] **预期**：每行显示与 Schema `displayName` 一致的名称，行顺序与之前一致，`AutoBeginPauseSwitch` 仍是复选框+输入框特殊行
+- [x] **操作**：打开设置窗口，检查「常规作战」「快捷操作」「卫戍协议」三页的热键行
+- [x] **预期**：每行显示与 Schema `displayName` 一致的名称，行顺序与之前一致，`AutoBeginPauseSwitch` 仍是复选框+输入框特殊行
 
 ### 单元测试：ActionCallbacks 由 Schema 生成
 
 - [ ] **操作**：启动 AFA 后触发若干热键（过帧、守卫、松开暂停、开局自动暂停开关）
 - [ ] **预期**：行为与之前一致（`Guarded`/`OnUp`/`NoActivate` 标志正确生效）
+
+> 问题：用户反馈 USleep 超时日志缺少触发位置；已改为记录 `Error.Stack` 调用栈。另确认根因为“同时按键时 PureKeyWait 饿死 USleep”，用户决定暂不修复，仅记录。
 
 ### 集成测试：smoke_test Schema 完整性
 
@@ -150,4 +152,10 @@
 
 ## 问题反馈
 
-无；跳过项已在上方注明（EventBus 异常隔离、静态检查手动执行）。
+### 问题1：USleep 超时日志缺少触发位置
+- [x] 已解决（已增加 `Error.Stack` 调用栈记录）
+
+### 问题2：同时按键时 PureKeyWait 饿死 USleep
+- [ ] 暂不修复（用户决定仅记录；根因已确认：后一个热键的 `KeyWait` 会挂起前一个热键的 `USleep`）
+
+跳过项已在上方注明（EventBus 异常隔离、静态检查手动执行）。
