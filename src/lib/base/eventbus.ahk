@@ -22,7 +22,14 @@ class EventBus {
             return
         }
         for callback in this.Listeners[eventName] {
-            callback(data)
+            try {
+                callback(data)
+            } catch Error as e {
+                ; 单个订阅者异常不应阻断其余订阅者；记录日志后继续
+                callbackName := ""
+                try callbackName := callback.Name
+                Logger.Error("EventBus", "事件回调异常：event=" eventName ", callback=" callbackName ", error=" e.Message)
+            }
         }
     }
 
