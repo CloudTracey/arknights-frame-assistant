@@ -25,7 +25,7 @@
 #Include ./lib/core/hotkey/game_keys.ahk
 #Include ./lib/core/hotkey/hotkey_actions.ahk
 #Include ./lib/core/monitor/level_detector.ahk
-#Include ./lib/key_bind.ahk
+#Include ./lib/ui/key_bind.ahk
 #Include ./lib/core/hotkey/hotkey_service.ahk
 #Include ./lib/core/settings/hotkey_conflict_validator.ahk
 #Include ./lib/core/settings/settings_service.ahk
@@ -35,11 +35,11 @@
 #Include ./lib/core/updater/downloader.ahk
 #Include ./lib/core/updater/self_replacer.ahk
 #Include ./lib/core/updater/updater_manager.ahk
-#Include ./lib/updater/updater_ui.ahk
+#Include ./lib/ui/updater_ui.ahk
 #Include ./lib/core/launch/game_launcher.ahk
-#Include ./lib/changelog/changelog_ui.ahk
+#Include ./lib/ui/changelog_ui.ahk
 #Include ./lib/core/changelog/changelog_checker.ahk
-#Include ./lib/gui.ahk
+#Include ./lib/ui/gui.ahk
 #Include ./lib/core/monitor/game_monitor.ahk
 
 HandleAfaExit(exitReason, exitCode) {

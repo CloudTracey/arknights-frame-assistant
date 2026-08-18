@@ -57,16 +57,6 @@ LEGACY_LAYER: dict[str, str] = {
     "src/lib/settings/saver.ahk": "core",
     "src/lib/settings/actions.ahk": "core",
     "src/lib/settings/hotkey_conflict_validator.ahk": "core",
-    "src/lib/updater/version_checker.ahk": "core",
-    "src/lib/updater/downloader.ahk": "core",
-    "src/lib/updater/self_replacer.ahk": "core",
-    "src/lib/updater/updater_manager.ahk": "core",
-    "src/lib/updater/updater_ui.ahk": "ui",
-    "src/lib/changelog/changelog.ahk": "core",
-    "src/lib/changelog/changelog_checker.ahk": "core",
-    "src/lib/changelog/changelog_ui.ahk": "ui",
-    "src/lib/gui.ahk": "ui",
-    "src/lib/key_bind.ahk": "ui",
 }
 
 LAYER_ORDER: dict[str, int] = {

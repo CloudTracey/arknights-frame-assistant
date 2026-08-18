@@ -815,6 +815,10 @@ class GuiManager {
         EventBus.Subscribe("SettingsReset", (*) => this._OnSettingsReset())
         EventBus.Subscribe("SettingsChanged", (data) => this._OnSettingsChanged(data))
         EventBus.Subscribe("GamePathNormalized", (data) => this.SetControlValue("GamePath", data.path))
+        EventBus.Subscribe("GamePathDetected", (data) => this._OnGamePathDetected(data))
+        EventBus.Subscribe("SettingsViewRefreshRequested", (data) => this._OnSettingsViewRefreshRequested(data))
+        EventBus.Subscribe("ConsoleOpened", (*) => this._OnConsoleOpened())
+        EventBus.Subscribe("ChangelogAvailable", (*) => this._OnChangelogAvailable())
     }
 
     ; 处理热键总开关状态变化（托盘文案/提示由 UI 负责）
@@ -912,6 +916,28 @@ class GuiManager {
                 value := KeyFormat.VirtualNewkeyFormat(value)
             this.MainGui[data.key].Value := value
         }
+    }
+
+    ; 处理游戏路径检测到事件
+    static _OnGamePathDetected(data) {
+        this.SetControlValue("GamePath", data.path)
+        this.TrackChange("GamePath")
+    }
+
+    ; 处理设置视图刷新请求
+    static _OnSettingsViewRefreshRequested(data) {
+        this._UpdateHotkeyControlsFromConfig()
+        this._UpdateImportantControlsFromConfig()
+        this._UpdateCustomControlsFromConfig()
+    }
+
+    ; 处理调试控制台打开事件
+    static _OnConsoleOpened() {
+        ShowTrayTip("调试日志控制台已打开", "AFA", "Mute")
+    }
+
+    ; 处理更新公告可用事件（展示由 ChangelogUI 负责，此处预留）
+    static _OnChangelogAvailable() {
     }
 
     ; 点击"手动检查更新"按钮

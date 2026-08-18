@@ -178,7 +178,7 @@ class UpdateUI {
             result := MessageBox.Confirm(message "`n`n是否现在配置GitHub Token？", "检查失败")
             if (result = "Yes") {
                 ; 打开设置界面
-                GuiManager.Show()
+                EventBus.Publish("SettingsShowRequested")
             }
         } else {
             MessageBox.Error(message, "检查失败")

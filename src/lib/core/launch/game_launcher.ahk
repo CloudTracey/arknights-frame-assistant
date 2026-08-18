@@ -25,16 +25,14 @@ class GameLauncher {
                 Logger.Warn("GameLauncher", "ProcessGetPath 异常 (pid=" pid "): " e.Message)
             }
             if (path != "") {
-                GuiManager.SetControlValue("GamePath", path)
-                GuiManager.TrackChange("GamePath")
+                EventBus.Publish("GamePathDetected", {path: path})
                 return
             }
             ; 主路径失败，降级到 WMI 查询
             Logger.Warn("GameLauncher", "ProcessGetPath 失败，降级到 WMI 查询 (pid=" pid ")")
             path := GameLauncher._GetProcessPathByWmi(pid)
             if (path != "") {
-                GuiManager.SetControlValue("GamePath", path)
-                GuiManager.TrackChange("GamePath")
+                EventBus.Publish("GamePathDetected", {path: path})
                 Logger.Info("GameLauncher", "WMI 降级查询成功: " path)
                 return
             }
