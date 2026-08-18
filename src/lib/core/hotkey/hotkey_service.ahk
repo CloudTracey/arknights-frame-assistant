@@ -56,7 +56,26 @@ class HotkeyService {
 
     ; 初始化热键服务
     static Init() {
+        HotkeyService._BuildActionCallbacks()
         HotkeyService._SubscribeEvents()
+    }
+
+    ; 由 Schema + ActionBindings 生成 ActionCallbacks：
+    ; 行为标志只维护在 HotkeySchema，动作函数引用只维护在 ActionBindings。
+    static _BuildActionCallbacks() {
+        this.ActionCallbacks := Map()
+        for item in HotkeySchema.Items {
+            if !this.ActionBindings.Has(item.id)
+                continue
+            profile := {Fn: this.ActionBindings[item.id]}
+            if (item.guarded)
+                profile.Guarded := true
+            if (item.onUp)
+                profile.OnUp := true
+            if (item.noActivate)
+                profile.NoActivate := true
+            this.ActionCallbacks[item.id] := profile
+        }
     }
 
     ; 内部：订阅热键事件（保留旧事件兼容，同时接入新事件契约）
@@ -128,46 +147,48 @@ class HotkeyService {
         return this._ActiveTab
     }
 
-    ; 热键回调映射表（profile.Fn 回调；profile.Guarded 有关卡守卫——拦截键注册 Up 变体补发透传；profile.OnUp 功能在松开时触发）
-    static ActionCallbacks := Map(
-        ; 常规作战（有守卫）
-        "PressPause", {Fn: HotkeyActions.ActionPressPause.Bind(HotkeyActions), Guarded: true},
-        "ReleasePause", {Fn: HotkeyActions.ActionReleasePause.Bind(HotkeyActions), OnUp: true},  ; 松开时触发（Up 变体注册）
-        "GameSpeed", {Fn: HotkeyActions.ActionGameSpeed.Bind(HotkeyActions), Guarded: true},
-        "16ms", {Fn: HotkeyActions.Action16ms.Bind(HotkeyActions), Guarded: true},
-        "33ms", {Fn: HotkeyActions.Action33ms.Bind(HotkeyActions), Guarded: true},
-        "166ms", {Fn: HotkeyActions.Action166ms.Bind(HotkeyActions), Guarded: true},
-        "PauseSelect", {Fn: HotkeyActions.ActionPauseSelect.Bind(HotkeyActions), Guarded: true},
-        "Skill", {Fn: HotkeyActions.ActionSkill.Bind(HotkeyActions), Guarded: true},
-        "Retreat", {Fn: HotkeyActions.ActionRetreat.Bind(HotkeyActions), Guarded: true},
-        "OneClickSkill", {Fn: HotkeyActions.ActionOneClickSkill.Bind(HotkeyActions), Guarded: true},
-        "OneClickRetreat", {Fn: HotkeyActions.ActionOneClickRetreat.Bind(HotkeyActions), Guarded: true},
-        "PauseSkill", {Fn: HotkeyActions.ActionPauseSkill.Bind(HotkeyActions), Guarded: true},
-        "PauseRetreat", {Fn: HotkeyActions.ActionPauseRetreat.Bind(HotkeyActions), Guarded: true},
-        "SwitchView", {Fn: HotkeyActions.ActionSwitchView.Bind(HotkeyActions), Guarded: true},
-        "BeginPause", {Fn: HotkeyActions.ActionBeginPauseSwitch.Bind(HotkeyActions), NoActivate: true},  ; 设置开关，不激活游戏窗口（避免焦点跳转）
-        "AutoBeginPauseSwitch", {Fn: HotkeyActions.ActionBeginPauseSwitch.Bind(HotkeyActions), NoActivate: true},
+    ; 热键动作绑定表（id -> 动作函数引用；Guarded/OnUp/NoActivate 行为标志由 HotkeySchema 提供，不在此重复）
+    static ActionBindings := Map(
+        ; 常规作战
+        "PressPause", HotkeyActions.ActionPressPause.Bind(HotkeyActions),
+        "ReleasePause", HotkeyActions.ActionReleasePause.Bind(HotkeyActions),
+        "GameSpeed", HotkeyActions.ActionGameSpeed.Bind(HotkeyActions),
+        "PauseSelect", HotkeyActions.ActionPauseSelect.Bind(HotkeyActions),
+        "Skill", HotkeyActions.ActionSkill.Bind(HotkeyActions),
+        "Retreat", HotkeyActions.ActionRetreat.Bind(HotkeyActions),
+        "SwitchView", HotkeyActions.ActionSwitchView.Bind(HotkeyActions),
+        "16ms", HotkeyActions.Action16ms.Bind(HotkeyActions),
+        "33ms", HotkeyActions.Action33ms.Bind(HotkeyActions),
+        "166ms", HotkeyActions.Action166ms.Bind(HotkeyActions),
+        "OneClickSkill", HotkeyActions.ActionOneClickSkill.Bind(HotkeyActions),
+        "OneClickRetreat", HotkeyActions.ActionOneClickRetreat.Bind(HotkeyActions),
+        "PauseSkill", HotkeyActions.ActionPauseSkill.Bind(HotkeyActions),
+        "PauseRetreat", HotkeyActions.ActionPauseRetreat.Bind(HotkeyActions),
+        "AutoBeginPauseSwitch", HotkeyActions.ActionBeginPauseSwitch.Bind(HotkeyActions),
         ; 快捷操作
-        "LButtonClick", {Fn: HotkeyActions.ActionLButtonClick.Bind(HotkeyActions)},
-        "CeaseOperations", {Fn: HotkeyActions.ActionCeaseOperations.Bind(HotkeyActions)},
-        "Skip", {Fn: HotkeyActions.ActionSkip.Bind(HotkeyActions)},
-        "Back", {Fn: HotkeyActions.ActionBack.Bind(HotkeyActions)},
-        "Harvest", {Fn: HotkeyActions.ActionHarvest.Bind(HotkeyActions)},
-        "CollectCollectibles", {Fn: HotkeyActions.ActionCollectCollectibles.Bind(HotkeyActions)},
+        "LButtonClick", HotkeyActions.ActionLButtonClick.Bind(HotkeyActions),
+        "Harvest", HotkeyActions.ActionHarvest.Bind(HotkeyActions),
+        "CeaseOperations", HotkeyActions.ActionCeaseOperations.Bind(HotkeyActions),
+        "Skip", HotkeyActions.ActionSkip.Bind(HotkeyActions),
+        "CollectCollectibles", HotkeyActions.ActionCollectCollectibles.Bind(HotkeyActions),
+        "Back", HotkeyActions.ActionBack.Bind(HotkeyActions),
         ; 卫戍协议
-        "CheckEnemies", {Fn: HotkeyActions.ActionCheckEnemies.Bind(HotkeyActions)},
-        "DispatchCenter", {Fn: HotkeyActions.ActionDispatchCenter.Bind(HotkeyActions)},
-        "Freeze", {Fn: HotkeyActions.ActionFreeze.Bind(HotkeyActions)},
-        "Refresh", {Fn: HotkeyActions.ActionRefresh.Bind(HotkeyActions)},
-        "Upgrade", {Fn: HotkeyActions.ActionUpgrade.Bind(HotkeyActions)},
-        "Sell", {Fn: HotkeyActions.ActionSell.Bind(HotkeyActions)},
-        "Ready", {Fn: HotkeyActions.ActionReady.Bind(HotkeyActions)},
-        "StrongHoldProtocolLButtonClick", {Fn: HotkeyActions.ActionLButtonClick.Bind(HotkeyActions)},
-        "StrongHoldProtocolRetreat", {Fn: HotkeyActions.ActionRetreat.Bind(HotkeyActions)},
-        "StrongHoldProtocolOneClickRetreat", {Fn: HotkeyActions.ActionOneClickRetreat.Bind(HotkeyActions)},
-        "OneClickSell", {Fn: HotkeyActions.ActionOneClickSell.Bind(HotkeyActions)},
-        "OneClickPurchase", {Fn: HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions)}
+        "CheckEnemies", HotkeyActions.ActionCheckEnemies.Bind(HotkeyActions),
+        "DispatchCenter", HotkeyActions.ActionDispatchCenter.Bind(HotkeyActions),
+        "Freeze", HotkeyActions.ActionFreeze.Bind(HotkeyActions),
+        "Refresh", HotkeyActions.ActionRefresh.Bind(HotkeyActions),
+        "Ready", HotkeyActions.ActionReady.Bind(HotkeyActions),
+        "StrongHoldProtocolLButtonClick", HotkeyActions.ActionLButtonClick.Bind(HotkeyActions),
+        "Upgrade", HotkeyActions.ActionUpgrade.Bind(HotkeyActions),
+        "Sell", HotkeyActions.ActionSell.Bind(HotkeyActions),
+        "StrongHoldProtocolRetreat", HotkeyActions.ActionRetreat.Bind(HotkeyActions),
+        "StrongHoldProtocolOneClickRetreat", HotkeyActions.ActionOneClickRetreat.Bind(HotkeyActions),
+        "OneClickSell", HotkeyActions.ActionOneClickSell.Bind(HotkeyActions),
+        "OneClickPurchase", HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions)
     )
+
+    ; 热键回调映射表（由 HotkeySchema.Items + ActionBindings 自动生成）
+    static ActionCallbacks := Map()
 
     ; 已激活热键映射表
     static ActiveHotkeys := Map()

@@ -209,35 +209,23 @@ class GuiManager {
         this.MainGui.Add("Text", "x0 y25 w" this.GuiWidth " h1 Backgroundd0d0d0") ; 分割线
 
         ; -- 常规作战 --
-        ; 常规作战 - 左列
+        ; 常规作战 - 左列（由 Schema 顺序生成，前半列）
+        combatItems := this._GetSchemaItems("combat")
+        combatHalf := Ceil(combatItems.Length / 2)
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vKeybindLeftGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindLeftGroup"])
 
-        this.KeybindControls.Push(AddBindRow("按下时暂停", "PressPause")*)
-        this.KeybindControls.Push(AddBindRow("松开时暂停", "ReleasePause")*)
-        this.KeybindControls.Push(AddBindRow("切换倍速", "GameSpeed")*)
-        this.KeybindControls.Push(AddBindRow("暂停时选中", "PauseSelect")*)
-        this.KeybindControls.Push(AddBindRow("技能", "Skill")*)
-        this.KeybindControls.Push(AddBindRow("撤退", "Retreat")*)
-        this.KeybindControls.Push(AddBindRow("视角切换", "SwitchView")*)
-
-        ; 常规作战 - 右列
-        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vKeybindRightGroup", "")
-        this.KeybindControls.Push(this.MainGui["KeybindRightGroup"])
-
-        row16ms := AddBindRow("前进 16ms", "16ms")
-        this.KeybindControls.Push(row16ms*)
-        this.FrameSkipLabels["16ms"] := row16ms[1]
-        row33ms := AddBindRow("前进 33ms", "33ms")
-        this.KeybindControls.Push(row33ms*)
-        this.FrameSkipLabels["33ms"] := row33ms[1]
-        row166ms := AddBindRow("前进 166ms", "166ms")
-        this.KeybindControls.Push(row166ms*)
-        this.FrameSkipLabels["166ms"] := row166ms[1]
-        this.KeybindControls.Push(AddBindRow("一键技能", "OneClickSkill")*)
-        this.KeybindControls.Push(AddBindRow("一键撤退", "OneClickRetreat")*)
-        this.KeybindControls.Push(AddBindRow("暂停技能", "PauseSkill")*)
-        this.KeybindControls.Push(AddBindRow("暂停撤退", "PauseRetreat")*)
+        for i, item in combatItems {
+            if (i = combatHalf + 1) {
+                ; 常规作战 - 右列
+                this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vKeybindRightGroup", "")
+                this.KeybindControls.Push(this.MainGui["KeybindRightGroup"])
+            }
+            row := AddBindRow(item.displayName, item.id)
+            this.KeybindControls.Push(row*)
+            if (item.id = "16ms" || item.id = "33ms" || item.id = "166ms")
+                this.FrameSkipLabels[item.id] := row[1]
+        }
         ; 空白占位
         placeholderKeybind := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.KeybindControls.Push(placeholderKeybind)
@@ -303,21 +291,20 @@ class GuiManager {
         this._BottomBaseY := y + h
 
         ; -- 快捷操作 --
-        ; 快捷操作 - 左列
+        ; 快捷操作 - 左列（由 Schema 顺序生成，前半列）
+        quickItems := this._GetSchemaItems("quick")
+        quickHalf := Ceil(quickItems.Length / 2)
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
         this.QuickControls.Push(this.MainGui["QuickLeftGroup"])
 
-        this.QuickControls.Push(AddBindRow("模拟左键点击", "LButtonClick")*)
-        this.QuickControls.Push(AddBindRow("基建快速收取", "Harvest")*)
-        this.QuickControls.Push(AddBindRow("放弃行动", "CeaseOperations")*)
-
-        ; 快捷操作 - 右列
-        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vQuickRightGroup", "")
-        this.QuickControls.Push(this.MainGui["QuickRightGroup"])
-
-        this.QuickControls.Push(AddBindRow("跳过招募动画/剧情", "Skip")*)
-        this.QuickControls.Push(AddBindRow("肉鸽收取道具", "CollectCollectibles")*)
-        this.QuickControls.Push(AddBindRow("返回上级菜单", "Back")*)
+        for i, item in quickItems {
+            if (i = quickHalf + 1) {
+                ; 快捷操作 - 右列
+                this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vQuickRightGroup", "")
+                this.QuickControls.Push(this.MainGui["QuickRightGroup"])
+            }
+            this.QuickControls.Push(AddBindRow(item.displayName, item.id)*)
+        }
         ; 空白占位
         placeholderQuick := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.QuickControls.Push(placeholderQuick)
@@ -336,29 +323,21 @@ class GuiManager {
         this.StrongHoldConflictHints.Push(hintQuick3)
 
         ; -- 卫戍协议 --
-        ; 卫戍协议 - 左列
+        ; 卫戍协议 - 左列（由 Schema 顺序生成，前半列）
+        strongHoldItems := this._GetSchemaItems("strongHold")
+        strongHoldHalf := Ceil(strongHoldItems.Length / 2)
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vStrongHoldProtocolLeftGroup", "")
         this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolLeftGroup"])
 
-        this.StrongHoldProtocolControls.Push(AddBindRow("查看敌人", "CheckEnemies")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("调度中心", "DispatchCenter")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("冻结", "Freeze")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("刷新", "Refresh")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("准备就绪", "Ready")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("模拟左键点击", "StrongHoldProtocolLButtonClick")*)
-
-        ; 卫戍协议 - 右列
-        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vStrongHoldProtocolRightGroup",
-            "")
-        this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolRightGroup"])
-
-        this.StrongHoldProtocolControls.Push(AddBindRow("升级", "Upgrade")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("出售/销毁", "Sell")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("单位撤退", "StrongHoldProtocolRetreat")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("一键撤退", "StrongHoldProtocolOneClickRetreat")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("一键出售/销毁", "OneClickSell")*)
-        this.StrongHoldProtocolControls.Push(AddBindRow("一键购买", "OneClickPurchase")*)
-
+        for i, item in strongHoldItems {
+            if (i = strongHoldHalf + 1) {
+                ; 卫戍协议 - 右列
+                this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vStrongHoldProtocolRightGroup",
+                    "")
+                this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolRightGroup"])
+            }
+            this.StrongHoldProtocolControls.Push(AddBindRow(item.displayName, item.id)*)
+        }
         ; 空白占位
         placeholderStrongHoldProtocol := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.StrongHoldProtocolControls.Push(placeholderStrongHoldProtocol)
@@ -792,6 +771,16 @@ class GuiManager {
             }
         }
         this.RefreshHotkeyConflicts()
+    }
+
+    ; 内部：按分组返回 Schema 热键项（排除 GUI 特殊行 AutoBeginPauseSwitch，由手工布局创建）
+    static _GetSchemaItems(group) {
+        result := []
+        for item in HotkeySchema.Items {
+            if (item.group = group && item.id != "AutoBeginPauseSwitch")
+                result.Push(item)
+        }
+        return result
     }
 
     ; 内部：订阅事件总线
