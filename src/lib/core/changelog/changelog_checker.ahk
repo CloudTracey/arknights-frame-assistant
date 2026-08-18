@@ -3,6 +3,11 @@
 class ChangelogChecker {
     static ChangelogFile := ""
 
+    ; 订阅展示请求（由 bootstrap 调用，避免顶层副作用）
+    static Init() {
+        EventBus.Subscribe("ChangelogShowRequested", (*) => this.CheckAndShow())
+    }
+
     static CheckAndShow() {
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
         this.ChangelogFile := configDir "\changelog.json"
@@ -18,7 +23,7 @@ class ChangelogChecker {
         if (!FileExist(this.ChangelogFile)) {
             ; 首次启动 / 从旧版本升级：changelog.json 不存在，自动获取
             Logger.Info("Changelog", "changelog.json 不存在，自动获取公告缓存")
-            VersionChecker.FetchChangelogCache()
+            ReleaseRepository.FetchChangelogCache()
         }
 
         if (!FileExist(this.ChangelogFile))
@@ -29,8 +34,8 @@ class ChangelogChecker {
         if (body = "")
             return
 
-        Logger.Info("Changelog", "显示更新公告，当前版本 " currentVersion)
-        ChangelogUI.Show(currentVersion, body)
+        Logger.Info("Changelog", "发布更新公告，当前版本 " currentVersion)
+        EventBus.Publish("ChangelogAvailable", {version: currentVersion, body: body})
     }
 
     ; 内部：读取 changelog.json，按版本降序拼接所有 body

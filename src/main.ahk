@@ -29,15 +29,16 @@
 #Include ./lib/core/hotkey/hotkey_service.ahk
 #Include ./lib/core/settings/hotkey_conflict_validator.ahk
 #Include ./lib/core/settings/settings_service.ahk
-#Include ./lib/updater/version_checker.ahk
-#Include ./lib/updater/downloader.ahk
-#Include ./lib/updater/self_replacer.ahk
-#Include ./lib/updater/updater_manager.ahk
+#Include ./lib/core/updater/github_token_service.ahk
+#Include ./lib/core/updater/release_repository.ahk
+#Include ./lib/core/updater/version_checker.ahk
+#Include ./lib/core/updater/downloader.ahk
+#Include ./lib/core/updater/self_replacer.ahk
+#Include ./lib/core/updater/updater_manager.ahk
 #Include ./lib/updater/updater_ui.ahk
 #Include ./lib/core/launch/game_launcher.ahk
-#Include ./lib/changelog/changelog.ahk
 #Include ./lib/changelog/changelog_ui.ahk
-#Include ./lib/changelog/changelog_checker.ahk
+#Include ./lib/core/changelog/changelog_checker.ahk
 #Include ./lib/gui.ahk
 #Include ./lib/core/monitor/game_monitor.ahk
 
@@ -110,6 +111,8 @@ class App {
         SettingsService.Init()
         VersionChecker.Init()
         Updater.Init()
+        ChangelogChecker.Init()
+        ChangelogUI.Init()
         GameLauncher.Init()
 
         ; ---- 加载设置 ----
@@ -141,8 +144,8 @@ class App {
 
         HotkeyService.HotkeyOn()
 
-        ; 检查并显示更新公告
-        ChangelogChecker.CheckAndShow()
+        ; 检查并显示更新公告（事件驱动）
+        EventBus.Publish("ChangelogShowRequested")
 
         ; 初始化 GUI（含 Alt+F4 退出热键注册）
         GuiManager.Start()

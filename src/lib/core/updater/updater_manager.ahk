@@ -1,5 +1,5 @@
 ; == 更新协调器 ==
-; 协调更新流程的各个模块
+; 协调更新流程的各个模块；与 UpdateUI 之间只通过 ADR-② 更新事件通信。
 
 class Updater {
     ; 每源下载重试次数（降级前）
@@ -14,15 +14,15 @@ class Updater {
         ; 订阅应用启动事件（自动检查）
         EventBus.Subscribe("AppStartCompleted", (*) => this.CheckOnStartup())
         ; 订阅手动检查更新事件
-        EventBus.Subscribe("CheckUpdateClick", (*) => this.CheckManual())
-        ; 订阅更新可用事件
-        EventBus.Subscribe("UpdateAvailable", (data) => this.ShowUpdateDialog(data))
+        EventBus.Subscribe("UpdateCheckRequested", (*) => this.CheckManual())
         ; 订阅更新确认事件
-        EventBus.Subscribe("UpdateConfirmed", (data) => this.DownloadWithAltSource(data))
+        EventBus.Subscribe("UpdateConfirmRequested", (data) => this.DownloadWithAltSource(data))
         ; 订阅更新忽略事件
-        EventBus.Subscribe("UpdateIgnored", (data) => this.HandleUpdateIgnored(data))
+        EventBus.Subscribe("UpdateIgnoreRequested", (data) => this.HandleUpdateIgnored(data))
         ; 订阅下载取消事件
-        EventBus.Subscribe("UpdateDownloadCancelled", (*) => this.HandleDownloadCancelled())
+        EventBus.Subscribe("UpdateDownloadCancelRequested", (*) => this.HandleDownloadCancelled())
+        ; 订阅手动下载事件
+        EventBus.Subscribe("UpdateManualDownloadRequested", (data) => this.HandleManualDownload(data))
     }
 
     ; 启动时检查（异步）
@@ -46,16 +46,13 @@ class Updater {
         }
 
         ; 执行版本检查
-        EventBus.Publish("CheckUpdateStart")
+        EventBus.Publish("UpdateCheckStarted", {isManual: isManual})
         checkResult := VersionChecker.Check()
         Logger.Info("Updater", "版本检查结果 status=" checkResult.status)
 
         ; 处理检查结果
         switch checkResult.status {
             case "up_to_date":
-                if (isManual) {
-                    UpdateUI.ShowUpToDateDialog(checkResult.localVersion)
-                }
                 ; 清除已忽略版本记录（当前已是最新）
                 dismissedVersion := Config.GetImportant("LastDismissedVersion")
                 if (dismissedVersion != "") {
@@ -73,7 +70,7 @@ class Updater {
                 lastDismissed := Config.GetImportant("LastDismissedVersion")
                 if (!isManual && lastDismissed == checkResult.remoteVersion) {
                     ; 自动检查时，如果该版本已被忽略，则跳过
-                    EventBus.Publish("CheckUpdateComplete")
+                    EventBus.Publish("UpdateCheckCompleted", {isManual: isManual, status: "update_available", localVersion: checkResult.localVersion})
                     return
                 }
 
@@ -91,7 +88,7 @@ class Updater {
             case "rate_limited":
                 ; 自动检查时静默降级到国内源
                 if (!isManual) {
-                    fallbackResult := VersionChecker._CheckFromDomestic(checkResult.localVersion)
+                    fallbackResult := ReleaseRepository.CheckDomestic(checkResult.localVersion)
                     if (fallbackResult.status = "update_available") {
                         Logger.Info("Updater", "自动降级到国内源成功，发现新版本 " fallbackResult.remoteVersion)
                         EventBus.Publish("UpdateAvailable", {
@@ -102,19 +99,15 @@ class Updater {
                             isManual: isManual,
                             changelogBody: fallbackResult.HasProp("changelogBody") ? fallbackResult.changelogBody : ""
                         })
-                        EventBus.Publish("CheckUpdateComplete")
+                        EventBus.Publish("UpdateCheckCompleted", {isManual: isManual, status: "update_available", localVersion: fallbackResult.localVersion})
                         return
                     }
-                }
-                if (isManual) {
-                    suggestToken := checkResult.HasProp("suggestToken") ? checkResult.suggestToken : false
-                    UpdateUI.ShowCheckFailedDialog(checkResult.message, suggestToken)
                 }
 
             case "token_invalid":
                 ; 自动检查时静默降级到国内源
                 if (!isManual) {
-                    fallbackResult := VersionChecker._CheckFromDomestic(checkResult.localVersion)
+                    fallbackResult := ReleaseRepository.CheckDomestic(checkResult.localVersion)
                     if (fallbackResult.status = "update_available") {
                         Logger.Info("Updater", "自动降级到国内源成功，发现新版本 " fallbackResult.remoteVersion)
                         EventBus.Publish("UpdateAvailable", {
@@ -125,23 +118,18 @@ class Updater {
                             isManual: isManual,
                             changelogBody: fallbackResult.HasProp("changelogBody") ? fallbackResult.changelogBody : ""
                         })
-                        EventBus.Publish("CheckUpdateComplete")
+                        EventBus.Publish("UpdateCheckCompleted", {isManual: isManual, status: "update_available", localVersion: fallbackResult.localVersion})
                         return
                     }
                 }
-                ; 手动检查或降级也失败，显示错误
-                if (isManual) {
-                    result := MessageBox.Info(checkResult.message)
-                    VersionChecker.TokenValidated := false
-                    GuiManager.Show()
-                }
-
-            case "check_failed":
-                if (isManual) {
-                    UpdateUI.ShowCheckFailedDialog(checkResult.message)
-                }
         }
-        EventBus.Publish("CheckUpdateComplete")
+        EventBus.Publish("UpdateCheckCompleted", {
+            isManual: isManual,
+            status: checkResult.status,
+            localVersion: checkResult.HasProp("localVersion") ? checkResult.localVersion : "",
+            message: checkResult.HasProp("message") ? checkResult.message : "",
+            suggestToken: checkResult.HasProp("suggestToken") ? checkResult.suggestToken : false
+        })
     }
 
     ; 下载入口（含同源重试 + 降级备选源）
@@ -157,7 +145,7 @@ class Updater {
     ; 内部：带重试的单源下载
     ; reason: 上次失败的简要原因（透传给 UI 展示）
     static _TryDownload(params, triedFallback, retryCount := 0, reason := "") {
-        UpdateUI.ShowDownloadingDialog(retryCount, reason)
+        EventBus.Publish("UpdateDownloadStarted", {retryCount: retryCount, reason: reason})
 
         ; downloadParams 结构约定：{downloadUrl, expectedHash, localVersion, remoteVersion, ...}
         ; expectedHash：下载文件的期望 SHA-256（hex，小写；为空时跳过校验）
@@ -166,7 +154,11 @@ class Updater {
             localVersion: params.localVersion,
             remoteVersion: params.remoteVersion,
             expectedHash: params.HasProp("expectedHash") ? params.expectedHash : "",
-            onProgress: (data) => UpdateUI.UpdateDownloadProgress(data),
+            onProgress: (data) => EventBus.Publish("UpdateDownloadProgress", {
+                downloadedBytes: data.loaded,
+                totalBytes: data.total,
+                speedBytesPerSec: data.speed
+            }),
             onComplete: (result) => this.HandleDownloadSuccess(result),
             onError: (error) => this.HandleDownloadRetryOrFallback(error, params, triedFallback, retryCount),
             onCancel: (info) => this.HandleDownloadCancelComplete()
@@ -187,6 +179,7 @@ class Updater {
             Sleep(this.DownloadRetryDelay)
             ; 优先用不含"下载失败:"前缀的原始原因，避免 UI 重复显示
             reason := error.HasProp("reason") ? error.reason : error.message
+            EventBus.Publish("UpdateDownloadRetryScheduled", {retryCount: retryCount + 1, reason: reason})
             this._TryDownload(params, triedFallback, retryCount + 1, reason)
             return
         }
@@ -194,11 +187,10 @@ class Updater {
         ; 同源重试耗尽，尝试降级备选源
         if (!triedFallback) {
             ; 降级检查期间更新下载窗口提示，避免用户误以为更新静默失败
-            UpdateUI.ShowFallbackNotice()
+            EventBus.Publish("UpdateFallbackNotice")
             fallbackInfo := this._GetFallbackDownloadInfo(params)
             if (fallbackInfo.downloadUrl != "") {
                 Logger.Info("Updater", "同源重试耗尽，降级备选源下载")
-                UpdateUI.CloseDownloadingDialog()
                 fallbackParams := {
                     downloadUrl: fallbackInfo.downloadUrl,
                     localVersion: params.localVersion,
@@ -211,10 +203,9 @@ class Updater {
         }
 
         ; 降级也失败，显示错误
-        UpdateUI.CloseDownloadingDialog()
         ; 用不含"下载失败:"前缀的原始原因，避免与弹窗标题/前缀重复
         reason := error.HasProp("reason") ? error.reason : error.message
-        UpdateUI.ShowDownloadFailedDialog("下载失败：`n" reason "`n`n两个更新源均不可用，请稍后重试或手动下载")
+        EventBus.Publish("UpdateDownloadFailed", {reason: reason})
     }
 
     ; 内部：获取备选源的下载信息（重新用备选源检查版本）
@@ -225,8 +216,8 @@ class Updater {
 
         localVersion := params.localVersion
         fallbackResult := isGitHubPreferred
-            ? VersionChecker._CheckFromDomestic(localVersion)
-            : VersionChecker._CheckFromGithub(localVersion)
+            ? ReleaseRepository.CheckDomestic(localVersion)
+            : ReleaseRepository.CheckGithub(localVersion)
 
         if (fallbackResult.status = "update_available" || fallbackResult.status = "up_to_date") {
             fallbackUrl := fallbackResult.HasProp("downloadUrl") ? fallbackResult.downloadUrl : ""
@@ -243,9 +234,7 @@ class Updater {
     ; 下载成功处理
     static HandleDownloadSuccess(result) {
         Logger.Info("Updater", "更新下载完成，准备执行自替换")
-        ; 关闭下载对话框
-        UpdateUI.CloseDownloadingDialog()
-        UpdateUI.ShowDownloadCompleteDialog()
+        EventBus.Publish("UpdateDownloadCompleted", {tempFile: result.tempFile})
         ; 执行自替换
         this.ExecuteSelfReplacement(result)
     }
@@ -259,10 +248,7 @@ class Updater {
     ; 处理下载取消完成
     static HandleDownloadCancelComplete() {
         Logger.Info("Updater", "用户取消更新下载")
-        ; 关闭下载对话框
-        UpdateUI.CloseDownloadingDialog()
-        ; 显示取消提示
-        UpdateUI.ShowDownloadCancelledDialog()
+        EventBus.Publish("UpdateDownloadCancelled")
     }
 
     ; 执行自替换
@@ -293,9 +279,9 @@ class Updater {
             MessageBox.Warning("已关闭本次更新提示，但忽略状态未能写入配置：`n" saveResult.message, "配置未保存")
     }
 
-    ; 显示更新对话框
-    static ShowUpdateDialog(data) {
-        UpdateUI.ShowUpdateDialog(data)
+    ; 处理手动下载
+    static HandleManualDownload(data) {
+        url := (data != "" && data.HasProp("url") && data.url != "") ? data.url : "https://www.bilibili.com/opus/1178139405104185363"
+        Run(url)
     }
 }
-

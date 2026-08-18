@@ -462,7 +462,6 @@ class UpdateDownloader {
             tempFile: this.TempFile,
             remoteVersion: this.RemoteVersion
         }
-        EventBus.Publish("UpdateDownloadComplete", result)
         if (this.OnComplete != "" && (Type(this.OnComplete) = "Func" || Type(this.OnComplete) = "Closure"))
             this.OnComplete.Call(result)
         this._Cleanup()
@@ -485,7 +484,6 @@ class UpdateDownloader {
             reason: err.Message,  ; 不含前缀的原始失败原因，供重试 UI 展示避免重复
             version: this.RemoteVersion
         }
-        EventBus.Publish("UpdateDownloadError", errorInfo)
         if (this.OnError != "" && (Type(this.OnError) = "Func" || Type(this.OnError) = "Closure"))
             this.OnError.Call(errorInfo)
         this._Cleanup()

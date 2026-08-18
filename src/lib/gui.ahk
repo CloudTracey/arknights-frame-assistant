@@ -522,7 +522,7 @@ class GuiManager {
         this.BtnCheckUpdate := this.MainGui.Add("Button", "xs y+10 w" this.BtnW " h24", "手动检查更新")
         this.BtnCheckUpdate.OnEvent("Click", (*) => this.OnManualCheckClick())
         this.BtnManualDownload := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "手动下载更新")
-        this.BtnManualDownload.OnEvent("Click", (*) => EventBus.Publish("OnManualDownload"))
+        this.BtnManualDownload.OnEvent("Click", (*) => EventBus.Publish("UpdateManualDownloadRequested"))
         this.UpdateControls.Push(this.BtnCheckUpdate)
         this.UpdateControls.Push(this.BtnManualDownload)
 
@@ -803,8 +803,9 @@ class GuiManager {
         EventBus.Subscribe("GuiHide", (*) => this.Hide())
         EventBus.Subscribe("KeyBindFocusCancel", (*) => this.FocusCancelButton())
         EventBus.Subscribe("GuiHideStopHook", HandleGuiHideStopHook)
-        EventBus.Subscribe("CheckUpdateComplete", (*) => this.OnCheckUpdateComplete())
-        EventBus.Subscribe("CheckUpdateStart", (*) => this.OnCheckUpdateStart())
+        EventBus.Subscribe("UpdateCheckCompleted", (*) => this.OnCheckUpdateComplete())
+        EventBus.Subscribe("UpdateCheckStarted", (*) => this.OnCheckUpdateStart())
+        EventBus.Subscribe("SettingsShowRequested", (*) => this.Show())
         EventBus.Subscribe("HotkeyStateChanged", (data) => this._OnHotkeyStateChanged(data))
         EventBus.Subscribe("HotkeyGroupChanged", (data) => this._OnHotkeyGroupChanged(data))
         EventBus.Subscribe("SwitchKeyChanged", (data) => this._OnSwitchKeyChanged(data))
@@ -915,7 +916,7 @@ class GuiManager {
 
     ; 点击"手动检查更新"按钮
     static OnManualCheckClick() {
-        EventBus.Publish("CheckUpdateClick")
+        EventBus.Publish("UpdateCheckRequested")
     }
 
     ; 检查完成，恢复按钮

@@ -87,13 +87,6 @@ class SelfReplacer {
             }
         }
 
-        ; 发布替换已启动事件
-        EventBus.Publish("SelfReplacementStarted", {
-            newFilePath: newFilePath,
-            currentExePath: currentExePath,
-            backupPath: backupPath
-        })
-
         ; 延迟后退出当前程序（给批处理时间启动）
         SetTimer(() => ExitApp(), -500)
 

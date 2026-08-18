@@ -4,6 +4,11 @@ class ChangelogUI {
     static GuiObj := ""
     static CurrentVersion := ""
 
+    ; 订阅公告可用事件（由 bootstrap 调用，避免顶层副作用）
+    static Init() {
+        EventBus.Subscribe("ChangelogAvailable", (data) => this.Show(data.version, data.body))
+    }
+
     static Show(version, body) {
         this.CurrentVersion := version
 

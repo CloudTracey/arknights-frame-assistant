@@ -169,14 +169,14 @@ class SettingsService {
         currentToken := Config.GetImportant("GitHubToken")
         persistedToken := Config.ReadImportantFromIni("GitHubToken")
         if (currentToken != "" && currentToken != persistedToken) {
-            tokenResult := VersionChecker.ValidateToken(currentToken)
+            tokenResult := GitHubTokenService.Validate(currentToken)
             if (!tokenResult.valid) {
                 Logger.Warn("Settings", "GitHub Token 验证失败：" tokenResult.message)
                 result := MessageBox.Confirm("GitHub Token验证失败：" tokenResult.message "`n`n是否仍要保存此Token？", "Token验证失败")
                 if (result = "No")
                     return false
             } else {
-                VersionChecker.TokenValidated := true
+                GitHubTokenService.TokenValidated := true
                 Logger.Info("Settings", "GitHub Token 验证成功")
                 MessageBox.Info("GitHub Token验证成功！`n用户: " tokenResult.username "`nAPI配额: " tokenResult.rateLimit, "Token有效")
             }

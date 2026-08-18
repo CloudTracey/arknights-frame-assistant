@@ -1,10 +1,23 @@
 ; == 更新UI模块 ==
 
 class UpdateUI {
-    ; 初始化：订阅事件
+    ; 初始化：订阅更新事件
     static Init() {
-        ; 订阅手动下载
-        EventBus.Subscribe("OnManualDownload", (*) => this.OnManualDownload())
+        EventBus.Subscribe("UpdateAvailable", (data) => this.ShowUpdateDialog(data))
+        EventBus.Subscribe("UpdateCheckCompleted", (data) => this._OnUpdateCheckCompleted(data))
+        EventBus.Subscribe("UpdateDownloadStarted", (data) => this.ShowDownloadingDialog(
+            data.HasProp("retryCount") ? data.retryCount : 0,
+            data.HasProp("reason") ? data.reason : ""))
+        EventBus.Subscribe("UpdateDownloadRetryScheduled", (data) => this.ShowDownloadingDialog(data.retryCount, data.reason))
+        EventBus.Subscribe("UpdateDownloadProgress", (data) => this.UpdateDownloadProgress({
+            total: data.totalBytes,
+            loaded: data.downloadedBytes,
+            speed: data.speedBytesPerSec
+        }))
+        EventBus.Subscribe("UpdateFallbackNotice", (*) => this.ShowFallbackNotice())
+        EventBus.Subscribe("UpdateDownloadCompleted", (data) => this._OnDownloadCompleted(data))
+        EventBus.Subscribe("UpdateDownloadFailed", (data) => this._OnDownloadFailed(data))
+        EventBus.Subscribe("UpdateDownloadCancelled", (*) => this._OnDownloadCancelled())
     }
 
     ; 更新对话框实例和参数
@@ -92,7 +105,7 @@ class UpdateUI {
         this.UpdateDialog.Destroy()
         this.UpdateDialog := ""
         this.UpdateDialogParams := ""
-        EventBus.Publish("UpdateConfirmed", params)
+        EventBus.Publish("UpdateConfirmRequested", params)
     }
 
     ; 点击"否"按钮
@@ -102,7 +115,7 @@ class UpdateUI {
         this.UpdateDialog.Destroy()
         this.UpdateDialog := ""
         this.UpdateDialogParams := ""
-        EventBus.Publish("UpdateDismissed", params)
+        ; UpdateDismissed 为孤儿事件，已删除；拒绝更新无需额外处理
     }
 
     ; 点击"忽略此版本"按钮
@@ -112,7 +125,41 @@ class UpdateUI {
         this.UpdateDialog.Destroy()
         this.UpdateDialog := ""
         this.UpdateDialogParams := ""
-        EventBus.Publish("UpdateIgnored", params)
+        EventBus.Publish("UpdateIgnoreRequested", params)
+    }
+
+    ; 处理检查完成事件：仅手动检查时展示结果弹窗
+    static _OnUpdateCheckCompleted(data) {
+        if (!data.isManual)
+            return
+        switch data.status {
+            case "up_to_date":
+                this.ShowUpToDateDialog(data.HasProp("localVersion") ? data.localVersion : "")
+            case "check_failed":
+            case "rate_limited":
+            case "token_invalid":
+                this.ShowCheckFailedDialog(
+                    data.HasProp("message") ? data.message : "",
+                    data.HasProp("suggestToken") ? data.suggestToken : false)
+        }
+    }
+
+    ; 处理下载完成事件
+    static _OnDownloadCompleted(data) {
+        this.CloseDownloadingDialog()
+        this.ShowDownloadCompleteDialog()
+    }
+
+    ; 处理下载失败事件
+    static _OnDownloadFailed(data) {
+        this.CloseDownloadingDialog()
+        this.ShowDownloadFailedDialog(data.HasProp("reason") ? data.reason : "")
+    }
+
+    ; 处理下载取消完成事件
+    static _OnDownloadCancelled() {
+        this.CloseDownloadingDialog()
+        this.ShowDownloadCancelledDialog()
     }
 
     ; 显示已是最新版本的提示
@@ -186,7 +233,7 @@ class UpdateUI {
         cancelBtnX := 340 - padding - manualBtnW
 
         manualBtn := this.DownloadingDialog.Add("Button", "x" padding " y+15 w" manualBtnW " h" manualBtnH, "手动下载(&M)")
-        manualBtn.OnEvent("Click", (*) => EventBus.Publish("OnManualDownload"))
+        manualBtn.OnEvent("Click", (*) => EventBus.Publish("UpdateManualDownloadRequested"))
         this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " yp w" manualBtnW " h" manualBtnH, "取消下载(&C)")
         this.DownloadingCancelBtn.OnEvent("Click", (*) => this.OnDownloadCancel())
         this.DownloadingDialog.OnEvent("Close", (*) => this.OnDownloadCancel())
@@ -197,8 +244,8 @@ class UpdateUI {
 
     ; 手动下载按钮点击事件
     static OnManualDownload() {
-        ; 打开浏览器访问下载地址页面
-        Run("https://www.bilibili.com/opus/1178139405104185363")
+        ; 交由 Updater 打开浏览器访问下载地址页面
+        EventBus.Publish("UpdateManualDownloadRequested", {url: "https://www.bilibili.com/opus/1178139405104185363"})
     }
 
     ; 下载取消按钮点击事件
@@ -212,8 +259,8 @@ class UpdateUI {
                 this.DownloadingDialog["DownloadText"].Value := "正在取消下载..."
             }
         }
-        ; 发布取消事件
-        EventBus.Publish("UpdateDownloadCancelled")
+        ; 发布取消命令
+        EventBus.Publish("UpdateDownloadCancelRequested")
     }
 
     ; 显示正在切换更新源的提示（复用下载窗口，非模态，不阻塞降级检查）
