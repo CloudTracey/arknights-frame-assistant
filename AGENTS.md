@@ -41,6 +41,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 > - ✅ 阶段 6：设置域重构，SettingsService 唯一写口落位 core/settings，业务层直接 IniWrite 清零
 > - ✅ 阶段 7：更新/公告域重构，Updater/Changelog 事件化，core/updater 与 core/changelog 落位，孤儿事件删除
 > - ✅ 阶段 8：UI 层收尾与硬化，UI 文件全部迁入 src/lib/ui，layer_check 基线清零
+> - ✅ 高风险收口：HotkeySchema 单一来源——ActionCallbacks 由 Schema + ActionBindings 生成，GUI 热键行由 Schema 遍历生成，删除 hidden/BeginPause 旧机制
 
 ### 启动流程（当前实现）
 
