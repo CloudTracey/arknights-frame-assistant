@@ -32,15 +32,16 @@
 #Include ../../src/lib/core/hotkey/hotkey_service.ahk
 #Include ../../src/lib/core/settings/hotkey_conflict_validator.ahk
 #Include ../../src/lib/core/settings/settings_service.ahk
-#Include ../../src/lib/updater/version_checker.ahk
-#Include ../../src/lib/updater/downloader.ahk
-#Include ../../src/lib/updater/self_replacer.ahk
-#Include ../../src/lib/updater/updater_manager.ahk
+#Include ../../src/lib/core/updater/github_token_service.ahk
+#Include ../../src/lib/core/updater/release_repository.ahk
+#Include ../../src/lib/core/updater/version_checker.ahk
+#Include ../../src/lib/core/updater/downloader.ahk
+#Include ../../src/lib/core/updater/self_replacer.ahk
+#Include ../../src/lib/core/updater/updater_manager.ahk
 #Include ../../src/lib/updater/updater_ui.ahk
 #Include ../../src/lib/core/launch/game_launcher.ahk
-#Include ../../src/lib/changelog/changelog.ahk
 #Include ../../src/lib/changelog/changelog_ui.ahk
-#Include ../../src/lib/changelog/changelog_checker.ahk
+#Include ../../src/lib/core/changelog/changelog_checker.ahk
 #Include ../../src/lib/gui.ahk
 #Include ../../src/lib/core/monitor/game_monitor.ahk
 
@@ -52,6 +53,8 @@ if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyService)
 if !IsSet(GameMonitor) || !IsSet(VersionUtils) || !IsSet(KeyFormat) || !IsSet(HotkeyActions)
     ExitApp 1
 if !IsSet(SettingsService) || !IsSet(HotkeyConflictValidator)
+    ExitApp 1
+if !IsSet(ReleaseRepository) || !IsSet(GitHubTokenService) || !IsSet(ChangelogChecker)
     ExitApp 1
 
 ; 探针：确认没有顶层副作用把 Config.IniFile 提前初始化（应仍为空）
