@@ -116,6 +116,33 @@
 
 ---
 
+## 追加测试
+
+> 对应更改：HotkeySchema 单一来源高风险收口
+
+### 单元测试：Schema 生成 GUI 热键行
+
+- [ ] **操作**：打开设置窗口，检查「常规作战」「快捷操作」「卫戍协议」三页的热键行
+- [ ] **预期**：每行显示与 Schema `displayName` 一致的名称，行顺序与之前一致，`AutoBeginPauseSwitch` 仍是复选框+输入框特殊行
+
+### 单元测试：ActionCallbacks 由 Schema 生成
+
+- [ ] **操作**：启动 AFA 后触发若干热键（过帧、守卫、松开暂停、开局自动暂停开关）
+- [ ] **预期**：行为与之前一致（`Guarded`/`OnUp`/`NoActivate` 标志正确生效）
+
+### 集成测试：smoke_test Schema 完整性
+
+- [ ] **前置**：具备 AutoHotkey 环境
+- [ ] **操作**：运行 `test/scripts/smoke_test.ahk`
+- [ ] **预期**：脚本正常退出 0，Schema 完整性校验通过
+
+### 回归测试：旧别名 BeginPause
+
+- [ ] **操作**：在 Settings.ini 中保留或写入旧的 `BeginPause` 键后启动 AFA
+- [ ] **预期**：AFA 正常启动，忽略该旧键，不参与热键注册/默认键/GUI
+
+---
+
 ## 测试结果
 
 - [x] 全部通过
