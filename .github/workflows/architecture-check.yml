@@ -1,0 +1,23 @@
+name: architecture-check
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  layer-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run layer check with baseline
+        run: python3 tools/layer_check.py --baseline KNOWN_VIOLATIONS
+
+      - name: Run event contract check
+        run: python3 tools/event_contract_check.py
