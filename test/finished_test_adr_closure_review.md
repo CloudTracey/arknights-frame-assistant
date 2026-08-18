@@ -134,21 +134,21 @@
 
 ### 集成测试：smoke_test Schema 完整性
 
-- [ ] **前置**：具备 AutoHotkey 环境
-- [ ] **操作**：运行 `test/scripts/smoke_test.ahk`
-- [ ] **预期**：脚本正常退出 0，Schema 完整性校验通过
+- [x] **前置**：具备 AutoHotkey 环境
+- [x] **操作**：运行 `test/scripts/smoke_test.ahk`
+- [x] **预期**：脚本正常退出 0，Schema 完整性校验通过
 
 ### 回归测试：旧别名 BeginPause
 
-- [ ] **操作**：在 Settings.ini 中保留或写入旧的 `BeginPause` 键后启动 AFA
-- [ ] **预期**：AFA 正常启动，忽略该旧键，不参与热键注册/默认键/GUI
+- [x] **操作**：在 Settings.ini 中保留或写入旧的 `BeginPause` 键后启动 AFA
+- [x] **预期**：AFA 正常启动，忽略该旧键，不参与热键注册/默认键/GUI
 
 ---
 
 ## 测试结果
 
-- [x] 全部通过
-- [ ] 存在问题（详见下方问题反馈）
+- [ ] 全部通过
+- [x] 存在问题（详见下方问题反馈）
 
 ## 问题反馈
 
