@@ -168,12 +168,12 @@ class App {
         GameMonitor.Start()
 
         ; 初始化按键
-        EventBus.Publish("SetSwitchKey")
+        EventBus.Publish("SetSwitchKey") ; Legacy
 
-        ; 刷新 GUI 以正确应用文本
-        EventBus.Publish("GuiUpdateHotkeyControls")
-        EventBus.Publish("GuiUpdateImportantControls")
-        EventBus.Publish("GuiUpdateCustomControls")
+        ; 刷新 GUI 以正确应用文本（Legacy 启动刷新；内部标签切换由 GuiManager 直接调用自身方法）
+        EventBus.Publish("GuiUpdateHotkeyControls")    ; Legacy
+        EventBus.Publish("GuiUpdateImportantControls") ; Legacy
+        EventBus.Publish("GuiUpdateCustomControls")    ; Legacy
     }
 }
 

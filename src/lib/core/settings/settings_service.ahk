@@ -106,6 +106,7 @@ class SettingsService {
         Config.LoadFromIni()
         this._RefreshRuntime()
         Logger.Info("Settings", "取消设置修改并恢复配置")
+        EventBus.Publish("SettingsViewRefreshRequested")
         EventBus.Publish("SettingsCancelled")
     }
 
@@ -114,8 +115,8 @@ class SettingsService {
         result := MessageBox.Confirm("  确定重置*所有*按键为默认设置吗 ？", "重置按键设置")
         if (result != "Yes")
             return
-        EventBus.Publish("HotkeyOff")
-        EventBus.Publish("UnsetSwitchKey")
+        EventBus.Publish("HotkeyOff")        ; Legacy
+        EventBus.Publish("UnsetSwitchKey")   ; Legacy
         EventBus.Publish("SettingsSaveStarting")
         Config.ResetHotkeyToDefaults()
         saveResult := Config.SaveHotkeysToIni()
@@ -125,6 +126,7 @@ class SettingsService {
             return
         }
         this._RefreshRuntime()
+        EventBus.Publish("SettingsViewRefreshRequested")
         EventBus.Publish("SettingsReset")
         Logger.Info("Settings", "已重置按键并保存默认设置")
     }
@@ -151,8 +153,8 @@ class SettingsService {
     ; 内部：验证并持久化当前 Config 工作副本
     static _ValidateAndPersist() {
         ; 保存/应用/重置期间暂停热键与切换键，完成后由 SettingsSaved/Applied/Reset 驱动恢复
-        EventBus.Publish("HotkeyOff")
-        EventBus.Publish("UnsetSwitchKey")
+        EventBus.Publish("HotkeyOff")        ; Legacy
+        EventBus.Publish("UnsetSwitchKey")   ; Legacy
         EventBus.Publish("SettingsSaveStarting")
 
         ; 登记本次会话中的敏感值，覆盖后续验证、外部设置和保存流程的日志。

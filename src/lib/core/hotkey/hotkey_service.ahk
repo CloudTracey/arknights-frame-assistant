@@ -61,19 +61,24 @@ class HotkeyService {
 
     ; 内部：订阅热键事件（保留旧事件兼容，同时接入新事件契约）
     static _SubscribeEvents() {
-        EventBus.Subscribe("HotkeyOff", (*) => this.HotkeyOff())
-        EventBus.Subscribe("UnsetSwitchKey", (*) => this.UnsetSwitchKey())
-        EventBus.Subscribe("HotkeyOn", (*) => this.HotkeyOn())
-        EventBus.Subscribe("SetSwitchKey", (*) => this.SetSwitchKey())
-        EventBus.Subscribe("SwitchHotkey", (*) => this.SwitchHotkey())
+        ; Legacy 旧事件（迁移期保留闭环，勿新增发布者）
+        EventBus.Subscribe("HotkeyOff", (*) => this.HotkeyOff())          ; Legacy
+        EventBus.Subscribe("UnsetSwitchKey", (*) => this.UnsetSwitchKey()) ; Legacy
+        EventBus.Subscribe("SetSwitchKey", (*) => this.SetSwitchKey())     ; Legacy
         ; 新事件契约
         EventBus.Subscribe("GameKeysChanged", (data) => this._HandleGameKeysChanged(data))
         EventBus.Subscribe("ActiveTabChangeRequested", (data) => this._HandleActiveTabChangeRequested(data))
         EventBus.Subscribe("HotkeyToggleRequested", (*) => this.SwitchHotkey())
+        EventBus.Subscribe("InLevelChanged", (data) => this._HandleInLevelChanged(data))
         EventBus.Subscribe("SettingsChanged", (data) => this._HandleSettingsChanged(data))
         EventBus.Subscribe("SettingsSaved", (*) => this._HandleSettingsSavedOrApplied())
         EventBus.Subscribe("SettingsApplied", (*) => this._HandleSettingsSavedOrApplied())
         EventBus.Subscribe("SettingsReset", (*) => this._HandleSettingsSavedOrApplied())
+    }
+
+    ; 处理关卡状态变化（目前仅记录调试日志；守卫判定走 LevelDetector.IsInLevel() getter）
+    static _HandleInLevelChanged(data) {
+        Logger.Debug("Hotkey", "关卡状态变化：inLevel=" data.inLevel)
     }
 
     ; 处理游戏按键变更：总开关开启时才重建，修复“禁用后被注册表变更恢复”的 bug

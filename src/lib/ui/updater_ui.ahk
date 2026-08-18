@@ -233,7 +233,7 @@ class UpdateUI {
         cancelBtnX := 340 - padding - manualBtnW
 
         manualBtn := this.DownloadingDialog.Add("Button", "x" padding " y+15 w" manualBtnW " h" manualBtnH, "手动下载(&M)")
-        manualBtn.OnEvent("Click", (*) => EventBus.Publish("UpdateManualDownloadRequested"))
+        manualBtn.OnEvent("Click", (*) => this.RequestManualDownload())
         this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " yp w" manualBtnW " h" manualBtnH, "取消下载(&C)")
         this.DownloadingCancelBtn.OnEvent("Click", (*) => this.OnDownloadCancel())
         this.DownloadingDialog.OnEvent("Close", (*) => this.OnDownloadCancel())
@@ -242,10 +242,9 @@ class UpdateUI {
         this.DownloadingDialog.Show("w340 h" dialogHeight " Center")
     }
 
-    ; 手动下载按钮点击事件
-    static OnManualDownload() {
-        ; 交由 Updater 打开浏览器访问下载地址页面
-        EventBus.Publish("UpdateManualDownloadRequested", {url: "https://www.bilibili.com/opus/1178139405104185363"})
+    ; 手动下载唯一发布点：GuiManager 与下载对话框按钮都经由这里请求 Updater 打开下载地址页面
+    static RequestManualDownload(url := "") {
+        EventBus.Publish("UpdateManualDownloadRequested", {url: url})
     }
 
     ; 下载取消按钮点击事件

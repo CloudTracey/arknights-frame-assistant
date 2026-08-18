@@ -522,7 +522,7 @@ class GuiManager {
         this.BtnCheckUpdate := this.MainGui.Add("Button", "xs y+10 w" this.BtnW " h24", "手动检查更新")
         this.BtnCheckUpdate.OnEvent("Click", (*) => this.OnManualCheckClick())
         this.BtnManualDownload := this.MainGui.Add("Button", "x+10 yp w" this.BtnW " h24", "手动下载更新")
-        this.BtnManualDownload.OnEvent("Click", (*) => EventBus.Publish("UpdateManualDownloadRequested"))
+        this.BtnManualDownload.OnEvent("Click", (*) => UpdateUI.RequestManualDownload())
         this.UpdateControls.Push(this.BtnCheckUpdate)
         this.UpdateControls.Push(this.BtnManualDownload)
 
@@ -796,11 +796,11 @@ class GuiManager {
 
     ; 内部：订阅事件总线
     static _SubscribeEvents() {
-        EventBus.Subscribe("GuiUpdateHotkeyControls", (*) => this._UpdateHotkeyControlsFromConfig())
-        EventBus.Subscribe("GuiUpdateImportantControls", (*) => this._UpdateImportantControlsFromConfig())
-        EventBus.Subscribe("GuiUpdateCustomControls", (*) => this._UpdateCustomControlsFromConfig())
+        ; Legacy 旧事件（仅 Bootstrap 启动时发布；内部标签切换直接调用刷新方法，不再自发布）
+        EventBus.Subscribe("GuiUpdateHotkeyControls", (*) => this._UpdateHotkeyControlsFromConfig())    ; Legacy
+        EventBus.Subscribe("GuiUpdateImportantControls", (*) => this._UpdateImportantControlsFromConfig()) ; Legacy
+        EventBus.Subscribe("GuiUpdateCustomControls", (*) => this._UpdateCustomControlsFromConfig())      ; Legacy
         EventBus.Subscribe("HotkeyBindingsChanged", (*) => this.RefreshHotkeyConflicts())
-        EventBus.Subscribe("GuiHide", (*) => this.Hide())
         EventBus.Subscribe("KeyBindFocusCancel", (*) => this.FocusCancelButton())
         EventBus.Subscribe("GuiHideStopHook", HandleGuiHideStopHook)
         EventBus.Subscribe("UpdateCheckCompleted", (*) => this.OnCheckUpdateComplete())
@@ -1704,9 +1704,10 @@ class GuiManager {
             for ctrl in this.StrongHoldConflictHints
                 try ctrl.Visible := false
         }
-        EventBus.Publish("GuiUpdateHotkeyControls")
-        EventBus.Publish("GuiUpdateImportantControls")
-        EventBus.Publish("GuiUpdateCustomControls")
+        ; 标签页内部刷新直接调用自身方法，避免自发布 Legacy GuiUpdate* 事件
+        this._UpdateHotkeyControlsFromConfig()
+        this._UpdateImportantControlsFromConfig()
+        this._UpdateCustomControlsFromConfig()
     }
 
     ; 内部：切换其他设置页面的分类
