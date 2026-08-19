@@ -1,5 +1,5 @@
 ; == 全局常量定义 ==
-; 从原 config.ahk 拆出；热键元数据改由 base/hotkey_schema.ahk 单一来源生成。
+; 全局常量定义；热键元数据由 base/hotkey_schema.ahk 单一来源生成。
 
 class Constants {
     static DefaultTabOrder := "keyBind,quick,strongHoldProtocol,other"

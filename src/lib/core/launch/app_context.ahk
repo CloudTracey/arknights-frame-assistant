@@ -1,5 +1,5 @@
 ; == 应用启动上下文 ==
-; 从 State 收归的 StartedByGameAutoStart 唯一 owner。
+; StartedByGameAutoStart 的唯一 owner。
 
 class AppContext {
     static _StartedByGameAutoStart := false

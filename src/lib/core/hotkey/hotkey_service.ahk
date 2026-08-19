@@ -38,7 +38,7 @@ class HotkeyService {
     ; 热键状态
     static HotkeyState := true
 
-    ; 游戏失焦悬停操作开关（从 State 收归；由 Loader/SettingsService 刷新）
+    ; 游戏失焦悬停操作开关（由 SettingsService 在保存/应用后刷新）
     static _HoverOperate := true
 
     static SetHoverOperate(value) {
@@ -49,7 +49,7 @@ class HotkeyService {
         return this._HoverOperate
     }
 
-    ; 热键域内部状态（从 GuiManager/State 收归）
+    ; 热键域内部状态
     static _ActiveTab := "keyBind"
     static _Group := "combatQuick"
     static _SwitchKey := ""
@@ -80,7 +80,7 @@ class HotkeyService {
 
     ; 内部：订阅热键事件（保留旧事件兼容，同时接入新事件契约）
     static _SubscribeEvents() {
-        ; Legacy 旧事件（迁移期保留闭环，勿新增发布者）
+        ; Legacy 旧事件（兼容保留闭环，勿新增发布者）
         EventBus.Subscribe("HotkeyOff", (*) => this.HotkeyOff())          ; Legacy
         EventBus.Subscribe("UnsetSwitchKey", (*) => this.UnsetSwitchKey()) ; Legacy
         EventBus.Subscribe("SetSwitchKey", (*) => this.SetSwitchKey())     ; Legacy

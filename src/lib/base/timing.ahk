@@ -1,5 +1,5 @@
 ; == 高精度延迟工具 ==
-; 从 hotkey_actions.ahk 抽出的 base 层纯时序函数，供 core 层过帧动作使用。
+; base 层高精度延迟工具，供 core 层过帧动作使用。
 
 ; 高精度延迟
 USleep(delay_ms) {

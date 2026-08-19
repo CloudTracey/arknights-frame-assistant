@@ -1,5 +1,5 @@
 ; == GitHub Token 验证服务 ==
-; 从 VersionChecker.ValidateToken 迁出，供 SettingsService/VersionChecker 复用。
+; 供 SettingsService/VersionChecker 复用。
 
 class GitHubTokenService {
     ; Token验证API地址

@@ -1,5 +1,5 @@
 ; == 版本/JSON 纯工具 ==
-; 从 version_checker.ahk 抽出的 base 层纯函数，供 updater/changelog 复用。
+; base 层版本/JSON 纯工具，供 updater/changelog 复用。
 
 class VersionUtils {
     ; 反转义 JSON 字符串

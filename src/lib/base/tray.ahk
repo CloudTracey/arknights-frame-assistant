@@ -1,5 +1,5 @@
 ; == 托盘提示工具 ==
-; 从 gui.ahk 抽出的 base 层托盘封装，供 core 与 UI 统一使用。
+; base 层托盘提示封装，供 core 与 UI 统一使用。
 
 ; 隐藏 TrayTip
 HideTrayTip() {

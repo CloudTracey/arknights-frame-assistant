@@ -714,7 +714,7 @@ SkipButtonPosition() {
     PButtonY := wh * 0.05
     return {PBX: PButtonX, PBY: PButtonY}
 }
-; 启动热键动作域：初始化触控注入（原 touch_injection.ahk 顶层副作用）
+; 启动热键动作域：初始化触控注入（Touch Injection）
 HotkeyActionsStart() {
     ; AHK 热键名称大小写不敏感，状态表采用相同语义。
     KeyForward.InterceptedKeys.CaseSense := false

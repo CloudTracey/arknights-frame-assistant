@@ -1,5 +1,5 @@
 ; == 热键键值格式化工具 ==
-; 从 key_bind.ahk 抽出的 base 层纯格式化函数，供 UI 与 core 共用。
+; base 层热键键值格式化工具，供 UI 与 core 共用。
 
 class KeyFormat {
     ; 格式化显示键值
