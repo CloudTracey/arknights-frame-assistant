@@ -1,6 +1,6 @@
 ; == 设置服务 ==
-; 合并原 settings/loader.ahk + saver.ahk + actions.ahk 的编排职责，
-; 成为唯一允许提交配置变更的模块（SettingsService.UpdatePersistedValue 是单键写口）。
+; 设置服务：唯一允许提交配置变更的模块，
+; 负责配置加载/保存/应用/重置的编排（SettingsService.UpdatePersistedValue 是单键写口）。
 
 class SettingsService {
     ; 初始化：订阅设置相关事件（由 bootstrap 调用，避免顶层副作用）
@@ -13,7 +13,7 @@ class SettingsService {
         EventBus.Subscribe("ChangelogDismissRequested", (data) => this._HandleChangelogDismissRequested(data))
     }
 
-    ; 启动时加载设置（原 Loader.LoadSettings）
+    ; 启动时加载设置
     static Initialize() {
         Config.MigrateFrameRate()
         Config.MigrateGitHubToken()
@@ -82,7 +82,7 @@ class SettingsService {
         }
     }
 
-    ; 处理更新公告忽略请求（原 ChangelogUI 直接 IniWrite）
+    ; 处理更新公告忽略请求（经统一配置写口）
     static _HandleChangelogDismissRequested(data) {
         result := this.UpdatePersistedValue("DismissedChangelogVersion", data.version)
         if (!result.success) {

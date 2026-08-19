@@ -12,13 +12,13 @@
        ↓
     base    (src/lib/base/)
 
-本工具在迁移期同时支持两种文件位置判定：
-1. 已经按目标目录落位的文件：按路径中的 /base/、/core/、/ui/ 识别；
-2. 尚未迁移的旧平铺文件：使用 LEGACY_LAYER 显式映射到目标层。
+本工具按目标目录判定文件层级：
+- src/main.ahk 为 bootstrap；
+- 按路径中的 /base/、/core/、/ui/ 识别。
 
 当前检测两类违规：
 - cross：跨层向上引用（core -> ui、base -> core/ui 等）；
-- state：对旧 `State.` 类的引用（阶段 4 将删除 State，本项用于跟踪收敛）。
+- state：对已删除的旧 `State.` 类的引用（防止回归）。
 
 用法：
     python tools/layer_check.py                     # 列出当前违规并失败（有违规时）
@@ -32,31 +32,6 @@ import argparse
 import re
 import sys
 from pathlib import Path
-
-# 迁移期旧平铺路径 -> 目标层。新目录落位后由路径自动判定，无需维护。
-LEGACY_LAYER: dict[str, str] = {
-    "src/main.ahk": "bootstrap",
-    "src/lib/version.ahk": "base",
-    "src/lib/eventbus.ahk": "base",
-    "src/lib/logger.ahk": "base",
-    "src/lib/message_box.ahk": "base",
-    "src/lib/token_protector.ahk": "base",
-    "src/lib/file_extractor.ahk": "base",
-    "src/lib/touch_injection.ahk": "base",
-    "src/lib/config.ahk": "base",
-    "src/lib/game_keys.ahk": "core",
-    "src/lib/hotkey_control.ahk": "core",
-    "src/lib/hotkey_actions.ahk": "core",
-    "src/lib/level_detector.ahk": "core",
-    "src/lib/game_monitor.ahk": "core",
-    "src/lib/game_launcher.ahk": "core",
-    "src/lib/game_auto_start.ahk": "core",
-    "src/lib/settings/settings_manager.ahk": "core",
-    "src/lib/settings/loader.ahk": "core",
-    "src/lib/settings/saver.ahk": "core",
-    "src/lib/settings/actions.ahk": "core",
-    "src/lib/settings/hotkey_conflict_validator.ahk": "core",
-}
 
 LAYER_ORDER: dict[str, int] = {
     "base": 0,
@@ -119,7 +94,7 @@ def layer_for(rel_path: str) -> str:
         return "core"
     if "/ui/" in rel_path:
         return "ui"
-    return LEGACY_LAYER.get(rel_path, "unknown")
+    return "unknown"
 
 
 def discover_files(src: Path) -> list[Path]:
@@ -279,8 +254,8 @@ def main(argv: list[str] | None = None) -> int:
         out = Path(args.update_baseline)
         out.parent.mkdir(parents=True, exist_ok=True)
         header = (
-            "# AFA 耦合治理迁移基线（由 tools/layer_check.py --update-baseline 生成）\n"
-            "# 每阶段只允许删除条目，不允许新增条目。\n"
+            "# AFA 耦合治理基线（由 tools/layer_check.py --update-baseline 生成）\n"
+            "# 每次更新只允许删除条目，不允许新增条目。\n"
         )
         out.write_text(header + "\n".join(current) + ("\n" if current else ""), encoding="utf-8")
         print(f"baseline written: {out} ({len(current)} entries)")

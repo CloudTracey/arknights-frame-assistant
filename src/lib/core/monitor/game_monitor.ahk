@@ -5,12 +5,12 @@ class GameMonitor {
     static _CheckTimer := ""
     static _TimeoutTimer := ""
 
-    ; 从 State 收归的私有状态
+    ; 私有状态
     static _GameHasStarted := false
     static _BlackScreenDetected := false
     static _ReadyForPause := false
 
-    ; 启动监控定时器（原为文件顶层 SetTimer）
+    ; 启动监控定时器（由 Bootstrap 调用，避免顶层副作用）
     static Start() {
         if (this._CheckTimer = "")
             this._CheckTimer := GameMonitor.CheckGameStatus.Bind(GameMonitor)

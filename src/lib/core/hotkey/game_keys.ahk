@@ -69,7 +69,7 @@ class GameKeys {
         }
     }
 
-    ; 返回拦截正则字符串，供 hotkey_control.ahk 使用
+    ; 返回拦截正则字符串，供 hotkey_service.ahk 使用
     static GetInterceptPattern() {
         keys := ""
         seen := Map()

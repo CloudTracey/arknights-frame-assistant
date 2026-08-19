@@ -48,8 +48,8 @@ description: |
 - **增量追加**：已有测试清单文件（含 `test_` 或 `finished_test_` 前缀）→ 在对应章节位置插入 `## 追加测试` 小节，标注 `> 对应更改：[本轮修改的简短描述]`，只追加新测试项，**不覆盖**已有内容
 
 **测试环境**：
-- AFA 版本：从 `src/lib/version.ahk` 读取
-- Windows 版本：从 CLAUDE.md 或用户确认
+- AFA 版本：从 `src/lib/base/version.ahk` 读取
+- Windows 版本：从 AGENTS.md 或用户确认
 - 测试日期：当天
 
 **单元测试**（对单个控件/功能的独立验证）：

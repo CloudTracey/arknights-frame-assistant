@@ -37,41 +37,56 @@
 
 ```
 ├── src/                          # 源代码目录
-│   ├── main.ahk                  # 主入口文件（程序启动点）
-│   └── lib/                      # 核心库模块
-│       ├── changelog/            # 更新公告模块
-│       │   ├── changelog.ahk     # 更新公告核心逻辑（兼容骨架）
-│       │   ├── changelog_checker.ahk  # 更新公告检查器
-│       │   └── changelog_ui.ahk  # 更新公告 UI
-│       ├── config.ahk            # 配置管理（Config/State/Constants 类）
-│       ├── eventbus.ahk          # 事件总线（模块间解耦通信）
-│       ├── file_extractor.ahk    # 嵌入资源的运行时提取
-│       ├── game_auto_start.ahk   # 随明日方舟自动启动小助手
-│       ├── game_keys.ahk         # 游戏按键注册表识别
-│       ├── game_launcher.ahk     # 随小助手自动启动游戏
-│       ├── game_monitor.ahk      # 游戏监控（自动退出 + 自动开局暂停）
-│       ├── gui.ahk               # 设置窗口 GUI
-│       ├── hotkey_actions.ahk    # 热键动作实现（功能函数）
-│       ├── hotkey_control.ahk    # 热键注册/注销/分组切换
-│       ├── key_bind.ahk          # 按键绑定（InputHook 捕获按键）
-│       ├── log_exporter.ahk      # 诊断日志压缩包导出
-│       ├── logger.ahk            # 双轨日志系统
-│       ├── message_box.ahk       # 自定义消息框
-│       ├── settings/             # 设置管理模块
-│       │   ├── actions.ahk       # 设置操作（重置/保存/应用/取消）
-│       │   ├── hotkey_conflict_validator.ahk  # 热键冲突验证
-│       │   ├── loader.ahk        # 设置加载
-│       │   ├── saver.ahk         # 设置保存（含验证逻辑）
-│       │   └── settings_manager.ahk  # 设置管理器入口
-│       ├── token_protector.ahk   # GitHub Token DPAPI 加密保护
-│       ├── touch_injection.ahk   # Touch Injection 模拟点击
-│       ├── updater/              # 自动更新模块
-│       │   ├── downloader.ahk    # 更新下载器
-│       │   ├── self_replacer.ahk # 自替换脚本（批处理生成）
-│       │   ├── updater_manager.ahk   # 更新协调器（流程控制）
-│       │   ├── updater_ui.ahk    # 更新 UI（对话框）
-│       │   └── version_checker.ahk   # 版本检查器（GitHub + 国内源）
-│       └── version.ahk           # 内置版本号
+│   ├── main.ahk                  # 主入口文件（仅加载定义，App.Bootstrap() 启动）
+│   └── lib/                      # 按四层架构组织
+│       ├── base/                 # 基础层：不依赖 core/ui
+│       │   ├── config.ahk        # 配置管理（Config 类）
+│       │   ├── constants.ahk     # 全局常量
+│       │   ├── eventbus.ahk      # 事件总线（模块间解耦通信）
+│       │   ├── file_extractor.ahk # 嵌入资源的运行时提取
+│       │   ├── hotkey_schema.ahk # 热键元数据唯一来源
+│       │   ├── key_format.ahk    # 热键键值格式化工具
+│       │   ├── logger.ahk        # 双轨日志系统
+│       │   ├── message_box.ahk   # 自定义消息框
+│       │   ├── timing.ahk        # 高精度延迟工具
+│       │   ├── token_protector.ahk # GitHub Token DPAPI 加密保护
+│       │   ├── touch_injection.ahk # Touch Injection 模拟点击
+│       │   ├── tray.ahk          # 托盘提示封装
+│       │   ├── version.ahk       # 内置版本号
+│       │   ├── version_utils.ahk # 版本/JSON 纯工具
+│       │   └── window.ahk        # 窗口判定工具
+│       ├── core/                 # 核心层：依赖 base，不依赖 ui
+│       │   ├── changelog/        # 更新公告检查
+│       │   │   └── changelog_checker.ahk
+│       │   ├── diagnostics/      # 诊断导出
+│       │   │   └── log_exporter.ahk
+│       │   ├── hotkey/           # 热键域
+│       │   │   ├── game_keys.ahk
+│       │   │   ├── hotkey_actions.ahk
+│       │   │   ├── hotkey_service.ahk
+│       │   │   └── timing_service.ahk
+│       │   ├── launch/           # 启动相关
+│       │   │   ├── app_context.ahk
+│       │   │   ├── game_auto_start.ahk
+│       │   │   └── game_launcher.ahk
+│       │   ├── monitor/          # 游戏监控
+│       │   │   ├── game_monitor.ahk
+│       │   │   └── level_detector.ahk
+│       │   ├── settings/         # 设置域
+│       │   │   ├── hotkey_conflict_validator.ahk
+│       │   │   └── settings_service.ahk
+│       │   └── updater/          # 自动更新模块
+│       │       ├── downloader.ahk
+│       │       ├── github_token_service.ahk
+│       │       ├── release_repository.ahk
+│       │       ├── self_replacer.ahk
+│       │       ├── updater_manager.ahk
+│       │       └── version_checker.ahk
+│       └── ui/                   # UI 层：依赖 core/base
+│           ├── changelog_ui.ahk  # 更新公告 UI
+│           ├── gui.ahk           # 设置窗口 GUI
+│           ├── key_bind.ahk      # 按键绑定（InputHook 捕获按键）
+│           └── updater_ui.ahk    # 更新 UI（对话框）
 ├── .github/                      # GitHub 配置
 │   ├── CODEOWNERS                # 代码所有者
 │   ├── ISSUE_TEMPLATE/           # Issue 模板
@@ -270,7 +285,7 @@ git checkout -b feature/your-feature-name
 
 > 该流程仅由维护者执行。
 
-1. 更新 `src/lib/version.ahk` 中 `Version.Number` 为新的版本号
+1. 更新 `src/lib/base/version.ahk` 中 `Version.Number` 为新的版本号
 2. 按 [RELEASE_TEMPLATE.md](.github/RELEASE_TEMPLATE.md) 撰写发布说明（新增 / 改进 / 修复）
 3. 在 GitHub 创建 Release（tag 形如 `v1.6.2`）
 4. GitHub Action（`.github/workflows/release-sync.yml`）自动将 exe 和 version.json 同步到国内源 COS 并刷新 CDN

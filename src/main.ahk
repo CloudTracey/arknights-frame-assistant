@@ -101,7 +101,7 @@ class App {
             MessageBox.Info("检测到上次运行崩溃。`n建议在设置中开启「调试模式」记录日志，并用「生成日志压缩包」导出诊断包反馈给开发者。", "AFA")
         }
 
-        ; ---- 原 include 时执行的初始化（按原 include 顺序） ----
+        ; ---- 初始化各模块 ----
         Config.InitPath()
         HotkeyActionsStart()
         LevelDetector.Init()
@@ -150,7 +150,7 @@ class App {
         ; 初始化 GUI（含 Alt+F4 退出热键注册）
         GuiManager.Start()
 
-        ; 初始化更新 UI（原 updater_ui.ahk 在 GUI 之后 include）
+        ; 初始化更新 UI（在 GUI 之后）
         UpdateUI.Init()
 
         ; 启动校准失败只在 GUI 就绪后用托盘提示一次，不阻塞主流程，也不改变已保存配置。

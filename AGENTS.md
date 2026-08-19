@@ -129,6 +129,6 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 
 ## 版本号
 
-- **AFA**：在 `src/lib/version.ahk` 的 `Version.Number` 中定义，版本检查器通过 GitHub API 或国内源 CDN 对比此值与远程 release tag/version.json
+- **AFA**：在 `src/lib/base/version.ahk` 的 `Version.Number` 中定义，版本检查器通过 GitHub API 或国内源 CDN 对比此值与远程 release tag/version.json
 - **AHK**：当前为 v2.0.26，无需向用户确认
 - **Windows**：跟随测试环境，自行获取，无需向用户确认

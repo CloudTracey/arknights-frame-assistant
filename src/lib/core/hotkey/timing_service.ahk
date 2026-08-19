@@ -1,5 +1,5 @@
 ; == 时序服务 ==
-; 从 State 收归的 CurrentDelay/ClickDelay 唯一 owner。
+; CurrentDelay/ClickDelay 的唯一 owner。
 
 class TimingService {
     static _CurrentDelay := 11.3  ; 默认120帧
@@ -27,7 +27,7 @@ class TimingService {
             this.Refresh()
     }
 
-    ; 根据当前配置刷新延迟缓存（由 SettingsService/Loader 在配置变更后调用）
+    ; 根据当前配置刷新延迟缓存（由 SettingsService 在配置变更后调用）
     static Refresh() {
         frame := Config.GetImportant("Frame")
         if (frame == "30") {
