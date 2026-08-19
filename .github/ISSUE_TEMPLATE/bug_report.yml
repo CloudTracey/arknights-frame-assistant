@@ -79,7 +79,6 @@ body:
     attributes:
       label: 日志文件
       description: 如有错误日志或调试信息，请在此粘贴或上传日志压缩包
-      render: shell
 
   - type: textarea
     id: additional
