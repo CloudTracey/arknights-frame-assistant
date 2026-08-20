@@ -114,6 +114,7 @@ class App {
         ; ---- 初始化各模块 ----
         Config.InitPath()
         GameClientRegistry.Init()
+        LogExporter.Init()
         HotkeyActionsStart()
         LevelDetector.Init()
         KeyBinder.Start()

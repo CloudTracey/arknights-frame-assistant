@@ -1,6 +1,15 @@
 ; == 日志压缩包导出 ==
 
 class LogExporter {
+    ; 订阅客户端集合变化，保持诊断信息所需缓存/日志最新（计划 2.6 事件契约）
+    static Init() {
+        EventBus.Subscribe("GameClientsChanged", (data) => this._HandleGameClientsChanged(data))
+    }
+
+    static _HandleGameClientsChanged(data) {
+        Logger.Debug("Diagnostics", "游戏客户端集合变化，数量=" data.clients.Length)
+    }
+
     static CreateArchiveInteractive() {
         defaultName := A_Desktop "\AFA-Logs-" Version.Get() "-" FormatTime(, "yyyyMMdd-HHmmss") ".zip"
         target := FileSelect("S", defaultName, "生成日志压缩包", "ZIP 压缩包 (*.zip)")
