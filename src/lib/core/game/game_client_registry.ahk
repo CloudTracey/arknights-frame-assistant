@@ -12,6 +12,7 @@ class GameClientRegistry {
     static _LastForegroundPid := 0
     static _LastClientsSignature := ""
     static _Initialized := false
+    static _RefreshScheduled := false
 
     ; 初始化（由 Bootstrap 或 GameMonitor 首次轮询前调用）
     static Init() {
@@ -59,6 +60,19 @@ class GameClientRegistry {
     static GetForegroundServerId() {
         client := this.GetForegroundClient()
         return client = "" ? "" : client.serverId
+    }
+
+    ; 热键路径缓存未命中时，投递一次异步补识别，不在判定线程内做重 IO。
+    static ScheduleRefresh() {
+        if (this._RefreshScheduled)
+            return
+        this._RefreshScheduled := true
+        SetTimer ObjBindMethod(GameClientRegistry, "_DelayedRefresh"), -1
+    }
+
+    static _DelayedRefresh() {
+        this._RefreshScheduled := false
+        this.Refresh()
     }
 
     ; 刷新客户端列表与前台客户端。由 GameMonitor 400ms 定时器调用。

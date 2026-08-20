@@ -74,6 +74,19 @@ class GameTarget {
         return WinActive(this.WinTitle()) != 0
     }
 
+    ; 热路径廉价校验：前台窗口是否就是当前缓存的客户端。
+    ; 只允许 GetForegroundWindow + GetWindowThreadProcessId 两次轻量 Win32 调用。
+    static IsForegroundCached() {
+        if (!this.IsBound())
+            return false
+        fgHwnd := DllCall("GetForegroundWindow", "Ptr")
+        if (fgHwnd != this._Hwnd)
+            return false
+        fgPid := 0
+        DllCall("GetWindowThreadProcessId", "Ptr", fgHwnd, "UInt*", &fgPid)
+        return fgPid = this._Pid
+    }
+
     ; 等待目标窗口成为前台；超时返回 false（不抛异常）
     static WaitActive(timeout := 500) {
         return WinWaitActive(this.WinTitle(), , timeout) != 0

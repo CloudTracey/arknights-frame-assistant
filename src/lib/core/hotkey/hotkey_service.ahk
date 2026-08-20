@@ -27,10 +27,15 @@ HotkeyContext(hotkeyName) {
     ; 鼠标键/滚轮：悬停判定
     if (pureKey ~= "i)^(lbutton|rbutton|mbutton|xbutton1|xbutton2|wheel)")
         return IsMouseInClient()
-    ; 键盘键：游戏窗口为活动窗口，或（启用失焦悬停操作时）鼠标悬停在游戏窗口上才触发；
-    ; 动作层统一包装负责激活游戏窗口并恢复原窗口（判定层不做副作用）
-    if GameTarget.IsActive()
+    ; 键盘键：优先使用热路径廉价校验（前台 hwnd→pid 与缓存比对）；
+    ; 缓存未命中时回退旧语义并投递异步补识别，不在判定线程内做重 IO。
+    if GameTarget.IsForegroundCached()
         return true
+    if WinActive(GameTarget.WinTitle()) {
+        GameClientRegistry.ScheduleRefresh()
+        return true
+    }
+    ; 失焦悬停操作开关关闭后，键盘键仅当游戏为活动窗口时才触发
     return HotkeyService.GetHoverOperate() && IsMouseInClient()
 }
 
