@@ -79,9 +79,9 @@ class HotkeyConflictValidator {
     ; 获取设置界面显示名称，用于保存阶段的错误提示。
     static GetDisplayName(controlName) {
         if Constants.KeyNames.Has(controlName)
-            return Constants.KeyNames[controlName]
+            return I18n.T(Constants.KeyNames[controlName])
         if Constants.CustomNames.Has(controlName)
-            return Constants.CustomNames[controlName]
+            return I18n.T(Constants.CustomNames[controlName])
         return controlName
     }
 }
