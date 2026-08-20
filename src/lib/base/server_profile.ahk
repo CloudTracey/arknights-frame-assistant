@@ -81,7 +81,20 @@ class ServerProfile {
             }
         }
 
-        ; 3. 完全无法识别
+        ; 3. 注册表存在性：某服注册表根下有 KEYBOARD_SETTING_V* 时优先
+        for serverId, profile in this.Profiles {
+            if (this._RegistryHasKeyboardSetting(serverId)) {
+                return {
+                    serverId: serverId,
+                    company: profile.Company,
+                    product: profile.Product,
+                    registryRoot: "HKCU\Software\" profile.Company "\" profile.Product,
+                    source: "registry"
+                }
+            }
+        }
+
+        ; 4. 完全无法识别
         return this._Unknown("", "")
     }
 
@@ -173,6 +186,22 @@ class ServerProfile {
     ; 检查某个区服的注册表根是否存在（用于避免对未安装区服弹警告）
     static RegistryRootExists(serverId) {
         return this._RegistryKeyExists(this.RegistryRoot(serverId))
+    }
+
+    ; 检查某服注册表根下是否存在 KEYBOARD_SETTING_V* 键值（推断用）
+    static _RegistryHasKeyboardSetting(serverId) {
+        root := this.RegistryRoot(serverId)
+        if (root = "" || !this._RegistryKeyExists(root))
+            return false
+        try {
+            Loop Reg, root, "V" {
+                if (InStr(A_LoopRegName, "KEYBOARD_SETTING_V") = 1)
+                    return true
+            }
+        } catch Error as e {
+            Logger.Debug("ServerProfile", "注册表按键设置检查失败：" root " - " e.Message)
+        }
+        return false
     }
 
     ; 通过 RegOpenKeyEx 判断注册表键是否存在，比 Loop Reg 更可靠
