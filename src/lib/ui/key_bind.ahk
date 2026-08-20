@@ -211,6 +211,9 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
 
 ; 窗口活动监控
 WatchActiveWindow(){
+    ; 重建期间 MainGui 可能暂时为空，避免访问已销毁窗口
+    if (GuiManager.MainGui = "")
+        return
     ; 当窗口失去焦点时
     if(WinActive("ahk_id " GuiManager.MainGui.Hwnd) == 0) {
         ; 如果上次点击的是edit控件

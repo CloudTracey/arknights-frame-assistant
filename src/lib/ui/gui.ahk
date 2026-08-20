@@ -16,6 +16,17 @@ class GuiManager {
         "serverPaths", "已识别区服路径：",
         "serverPathsEmpty", "（尚未识别到区服路径）"
     )
+    ; 语言代码顺序与下拉框显示顺序一致
+    static LanguageCodes := ["auto", "zh-Hans", "zh-Hant", "ja-JP", "ko-KR", "en-US"]
+    ; 下拉框显示名固定使用各语言自己的写法，不随当前界面语言变化
+    static LanguageDisplayNames := Map(
+        "auto", "Auto",
+        "zh-Hans", "中文（简体）",
+        "zh-Hant", "中文（繁體）",
+        "ja-JP", "日本語",
+        "ko-KR", "한국어",
+        "en-US", "English (US)"
+    )
     static BtnCheckUpdate := ""
     static BtnApply := ""
     static BtnCancel := ""
@@ -44,8 +55,10 @@ class GuiManager {
     static OtherSettingsControls := [] ; 其他设置相关控件
     static NavItems := []              ; 左侧导航项 Text 控件列表
     static NavIndicators := []        ; 每个导航项的竖线指示器
-    static CurrentOtherCategory := "Launch"  ; 当前选中的分类
+    static CurrentOtherCategory := "General" ; 当前选中的分类（通用置首位）
     static _BottomBaseY := 0            ; 底部按钮基准 Y 坐标
+    static GeneralControls := []       ; "通用"设置控件组
+    static DisplayControls := []       ; "显示"设置控件组
     static LaunchControls := []        ; "启动与退出"设置控件组
     static UpdateControls := []        ; "更新"设置控件组
     static CustomControls := []        ; "自定义"设置控件组
@@ -53,11 +66,13 @@ class GuiManager {
     static LogControls := []           ; "日志"页面控件组
     ; 其他设置分类映射：分类名 → [控件组, 导航索引]
     static OtherCategories := Map(
-        "Launch", [this.LaunchControls, 1],
-        "Update", [this.UpdateControls, 2],
-        "Custom", [this.CustomControls, 3],
-        "Log", [this.LogControls, 4],
-        "About", [this.AboutControls, 5]
+        "General", [this.GeneralControls, 1],
+        "Display", [this.DisplayControls, 2],
+        "Launch", [this.LaunchControls, 3],
+        "Update", [this.UpdateControls, 4],
+        "Custom", [this.CustomControls, 5],
+        "Log", [this.LogControls, 6],
+        "About", [this.AboutControls, 7]
     )
     static NotOtherControls := [] ; 仅非其他设置相关控件
     static TxtKeybind := ""           ; "常规作战"标签文本
@@ -80,6 +95,10 @@ class GuiManager {
     static TabDragIndex := 0
     static TabDragStartY := 0
     static TabDragMoved := false
+    static _TabManagerHandlersRegistered := false
+    static _AltF4Registered := false
+    static _LanguageChanged := false
+    static _EventsSubscribed := false
     static StrongHoldConflictHints := [] ; 非卫戍协议页面上的模式切换提示
     static CurrentTab := ""    ; 当前显示的标签页
     static LastActiveTab := "keyBind"  ; 最后选中的功能性标签页（排除"其他设置"）
@@ -103,7 +122,7 @@ class GuiManager {
         this.MainGui.Opt("+MinimizeBox")
         this.MainGui.BackColor := "FFFFFF"
         WinSetTransColor("ffa8a8", this.MainGui)
-        this.MainGui.SetFont("s9", "Microsoft YaHei UI")
+        this.MainGui.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
         hWnd := this.MainGui.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 20, "int*", false, "int", 4)
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 35, "uint*", 0x00FFFFFF, "int", 4)
@@ -230,7 +249,7 @@ class GuiManager {
                 this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vKeybindRightGroup", "")
                 this.KeybindControls.Push(this.MainGui["KeybindRightGroup"])
             }
-            row := AddBindRow(item.displayName, item.id)
+            row := AddBindRow(I18n.T(item.nameKey), item.id)
             this.KeybindControls.Push(row*)
             if (item.id = "16ms" || item.id = "33ms" || item.id = "166ms")
                 this.FrameSkipLabels[item.id] := row[1]
@@ -312,7 +331,7 @@ class GuiManager {
                 this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vQuickRightGroup", "")
                 this.QuickControls.Push(this.MainGui["QuickRightGroup"])
             }
-            this.QuickControls.Push(AddBindRow(item.displayName, item.id)*)
+            this.QuickControls.Push(AddBindRow(I18n.T(item.nameKey), item.id)*)
         }
         ; 空白占位
         placeholderQuick := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
@@ -345,7 +364,7 @@ class GuiManager {
                     "")
                 this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolRightGroup"])
             }
-            this.StrongHoldProtocolControls.Push(AddBindRow(item.displayName, item.id)*)
+            this.StrongHoldProtocolControls.Push(AddBindRow(I18n.T(item.nameKey), item.id)*)
         }
         ; 空白占位
         placeholderStrongHoldProtocol := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
@@ -368,12 +387,12 @@ class GuiManager {
         this.OtherSettingsControls.Push(this.MainGui.Add("Text", "x130 y38 w1 h" dividerHeight " Backgroundd0d0d0"))
 
         ; 其他设置 - 左侧导航
-        ; 导航项"启动与退出"（默认选中态：蓝色文字）
+        ; 导航项"通用"（默认选中态：蓝色文字，置首位）
         this.MainGui.SetFont("s9 c1994d2")
-        navLaunch := this.MainGui.Add("Text", "x0 y40 w130 Center Section", "启动与退出")
-        navLaunch.OnEvent("Click", (*) => this._SwitchOtherCategory("Launch"))
-        this.NavItems.Push(navLaunch)
-        this.OtherSettingsControls.Push(navLaunch)
+        navGeneral := this.MainGui.Add("Text", "x0 y40 w130 Center Section", I18n.T("tab.general"))
+        navGeneral.OnEvent("Click", (*) => this._SwitchOtherCategory("General"))
+        this.NavItems.Push(navGeneral)
+        this.OtherSettingsControls.Push(navGeneral)
 
         ; 竖线指示器——跟随导航项高度
         this.NavIndicators := []
@@ -383,39 +402,78 @@ class GuiManager {
         ; 恢复默认字体
         this.MainGui.SetFont("s9 cDefault norm")
 
+        ; 导航项"显示"（未选中态）
+        navDisplay := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("tab.display"))
+        navDisplay.OnEvent("Click", (*) => this._SwitchOtherCategory("Display"))
+        this.NavItems.Push(navDisplay)
+        this.OtherSettingsControls.Push(navDisplay)
+        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.OtherSettingsControls.Push(this.NavIndicators[2])
+
+        ; 导航项"启动与退出"（未选中态）
+        navLaunch := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("tab.launch"))
+        navLaunch.OnEvent("Click", (*) => this._SwitchOtherCategory("Launch"))
+        this.NavItems.Push(navLaunch)
+        this.OtherSettingsControls.Push(navLaunch)
+        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.OtherSettingsControls.Push(this.NavIndicators[3])
+
         ; 导航项"更新"（未选中态）
-        navUpdate := this.MainGui.Add("Text", "xs y+m w130 Center", "更新")
+        navUpdate := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("tab.update"))
         navUpdate.OnEvent("Click", (*) => this._SwitchOtherCategory("Update"))
         this.NavItems.Push(navUpdate)
         this.OtherSettingsControls.Push(navUpdate)
         this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
-        this.OtherSettingsControls.Push(this.NavIndicators[2])
+        this.OtherSettingsControls.Push(this.NavIndicators[4])
 
         ; 导航项"自定义"（未选中态）
-        navCustom := this.MainGui.Add("Text", "xs y+m w130 Center", "自定义")
+        navCustom := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("tab.custom"))
         navCustom.OnEvent("Click", (*) => this._SwitchOtherCategory("Custom"))
         this.NavItems.Push(navCustom)
         this.OtherSettingsControls.Push(navCustom)
         this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
-        this.OtherSettingsControls.Push(this.NavIndicators[3])
+        this.OtherSettingsControls.Push(this.NavIndicators[5])
 
         ; 导航项"日志"（未选中态）
-        navLog := this.MainGui.Add("Text", "xs y+m w130 Center", "日志")
+        navLog := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("tab.log"))
         navLog.OnEvent("Click", (*) => this._SwitchOtherCategory("Log"))
         this.NavItems.Push(navLog)
         this.OtherSettingsControls.Push(navLog)
         this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
-        this.OtherSettingsControls.Push(this.NavIndicators[4])
+        this.OtherSettingsControls.Push(this.NavIndicators[6])
 
         ; 导航项"关于"（未选中态）
-        navAbout := this.MainGui.Add("Text", "xs y+m w130 Center", "关于")
+        navAbout := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("tab.about"))
         navAbout.OnEvent("Click", (*) => this._SwitchOtherCategory("About"))
         this.NavItems.Push(navAbout)
         this.OtherSettingsControls.Push(navAbout)
         this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
-        this.OtherSettingsControls.Push(this.NavIndicators[5])
+        this.OtherSettingsControls.Push(this.NavIndicators[7])
 
         ; 其他设置 - 右侧内容区
+        ; 分类"通用"（置首位）
+        sepGeneral := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
+        sepGeneralTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", I18n.T("general.title"))
+        this.GeneralControls.Push(sepGeneral)
+        this.GeneralControls.Push(sepGeneralTxt)
+
+        ; 界面语言
+        txtLanguage := this.MainGui.Add("Text", "xs y+16", I18n.T("general.language"))
+        ddLanguage := this.MainGui.Add("DropDownList", "x+10 yp-3 w140 vLanguage", this._BuildLanguageLabels())
+        ddLanguage.OnEvent("Change", (*) => this.TrackChange("Language"))
+        this.MainGui["Language"].Value := this._LanguageToIndex(Config.GetImportant("Language"))
+        this.GeneralControls.Push(txtLanguage)
+        this.GeneralControls.Push(ddLanguage)
+
+        ; 分类"显示"
+        sepDisplay := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
+        sepDisplayTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", I18n.T("display.title"))
+        this.DisplayControls.Push(sepDisplay)
+        this.DisplayControls.Push(sepDisplayTxt)
+        ; 标签管理器迁入“显示”分类后，标题重新锚定到本分类内容区顶部
+        sepDisplay.GetPos(, &displayTopY)
+        this.TabManagerTitleY := displayTopY + 18
+
         ; 分类"启动与退出"
         sepLaunch := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
         sepLaunchTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", "  启动与退出设置  ")
@@ -550,9 +608,6 @@ class GuiManager {
 
         ; 点击延迟设置
         txtClickDelay := this.MainGui.Add("Text", "xs y+10 Section", "点击延迟")
-        ; 记录左列第一项的实际 y，供右列"顶部标签页"标题对齐（避免绝对坐标估算误差）
-        txtClickDelay.GetPos(, &tabManagerFirstY)
-        this.TabManagerTitleY := tabManagerFirstY
         this.ClickDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vClickDelay Number", Config.GetCustom(
             "ClickDelay"))
         this.ClickDelay.OnEvent("Change", (*) => this.TrackChange("ClickDelay"))
@@ -603,14 +658,14 @@ class GuiManager {
 
         ; 标签页可见性与顺序（右列标题动态对齐左列第一项）
         tabManagerTitle := this.MainGui.Add("Text", "x" this.TabManagerX " y" this.TabManagerTitleY " w" this.TabManagerRowWidth
-            " h20 c333333", "顶部标签页")
+            " h20 c333333", I18n.T("display.tabManager"))
         tabManagerTitle.SetFont("bold")
         tabManagerHint := this.MainGui.Add("Text", "xp y" (this.TabManagerTitleY + 20) " w" this.TabManagerRowWidth
-            " h16 c8a8a8a", "拖动排序 · 点击眼睛切换显示")
+            " h16 c8a8a8a", I18n.T("display.tabManagerHint"))
         ; 首行 y 与标题保持固定间距（标题→提示 20px，提示→首行 16px + 行高 30px = 43px）
         this.TabManagerRowStartY := this.TabManagerTitleY + 43
-        this.CustomControls.Push(tabManagerTitle)
-        this.CustomControls.Push(tabManagerHint)
+        this.DisplayControls.Push(tabManagerTitle)
+        this.DisplayControls.Push(tabManagerHint)
         for index, tabItem in this.TabItems {
             rowY := this.TabManagerRowStartY + (index - 1) * this.TabManagerRowHeight
             tabItem.RowBackground := this.MainGui.Add("Text", "x" this.TabManagerX " y" rowY
@@ -626,29 +681,29 @@ class GuiManager {
             tabItem.EyeControl := this.MainGui.Add("Text", "x" (this.TabManagerX + 171) " y" (rowY + 4)
                 " w24 h18 Center +0x100", Chr(0xE890))
             tabItem.EyeControl.SetFont("s11 c1994d2", "Segoe MDL2 Assets")
-            this.CustomControls.Push(tabItem.RowBackground)
-            this.CustomControls.Push(tabItem.RowHighlight)
-            this.CustomControls.Push(tabItem.DragControl)
-            this.CustomControls.Push(tabItem.ManagerLabel)
-            this.CustomControls.Push(tabItem.EyeControl)
+            this.DisplayControls.Push(tabItem.RowBackground)
+            this.DisplayControls.Push(tabItem.RowHighlight)
+            this.DisplayControls.Push(tabItem.DragControl)
+            this.DisplayControls.Push(tabItem.ManagerLabel)
+            this.DisplayControls.Push(tabItem.EyeControl)
         }
 
         ; 分类"日志"
         sepLog := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
-        sepLogTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", "  日志设置  ")
+        sepLogTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", I18n.T("log.title"))
         this.LogControls.Push(sepLog)
         this.LogControls.Push(sepLogTxt)
 
         logButtonX := 160 + (530 - 160) // 2
-        btnCreateLogArchive := this.MainGui.Add("Button", "x" logButtonX " y+16 w160 h28", "生成日志压缩包")
+        btnCreateLogArchive := this.MainGui.Add("Button", "x" logButtonX " y+16 w160 h28", I18n.T("log.createArchive"))
         btnCreateLogArchive.OnEvent("Click", (*) => LogExporter.CreateArchiveInteractive())
         this.LogControls.Push(btnCreateLogArchive)
 
-        btnOpenLogDirectory := this.MainGui.Add("Button", "x" logButtonX " y+8 w160 h28", "打开日志文件夹")
+        btnOpenLogDirectory := this.MainGui.Add("Button", "x" logButtonX " y+8 w160 h28", I18n.T("log.openDirectory"))
         btnOpenLogDirectory.OnEvent("Click", (*) => LogExporter.OpenLogDirectory())
         this.LogControls.Push(btnOpenLogDirectory)
 
-        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 h24 vDebugEnabled", " 启用调试模式（实时日志窗口，日志额外记录调试信息）")
+        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 h24 vDebugEnabled", I18n.T("log.debugMode"))
         chkDebug.OnEvent("Click", (*) => this.TrackChange("DebugEnabled"))
         this.MainGui["DebugEnabled"].Value := Config.GetImportant("DebugEnabled")
         this.LogControls.Push(chkDebug)
@@ -733,9 +788,9 @@ class GuiManager {
     }
 
     static _UpdateFrameSkipLabels() {
-        try this.FrameSkipLabels["16ms"].Text := "前进 " this.MainGui["FrameSkip16msDelay"].Value "ms"
-        try this.FrameSkipLabels["33ms"].Text := "前进 " this.MainGui["FrameSkip33msDelay"].Value "ms"
-        try this.FrameSkipLabels["166ms"].Text := "前进 " this.MainGui["FrameSkip166msDelay"].Value "ms"
+        try this.FrameSkipLabels["16ms"].Text := I18n.T("hotkey.frameSkip", this.MainGui["FrameSkip16msDelay"].Value)
+        try this.FrameSkipLabels["33ms"].Text := I18n.T("hotkey.frameSkip", this.MainGui["FrameSkip33msDelay"].Value)
+        try this.FrameSkipLabels["166ms"].Text := I18n.T("hotkey.frameSkip", this.MainGui["FrameSkip166msDelay"].Value)
     }
 
     ; 内部：更新其他控件值（从配置）
@@ -751,6 +806,8 @@ class GuiManager {
             try {
                 if (key = "Frame") {
                     this.MainGui[key].Value := this._FrameTextToIndex(Config.GetImportant("Frame"))
+                } else if (key = "Language") {
+                    this.MainGui[key].Value := this._LanguageToIndex(Config.GetImportant("Language"))
                 } else {
                     this.MainGui[key].Value := value
                 }
@@ -800,8 +857,11 @@ class GuiManager {
         return result
     }
 
-    ; 内部：订阅事件总线
+    ; 内部：订阅事件总线（幂等，重建时不会重复订阅）
     static _SubscribeEvents() {
+        if (this._EventsSubscribed)
+            return
+        this._EventsSubscribed := true
         ; Legacy 旧事件（仅 Bootstrap 启动时发布；内部标签切换直接调用刷新方法，不再自发布）
         EventBus.Subscribe("GuiUpdateHotkeyControls", (*) => this._UpdateHotkeyControlsFromConfig())    ; Legacy
         EventBus.Subscribe("GuiUpdateImportantControls", (*) => this._UpdateImportantControlsFromConfig()) ; Legacy
@@ -855,9 +915,11 @@ class GuiManager {
         A_IconTip := "AFA`n" serverName " - " state
     }
 
-    ; 语言切换：设置界面重建（完整重建逻辑在 B2 中落地；当前先保证事件闭环与窗口标题刷新）
+    ; 语言切换：记录变更，保存/应用后统一重建
     static _OnLocaleChanged(data) {
         Logger.Info("Gui", "语言切换：" data.previous " -> " data.locale)
+        if (data.locale != data.previous)
+            this._LanguageChanged := true
         if (this.MainGui != "")
             this.MainGui.Title := I18n.T("gui.windowTitle", Version.Get())
     }
@@ -904,6 +966,13 @@ class GuiManager {
 
     ; 处理设置已保存
     static _OnSettingsSaved() {
+        if (this._LanguageChanged) {
+            this._LanguageChanged := false
+            this.Hide()
+            this.Rebuild()
+            this.Hide()
+            return
+        }
         this.CommitTabSettings()
         this.SetIsModifiedFalse()
         this.CaptureInitialSnapshot()
@@ -912,6 +981,11 @@ class GuiManager {
 
     ; 处理设置已应用
     static _OnSettingsApplied() {
+        if (this._LanguageChanged) {
+            this._LanguageChanged := false
+            this.Rebuild()
+            return
+        }
         this.CommitTabSettings()
         this.SetIsModifiedFalse()
         this.CaptureInitialSnapshot()
@@ -950,6 +1024,10 @@ class GuiManager {
             }
             if (data.key = "AutoBeginPause") {
                 this.MainGui["AutoBeginPause"].Value := (data.value = "1" || data.value = 1) ? 1 : 0
+                return
+            }
+            if (data.key = "Language") {
+                this.MainGui["Language"].Value := this._LanguageToIndex(data.value)
                 return
             }
             value := data.value
@@ -1143,10 +1221,10 @@ class GuiManager {
 
         try {
             if this.HasHotkeyConflicts {
-                this.HintUnsaved.Text := "存在按键冲突"
+                this.HintUnsaved.Text := I18n.T("hint.conflict")
                 this.HintUnsaved.Visible := true
             } else {
-                this.HintUnsaved.Text := "修改尚未保存或应用"
+                this.HintUnsaved.Text := I18n.T("hint.unsaved")
                 this.HintUnsaved.Visible := this.IsModified
             }
         }
@@ -1226,6 +1304,9 @@ class GuiManager {
         if (Config.AllImportant.Has(controlName)) {
             if (controlName = "Frame")
                 Config.SetImportant("Frame", Constants.FrameOptions[currentValue])
+            else if (controlName = "Language") {
+                Config.SetImportant("Language", this.LanguageCodes[currentValue])
+            }
             else
                 Config.SetImportant(controlName, currentValue)
         }
@@ -1303,6 +1384,23 @@ class GuiManager {
             }
         }
         this._HideOtherCategories()
+    }
+
+    ; 语言配置→下拉框索引
+    static _LanguageToIndex(lang) {
+        for i, item in this.LanguageCodes {
+            if (item = lang)
+                return i
+        }
+        return 1
+    }
+
+    ; 生成语言下拉框显示文本：固定使用各语言自己的写法
+    static _BuildLanguageLabels() {
+        labels := []
+        for code in this.LanguageCodes
+            labels.Push(this.LanguageDisplayNames[code])
+        return labels
     }
 
     ; 帧率文本值→下拉框索引
@@ -1565,17 +1663,18 @@ class GuiManager {
     }
 
     static RegisterTabManagerMouseHandlers() {
+        ; 幂等守卫：重复调用不会叠加监听（B1 要求）
+        if (this._TabManagerHandlersRegistered)
+            return
+        this._TabManagerHandlersRegistered := true
+
         ; 同时监听 WM_LBUTTONDOWN(0x0201) 和 WM_LBUTTONDBLCLK(0x0203)：
         ; 窗口类带 CS_DBLCLKS 样式时，快速双击的第二次按下会发 0x0203 而非 0x0201，
         ; 若只监听 0x0201，快速点击同一眼睛时会漏掉第二次点击。
-        OnMessage(0x0201, (wParam, lParam, msg, hwnd) => this.HandleTabManagerMouseDown(
-            wParam, lParam, msg, hwnd))
-        OnMessage(0x0203, (wParam, lParam, msg, hwnd) => this.HandleTabManagerMouseDown(
-            wParam, lParam, msg, hwnd))
-        OnMessage(0x0200, (wParam, lParam, msg, hwnd) => this.HandleTabManagerMouseMove(
-            wParam, lParam, msg, hwnd))
-        OnMessage(0x0202, (wParam, lParam, msg, hwnd) => this.HandleTabManagerMouseUp(
-            wParam, lParam, msg, hwnd))
+        OnMessage(0x0201, ObjBindMethod(GuiManager, "HandleTabManagerMouseDown"))
+        OnMessage(0x0203, ObjBindMethod(GuiManager, "HandleTabManagerMouseDown"))
+        OnMessage(0x0200, ObjBindMethod(GuiManager, "HandleTabManagerMouseMove"))
+        OnMessage(0x0202, ObjBindMethod(GuiManager, "HandleTabManagerMouseUp"))
     }
 
     static GetTabManagerHit(controlHwnd) {
@@ -1828,7 +1927,7 @@ class GuiManager {
         }
         ; 上面遍历会把 CustomControls 内所有控件设为可见（含 RowHighlight 高亮层），
         ; 重绘管理器将其恢复为 TabDragIndex 决定的正确状态，避免启动后全部标签误高亮。
-        if (categoryName = "Custom")
+        if (categoryName = "Display")
             this.RenderTabManager()
         ; 切换到更新分类时，同步 Token 行状态
         if (categoryName = "Update") {
@@ -1885,8 +1984,11 @@ class GuiManager {
     ; 启动 GUI 并注册 Alt+F4 退出热键（原为文件末尾顶层副作用）
     static Start() {
         this.Init()
-        HotIf((*) => WinActive("ahk_id" this.MainGui.Hwnd))
-        Hotkey("!F4", (*) => ExitApp(), "On")
+        if (this._AltF4Registered)
+            return
+        this._AltF4Registered := true
+        HotIf(IsSettingsWindowActive)
+        Hotkey("!F4", HandleSettingsAltF4, "On")
         HotIf
     }
 
@@ -1897,8 +1999,9 @@ class GuiManager {
             this.Init()
             return
         }
-        this.MainGui.Destroy()
+        oldGui := this.MainGui
         this.MainGui := ""
+        oldGui.Destroy()
         this._ClearControlArrays()
         this.Init()
     }
@@ -1912,6 +2015,8 @@ class GuiManager {
             this.OtherSettingsControls,
             this.NavItems,
             this.NavIndicators,
+            this.GeneralControls,
+            this.DisplayControls,
             this.LaunchControls,
             this.UpdateControls,
             this.CustomControls,
@@ -1923,7 +2028,7 @@ class GuiManager {
             this.TabFontState,
             this.FrameSkipLabels
         ] {
-            if (IsObject(arr) && arr.HasOwnProp("Length")) {
+            if (IsObject(arr) && Type(arr) = "Array") {
                 while (arr.Length > 0)
                     arr.Pop()
             }
@@ -1934,6 +2039,16 @@ class GuiManager {
         this.AppliedTabSettings := {Order: [], Visibility: Map()}
         this.CurrentTab := ""
     }
+}
+
+; 设置窗口是否为当前活动窗口（供 Alt+F4 热键使用，命名函数保证幂等）
+IsSettingsWindowActive(*) {
+    return GuiManager.MainGui != "" && WinActive("ahk_id " GuiManager.MainGui.Hwnd)
+}
+
+; Alt+F4 始终退出设置窗口
+HandleSettingsAltF4(*) {
+    ExitApp()
 }
 
 ; 处理GUI隐藏时停止Hook的事件
