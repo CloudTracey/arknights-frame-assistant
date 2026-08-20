@@ -7,6 +7,7 @@ class GuiManager {
     static BtnSave := ""
     static BtnDefaultHotkeys := ""
     static BtnCheckGamePath := ""
+    static ServerPathsText := ""
     static BtnCheckUpdate := ""
     static BtnApply := ""
     static BtnCancel := ""
@@ -80,7 +81,7 @@ class GuiManager {
     static GuiImportantKeys := ["Frame", "AutoExit", "AutoOpenSettings", "ExitOnWindowClose",
         "DefaultStrongHoldProtocol", "TabOrder", "HiddenTabs", "AutoRunGame", "AutoStartWithGame", "GamePath",
         "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause",
-        "BackCeaseOperations", "InLevelGuard", "DebugEnabled"]
+        "BackCeaseOperations", "InLevelGuard", "DebugEnabled", "Language"]
 
     ; 初始化GUI（单例模式）
     static Init() {
@@ -438,21 +439,15 @@ class GuiManager {
         this.MainGui["DefaultStrongHoldProtocol"].Value := Config.GetImportant("DefaultStrongHoldProtocol")
         this.LaunchControls.Push(checkboxDefaultStrongHoldProtocol)
 
-        ; 启动小助手时自动启动游戏
+        ; 启动小助手时自动启动下方路径游戏
         checkboxAutoRunGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoRunGame", " 启动小助手时同时启动明日方舟")
         checkboxAutoRunGame.OnEvent("Click", (*) => this.TrackChange("AutoRunGame"))
         this.MainGui["AutoRunGame"].Value := Config.GetImportant("AutoRunGame")
         this.LaunchControls.Push(checkboxAutoRunGame)
 
-        ; 启动游戏时自动启动小助手
-        checkboxAutoStartWithGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoStartWithGame", " 启动明日方舟时自动启动小助手")
-        checkboxAutoStartWithGame.OnEvent("Click", (*) => this.TrackChange("AutoStartWithGame"))
-        this.MainGui["AutoStartWithGame"].Value := Config.GetImportant("AutoStartWithGame")
-        this.LaunchControls.Push(checkboxAutoStartWithGame)
-
         ; 识别游戏路径
         this.BtnCheckGamePath := this.MainGui.Add("Button", "xs y+12 w" this.BtnW " h24", "识别游戏路径")
-        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", "请先启动游戏再进行识别")
+        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", "可同时识别所有区服的路径")
         this.BtnCheckGamePath.OnEvent("Click", (*) => EventBus.Publish("CheckGamePathClick"))
         this.LaunchControls.Push(this.BtnCheckGamePath)
         this.LaunchControls.Push(hintGamePath)
@@ -464,6 +459,16 @@ class GuiManager {
         editGamePath.OnEvent("Change", (*) => this.TrackChange("GamePath"))
         this.LaunchControls.Push(txtGamePath)
         this.LaunchControls.Push(editGamePath)
+
+        ; 启动游戏时自动启动小助手
+        checkboxAutoStartWithGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoStartWithGame", " 启动明日方舟时自动启动小助手（以下路径均可触发）")
+        checkboxAutoStartWithGame.OnEvent("Click", (*) => this.TrackChange("AutoStartWithGame"))
+        this.MainGui["AutoStartWithGame"].Value := Config.GetImportant("AutoStartWithGame")
+        this.LaunchControls.Push(checkboxAutoStartWithGame)
+
+        ; 已识别区服路径总览（只读 Edit，便于用户选择复制到上方 GamePath 输入框）
+        this.ServerPathsText := this.MainGui.Add("Edit", "xs y+6 w530 r4 ReadOnly vServerPathsText", this._BuildServerPathsText())
+        this.LaunchControls.Push(this.ServerPathsText)
 
         ; 分类"更新"
         sepUpdate := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
@@ -808,6 +813,25 @@ class GuiManager {
         EventBus.Subscribe("SettingsViewRefreshRequested", (data) => this._OnSettingsViewRefreshRequested(data))
         EventBus.Subscribe("ConsoleOpened", (*) => this._OnConsoleOpened())
         EventBus.Subscribe("ChangelogAvailable", (*) => this._OnChangelogAvailable())
+        EventBus.Subscribe("LocaleChanged", (data) => this._OnLocaleChanged(data))
+        EventBus.Subscribe("GameClientsChanged", (data) => this._OnGameClientsChanged(data))
+        EventBus.Subscribe("ForegroundClientChanged", (data) => this._OnForegroundClientChanged(data))
+    }
+
+    static _OnGameClientsChanged(data) {
+        Logger.Debug("Gui", "游戏客户端集合变化，数量=" data.clients.Length)
+        this._RefreshServerPathsText()
+    }
+
+    static _OnForegroundClientChanged(data) {
+        Logger.Debug("Gui", "前台客户端变化：serverId=" data.serverId ", pid=" data.pid)
+    }
+
+    ; 语言切换：设置界面重建（完整重建逻辑在 B2 中落地；当前先保证事件闭环与窗口标题刷新）
+    static _OnLocaleChanged(data) {
+        Logger.Info("Gui", "语言切换：" data.previous " -> " data.locale)
+        if (this.MainGui != "")
+            this.MainGui.Title := I18n.T("gui.windowTitle", Version.Get())
     }
 
     ; 处理热键总开关状态变化（托盘文案/提示由 UI 负责）
@@ -907,10 +931,35 @@ class GuiManager {
         }
     }
 
-    ; 处理游戏路径检测到事件
+    ; 生成“已识别区服路径”多行文本
+    static _BuildServerPathsText() {
+        text := "已识别区服路径："
+        found := false
+        for serverId in ["CN", "JP", "KR", "EN"] {
+            path := Config.GetImportant("GamePath" serverId)
+            if (path != "") {
+                text .= "`n" serverId ": " path
+                found := true
+            }
+        }
+        if (!found)
+            text .= "`n（尚未识别到区服路径）"
+        return text
+    }
+
+    ; 刷新已识别区服路径总览
+    static _RefreshServerPathsText() {
+        if (this.ServerPathsText != "")
+            this.ServerPathsText.Value := this._BuildServerPathsText()
+    }
+
+    ; 处理游戏路径检测到事件：仅在 GamePath 为空时填充，避免覆盖用户已有默认启动路径
     static _OnGamePathDetected(data) {
-        this.SetControlValue("GamePath", data.path)
-        this.TrackChange("GamePath")
+        if (Config.GetImportant("GamePath") = "") {
+            this.SetControlValue("GamePath", data.path)
+            this.TrackChange("GamePath")
+        }
+        this._RefreshServerPathsText()
     }
 
     ; 处理设置视图刷新请求
@@ -918,6 +967,7 @@ class GuiManager {
         this._UpdateHotkeyControlsFromConfig()
         this._UpdateImportantControlsFromConfig()
         this._UpdateCustomControlsFromConfig()
+        this._RefreshServerPathsText()
     }
 
     ; 处理调试控制台打开事件
@@ -1785,6 +1835,51 @@ class GuiManager {
         HotIf((*) => WinActive("ahk_id" this.MainGui.Hwnd))
         Hotkey("!F4", (*) => ExitApp(), "On")
         HotIf
+    }
+
+    ; 重建设置窗口（语言切换等场景）。当前实现保证可重建主窗口；
+    ; 控件数组原地清空以保持 OtherCategories 引用有效。
+    static Rebuild() {
+        if (this.MainGui = "") {
+            this.Init()
+            return
+        }
+        this.MainGui.Destroy()
+        this.MainGui := ""
+        this._ClearControlArrays()
+        this.Init()
+    }
+
+    ; 原地清空所有动态控件数组/Map，避免重建时重复追加。
+    static _ClearControlArrays() {
+        for arr in [
+            this.KeybindControls,
+            this.QuickControls,
+            this.StrongHoldProtocolControls,
+            this.OtherSettingsControls,
+            this.NavItems,
+            this.NavIndicators,
+            this.LaunchControls,
+            this.UpdateControls,
+            this.CustomControls,
+            this.AboutControls,
+            this.LogControls,
+            this.NotOtherControls,
+            this.StrongHoldConflictHints,
+            this.TabItems,
+            this.TabFontState,
+            this.FrameSkipLabels
+        ] {
+            if (IsObject(arr) && arr.HasOwnProp("Length")) {
+                while (arr.Length > 0)
+                    arr.Pop()
+            }
+        }
+        this._PrevConflictedControls := Map()
+        this.TabFontState := Map()
+        this.FrameSkipLabels := Map()
+        this.AppliedTabSettings := {Order: [], Visibility: Map()}
+        this.CurrentTab := ""
     }
 }
 
