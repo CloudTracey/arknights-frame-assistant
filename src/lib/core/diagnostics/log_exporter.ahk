@@ -101,7 +101,15 @@ class LogExporter {
         lines.Push("StartedByGameAutoStart=" AppContext.GetStartedByGameAutoStart())
         lines.Push("GamePathConfigured=" (gamePath != ""))
         lines.Push("GameFileExists=" ((gamePath != "" && FileExist(gamePath)) ? "true" : "false"))
-        lines.Push("GameRunning=" (ProcessExist("Arknights.exe") ? "true" : "false"))
+        clients := GameClientRegistry.GetClients()
+        lines.Push("GameRunning=" ((GameClientRegistry.HasClients() || GameTarget.ProcessExists()) ? "true" : "false"))
+        lines.Push("ClientCount=" clients.Length)
+        for i, client in clients
+            lines.Push("Client" i "=" client.pid "|" client.hwnd "|" client.serverId "|" client.exePath)
+        foreground := GameClientRegistry.GetForegroundClient()
+        lines.Push("ForegroundClient=" (foreground = "" ? "" : foreground.pid "|" foreground.serverId))
+        for serverId in ServerProfile.Ids()
+            lines.Push("RegistryRoot" serverId "=" ServerProfile.RegistryRoot(serverId))
         lines.Push("GeneratedAt=" FormatTime(, "yyyy-MM-dd HH:mm:ss.") A_MSec)
         lines.Push("LogDirectoryAvailable=" (Logger.FileAvailable ? "true" : "false"))
         if !IsObject(retention)
@@ -133,7 +141,7 @@ class LogExporter {
         safeKeys := ["AutoExit", "AutoOpenSettings", "ExitOnWindowClose", "Frame", "Frame155", "AutoUpdate", "LastDismissedVersion", "LastLaunchedVersion", "UpdateChannel", "UpdateSource", "UseGitHubToken", "AutoRunGame", "AutoStartWithGame", "DismissedChangelogVersion", "DefaultStrongHoldProtocol", "AutoBeginPause", "DebugEnabled"]
         for key in safeKeys
             lines.Push(key "=" Config.GetImportant(key))
-        lines.Push("GamePath=<redacted>")
+        lines.Push("GamePath=" gamePath)
         lines.Push("GitHubToken=<redacted>")
         lines.Push("GitHubTokenProtected=<redacted>")
         return this._JoinLines(lines)

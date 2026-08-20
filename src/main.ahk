@@ -11,6 +11,15 @@
 #Include ./lib/base/constants.ahk
 #Include ./lib/base/config.ahk
 #Include ./lib/base/eventbus.ahk
+#Include ./lib/base/i18n.ahk
+#Include ./lib/base/changelog_format.ahk
+#Include ./lib/base/metrics.ahk
+#Include ./lib/base/locales/zh_cn.ahk
+#Include ./lib/base/locales/ja_jp.ahk
+#Include ./lib/base/locales/ko_kr.ahk
+#Include ./lib/base/locales/en_us.ahk
+#Include ./lib/base/server_profile.ahk
+#Include ./lib/base/game_target.ahk
 #Include ./lib/base/file_extractor.ahk
 #Include ./lib/base/timing.ahk
 #Include ./lib/base/window.ahk
@@ -18,6 +27,7 @@
 #Include ./lib/base/tray.ahk
 #Include ./lib/base/version_utils.ahk
 #Include ./lib/base/touch_injection.ahk
+#Include ./lib/core/game/game_client_registry.ahk
 #Include ./lib/core/diagnostics/log_exporter.ahk
 #Include ./lib/core/launch/app_context.ahk
 #Include ./lib/core/launch/game_auto_start.ahk
@@ -103,6 +113,7 @@ class App {
 
         ; ---- 初始化各模块 ----
         Config.InitPath()
+        GameClientRegistry.Init()
         HotkeyActionsStart()
         LevelDetector.Init()
         KeyBinder.Start()
@@ -118,7 +129,6 @@ class App {
         ; ---- 加载设置 ----
         SettingsService.Initialize()
         Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
-        Logger.RegisterSecret(Config.GetImportant("GamePath"))
         Logger.RegisterSecret(A_ScriptFullPath)
         Logger.Info("Startup", "配置加载完成，版本=" Version.Get())
 

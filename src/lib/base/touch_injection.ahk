@@ -38,7 +38,7 @@ class TouchInjector {
     }
 
     static _Inject(flags) {
-        hwnd := WinExist("ahk_exe Arknights.exe")
+        hwnd := WinExist(GameTarget.WinTitle())
         pt := Buffer(8, 0)
         NumPut("Int", this._LastX, pt, 0)
         NumPut("Int", this._LastY, pt, 4)

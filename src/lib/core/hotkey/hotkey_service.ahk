@@ -29,7 +29,7 @@ HotkeyContext(hotkeyName) {
         return IsMouseInClient()
     ; 键盘键：游戏窗口为活动窗口，或（启用失焦悬停操作时）鼠标悬停在游戏窗口上才触发；
     ; 动作层统一包装负责激活游戏窗口并恢复原窗口（判定层不做副作用）
-    if WinActive("ahk_exe Arknights.exe")
+    if GameTarget.IsActive()
         return true
     return HotkeyService.GetHoverOperate() && IsMouseInClient()
 }
@@ -86,6 +86,8 @@ class HotkeyService {
         EventBus.Subscribe("SetSwitchKey", (*) => this.SetSwitchKey())     ; Legacy
         ; 新事件契约
         EventBus.Subscribe("GameKeysChanged", (data) => this._HandleGameKeysChanged(data))
+        EventBus.Subscribe("GameClientsChanged", (data) => this._HandleGameClientsChanged(data))
+        EventBus.Subscribe("ForegroundClientChanged", (data) => this._HandleForegroundClientChanged(data))
         EventBus.Subscribe("ActiveTabChangeRequested", (data) => this._HandleActiveTabChangeRequested(data))
         EventBus.Subscribe("HotkeyToggleRequested", (*) => this.SwitchHotkey())
         EventBus.Subscribe("InLevelChanged", (data) => this._HandleInLevelChanged(data))
@@ -107,6 +109,20 @@ class HotkeyService {
         Logger.Info("Hotkey", "收到 GameKeysChanged，重建热键")
         this.EnableByTab(this._ActiveTab)
         this.SetSwitchKey()
+    }
+
+    ; 处理游戏客户端集合变化：拦截并集可能需要变化，重建热键
+    static _HandleGameClientsChanged(data) {
+        if (!this.HotkeyState)
+            return
+        Logger.Info("Hotkey", "收到 GameClientsChanged，重建热键")
+        this.EnableByTab(this._ActiveTab)
+        this.SetSwitchKey()
+    }
+
+    ; 处理前台客户端变化：当前映射随前台切换，无需重建热键（热键全局唯一一套）
+    static _HandleForegroundClientChanged(data) {
+        Logger.Debug("Hotkey", "前台客户端变化：serverId=" data.serverId ", pid=" data.pid)
     }
 
     ; 处理 UI 标签页切换请求
@@ -204,11 +220,11 @@ class HotkeyService {
     static _WrapAction(fn) {
         Wrapped(ThisHotkey) {
             ; 防御性检查：游戏窗口不存在则跳过（正常触发路径已由判定层保证存在，此处防异常阻塞）
-            if !WinExist("ahk_exe Arknights.exe")
+            if !GameTarget.Exists()
                 return
-            WinActivate("ahk_exe Arknights.exe")
+            GameTarget.Activate()
             ; 激活超时（游戏窗口异常不可激活）则跳过动作，避免按键发往非游戏窗口
-            if !WinWaitActive("ahk_exe Arknights.exe", , 500)
+            if !GameTarget.WaitActive(500)
                 return
             try {
                 fn(ThisHotkey)
@@ -246,6 +262,7 @@ class HotkeyService {
     static HotkeyOn(*) {
         KeyForward.DownHandled.Clear()  ; 重建前清空运行时标记（保留 CaseSense）
         KeyForward.SuppressUp.Clear()
+        KeyForward.InterceptedKeys.Clear()
         HotIf(HotkeyContext)
         pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in Constants.KeyNames {
@@ -271,6 +288,7 @@ class HotkeyService {
         HotkeyService.ActiveHotkeys := Map()
         KeyForward.DownHandled.Clear()
         KeyForward.SuppressUp.Clear()
+        KeyForward.InterceptedKeys.Clear()
         HotIf
         if !silent
             Logger.Info("Hotkey", "热键已禁用")
