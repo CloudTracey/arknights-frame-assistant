@@ -17,10 +17,11 @@
 #Include ../../src/lib/base/i18n.ahk
 #Include ../../src/lib/base/changelog_format.ahk
 #Include ../../src/lib/base/metrics.ahk
-#Include ../../src/lib/base/locales/zh_cn.ahk
+#Include ../../src/lib/base/locales/zh_hans.ahk
 #Include ../../src/lib/base/locales/ja_jp.ahk
 #Include ../../src/lib/base/locales/ko_kr.ahk
 #Include ../../src/lib/base/locales/en_us.ahk
+#Include ../../src/lib/base/locales/zh_hant.ahk
 #Include ../../src/lib/base/server_profile.ahk
 #Include ../../src/lib/base/game_target.ahk
 #Include ../../src/lib/base/file_extractor.ahk

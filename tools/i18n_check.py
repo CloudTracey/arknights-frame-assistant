@@ -3,9 +3,9 @@
 """AFA i18n 静态检查。
 
 扫描源码中的 I18n.T("...") 调用，与各语言资源表比对：
-- 缺失：源码用到但 zh-CN 资源没有
+- 缺失：源码用到但 zh-Hans 资源没有
 - 多余：资源中有但源码未使用
-- 未使用：zh-CN 有但源码未使用（仅提示）
+- 未使用：zh-Hans 有但源码未使用（仅提示）
 """
 
 from __future__ import annotations
@@ -47,13 +47,13 @@ def extract_resource_keys(path: Path) -> set[str]:
 
 def main() -> int:
     used = extract_used_keys()
-    zh = extract_resource_keys(LOCALES / "zh_cn.ahk")
+    zh = extract_resource_keys(LOCALES / "zh_hans.ahk")
     problems: list[str] = []
     for key in sorted(used - zh):
-        problems.append(f"[missing] {key} 在 zh-CN 资源中缺失")
+        problems.append(f"[missing] {key} 在 zh-Hans 资源中缺失")
     for key in sorted(zh - used):
         print(f"INFO: [unused] {key} 在源码中未使用")
-    for locale in ["ja_jp", "ko_kr", "en_us"]:
+    for locale in ["zh_hans", "zh_hant", "ja_jp", "ko_kr", "en_us"]:
         res = extract_resource_keys(LOCALES / f"{locale}.ahk")
         for key in sorted(zh - res):
             problems.append(f"[missing-{locale}] {key} 在 {locale} 资源中缺失")

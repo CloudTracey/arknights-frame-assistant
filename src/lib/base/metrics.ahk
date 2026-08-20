@@ -4,9 +4,11 @@
 class Metrics {
     static FontFor(locale) {
         switch locale {
+            case "zh-Hant": return "Microsoft JhengHei UI"
             case "ja-JP": return "Yu Gothic UI"
             case "ko-KR": return "Malgun Gothic"
             case "en-US": return "Segoe UI"
+            case "zh-Hans": return "Microsoft YaHei UI"
             default: return "Microsoft YaHei UI"
         }
     }

@@ -14,10 +14,11 @@
 #Include ./lib/base/i18n.ahk
 #Include ./lib/base/changelog_format.ahk
 #Include ./lib/base/metrics.ahk
-#Include ./lib/base/locales/zh_cn.ahk
+#Include ./lib/base/locales/zh_hans.ahk
 #Include ./lib/base/locales/ja_jp.ahk
 #Include ./lib/base/locales/ko_kr.ahk
 #Include ./lib/base/locales/en_us.ahk
+#Include ./lib/base/locales/zh_hant.ahk
 #Include ./lib/base/server_profile.ahk
 #Include ./lib/base/game_target.ahk
 #Include ./lib/base/file_extractor.ahk
