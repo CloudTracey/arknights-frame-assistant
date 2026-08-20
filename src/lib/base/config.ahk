@@ -25,6 +25,12 @@ class Config {
         "UseGitHubToken", "0",
         "GitHubToken", "",
         "GamePath", "",
+        "GamePathCN", "",
+        "GamePathJP", "",
+        "GamePathKR", "",
+        "GamePathEN", "",
+        "PreferredServer", "",
+        "LastActiveServer", "",
         "AutoRunGame", "0",
         "AutoStartWithGame", "0",
         "LastLaunchedVersion", "",
@@ -35,7 +41,8 @@ class Config {
         "AutoBeginPause", "0",
         "BackCeaseOperations", "1",
         "InLevelGuard", "1",
-        "DebugEnabled", "0"
+        "DebugEnabled", "0",
+        "Language", "auto"
     )
 
     ; 内部：默认自定义设置
@@ -366,6 +373,45 @@ class Config {
         ; 写入所有默认自定义设置
         for keyVar, defaultVal in this._DefaultCustom {
             IniWrite(defaultVal, this.IniFile, "Custom", keyVar)
+        }
+    }
+
+    ; 将旧版单一 GamePath 静默迁移到按区服路径（GamePathCN/JP/KR/EN）。
+    ; GamePath 保留为默认启动路径镜像，不删除。
+    static MigrateGamePaths() {
+        if this.IniFile = ""
+            this.InitPath()
+        if !FileExist(this.IniFile)
+            return
+
+        legacy := IniRead(this.IniFile, "Main", "GamePath", "")
+        if (legacy = "")
+            return
+
+        info := ServerProfile.FromExePath(legacy)
+        if (info.serverId = "" || info.serverId = "Unknown")
+            return
+
+        key := "GamePath" info.serverId
+        if (IniRead(this.IniFile, "Main", key, "") = "") {
+            try {
+                IniWrite(legacy, this.IniFile, "Main", key)
+                if (this._ImportantSettings.Has(key))
+                    this._ImportantSettings[key] := legacy
+                Logger.Info("Config", "旧 GamePath 已迁移到 " key)
+            } catch Error as e {
+                Logger.Warn("Config", "迁移 GamePath 失败：" e.Message)
+            }
+        }
+
+        if (IniRead(this.IniFile, "Main", "PreferredServer", "") = "") {
+            try {
+                IniWrite(info.serverId, this.IniFile, "Main", "PreferredServer")
+                if (this._ImportantSettings.Has("PreferredServer"))
+                    this._ImportantSettings["PreferredServer"] := info.serverId
+            } catch Error as e {
+                Logger.Warn("Config", "写入 PreferredServer 失败：" e.Message)
+            }
         }
     }
 

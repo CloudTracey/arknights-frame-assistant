@@ -43,6 +43,12 @@ class Constants {
         "UseGitHubToken", "是否使用GitHub Token",
         "GitHubToken", "GitHub Token",
         "GamePath", "游戏路径",
+        "GamePathCN", "国服游戏路径",
+        "GamePathJP", "日服游戏路径",
+        "GamePathKR", "韩服游戏路径",
+        "GamePathEN", "国际服游戏路径",
+        "PreferredServer", "首选区服",
+        "LastActiveServer", "上次识别区服",
         "AutoRunGame", "随小助手自动启动明日方舟",
         "AutoStartWithGame", "随明日方舟自动启动小助手",
         "DismissedChangelogVersion", "已忽略公告版本",
@@ -52,7 +58,8 @@ class Constants {
         "AutoBeginPause", "开局自动暂停",
         "BackCeaseOperations", "使用“返回上级菜单”放弃行动",
         "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键",
-        "DebugEnabled", "调试模式"
+        "DebugEnabled", "调试模式",
+        "Language", "界面语言"
     )
 
     ; 自定义设置名称映射

@@ -14,41 +14,58 @@ class GameLauncher {
         }
     }
 
-    ; 获取游戏路径（ProcessGetPath 失败时降级到 WMI 查询）
+    ; 获取游戏路径：优先识别正在运行的实例；没有进程时按已知目录特征扫描常见安装位置
     static CheckGamePath() {
-        if(ProcessExist("Arknights.exe")) {
-            pid := ProcessExist("Arknights.exe")
-            path := ""
-            try {
-                path := ProcessGetPath(pid)
-            } catch Error as e {
-                Logger.Warn("GameLauncher", "ProcessGetPath 异常 (pid=" pid "): " e.Message)
+        GameClientRegistry.Refresh()
+        clients := GameClientRegistry.GetClients()
+        if (clients.Length > 0) {
+            firstPath := ""
+            defaultGamePath := Config.GetImportant("GamePath")
+            for client in clients {
+                if (client.exePath = "")
+                    continue
+                if (firstPath = "" && defaultGamePath = "")
+                    firstPath := client.exePath
+                if (client.serverId != "" && client.serverId != "Unknown") {
+                    key := "GamePath" client.serverId
+                    SettingsService.UpdatePersistedValue(key, client.exePath)
+                    Logger.Info("GameLauncher", "识别到 " client.serverId " 游戏路径：" client.exePath)
+                } else if (defaultGamePath = "") {
+                    SettingsService.UpdatePersistedValue("GamePath", client.exePath)
+                    Logger.Info("GameLauncher", "识别到未知区服游戏路径：" client.exePath)
+                }
             }
-            if (path != "") {
-                EventBus.Publish("GamePathDetected", {path: path})
-                return
-            }
-            ; 主路径失败，降级到 WMI 查询
-            Logger.Warn("GameLauncher", "ProcessGetPath 失败，降级到 WMI 查询 (pid=" pid ")")
-            path := GameLauncher._GetProcessPathByWmi(pid)
-            if (path != "") {
-                EventBus.Publish("GamePathDetected", {path: path})
-                Logger.Info("GameLauncher", "WMI 降级查询成功: " path)
-                return
-            }
-            Logger.Error("GameLauncher", "WMI 降级查询也失败 (pid=" pid ")")
-            MessageBox.Warning("未检测到游戏进程，请先启动游戏再进行识别", "识别失败")
-        } else {
-            MessageBox.Warning("未检测到游戏进程，请先启动游戏再进行识别", "识别失败")
+            if (firstPath != "")
+                EventBus.Publish("GamePathDetected", {path: firstPath, clients: clients})
+            return
         }
+
+        ; 没有运行中的客户端时，尝试按固定目录特征直接扫描
+        installed := ServerProfile.FindInstalledPaths()
+        if (installed.Count > 0) {
+            firstPath := ""
+            defaultGamePath := Config.GetImportant("GamePath")
+            for serverId, path in installed {
+                if (firstPath = "" && defaultGamePath = "")
+                    firstPath := path
+                key := "GamePath" serverId
+                SettingsService.UpdatePersistedValue(key, path)
+                Logger.Info("GameLauncher", "扫描识别到 " serverId " 游戏路径：" path)
+            }
+            if (firstPath != "")
+                EventBus.Publish("GamePathDetected", {path: firstPath, installed: installed})
+            return
+        }
+
+        MessageBox.Warning("未检测到游戏进程，且未在常见目录找到游戏路径。`n请先启动游戏，或手动填写游戏路径。", "识别失败")
     }
 
     ; 启动游戏
     static Launch() {
         gamePath := Config.GetImportant("GamePath")
 
-        ; 检查是否已运行
-        if ProcessExist("Arknights.exe") {
+        ; 检查是否已运行（任意区服客户端都算已运行）
+        if GameClientRegistry.HasClients() || GameTarget.ProcessExists() {
             Logger.Info("GameLauncher", "游戏已在运行，跳过启动")
             return { success: true, message: "游戏已在运行" }
         }
@@ -97,7 +114,7 @@ class GameLauncher {
     static WaitForGame(timeout := 60000) {
         startTime := A_TickCount
         while (A_TickCount - startTime < timeout) {
-            if ProcessExist("Arknights.exe") {
+            if GameClientRegistry.HasClients() || GameTarget.ProcessExists() {
                 Logger.Info("GameLauncher", "检测到游戏进程已启动")
                 return true
             }
