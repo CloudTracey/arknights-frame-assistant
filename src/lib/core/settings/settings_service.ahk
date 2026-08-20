@@ -18,6 +18,8 @@ class SettingsService {
         Config.MigrateFrameRate()
         Config.MigrateGitHubToken()
         Config.LoadFromIni()
+        Config.MigrateGamePaths()
+        I18n.Init(Config.ReadImportantFromIni("Language"))
         this._RefreshRuntime()
     }
 
@@ -28,6 +30,10 @@ class SettingsService {
         Logger.SetConsoleEnabled(debugOn)
         TimingService.Refresh()
         HotkeyService.SetHoverOperate(Config.ReadCustomFromIni("HoverOperate") == "1")
+        lang := Config.ReadImportantFromIni("Language")
+        if (lang = "auto")
+            lang := I18n.DetectAutoLocale()
+        I18n.SetLocale(lang)
         if IsSet(LevelDetector)
             LevelDetector.SyncGuardSetting()
     }
@@ -159,7 +165,6 @@ class SettingsService {
 
         ; 登记本次会话中的敏感值，覆盖后续验证、外部设置和保存流程的日志。
         Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
-        Logger.RegisterSecret(Config.GetImportant("GamePath"))
 
         ; 检查按键冲突
         if (!this._CheckKeyConflicts()) {
@@ -192,24 +197,34 @@ class SettingsService {
             return false
         }
 
-        ; 验证游戏路径
-        gamePath := Config.GetImportant("GamePath")
-        if (gamePath != "") {
+        ; 验证游戏路径（旧 GamePath + 按区服路径）
+        pathsToValidate := [Config.GetImportant("GamePath")]
+        for serverId in ["CN", "JP", "KR", "EN"] {
+            key := "GamePath" serverId
+            value := Config.GetImportant(key)
+            if (value != "")
+                pathsToValidate.Push(value)
+        }
+        for gamePath in pathsToValidate {
+            if (gamePath = "")
+                continue
             if !FileExist(gamePath) {
                 result := MessageBox.Confirm("游戏路径不存在：`n" gamePath "`n`n是否仍要保存？", "路径不存在")
                 if (result = "No") {
                     Logger.Warn("Settings", "保存中止：游戏路径不存在")
                     return false
                 }
-            } else {
-                SplitPath(gamePath, &fileName)
-                if (fileName != "Arknights.exe") {
-                    result := MessageBox.Confirm("游戏路径不正确：`n" gamePath "`n`n目标文件不是 Arknights.exe，请确保选择正确的游戏可执行文件。`n`n是否仍要保存？", "路径不正确")
-                    if (result = "No") {
-                        Logger.Warn("Settings", "保存中止：游戏路径不是 Arknights.exe")
-                        return false
-                    }
+                continue
+            }
+            info := ServerProfile.FromExePath(gamePath)
+            if (info.serverId = "") {
+                result := MessageBox.Confirm("游戏路径不正确：`n" gamePath "`n`n目标文件不是 Arknights.exe，请确保选择正确的游戏可执行文件。`n`n是否仍要保存？", "路径不正确")
+                if (result = "No") {
+                    Logger.Warn("Settings", "保存中止：无法从路径推断区服")
+                    return false
                 }
+            } else {
+                Logger.Info("Settings", "游戏路径区服识别：" info.serverId " - " gamePath)
             }
         }
 
@@ -234,19 +249,32 @@ class SettingsService {
             return true
 
         enabled := (Config.GetImportant("AutoStartWithGame") = 1 || Config.GetImportant("AutoStartWithGame") = "1")
-        appliedGamePath := ""
+        appliedGamePaths := []
         if (enabled) {
-            gamePath := Config.GetImportant("GamePath")
-            validation := GameAutoStartManager.ValidateGamePath(gamePath)
-            if (!validation.success) {
-                MessageBox.Error(validation.message, "无法启用随游戏自动启动")
+            gamePaths := GameAutoStartManager.GetConfiguredGamePaths()
+            if (gamePaths.Length = 0)
+                gamePaths := [Config.GetImportant("GamePath")]
+            defaultGamePath := Config.GetImportant("GamePath")
+            for gamePath in gamePaths {
+                if (gamePath = "")
+                    continue
+                validation := GameAutoStartManager.ValidateGamePath(gamePath)
+                if (!validation.success) {
+                    MessageBox.Error(validation.message, "无法启用随游戏自动启动")
+                    return false
+                }
+                ; 只有当前路径就是用户指定的默认启动路径时，才更新 GamePath；
+                ; 其余区服路径只参与自启任务，不能覆盖默认启动路径。
+                if (gamePath = defaultGamePath) {
+                    Config.SetImportant("GamePath", validation.path)
+                    EventBus.Publish("GamePathNormalized", {path: validation.path})
+                }
+                appliedGamePaths.Push(validation.path)
+            }
+            if (appliedGamePaths.Length = 0) {
+                MessageBox.Error("请先设置至少一个游戏路径。", "无法启用随游戏自动启动")
                 return false
             }
-            ; 保存规范化后的绝对路径，确保后续启动校准使用同一事件过滤条件。
-            Config.SetImportant("GamePath", validation.path)
-            Logger.RegisterSecret(validation.path)
-            EventBus.Publish("GamePathNormalized", {path: validation.path})
-            appliedGamePath := validation.path
 
             if (Config.GetImportant("AutoStartWithGame") != "1") {
                 confirmationMessage := "启用此功能需要开启 Windows 的“进程创建成功审核”。`n"
@@ -258,7 +286,7 @@ class SettingsService {
             }
         }
 
-        result := GameAutoStartManager.Apply(enabled, appliedGamePath)
+        result := GameAutoStartManager.Apply(enabled, appliedGamePaths)
         if (!result.success) {
             MessageBox.Error(result.message, enabled ? "启用随游戏自动启动失败" : "关闭随游戏自动启动失败")
             return false
@@ -296,7 +324,7 @@ class SettingsService {
 
     ; 重置游戏状态
     static _ResetGameStateIfNeeded() {
-        if (Config.GetImportant("AutoExit") == "1" && !WinExist("ahk_exe Arknights.exe")) {
+        if (Config.GetImportant("AutoExit") == "1" && !GameTarget.Exists()) {
             GameMonitor.ResetRunRecord()
         }
     }

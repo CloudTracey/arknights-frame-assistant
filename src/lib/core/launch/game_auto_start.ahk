@@ -59,25 +59,62 @@ class GameAutoStartManager {
         return StrGet(pathBuffer, "UTF-16")
     }
 
-    ; 根据设置应用外部自动启动状态
+    ; 根据设置应用外部自动启动状态。gamePath 可为单个路径或路径数组。
     static Apply(enabled, gamePath := "") {
         if (enabled) {
-            validation := this.ValidateGamePath(gamePath)
-            if (!validation.success)
-                return validation
-            return this.Enable(validation.path)
+            paths := this._AsPathArray(gamePath)
+            if (paths.Length = 0)
+                return {success: false, message: "请先设置明日方舟的游戏路径。"}
+            validated := []
+            for path in paths {
+                validation := this.ValidateGamePath(path)
+                if (!validation.success)
+                    return validation
+                validated.Push(validation.path)
+            }
+            return this.Enable(validated)
         }
         return this.Disable()
     }
 
-    ; 启用审核并注册计划任务
-    static Enable(gamePath) {
+    ; 获取当前配置的全部游戏路径（GamePath + GamePathCN/JP/KR/EN），用于随游戏自启
+    static GetConfiguredGamePaths() {
+        result := []
+        seen := Map()
+        candidates := [Config.GetImportant("GamePath")]
+        for serverId in ["CN", "JP", "KR", "EN"]
+            candidates.Push(Config.GetImportant("GamePath" serverId))
+        for path in candidates {
+            if (path = "")
+                continue
+            norm := this._NormalizePath(path)
+            if (norm != "" && !seen.Has(StrLower(norm))) {
+                seen[StrLower(norm)] := true
+                result.Push(this._GetLongPath(norm))
+            }
+        }
+        return result
+    }
+
+    static _AsPathArray(gamePath) {
+        if (IsObject(gamePath))
+            return gamePath
+        if (gamePath = "")
+            return []
+        return [gamePath]
+    }
+
+    ; 启用审核并注册计划任务。gamePaths 可为单个路径或路径数组。
+    static Enable(gamePaths) {
+        paths := this._AsPathArray(gamePaths)
+        if (paths.Length = 0)
+            return {success: false, message: "请先设置明日方舟的游戏路径。"}
         auditResult := this.EnableProcessCreationAudit()
         if (!auditResult.success)
             return auditResult
 
         try {
-            taskResult := this.EnsureTask(gamePath)
+            taskResult := this.EnsureTask(paths)
             return this._Result(true, {
                 message: "随游戏自动启动已启用。",
                 skipped: auditResult.skipped && taskResult.skipped,
@@ -130,7 +167,7 @@ class GameAutoStartManager {
             return result
         }
         if (enabled)
-            return this.Enable(Config.GetImportant("GamePath"))
+            return this.Enable(this.GetConfiguredGamePaths())
         return this.Disable()
     }
 
@@ -322,8 +359,11 @@ class GameAutoStartManager {
             reason: reason, errorCode: errorCode, message: message})
     }
 
-    ; 计划任务语义一致时不重写；仅缺失或关键字段漂移时更新。
-    static EnsureTask(gamePath) {
+    ; 计划任务语义一致时不重写；仅缺失或关键字段漂移时更新。gamePaths 为路径数组。
+    static EnsureTask(gamePaths) {
+        paths := this._AsPathArray(gamePaths)
+        if (paths.Length = 0)
+            return this._Result(false, {message: "请先设置至少一个游戏路径。", reason: "empty_paths"})
         userSid := this.GetCurrentUserSid()
         accountName := this.GetCurrentUserName()
         taskName := this.GetTaskName(userSid)
@@ -331,7 +371,7 @@ class GameAutoStartManager {
         service := ComObject("Schedule.Service")
         service.Connect()
         rootFolder := service.GetFolder("\")
-        desiredTask := this._BuildTaskDefinition(service, gamePath, userSid, accountName)
+        desiredTask := this._BuildTaskDefinition(service, paths, userSid, accountName)
         try {
             existingTask := rootFolder.GetTask(taskName)
             if (this._IsTaskEquivalent(existingTask.Definition, desiredTask, userSid)) {
@@ -345,14 +385,18 @@ class GameAutoStartManager {
                 throw e
         }
         rootFolder.RegisterTaskDefinition(taskName, desiredTask, 6, , , 3)
-        Logger.Info("GameAutoStart", "计划任务已创建或更新：" gamePath)
+        pathSummary := ""
+        for p in paths
+            pathSummary .= (pathSummary = "" ? "" : " | ") p
+        Logger.Info("GameAutoStart", "计划任务已创建或更新：" pathSummary)
         return this._Result(true, {stage: "task_register", reason: "created_or_updated",
             taskChanged: true, message: "计划任务已创建或更新。"})
     }
 
-    static RegisterTask(gamePath) => this.EnsureTask(gamePath)
+    static RegisterTask(gamePaths) => this.EnsureTask(gamePaths)
 
-    static _BuildTaskDefinition(service, gamePath, userSid, accountName) {
+    static _BuildTaskDefinition(service, gamePaths, userSid, accountName) {
+        paths := this._AsPathArray(gamePaths)
         taskDefinition := service.NewTask(0)
 
         taskDefinition.RegistrationInfo.Author := "Arknights Frame Assistant"
@@ -375,7 +419,7 @@ class GameAutoStartManager {
 
         trigger := taskDefinition.Triggers.Create(0)
         trigger.Enabled := true
-        trigger.Subscription := this.BuildEventSubscription(gamePath, userSid)
+        trigger.Subscription := this.BuildEventSubscription(paths, userSid)
 
         action := taskDefinition.Actions.Create(0)
         if (A_IsCompiled) {
@@ -514,16 +558,31 @@ class GameAutoStartManager {
         return StrGet(nameBuffer, "UTF-16")
     }
 
-    ; 生成安全日志事件订阅。使用完整路径和用户 SID，避免误触发。
-    static BuildEventSubscription(gamePath, userSid) {
-        escapedPath := this.EscapeXml(gamePath)
+    ; 生成安全日志事件订阅。使用一个或多个完整路径和用户 SID，避免误触发。
+    ; 多个路径在同一个 Select 内用 or 连接，保持单 trigger（Triggers.Count == 1）。
+    static BuildEventSubscription(gamePaths, userSid) {
+        paths := this._AsPathArray(gamePaths)
+        if (paths.Length = 0)
+            return ""
         escapedSid := this.EscapeXml(userSid)
+        pathConditions := []
+        for gamePath in paths {
+            escapedPath := this.EscapeXml(gamePath)
+            pathConditions.Push("*[EventData[Data[@Name='NewProcessName']=" Chr(34) escapedPath Chr(34)
+                . " and Data[@Name='SubjectUserSid']=" Chr(34) escapedSid Chr(34) "]]")
+        }
         subscription := "<QueryList>"
         subscription .= "<Query Id='0' Path='Security'>"
         subscription .= "<Select Path='Security'>"
         subscription .= "*[System[Provider[@Name='Microsoft-Windows-Security-Auditing'] and EventID=4688]]"
-        subscription .= " and *[EventData[Data[@Name='NewProcessName']=" Chr(34) escapedPath Chr(34)
-        subscription .= " and Data[@Name='SubjectUserSid']=" Chr(34) escapedSid Chr(34) "]]"
+        if (pathConditions.Length = 1) {
+            subscription .= " and " pathConditions[1]
+        } else if (pathConditions.Length > 1) {
+            combined := pathConditions[1]
+            Loop pathConditions.Length - 1
+                combined .= " or " pathConditions[A_Index + 1]
+            subscription .= " and (" combined ")"
+        }
         subscription .= "</Select></Query></QueryList>"
         return subscription
     }
