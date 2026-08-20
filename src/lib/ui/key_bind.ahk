@@ -150,7 +150,8 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             "FrameSkip16msDelay", 1,
             "FrameSkip33msDelay", 1,
             "FrameSkip166msDelay", 1,
-            "ServerPathsText", 1
+            "ServerPathsText", 1,
+            "RunningClientsText", 1
         )
         if nonKeybindEdits.Has(KeyBinder.ControlObj.Name) {
             return

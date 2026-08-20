@@ -8,6 +8,14 @@ class GuiManager {
     static BtnDefaultHotkeys := ""
     static BtnCheckGamePath := ""
     static ServerPathsText := ""
+    static RunningClientsText := ""
+    ; 阶段 A 新增界面文案集中在这里，便于阶段 B 统一键化
+    static AStrings := Map(
+        "runningClients", "当前运行客户端：",
+        "server.unknown", "未知区服",
+        "serverPaths", "已识别区服路径：",
+        "serverPathsEmpty", "（尚未识别到区服路径）"
+    )
     static BtnCheckUpdate := ""
     static BtnApply := ""
     static BtnCancel := ""
@@ -470,6 +478,10 @@ class GuiManager {
         this.ServerPathsText := this.MainGui.Add("Edit", "xs y+6 w530 r4 ReadOnly vServerPathsText", this._BuildServerPathsText())
         this.LaunchControls.Push(this.ServerPathsText)
 
+        ; 当前运行客户端总览（只读 Edit）
+        this.RunningClientsText := this.MainGui.Add("Edit", "xs y+6 w530 r3 ReadOnly vRunningClientsText", this._BuildRunningClientsText())
+        this.LaunchControls.Push(this.RunningClientsText)
+
         ; 分类"更新"
         sepUpdate := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
         sepUpdateTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", "  更新设置  ")
@@ -821,10 +833,26 @@ class GuiManager {
     static _OnGameClientsChanged(data) {
         Logger.Debug("Gui", "游戏客户端集合变化，数量=" data.clients.Length)
         this._RefreshServerPathsText()
+        this._RefreshRunningClientsText()
     }
 
     static _OnForegroundClientChanged(data) {
         Logger.Debug("Gui", "前台客户端变化：serverId=" data.serverId ", pid=" data.pid)
+        this._RefreshRunningClientsText()
+        this._UpdateTrayServer(data.serverId)
+    }
+
+    ; 托盘提示带当前前台区服（阶段 A6）。
+    ; 只有前台确实是游戏客户端时才更新；切到桌面/非游戏窗口时保留上次游戏区服，避免显示“未知区服”。
+    static _UpdateTrayServer(serverId) {
+        if (serverId = "")
+            return
+        serverName := this.AStrings["server.unknown"]
+        profile := ServerProfile.Get(serverId)
+        if (profile != "")
+            serverName := I18n.T(profile.DisplayNameKey)
+        state := HotkeyService.HotkeyState ? "热键已启用" : "热键已禁用"
+        A_IconTip := "AFA`n" serverName " - " state
     }
 
     ; 语言切换：设置界面重建（完整重建逻辑在 B2 中落地；当前先保证事件闭环与窗口标题刷新）
@@ -933,7 +961,7 @@ class GuiManager {
 
     ; 生成“已识别区服路径”多行文本
     static _BuildServerPathsText() {
-        text := "已识别区服路径："
+        text := this.AStrings["serverPaths"]
         found := false
         for serverId in ["CN", "JP", "KR", "EN"] {
             path := Config.GetImportant("GamePath" serverId)
@@ -943,7 +971,7 @@ class GuiManager {
             }
         }
         if (!found)
-            text .= "`n（尚未识别到区服路径）"
+            text .= "`n" this.AStrings["serverPathsEmpty"]
         return text
     }
 
@@ -951,6 +979,30 @@ class GuiManager {
     static _RefreshServerPathsText() {
         if (this.ServerPathsText != "")
             this.ServerPathsText.Value := this._BuildServerPathsText()
+    }
+
+    ; 生成“当前运行客户端”多行文本
+    static _BuildRunningClientsText() {
+        clients := GameClientRegistry.GetClients()
+        text := this.AStrings["runningClients"]
+        if (clients.Length = 0) {
+            text .= "`n（无）"
+            return text
+        }
+        for client in clients {
+            serverName := this.AStrings["server.unknown"]
+            profile := ServerProfile.Get(client.serverId)
+            if (profile != "")
+                serverName := I18n.T(profile.DisplayNameKey)
+            text .= "`n" serverName " (pid=" client.pid ", hwnd=" client.hwnd ")"
+        }
+        return text
+    }
+
+    ; 刷新当前运行客户端总览
+    static _RefreshRunningClientsText() {
+        if (this.RunningClientsText != "")
+            this.RunningClientsText.Value := this._BuildRunningClientsText()
     }
 
     ; 处理游戏路径检测到事件：仅在 GamePath 为空时填充，避免覆盖用户已有默认启动路径
@@ -968,6 +1020,7 @@ class GuiManager {
         this._UpdateImportantControlsFromConfig()
         this._UpdateCustomControlsFromConfig()
         this._RefreshServerPathsText()
+        this._RefreshRunningClientsText()
     }
 
     ; 处理调试控制台打开事件
