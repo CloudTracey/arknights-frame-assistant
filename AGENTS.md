@@ -72,6 +72,12 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 
 ### 关键设计
 
+- **多区服与热路径预算（v2.0.0+）**：`GameTarget` 是“目标游戏窗口”的唯一 owner，禁止在热键/监控路径再直接写 `ahk_exe Arknights.exe`（宽松回退集中在 `GameTarget`）。热键触发路径只允许 O(1) 内存查表 + 最多 2 次轻量 Win32 调用（`GetForegroundWindow` / `GetWindowThreadProcessId`）；`ProcessGetPath`、WMI、`RegRead`、`PixelSearch`、文件 IO 一律走定时器慢路径。`GameClientRegistry` 维护 PID→区服缓存并由 `GameMonitor` 400ms 轮询刷新；`GameKeys` 按前台区服取映射，拦截正则为所有已安装区服并集。
+
+- **FileDelete/Map.Delete 陷阱**：`FileDelete` 对不存在的文件会抛异常，与 `Map.Delete` 同类，删除前必须先 `FileExist`/`Has` 判断。
+
+- **不用 AHK 执行/编译脚本**：默认不编译或启动 AFA；涉及 GUI、提权、计划任务和真实游戏联动的验收仍由用户操作并反馈。脚本取不到输出时直接问用户。
+
 - **Constants 类**：常量定义。`Delay30`~`Delay240` 是各帧率对应的延迟毫秒值（取 `ceil(1000/fps)`，例外：`Delay144=8` 多 1ms 余量），`TimingService.GetCurrentDelay()` 依此计算。`FrameOptions` 定义下拉框选项数组，`FrameTextToOldIndex`/`FrameOldIndexToText` 用于 Frame155 双写转换。`KeyNames` 是一个 `Map(keyName, displayName)`，定义所有热键 key 到 GUI 中文显示名的映射——新增热键功能时**必须**在此 Map 中同步添加条目。`CustomNames` 对应自定义设置的显示名，新增自定义配置项时也需同步添加，否则设置无法保存；同时需在 `Config._DefaultCustom` 加默认值——老用户已有 INI 缺新键时由 `LoadFromIni` 的 `_BackfillMissingCustomDefaults()`（v1.9.0+）自动补齐，无需手工迁移。
 - **Logger 日志系统**（v1.5.10+）：双轨滚动存储，普通日志（`afa-*.log`）保留 15 MiB，关键日志 WARN/ERROR（`critical-*.log`）单独保留 5 MiB，总容量 20 MiB。按会话隔离（文件名含时间戳+PID+tick），支持 7 天过期清理和容量驱动的分段轮换。`RegisterSecret(value)` 注册敏感值，`_BuildLine` 自动调用 `Redact` 脱敏。启动时检测上一会话是否异常退出（无 Shutdown 标记的上一会话日志文件受保护不被清理）。`SetDebugEnabled(enabled)` 控制 DEBUG 级别是否持久化。所有日志通过 `OutputDebug` 同步输出到 DebugView。容量清理依赖缓存指标（`CachedOrdinaryFiles`/`CachedOrdinaryBytes` 等），每 64 次写入或有容量压力时触发。
 - **实时调试控制台**（v1.9.0+，logger.ahk）：`SetConsoleEnabled` 经 `AllocConsole` 创建「AFA 调试日志」窗口。输出**必须用 `WriteConsoleW` DllCall 直接写入**——`FileOpen("CONOUT$")`+`WriteLine` 因 File 对象内部缓冲、控制台不关闭不刷新而空屏。`SetConsoleTextAttribute` 按级别着色（ERROR红/WARN黄/DEBUG灰/INFO白）；打开时显示亮蓝横幅并回放 `RecentLines` 最近日志。安全措施：X 按钮置灰、`SetConsoleCtrlHandler(NULL, TRUE)` 忽略 Ctrl+C/Break、`SetConsoleMode` 清除 `ENABLE_QUICK_EDIT_MODE(0x0040)` 并置 `ENABLE_EXTENDED_FLAGS(0x0080)`（否则点击控制台进入选择态、阻塞进程控制台 I/O 卡死 AFA）。`AllocConsole` 失败（进程已有控制台，如从终端启动）→ 静默降级并**复位 `ConsoleEnabled=false`**（避免 `CloseConsole` 误 `FreeConsole` 脱离调用方终端）。`ConsoleTipShown` 内存标志控"当次会话仅首次"提示。`DebugEnabled`（Important）经 `SettingsService.Initialize()` 接线同时控制持久化与控制台；`version_checker.IsDebugLogging()` 直接读 `Logger.DebugEnabled`（单源，勿重读 INI 造成双源）。
