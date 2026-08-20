@@ -16,7 +16,7 @@ class ChangelogChecker {
         dismissedVersion := Config.GetImportant("DismissedChangelogVersion")
 
         if (dismissedVersion = currentVersion) {
-            Logger.Debug("Changelog", "已忽略当前版本 " currentVersion " 的公告，跳过")
+            Logger.Info("Changelog", "已忽略当前版本 " currentVersion " 的公告，跳过")
             return
         }
 

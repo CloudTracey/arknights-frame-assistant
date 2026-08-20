@@ -64,7 +64,7 @@ class KeyBinder {
         if(Newkey != "") {
             pureNewkey := RegExReplace(Newkey, "^[~*$!^+#&<>()]+")
             if(pureNewkey == "Backspace" || pureNewkey == "Delete") {
-                Logger.Debug("KeyBind", "清除按键：" KeyBinder.ControlObj.Name)
+                Logger.Info("KeyBind", "清除按键：" KeyBinder.ControlObj.Name)
                 KeyBinder.ControlObj.Value := ""
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, "")
@@ -76,7 +76,7 @@ class KeyBinder {
                 KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
             }
             else {
-                Logger.Debug("KeyBind", "改键：" KeyBinder.ControlObj.Name " → " realNewkey)
+                Logger.Info("KeyBind", "改键：" KeyBinder.ControlObj.Name " → " realNewkey)
                 KeyBinder.ControlObj.Value := virtualNewkey ; 让GUI显示人能读的东西
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, realNewkey)
@@ -223,4 +223,3 @@ WatchActiveWindow(){
         }
     }
 }
-

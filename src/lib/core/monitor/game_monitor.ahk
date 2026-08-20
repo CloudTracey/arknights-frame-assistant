@@ -136,14 +136,14 @@ class GameMonitor {
             try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
             return
         }
-        Logger.Debug("GameMonitor", "自动暂停：等待倍速按钮")
+        Logger.Info("GameMonitor", "自动暂停：等待倍速按钮")
         while(true) {
             if PixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBCUY, PosC.PBCLX, PosC.PBCDY, 0xffffff, 10)
             {
                 GameKeys.SendDown("pauseBattle")
                 USleep(50)
                 GameKeys.SendUp("pauseBattle")
-                Logger.Debug("GameMonitor", "自动暂停：已暂停")
+                Logger.Info("GameMonitor", "自动暂停：已暂停")
                 ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
                 isProxy := false
                 TobC := TakeOverButtonPositions()
@@ -167,9 +167,9 @@ class GameMonitor {
                     GameKeys.SendDown("pauseBattle")
                     USleep(50)
                     GameKeys.SendUp("pauseBattle")
-                    Logger.Debug("GameMonitor", "代理指挥，取消暂停")
+                    Logger.Info("GameMonitor", "代理指挥，取消暂停")
                 } else {
-                    Logger.Debug("GameMonitor", "非代理指挥，保持暂停")
+                    Logger.Info("GameMonitor", "非代理指挥，保持暂停")
                 }
 
                 this._BlackScreenDetected := false

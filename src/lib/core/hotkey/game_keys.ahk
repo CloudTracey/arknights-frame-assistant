@@ -292,7 +292,7 @@ class GameKeys {
                 {
                     if (InStr(A_LoopRegName, "KEYBOARD_SETTING_V") = 1) {
                         targetValueName := A_LoopRegName
-                        Logger.Debug("GameKeys", "找到键值：" targetValueName)
+                        Logger.Info("GameKeys", "找到键值：" targetValueName)
                         break
                     }
                 }
@@ -303,7 +303,7 @@ class GameKeys {
 
             ; 如果枚举没找到，尝试已知键名
             if (targetValueName = "") {
-                Logger.Debug("GameKeys", "枚举未找到，尝试已知键名")
+                Logger.Info("GameKeys", "枚举未找到，尝试已知键名")
                 knownKeys := ["KEYBOARD_SETTING_V2_h476498874"]
                 for keyName in knownKeys {
                     try {
@@ -323,7 +323,7 @@ class GameKeys {
                 return Map()
             }
 
-            Logger.Debug("GameKeys", "选用键值：" targetValueName)
+            Logger.Info("GameKeys", "选用键值：" targetValueName)
 
             ; RegRead 对于 REG_BINARY 返回 hex 字符串
             try {
@@ -338,7 +338,7 @@ class GameKeys {
                 return Map()
             }
 
-            Logger.Debug("GameKeys", "读取成功，hex 长度：" StrLen(hexStr))
+            Logger.Info("GameKeys", "读取成功，hex 长度：" StrLen(hexStr))
             this._LastHex := hexStr
 
             ; hex 字符串 → UTF-8 文本
@@ -356,10 +356,10 @@ class GameKeys {
                 return Map()
             }
 
-            Logger.Debug("GameKeys", "原始 JSON：" jsonStr)
+            Logger.Info("GameKeys", "原始 JSON：" jsonStr)
 
             result := this._ParseJson(jsonStr)
-            Logger.Debug("GameKeys", "解析完成，共 " result.Count " 个映射")
+            Logger.Info("GameKeys", "解析完成，共 " result.Count " 个映射")
             return result
         } catch Error as e {
             Logger.Error("GameKeys", "整体异常：" e.Message "，行号：" e.Line)
