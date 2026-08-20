@@ -13,7 +13,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - **AHK 文档**: `docs/ahk_docs/` 目录包含最新的 AHK v2 官方文档。开发时优先读取 `ahk_docs/lib/` 下的对应 `.htm` 文件（如 `ahk_docs/lib/Control.htm`），而非依赖模型内置的 AHK 知识，因为内置知识可能过时或不完整。
 - **Win32文档**: `docs/win_docs/` 目录包含项目所需的Windows API 文档，开发时优先读取 `win_docs/` 下的对应 `.md` 文件
 - **入口文件**: `src/main.ahk`
-- 没有编译步骤 — AHK 脚本可直接运行。发布时用 AutoHotkey 编译器打包为 exe。
+- 如果开发过程中使用AHK脚本进行测试，需要增加 `OnError` 全局回调 + 主流程 `try/catch`，出错才能把错误信息写文件，不然会弹窗报错，获取不到结果
 - 默认不编译或启动 AFA；只有用户明确要求构建时才使用已验证的本地 AutoHotkey/Ahk2Exe 工具。涉及 GUI、提权、计划任务和真实游戏联动的验收仍由用户操作并反馈
 - 没有自动化测试框架，所有测试为手工验证。每次完成工作后，调用 `test-checklist` skill 生成测试清单，逐项引导用户完成手工验证。测试清单放在 `test/` 目录，格式参考 `test/template/test_template.md`。
 - 静态分层检查已落地：`tools/layer_check.py` 与基线 `KNOWN_VIOLATIONS`。涉及跨模块引用或 include 顺序的改动必须先跑 `python3 tools/layer_check.py --baseline KNOWN_VIOLATIONS`；`test/scripts/smoke_test.ahk` 用于 include 全模块后验证无顶层副作用；事件契约检查器 `tools/event_contract_check.py` 已接入 CI，涉及 `EventBus.Publish/Subscribe` 的改动需运行 `python3 tools/event_contract_check.py`。
