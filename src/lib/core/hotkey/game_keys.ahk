@@ -126,13 +126,19 @@ class GameKeys {
 
     ; ── 区服解析 ──
 
-    ; 解析当前应使用的区服：优先前台客户端，其次 PreferredServer，最后 CN
+    ; 解析当前应使用的区服：优先前台客户端，其次 PreferredServer，
+    ; 再其次上次成功识别的 LastActiveServer，最后 CN。
     static _ResolveServerId() {
         serverId := GameClientRegistry.GetForegroundServerId()
         if (serverId != "" && this._ServerBindings.Has(serverId))
             return serverId
 
         preferred := Config.GetImportant("PreferredServer")
+        if (preferred = "") {
+            last := Config.GetImportant("LastActiveServer")
+            if (last != "" && this._ServerBindings.Has(last))
+                preferred := last
+        }
         if (preferred != "" && this._ServerBindings.Has(preferred))
             return preferred
 
