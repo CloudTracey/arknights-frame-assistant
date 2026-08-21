@@ -599,7 +599,6 @@ class GuiManager {
         editGithubToken.OnEvent("Change", (*) => this.TrackChange("GitHubToken"))
         this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value)
         this.HintGithubToken := this.MainGui.Add("Text", "xs y+6 c9c9c9c", I18n.T("update.githubTokenHint"))
-        this._UpdateGitHubTokenHint()
         this.UpdateControls.Push(checkboxUseGitHubToken)
         this.UpdateControls.Push(editGithubToken)
         this.UpdateControls.Push(this.HintGithubToken)
@@ -824,26 +823,9 @@ class GuiManager {
                 }
             }
         }
-        this._UpdateGitHubTokenHint()
         if tabSettingsChanged {
             this.LoadTabSettingsFromConfig()
             this.ApplyTabSettings()
-        }
-    }
-
-    ; 内部：显示 Token 存储迁移或解密状态，不显示敏感数据。
-    static _UpdateGitHubTokenHint() {
-        try {
-            switch Config.TokenStorageStatus {
-                case "migration_failed":
-                    this.HintGithubToken.Text := I18n.T("token.migrationFailed")
-                case "cleanup_failed":
-                    this.HintGithubToken.Text := I18n.T("token.cleanupFailed")
-                case "decrypt_failed":
-                    this.HintGithubToken.Text := I18n.T("token.decryptFailed")
-                default:
-                    this.HintGithubToken.Text := I18n.T("update.githubTokenHint")
-            }
         }
     }
 
