@@ -1,6 +1,6 @@
 <div align="center">
 
-[简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
+[简体中文](README.md) | [繁體中文](README.zh-Hant.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [English](README.en.md)
 
 <img alt="LOGO" src="./logo.png" width="256" height="256" />
 
@@ -16,6 +16,9 @@ Welcome to **Arknights Frame Assistant** (AFA), a small Windows utility for impr
 </div>
 
 <br>
+
+
+> ⚠️ **Note:** This document and the in-app descriptions are mostly AI-translated and may be inaccurate. Issues and pull requests are welcome to help correct them.
 
 ## Contents
 
@@ -140,14 +143,14 @@ Supported default bindings:
 |------|------|
 | **Automatic Updates** | Automatically check for and download updates |
 | **Update Source** | Choose China Source or GitHub; China Source is the default and failed checks fall back to the other source |
-| **Language** | Switch the interface between Simplified Chinese, English, and Japanese |
+| **Language** | Switch the interface between Simplified Chinese, Traditional Chinese, Japanese, Korean, and English |
 | **Start Arknights with AFA** | Start the game with AFA; a game path is required |
 | **Start AFA with Arknights** | Start AFA automatically with the game; a game path is required. AFA reads and calibrates Windows process-creation auditing and the current-user scheduled task as needed |
 | **Exit with Game Process** | Exit AFA automatically when the game closes |
 | **Open Settings at Startup** | Show the settings window at startup |
 | **Exit when Window Closes** | Exit AFA when the settings window is closed with X or Alt+F4; otherwise hide it in the tray |
 | **Start with Stronghold Protocol** | Use Stronghold Protocol as the default startup scheme |
-| **Top Tab Management** | In Custom, use eye icons to toggle tab visibility and drag to reorder tabs; Other Settings always remains visible. The order and visibility take effect together when saved or applied, and the top bar divides evenly among visible tabs |
+| **Top Tab Management** | In Display, use eye icons to toggle tab visibility and drag to reorder tabs; Other Settings always remains visible. The order and visibility take effect together when saved or applied, and the top bar divides evenly among visible tabs |
 | **Click Delay** | Set the delay in milliseconds between selecting a unit and triggering an action |
 | **Enable/Disable Hotkey** | Set the shortcut for enabling or disabling all hotkeys |
 | **GitHub Token** | Increase API quota when GitHub reports a rate limit |
@@ -217,7 +220,7 @@ A: Open Logs, select **Create Log Archive**, and attach the ZIP to the issue. Lo
 
 ## Contributing
 
-Issues and pull requests are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) first. User-visible changes must update all three README files and all three language resources.
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) first. User-visible changes must update all five README files and all five language resources.
 
 <br>
 

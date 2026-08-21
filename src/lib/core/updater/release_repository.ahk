@@ -41,7 +41,7 @@ class ReleaseRepository {
         ; 检查本地版本是否有效
         if (localVersion = "") {
             VersionChecker._Log("错误: 本地版本为空!")
-            return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "无法获取本地版本号"}
+            return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.localVersionMissing")}
         }
 
         ; 是否使用GitHub Token进行更新检查
@@ -65,7 +65,7 @@ class ReleaseRepository {
             req := VersionChecker._CreateHttpRequest(apiUrl, gitHubToken)
             if (req.error != "") {
                 VersionChecker._Log("创建HTTP请求失败: " req.error)
-                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "网络错误: " req.error}
+                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("token.networkError", req.error)}
             }
 
             VersionChecker._Log("发送请求...")
@@ -78,7 +78,7 @@ class ReleaseRepository {
                 if (A_TickCount - checkStart > this.TimeoutMs) {
                     try req.http.Abort()
                     VersionChecker._Log("版本检查超时")
-                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "请求超时，请检查网络连接"}
+                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("token.timeout")}
                 }
             }
             VersionChecker._Log("请求已发送，等待响应...")
@@ -89,15 +89,15 @@ class ReleaseRepository {
             ; 检查HTTP状态
             if (resp.statusCode = 401) {
                 VersionChecker._Log("Token无效（401未授权）")
-                return {status: "token_invalid", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "GitHub Token无效，请检查设置"}
+                return {status: "token_invalid", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.tokenInvalid")}
             }
             if (resp.statusCode = 403) {
                 VersionChecker._Log("检测到API频率限制")
-                return {status: "rate_limited", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "API请求频率超限。请在设置中配置GitHub Token以提高配额", suggestToken: true}
+                return {status: "rate_limited", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.rateLimited"), suggestToken: true}
             }
             if (resp.statusCode != 200) {
                 VersionChecker._Log("服务器返回非200状态码: " resp.statusCode)
-                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "服务器返回错误: " resp.statusCode " " resp.statusText}
+                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.serverError", resp.statusCode, resp.statusText)}
             }
 
             ; 根据渠道解析响应
@@ -122,7 +122,7 @@ class ReleaseRepository {
 
                 if (remoteVersion = "" || downloadUrl = "") {
                     VersionChecker._Log("无法解析版本信息")
-                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "无法解析版本信息"}
+                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.parseFailed")}
                 }
 
                 ; 保存到缓存
@@ -154,7 +154,7 @@ class ReleaseRepository {
 
                 if (releases.Length = 0) {
                     VersionChecker._Log("无法解析版本信息")
-                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "无法解析版本信息"}
+                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.parseFailed")}
                 }
 
                 ; 找出SemVer最高的版本（包含正式版和预发布版）
@@ -174,7 +174,7 @@ class ReleaseRepository {
 
                 if (remoteVersion = "" || downloadUrl = "") {
                     VersionChecker._Log("无法解析版本信息")
-                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "无法解析版本信息"}
+                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.parseFailed")}
                 }
 
                 ; 保存到缓存
@@ -203,8 +203,8 @@ class ReleaseRepository {
             VersionChecker._Log("ErrorMessage: " err.Message)
 
             userMessage := errorInfo.desc
-            if (InStr(errorInfo.desc, "超时"))
-                userMessage := "网络请求超时，请检查网络连接后重试。`n`n如果问题持续存在，请尝试配置GitHub Token。"
+            if (errorInfo.code = "0x80072EE2")
+                userMessage := I18n.T("repo.timeoutUser")
 
             return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: userMessage, errorDetail: "[" errorInfo.code "] " err.Message}
         }
@@ -222,7 +222,7 @@ class ReleaseRepository {
         VersionChecker._Log("本地版本: " localVersion)
 
         if (localVersion = "") {
-            return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "无法获取本地版本号"}
+            return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.localVersionMissing")}
         }
 
         ; 正式版：只查 stable
@@ -279,7 +279,7 @@ class ReleaseRepository {
             req := VersionChecker._CreateHttpRequest(jsonUrl, "", "application/json")
             if (req.error != "") {
                 VersionChecker._Log("国内源HTTP请求创建失败: " req.error)
-                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "网络错误: " req.error}
+                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("token.networkError", req.error)}
             }
 
             req.http.Send()
@@ -291,7 +291,7 @@ class ReleaseRepository {
                 if (A_TickCount - checkStart > this.TimeoutMs) {
                     try req.http.Abort()
                     VersionChecker._Log("国内源版本检查超时")
-                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "请求超时，请检查网络连接"}
+                    return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("token.timeout")}
                 }
             }
 
@@ -300,7 +300,7 @@ class ReleaseRepository {
 
             if (resp.statusCode != 200) {
                 VersionChecker._Log("国内源返回非200状态码: " resp.statusCode)
-                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "国内源返回错误: " resp.statusCode}
+                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.domesticError", resp.statusCode)}
             }
 
             ; 解析 version.json
@@ -313,7 +313,7 @@ class ReleaseRepository {
 
             if (remoteVersion = "" || downloadUrl = "") {
                 VersionChecker._Log("无法解析国内源 version.json")
-                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "无法解析版本信息"}
+                return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.parseFailed")}
             }
 
             ; 解析 releases 数组用于 changelog 缓存
@@ -342,7 +342,7 @@ class ReleaseRepository {
         } catch as err {
             errorInfo := VersionChecker._ParseErrorInfo(err)
             VersionChecker._Log("国内源检查异常: " errorInfo.desc)
-            return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: "国内源检查失败: " errorInfo.desc}
+            return {status: "check_failed", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: I18n.T("repo.domesticCheckFailed", errorInfo.desc)}
         }
     }
 
@@ -497,8 +497,9 @@ class ReleaseRepository {
 
         body := ""
         for i, release in newerReleases {
+            localizedBody := ChangelogFormat.LocalizeBody(release.body)
             dateHeaderPattern := "m)^## (\d{4}-\d{2}-\d{2})"
-            cleanBody := RegExReplace(release.body, dateHeaderPattern, "## " release.tag_name " ($1)")
+            cleanBody := RegExReplace(localizedBody, dateHeaderPattern, "## " release.tag_name " ($1)")
             if (i > 1)
                 body .= "`r`n`r`n---`r`n`r`n"
             body .= cleanBody

@@ -14,7 +14,6 @@ class Config {
     ; 内部：默认重要设置
     static _DefaultImportant := Map(
         "AutoExit", "1",
-        "Language", "zh-CN",
         "AutoOpenSettings", "1",
         "ExitOnWindowClose", "0",
         "Frame", "90",
@@ -26,6 +25,12 @@ class Config {
         "UseGitHubToken", "0",
         "GitHubToken", "",
         "GamePath", "",
+        "GamePathCN", "",
+        "GamePathJP", "",
+        "GamePathKR", "",
+        "GamePathEN", "",
+        "PreferredServer", "",
+        "LastActiveServer", "",
         "AutoRunGame", "0",
         "AutoStartWithGame", "0",
         "LastLaunchedVersion", "",
@@ -36,7 +41,8 @@ class Config {
         "AutoBeginPause", "0",
         "BackCeaseOperations", "1",
         "InLevelGuard", "1",
-        "DebugEnabled", "0"
+        "DebugEnabled", "0",
+        "Language", "auto"
     )
 
     ; 内部：默认自定义设置
@@ -260,7 +266,7 @@ class Config {
     static PrepareGitHubTokenForStorage(plainToken) {
         ; 解密失败时禁止在外部设置变更前用空值覆盖仍可能可恢复的原加密配置。
         if (this.TokenStorageStatus = "decrypt_failed" && plainToken = "")
-            return {success: false, message: "GitHub Token 无法解密。为避免覆盖原加密配置，请重新输入 Token 后再保存。"}
+            return {success: false, message: I18n.T("config.tokenDecryptPreventOverwrite")}
         return TokenProtector.Protect(plainToken)
     }
 
@@ -276,11 +282,11 @@ class Config {
     static GetTokenStorageWarning() {
         switch this.TokenStorageStatus {
             case "migration_failed":
-                return "旧版 GitHub Token 未能完成加密迁移，原配置已保留。请恢复 Settings.ini 的写入权限后重启 AFA。"
+                return I18n.T("token.warningMigrationFailed")
             case "cleanup_failed":
-                return "GitHub Token 已完成加密，但旧明文未能删除。请恢复 Settings.ini 的写入权限后重新保存设置。"
+                return I18n.T("token.warningCleanupFailed")
             case "decrypt_failed":
-                return "GitHub Token 无法解密，可能来自其他 Windows 用户或电脑。请重新输入 Token 并保存。"
+                return I18n.T("token.warningDecryptFailed")
             default:
                 return ""
         }
@@ -370,6 +376,45 @@ class Config {
         }
     }
 
+    ; 将旧版单一 GamePath 静默迁移到按区服路径（GamePathCN/JP/KR/EN）。
+    ; GamePath 保留为默认启动路径镜像，不删除。
+    static MigrateGamePaths() {
+        if this.IniFile = ""
+            this.InitPath()
+        if !FileExist(this.IniFile)
+            return
+
+        legacy := IniRead(this.IniFile, "Main", "GamePath", "")
+        if (legacy = "")
+            return
+
+        info := ServerProfile.FromExePath(legacy)
+        if (info.serverId = "" || info.serverId = "Unknown")
+            return
+
+        key := "GamePath" info.serverId
+        if (IniRead(this.IniFile, "Main", key, "") = "") {
+            try {
+                IniWrite(legacy, this.IniFile, "Main", key)
+                if (this._ImportantSettings.Has(key))
+                    this._ImportantSettings[key] := legacy
+                Logger.Info("Config", "旧 GamePath 已迁移到 " key)
+            } catch Error as e {
+                Logger.Warn("Config", "迁移 GamePath 失败：" e.Message)
+            }
+        }
+
+        if (IniRead(this.IniFile, "Main", "PreferredServer", "") = "") {
+            try {
+                IniWrite(info.serverId, this.IniFile, "Main", "PreferredServer")
+                if (this._ImportantSettings.Has("PreferredServer"))
+                    this._ImportantSettings["PreferredServer"] := info.serverId
+            } catch Error as e {
+                Logger.Warn("Config", "写入 PreferredServer 失败：" e.Message)
+            }
+        }
+    }
+
     ; 保存到配置文件
     static SaveToIni(settingsMap, tokenStorage := "") {
         if this.IniFile = ""
@@ -382,7 +427,7 @@ class Config {
             requestedToken := settingsMap.HasProp("GitHubToken") ? settingsMap.GitHubToken : ""
             ; 解密失败时禁止用空值覆盖仍可能可恢复的原加密配置。
             if (this.TokenStorageStatus = "decrypt_failed" && requestedToken = "")
-                return {success: false, message: "GitHub Token 无法解密。为避免覆盖原加密配置，请重新输入 Token 后再保存。"}
+                return {success: false, message: I18n.T("config.tokenDecryptPreventOverwrite")}
 
             if !IsObject(tokenStorage)
                 tokenStorage := this.PrepareGitHubTokenForStorage(requestedToken)
@@ -455,7 +500,7 @@ class Config {
             return {success: true, message: ""}
         } catch Error as e {
             Logger.Error("Config", "配置文件写入失败：" e.Message)
-            return {success: false, message: "配置文件写入失败：" e.Message}
+            return {success: false, message: I18n.T("config.writeFailed", e.Message)}
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
@@ -475,7 +520,7 @@ class Config {
         try {
             ; 非 GUI 保存同样不能在解密失败时用空值覆盖原加密配置。
             if (this.TokenStorageStatus = "decrypt_failed" && this._ImportantSettings.Has("GitHubToken") && this._ImportantSettings["GitHubToken"] = "")
-                return {success: false, message: "GitHub Token 无法解密，已保留原加密配置。请重新输入 Token 后保存。"}
+                return {success: false, message: I18n.T("config.tokenDecryptKeptOriginal")}
 
             tokenStorage := this.PrepareGitHubTokenForStorage(this._ImportantSettings.Has("GitHubToken") ? this._ImportantSettings["GitHubToken"] : "")
             if !tokenStorage.success
@@ -520,7 +565,7 @@ class Config {
             return {success: true, message: ""}
         } catch Error as e {
             Logger.Error("Config", "配置文件保存失败：" e.Message)
-            return {success: false, message: "配置文件写入失败：" e.Message}
+            return {success: false, message: I18n.T("config.writeFailed", e.Message)}
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
@@ -575,7 +620,7 @@ class Config {
             return {success: true, message: ""}
         } catch Error as e {
             Logger.Error("Config", "单键配置写入失败：" e.Message)
-            return {success: false, message: "配置文件写入失败：" e.Message}
+            return {success: false, message: I18n.T("config.writeFailed", e.Message)}
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
@@ -629,7 +674,7 @@ class Config {
             return {success: true, message: ""}
         } catch Error as e {
             Logger.Error("Config", "热键设置写入失败：" e.Message)
-            return {success: false, message: "配置文件写入失败：" e.Message}
+            return {success: false, message: I18n.T("config.writeFailed", e.Message)}
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))

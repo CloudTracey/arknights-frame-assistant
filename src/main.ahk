@@ -10,8 +10,17 @@
 #Include ./lib/base/hotkey_schema.ahk
 #Include ./lib/base/constants.ahk
 #Include ./lib/base/config.ahk
-#Include ./lib/base/i18n.ahk
 #Include ./lib/base/eventbus.ahk
+#Include ./lib/base/i18n.ahk
+#Include ./lib/base/changelog_format.ahk
+#Include ./lib/base/metrics.ahk
+#Include ./lib/base/locales/zh_hans.ahk
+#Include ./lib/base/locales/ja_jp.ahk
+#Include ./lib/base/locales/ko_kr.ahk
+#Include ./lib/base/locales/en_us.ahk
+#Include ./lib/base/locales/zh_hant.ahk
+#Include ./lib/base/server_profile.ahk
+#Include ./lib/base/game_target.ahk
 #Include ./lib/base/file_extractor.ahk
 #Include ./lib/base/timing.ahk
 #Include ./lib/base/window.ahk
@@ -19,6 +28,7 @@
 #Include ./lib/base/tray.ahk
 #Include ./lib/base/version_utils.ahk
 #Include ./lib/base/touch_injection.ahk
+#Include ./lib/core/game/game_client_registry.ahk
 #Include ./lib/core/diagnostics/log_exporter.ahk
 #Include ./lib/core/launch/app_context.ahk
 #Include ./lib/core/launch/game_auto_start.ahk
@@ -96,14 +106,10 @@ class App {
         Logger.Init()
         Logger.Info("Startup", "管理员进程启动，脚本=" A_ScriptName)
 
-        ; 上一会话异常退出（Logger.PreviousAbnormalFile 在 Logger.Init 已识别）时提示用户。
-        if (Logger.PreviousAbnormalFile != "") {
-            Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
-            MessageBox.Info("检测到上次运行崩溃。`n建议在设置中开启「调试模式」记录日志，并用「生成日志压缩包」导出诊断包反馈给开发者。", "AFA")
-        }
-
         ; ---- 初始化各模块 ----
         Config.InitPath()
+        GameClientRegistry.Init()
+        LogExporter.Init()
         HotkeyActionsStart()
         LevelDetector.Init()
         KeyBinder.Start()
@@ -119,9 +125,15 @@ class App {
         ; ---- 加载设置 ----
         SettingsService.Initialize()
         Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
-        Logger.RegisterSecret(Config.GetImportant("GamePath"))
         Logger.RegisterSecret(A_ScriptFullPath)
         Logger.Info("Startup", "配置加载完成，版本=" Version.Get())
+
+        ; 上一会话异常退出（Logger.PreviousAbnormalFile 在 Logger.Init 已识别）时提示用户。
+        ; 放在 I18n.Init 之后，保证提示使用用户选择的界面语言。
+        if (Logger.PreviousAbnormalFile != "") {
+            Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
+            MessageBox.Info(I18n.T("msg.lastCrashWarning"), "AFA")
+        }
 
         ; 写入启动来源状态，并校准随游戏自动启动的 Windows 审核和计划任务
         AppContext.SetStartedByGameAutoStart(startedByGameAutoStart)
@@ -156,11 +168,11 @@ class App {
 
         ; 启动校准失败只在 GUI 就绪后用托盘提示一次，不阻塞主流程，也不改变已保存配置。
         if (IsSet(pendingAutoStartWarning))
-            ShowTrayTip(pendingAutoStartWarning, "随游戏自动启动校准失败", 2)
+            ShowTrayTip(pendingAutoStartWarning, I18n.T("msg.autoStartCalibrationFailedTitle"), 2)
 
         tokenStorageWarning := Config.GetTokenStorageWarning()
         if (tokenStorageWarning != "")
-            MessageBox.Warning(tokenStorageWarning, "GitHub Token 存储提示")
+            MessageBox.Warning(tokenStorageWarning, I18n.T("msg.githubTokenStorageTitle"))
 
         ; 触发应用启动事件（触发自动更新检查和游戏自动启动）
         EventBus.Publish("AppStartCompleted")

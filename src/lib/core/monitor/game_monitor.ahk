@@ -15,6 +15,11 @@ class GameMonitor {
         if (this._CheckTimer = "")
             this._CheckTimer := GameMonitor.CheckGameStatus.Bind(GameMonitor)
         SetTimer this._CheckTimer, 400
+        EventBus.Subscribe("ForegroundClientChanged", (data) => this._HandleForegroundClientChanged(data))
+    }
+
+    static _HandleForegroundClientChanged(data) {
+        Logger.Debug("GameMonitor", "前台客户端变化：serverId=" data.serverId ", pid=" data.pid)
     }
 
     ; 调整主轮询定时器间隔（供内部与 hotkey_actions 复用）
@@ -43,6 +48,9 @@ class GameMonitor {
 
     ; 检查游戏状态
     static CheckGameStatus() {
+        ; 慢路径：刷新客户端实例与前台缓存（热键路径不调用本方法）
+        GameClientRegistry.Refresh()
+
         ; AutoExit 运行时读 INI 实际保存值（GUI 未应用修改不影响）；检测到 AutoExit 刚被应用开启时重置游戏运行记录，
         ; 避免应用设置后立即因"游戏曾运行过"的历史记录触发自动退出
         static PrevAutoExit := ""
@@ -53,21 +61,24 @@ class GameMonitor {
         }
         PrevAutoExit := autoExit
 
-        ; 自动退出
+        ; 自动退出：所有受管客户端都退出才退出 AFA
         if (autoExit == "1") {
-            if ProcessExist("Arknights.exe") {
+            hasClients := GameClientRegistry.HasClients()
+            ; 枚举失败时兜底旧判断，避免误退出
+            if (!hasClients && GameTarget.ProcessExists())
+                hasClients := true
+            if (hasClients) {
                 this._GameHasStarted := true
-            }
-            else {
+            } else {
                 if (this._GameHasStarted == true) {
-                    Logger.Info("GameMonitor", "检测到游戏进程已退出，自动退出 AFA")
+                    Logger.Info("GameMonitor", "检测到所有游戏客户端已退出，自动退出 AFA")
                     ExitApp
                 }
             }
         }
 
         ; 自动开局暂停（运行时读 INI，同 AutoExit 理由）
-        if (Config.ReadImportantFromIni("AutoBeginPause") == "1" && WinActive("ahk_exe Arknights.exe")) {
+        if (Config.ReadImportantFromIni("AutoBeginPause") == "1" && GameTarget.IsActive()) {
             ; 寻找黑屏：遍历 17 个全屏采样点，允许 1 个点被游戏鼠标遮挡
             if (this._BlackScreenDetected == false) {
                 points := GameMonitor.BlackScreenPoints()
@@ -136,14 +147,14 @@ class GameMonitor {
             try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
             return
         }
-        Logger.Debug("GameMonitor", "自动暂停：等待倍速按钮")
+        Logger.Info("GameMonitor", "自动暂停：等待倍速按钮")
         while(true) {
             if PixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBCUY, PosC.PBCLX, PosC.PBCDY, 0xffffff, 10)
             {
                 GameKeys.SendDown("pauseBattle")
                 USleep(50)
                 GameKeys.SendUp("pauseBattle")
-                Logger.Debug("GameMonitor", "自动暂停：已暂停")
+                Logger.Info("GameMonitor", "自动暂停：已暂停")
                 ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
                 isProxy := false
                 TobC := TakeOverButtonPositions()
@@ -167,9 +178,9 @@ class GameMonitor {
                     GameKeys.SendDown("pauseBattle")
                     USleep(50)
                     GameKeys.SendUp("pauseBattle")
-                    Logger.Debug("GameMonitor", "代理指挥，取消暂停")
+                    Logger.Info("GameMonitor", "代理指挥，取消暂停")
                 } else {
-                    Logger.Debug("GameMonitor", "非代理指挥，保持暂停")
+                    Logger.Info("GameMonitor", "非代理指挥，保持暂停")
                 }
 
                 this._BlackScreenDetected := false

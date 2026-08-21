@@ -28,6 +28,6 @@ class FileExtractor {
             FileInstall "resources\images\TakeOverButton_2.png", FileExtractor.TakeOver2Path, 1
         if (!FileExist(FileExtractor.TakeOver3Path))
             FileInstall "resources\images\TakeOverButton_3.png", FileExtractor.TakeOver3Path, 1
-        Logger.Debug("FileExtractor", "嵌入资源提取完成：" FileExtractor.ResourcesDir)
+        Logger.Info("FileExtractor", "嵌入资源提取完成：" FileExtractor.ResourcesDir)
     }
 }

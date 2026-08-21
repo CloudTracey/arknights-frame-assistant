@@ -18,7 +18,8 @@ class SettingsService {
         Config.MigrateFrameRate()
         Config.MigrateGitHubToken()
         Config.LoadFromIni()
-        I18n.Init()
+        Config.MigrateGamePaths()
+        I18n.Init(Config.ReadImportantFromIni("Language"))
         this._RefreshRuntime()
     }
 
@@ -29,6 +30,10 @@ class SettingsService {
         Logger.SetConsoleEnabled(debugOn)
         TimingService.Refresh()
         HotkeyService.SetHoverOperate(Config.ReadCustomFromIni("HoverOperate") == "1")
+        lang := Config.ReadImportantFromIni("Language")
+        if (lang = "auto")
+            lang := I18n.DetectAutoLocale()
+        I18n.SetLocale(lang)
         if IsSet(LevelDetector)
             LevelDetector.SyncGuardSetting()
     }
@@ -73,12 +78,12 @@ class SettingsService {
         if (data.value = "1") {
             HideTrayTip()
             SetTimer HideTrayTip, 0
-            ShowTrayTip("已开启开局自动暂停", "AFA", "Mute")
+            ShowTrayTip(I18n.T("tray.autoBeginPauseOn"), "AFA", "Mute")
             SetTimer HideTrayTip, -3000
         } else {
             HideTrayTip()
             SetTimer HideTrayTip, 0
-            ShowTrayTip("已关闭开局自动暂停", "AFA", "Mute")
+            ShowTrayTip(I18n.T("tray.autoBeginPauseOff"), "AFA", "Mute")
             SetTimer HideTrayTip, -3000
         }
     }
@@ -88,7 +93,7 @@ class SettingsService {
         result := this.UpdatePersistedValue("DismissedChangelogVersion", data.version)
         if (!result.success) {
             Logger.Warn("Changelog", "忽略版本保存失败：" result.message)
-            MessageBox.Warning("更新公告已关闭，但忽略状态未能保存。下次启动可能会再次显示，请检查 Settings.ini 的写入权限。", "配置未保存")
+            MessageBox.Warning(I18n.T("msg.changelogDismissFailed"), I18n.T("msg.configNotSavedTitle"))
         }
     }
 
@@ -113,7 +118,7 @@ class SettingsService {
 
     ; 重置按键为默认值
     static Reset() {
-        result := MessageBox.Confirm(I18n.T("  确定重置*所有*按键为默认设置吗 ？"), I18n.T("重置按键设置"))
+        result := MessageBox.Confirm(I18n.T("msg.resetKeysConfirm"), I18n.T("msg.resetKeysTitle"))
         if (result != "Yes")
             return
         EventBus.Publish("HotkeyOff")        ; Legacy
@@ -123,7 +128,7 @@ class SettingsService {
         saveResult := Config.SaveHotkeysToIni()
         if (!saveResult.success) {
             Logger.Warn("Settings", "重置按键并保存中止：" saveResult.message)
-            MessageBox.Error(saveResult.message, "设置保存失败")
+            MessageBox.Error(saveResult.message, I18n.T("msg.saveFailedTitle"))
             return
         }
         this._RefreshRuntime()
@@ -143,11 +148,11 @@ class SettingsService {
         if (isApply) {
             EventBus.Publish("SettingsApplied")
             Logger.Info("Settings", "设置已应用")
-            MessageBox.Info(I18n.T("设置已应用！"), I18n.T("应用成功"))
+            MessageBox.Info(I18n.T("msg.settingsApplied"), I18n.T("msg.settingsAppliedTitle"))
         } else {
             EventBus.Publish("SettingsSaved")
             Logger.Info("Settings", "设置已保存并关闭")
-            MessageBox.Info(I18n.T("设置已保存！后续可双击右下角托盘区图标或通过右键菜单打开设置"), I18n.T("保存成功"))
+            MessageBox.Info(I18n.T("msg.settingsSaved"), I18n.T("msg.settingsSavedTitle"))
         }
     }
 
@@ -160,7 +165,6 @@ class SettingsService {
 
         ; 登记本次会话中的敏感值，覆盖后续验证、外部设置和保存流程的日志。
         Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
-        Logger.RegisterSecret(Config.GetImportant("GamePath"))
 
         ; 检查按键冲突
         if (!this._CheckKeyConflicts()) {
@@ -175,13 +179,13 @@ class SettingsService {
             tokenResult := GitHubTokenService.Validate(currentToken)
             if (!tokenResult.valid) {
                 Logger.Warn("Settings", "GitHub Token 验证失败：" tokenResult.message)
-                result := MessageBox.Confirm("GitHub Token验证失败：" tokenResult.message "`n`n是否仍要保存此Token？", "Token验证失败")
+                result := MessageBox.Confirm(I18n.T("msg.tokenValidateFailed", tokenResult.message), I18n.T("msg.tokenValidateFailedTitle"))
                 if (result = "No")
                     return false
             } else {
                 GitHubTokenService.TokenValidated := true
                 Logger.Info("Settings", "GitHub Token 验证成功")
-                MessageBox.Info("GitHub Token验证成功！`n用户: " tokenResult.username "`nAPI配额: " tokenResult.rateLimit, "Token有效")
+                MessageBox.Info(I18n.T("msg.tokenValidateSuccess", tokenResult.username, tokenResult.rateLimit), I18n.T("msg.tokenValidateSuccessTitle"))
             }
         }
 
@@ -189,28 +193,38 @@ class SettingsService {
         tokenStorage := Config.PrepareGitHubTokenForStorage(currentToken)
         if (!tokenStorage.success) {
             Logger.Warn("Settings", "保存中止：GitHub Token 无法安全保存（" tokenStorage.message "）")
-            MessageBox.Error("GitHub Token 无法安全保存：`n" tokenStorage.message, "设置保存失败")
+            MessageBox.Error(I18n.T("msg.tokenStorageFailed", tokenStorage.message), I18n.T("msg.tokenStorageFailedTitle"))
             return false
         }
 
-        ; 验证游戏路径
-        gamePath := Config.GetImportant("GamePath")
-        if (gamePath != "") {
+        ; 验证游戏路径（旧 GamePath + 按区服路径）
+        pathsToValidate := [Config.GetImportant("GamePath")]
+        for serverId in ["CN", "JP", "KR", "EN"] {
+            key := "GamePath" serverId
+            value := Config.GetImportant(key)
+            if (value != "")
+                pathsToValidate.Push(value)
+        }
+        for gamePath in pathsToValidate {
+            if (gamePath = "")
+                continue
             if !FileExist(gamePath) {
-                result := MessageBox.Confirm("游戏路径不存在：`n" gamePath "`n`n是否仍要保存？", "路径不存在")
+                result := MessageBox.Confirm(I18n.T("msg.gamePathMissingConfirm", gamePath), I18n.T("msg.gamePathMissingTitle"))
                 if (result = "No") {
                     Logger.Warn("Settings", "保存中止：游戏路径不存在")
                     return false
                 }
-            } else {
-                SplitPath(gamePath, &fileName)
-                if (fileName != "Arknights.exe") {
-                    result := MessageBox.Confirm("游戏路径不正确：`n" gamePath "`n`n目标文件不是 Arknights.exe，请确保选择正确的游戏可执行文件。`n`n是否仍要保存？", "路径不正确")
-                    if (result = "No") {
-                        Logger.Warn("Settings", "保存中止：游戏路径不是 Arknights.exe")
-                        return false
-                    }
+                continue
+            }
+            info := ServerProfile.FromExePath(gamePath)
+            if (info.serverId = "") {
+                result := MessageBox.Confirm(I18n.T("msg.gamePathInvalidConfirm", gamePath), I18n.T("msg.gamePathInvalidTitle"))
+                if (result = "No") {
+                    Logger.Warn("Settings", "保存中止：无法从路径推断区服")
+                    return false
                 }
+            } else {
+                Logger.Info("Settings", "游戏路径区服识别：" info.serverId " - " gamePath)
             }
         }
 
@@ -223,7 +237,7 @@ class SettingsService {
         ; 保存到 INI（全量保存 Config 工作副本；单键场景请走 UpdatePersistedValue）
         saveResult := Config.SaveAllToIni()
         if (!saveResult.success) {
-            MessageBox.Error(saveResult.message, "设置保存失败")
+            MessageBox.Error(saveResult.message, I18n.T("msg.saveFailedTitle"))
             return false
         }
         return true
@@ -235,33 +249,43 @@ class SettingsService {
             return true
 
         enabled := (Config.GetImportant("AutoStartWithGame") = 1 || Config.GetImportant("AutoStartWithGame") = "1")
-        appliedGamePath := ""
+        appliedGamePaths := []
         if (enabled) {
-            gamePath := Config.GetImportant("GamePath")
-            validation := GameAutoStartManager.ValidateGamePath(gamePath)
-            if (!validation.success) {
-                MessageBox.Error(validation.message, "无法启用随游戏自动启动")
+            gamePaths := GameAutoStartManager.GetConfiguredGamePaths()
+            if (gamePaths.Length = 0)
+                gamePaths := [Config.GetImportant("GamePath")]
+            defaultGamePath := Config.GetImportant("GamePath")
+            for gamePath in gamePaths {
+                if (gamePath = "")
+                    continue
+                validation := GameAutoStartManager.ValidateGamePath(gamePath)
+                if (!validation.success) {
+                    MessageBox.Error(validation.message, I18n.T("msg.autoStartTitle"))
+                    return false
+                }
+                ; 只有当前路径就是用户指定的默认启动路径时，才更新 GamePath；
+                ; 其余区服路径只参与自启任务，不能覆盖默认启动路径。
+                if (gamePath = defaultGamePath) {
+                    Config.SetImportant("GamePath", validation.path)
+                    EventBus.Publish("GamePathNormalized", {path: validation.path})
+                }
+                appliedGamePaths.Push(validation.path)
+            }
+            if (appliedGamePaths.Length = 0) {
+                MessageBox.Error(I18n.T("msg.autoStartNoPath"), I18n.T("msg.autoStartTitle"))
                 return false
             }
-            ; 保存规范化后的绝对路径，确保后续启动校准使用同一事件过滤条件。
-            Config.SetImportant("GamePath", validation.path)
-            Logger.RegisterSecret(validation.path)
-            EventBus.Publish("GamePathNormalized", {path: validation.path})
-            appliedGamePath := validation.path
 
             if (Config.GetImportant("AutoStartWithGame") != "1") {
-                confirmationMessage := "启用此功能需要开启 Windows 的“进程创建成功审核”。`n"
-                confirmationMessage .= "Windows 将为进程启动记录安全日志；关闭此功能后，审核设置仍会保留。`n`n"
-                confirmationMessage .= "是否继续？"
-                result := MessageBox.Confirm(confirmationMessage, "启用随游戏自动启动")
+                result := MessageBox.Confirm(I18n.T("msg.autoStartConfirmBody"), I18n.T("msg.autoStartConfirmTitle"))
                 if (result = "No")
                     return false
             }
         }
 
-        result := GameAutoStartManager.Apply(enabled, appliedGamePath)
+        result := GameAutoStartManager.Apply(enabled, appliedGamePaths)
         if (!result.success) {
-            MessageBox.Error(result.message, enabled ? "启用随游戏自动启动失败" : "关闭随游戏自动启动失败")
+            MessageBox.Error(result.message, enabled ? I18n.T("msg.autoStartEnableFailedTitle") : I18n.T("msg.autoStartDisableFailedTitle"))
             return false
         }
         return true
@@ -292,12 +316,12 @@ class SettingsService {
 
     ; 内部：显示冲突错误
     static _ShowConflictError(conflictKey, prevName, currentName) {
-        MessageBox.Error("按键冲突！`n【" conflictKey "】`n已被【" prevName "】使用，与【" currentName "】冲突`n`n请先修改重复的按键。", "保存失败")
+        MessageBox.Error(I18n.T("msg.keyConflict", conflictKey, prevName, currentName), I18n.T("msg.keyConflictTitle"))
     }
 
     ; 重置游戏状态
     static _ResetGameStateIfNeeded() {
-        if (Config.GetImportant("AutoExit") == "1" && !WinExist("ahk_exe Arknights.exe")) {
+        if (Config.GetImportant("AutoExit") == "1" && !GameTarget.Exists()) {
             GameMonitor.ResetRunRecord()
         }
     }

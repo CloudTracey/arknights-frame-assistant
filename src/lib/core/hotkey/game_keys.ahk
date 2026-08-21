@@ -1,45 +1,52 @@
-; == 游戏按键注册表识别 ==
-; 从注册表读取明日方舟游戏内按键设置，动态适配用户自定义按键
-; 每 10 秒轮询注册表检测变更，多层防御回退到默认值
+; == 游戏按键注册表识别（多区服） ==
+; 从各服注册表读取明日方舟游戏内按键设置，动态适配用户自定义按键。
+; 每个区服维护独立映射；热键路径按前台区服取映射；拦截正则取所有已安装区服的并集。
 
 class GameKeys {
+
     ; ── 公开 API ──
 
-    ; 初始化：首次读取注册表 + 启动 10s 轮询
+    ; 初始化：首次读取所有已知区服 + 启动 10s 轮询
     static Init() {
         if (this._HasInitialized)
             return
         this._HasInitialized := true
 
-        ; 初始化 Unity KeyId → AHK 键名映射
         this._InitUnityKeyMap()
-
-        ; 初始化默认映射
         this._InitDefaults()
 
-        ; 首次读取
-        bindings := this._ReadFromRegistry()
-        if (bindings.Count > 0) {
-            this._Bindings := bindings
-            this._LastReadSuccess := true
-        } else {
-            this._Bindings := this._Defaults.Clone()
-            this._LastReadSuccess := false
-            this._ShowWarning()
+        ; 首次读取全部已知区服
+        for serverId in ServerProfile.Ids() {
+            result := this._ReadServer(serverId)
+            if (result.success) {
+                this._ServerBindings[serverId] := this._MergeDefaults(result.bindings)
+                this._ServerLastHex[serverId] := result.hex
+                this._ServerReadSuccess[serverId] := true
+                this._LogBindings(serverId)
+            } else {
+                this._ServerReadSuccess[serverId] := false
+                if (result.rootExists) {
+                    ; 注册表根存在但读取失败：按该服默认值兜底，并只提示一次
+                    this._ServerBindings[serverId] := this._MergeDefaults(Map())
+                    this._ShowWarning(serverId)
+                }
+            }
         }
 
-        ; 输出完整按键映射（Info）
-        this._LogBindings()
+        ; 兼容旧字段：默认指向 CN（或 PreferredServer）
+        this._Bindings := this._GetBindingsForServer(this._ResolveServerId())
 
-        ; 启动 10 秒轮询定时器
+        EventBus.Subscribe("ForegroundClientChanged", (data) => this._HandleForegroundClientChanged(data))
+
         SetTimer ObjBindMethod(GameKeys, "_OnPoll"), 10000
     }
 
-    ; 获取某功能的 AHK 键名
+    ; 获取某功能的 AHK 键名（按前台区服解析）
     static Get(gameFunc) {
-        if (this._Bindings.Has(gameFunc))
-            return this._Bindings[gameFunc]
-        ; 兜底：返回默认值
+        serverId := this._ResolveServerId()
+        bindings := this._GetBindingsForServer(serverId)
+        if (bindings.Has(gameFunc))
+            return bindings[gameFunc]
         if (this._Defaults.Has(gameFunc))
             return this._Defaults[gameFunc]
         return ""
@@ -69,29 +76,92 @@ class GameKeys {
         }
     }
 
-    ; 返回拦截正则字符串，供 hotkey_service.ahk 使用
+    ; 返回拦截正则字符串，供 hotkey_service.ahk 使用。
+    ; 只纳入“注册表存在的服”的实际绑定 ∪ 各服缺失功能组默认值；未安装的服不纳入。
     static GetInterceptPattern() {
         keys := ""
         seen := Map()
-        for _, key in this._Bindings {
-            if (key != "" && !seen.Has(key)) {
-                keys .= this._EscapeRegex(key) . "|"
-                seen[key] := true
+
+        addedAny := false
+        for serverId in ServerProfile.Ids() {
+            if (this._ServerReadSuccess.Has(serverId) && this._ServerReadSuccess[serverId]) {
+                bindings := this._GetBindingsForServer(serverId)
+                for _, key in bindings {
+                    if (key != "" && !seen.Has(key)) {
+                        keys .= this._EscapeRegex(key) . "|"
+                        seen[key] := true
+                        addedAny := true
+                    }
+                }
             }
         }
+
+        ; 没有任何区服注册表可读时回退 CN 默认，保持旧版行为不回归
+        if (!addedAny) {
+            bindings := this._MergeDefaults(Map())
+            for _, key in bindings {
+                if (key != "" && !seen.Has(key)) {
+                    keys .= this._EscapeRegex(key) . "|"
+                    seen[key] := true
+                }
+            }
+        }
+
         ; 追加不可重新绑定的游戏键和鼠标键
         keys .= "Escape|RButton|MButton"
         return "i)\b(" keys ")\b$"
     }
 
     ; ── 内部状态 ──
-    static _Bindings := Map()        ; gameFunc → AHK 键名
-    static _LastHex := ""            ; 上次读取的注册表原始 hex，用于变更检测
+    static _Bindings := Map()        ; 兼容旧字段：当前前台/首选服的映射
+    static _ServerBindings := Map()  ; serverId → gameFunc → AHK 键名
+    static _ServerLastHex := Map()   ; serverId → 上次原始 hex
+    static _ServerReadSuccess := Map() ; serverId → bool
+    static _ServerWarned := Map()    ; serverId → bool（每服每会话只提示一次）
+    static _PendingWarningServers := [] ; 待汇总的读取失败区服
+    static _WarningScheduled := false   ; 是否已安排汇总弹窗定时器
     static _Defaults := Map()        ; 硬编码默认映射
     static _UnityKeyMap := Map()     ; Unity keyId → AHK 键名
     static _HasInitialized := false
-    static _HasWarned := false       ; 每会话仅弹一次警告
-    static _LastReadSuccess := true  ; 上次读取是否成功
+
+    ; ── 区服解析 ──
+
+    ; 解析当前应使用的区服：优先前台客户端，其次 PreferredServer，
+    ; 再其次上次成功识别的 LastActiveServer，最后 CN。
+    static _ResolveServerId() {
+        serverId := GameClientRegistry.GetForegroundServerId()
+        if (serverId != "" && this._ServerBindings.Has(serverId))
+            return serverId
+
+        preferred := Config.GetImportant("PreferredServer")
+        if (preferred = "") {
+            last := Config.GetImportant("LastActiveServer")
+            if (last != "" && this._ServerBindings.Has(last))
+                preferred := last
+        }
+        if (preferred != "" && this._ServerBindings.Has(preferred))
+            return preferred
+
+        if (this._ServerBindings.Has("CN"))
+            return "CN"
+        return "CN"
+    }
+
+    static _GetBindingsForServer(serverId) {
+        if (this._ServerBindings.Has(serverId))
+            return this._ServerBindings[serverId]
+        return this._MergeDefaults(Map())
+    }
+
+    ; 前台客户端变化时更新 LastActiveServer（仅内存，避免热路径写 IO）
+    static _HandleForegroundClientChanged(data) {
+        if (data.serverId != "" && this._ServerBindings.Has(data.serverId)) {
+            this._Bindings := this._GetBindingsForServer(data.serverId)
+            if (Config.AllImportant.Has("LastActiveServer"))
+                Config.SetImportant("LastActiveServer", data.serverId)
+            Logger.Debug("GameKeys", "前台区服切换：" data.serverId)
+        }
+    }
 
     ; ── 初始化 Unity KeyId → AHK 键名映射 ──
     static _InitUnityKeyMap() {
@@ -116,7 +186,6 @@ class GameKeys {
             "alpha8", "8", "alpha9", "9",
 
             ; === 符号键 char* → 对应 AHK 物理键名 ===
-            ; 注意：{、}、|、: 等是 Shift+物理键的组合字符，映射到物理键
             "charMinus", "-",
             "charPlus", "=",
             "charEquals", "=",
@@ -128,30 +197,30 @@ class GameKeys {
             "charQuote", "'",
             "charLeftBracket", "[",
             "charRightBracket", "]",
-            "charLeftCurlyBracket", "[",     ; { 的物理键是 [
-            "charRightCurlyBracket", "]",     ; } 的物理键是 ]
-            "charlLeftCurlyBracket", "[",     ; { 的小写+l变体
-            "charlRightCurlyBracket", "]",    ; } 的小写+l变体
-            "charPipe", "\",                  ; | 的物理键是 \
-            "charColon", ";",                 ; : 的物理键是 ;
-            "charLess", ",",                  ; < 的物理键是 ,
-            "charGreater", ".",               ; > 的物理键是 .
-            "charQuestion", "/",              ; ? 的物理键是 /
+            "charLeftCurlyBracket", "[",
+            "charRightCurlyBracket", "]",
+            "charlLeftCurlyBracket", "[",
+            "charlRightCurlyBracket", "]",
+            "charPipe", "\",
+            "charColon", ";",
+            "charLess", ",",
+            "charGreater", ".",
+            "charQuestion", "/",
             "charBackQuote", "``",
-            "charTilde", "``",                ; ~ 的物理键是 `
-            "charExclaim", "1",               ; ! 的物理键是 1
-            "charAt", "2",                    ; @ 的物理键是 2
-            "charHash", "3",                  ; # 的物理键是 3
-            "charDollar", "4",                ; $ 的物理键是 4
-            "charPercent", "5",               ; % 的物理键是 5
-            "charCaret", "6",                 ; ^ 的物理键是 6
-            "charAmpersand", "7",             ; & 的物理键是 7
-            "charAsterisk", "8",              ; * 的物理键是 8
-            "charLeftParen", "9",             ; ( 的物理键是 9
-            "charRightParen", "0",            ; ) 的物理键是 0
-            "charUnderscore", "-",            ; _ 的物理键是 -
+            "charTilde", "``",
+            "charExclaim", "1",
+            "charAt", "2",
+            "charHash", "3",
+            "charDollar", "4",
+            "charPercent", "5",
+            "charCaret", "6",
+            "charAmpersand", "7",
+            "charAsterisk", "8",
+            "charLeftParen", "9",
+            "charRightParen", "0",
+            "charUnderscore", "-",
 
-            ; === 修饰键（可能被绑定为游戏按键） ===
+            ; === 修饰键 ===
             "keyShift", "Shift",
             "keyAlt", "Alt",
             "keyControl", "Control",
@@ -162,7 +231,7 @@ class GameKeys {
             "keyLAlt", "LAlt",
             "keyRAlt", "RAlt",
 
-            ; === 功能键 keyF1 - keyF12 → F1 - F12 ===
+            ; === 功能键 ===
             "keyF1", "F1", "keyF2", "F2", "keyF3", "F3", "keyF4", "F4",
             "keyF5", "F5", "keyF6", "F6", "keyF7", "F7", "keyF8", "F8",
             "keyF9", "F9", "keyF10", "F10", "keyF11", "F11", "keyF12", "F12",
@@ -190,13 +259,11 @@ class GameKeys {
             "keyLeft", "Left", "keyRight", "Right",
 
             ; === 鼠标键 ===
-            ; 明日方舟自定义名（设置界面仅图标无文本）：Forward=前进/屏幕侧→XButton2，Back=后退/身体侧→XButton1
             "mouseLeft", "LButton",
             "mouseRight", "RButton",
             "mouseMiddle", "MButton",
-            "mouseForward", "XButton2",     ; 侧键前进（Browser_Forward，第 5 键）
-            "mouseBack", "XButton1",        ; 侧键后退（Browser_Back，第 4 键）
-            ; 标准 Unity KeyCode（防御性）：Mouse0-2=左/右/中，Mouse3-4=第 4/5 键
+            "mouseForward", "XButton2",
+            "mouseBack", "XButton1",
             "mouse0", "LButton",
             "mouse1", "RButton",
             "mouse2", "MButton",
@@ -238,7 +305,7 @@ class GameKeys {
             "f5", "F5", "f6", "F6", "f7", "F7", "f8", "F8",
             "f9", "F9", "f10", "F10", "f11", "F11", "f12", "F12",
 
-            ; === 全小写变体（兼容不同游戏版本） ===
+            ; === 全小写变体 ===
             "keybackspace", "Backspace", "keydelete", "Delete",
             "keyinsert", "Insert", "keyhome", "Home", "keyend", "End",
             "keypageup", "PgUp", "keypagedown", "PgDn",
@@ -259,15 +326,12 @@ class GameKeys {
     ; ── 初始化默认映射 ──
     static _InitDefaults() {
         this._Defaults := Map(
-            ; normalBattle
             "changeSpeed", "f",
             "releaseSkill", "e",
             "retreatChar", "q",
             "pauseBattle", "Space",
             "battleLeftPopup", "v",
-            ; normalFunc
             "homeKey", "Tab",
-            ; autoChess
             "autochessRefresh", "d",
             "autochessFreeze", "s",
             "autochessLevelUp", "g",
@@ -279,67 +343,58 @@ class GameKeys {
     }
 
     ; ── 从注册表读取并解析 ──
-    ; 返回解析后的 Map，失败返回空 Map
-    static _ReadFromRegistry() {
-        try {
-            ; 先用已知键名直接读取（避免 Loop Reg 兼容性问题）
-            hexStr := ""
-            targetValueName := ""
+    ; 返回 {success, bindings, hex, rootExists}
+    static _ReadServer(serverId) {
+        result := {success: false, bindings: Map(), hex: "", rootExists: false}
+        root := ServerProfile.RegistryRoot(serverId)
+        if (root = "")
+            return result
 
-            ; 枚举注册表值，找 KEYBOARD_SETTING_V* 前缀，找到即停
-            try {
-                Loop Reg, "HKCU\Software\HyperGryph\Arknights", "V"
-                {
-                    if (InStr(A_LoopRegName, "KEYBOARD_SETTING_V") = 1) {
-                        targetValueName := A_LoopRegName
-                        Logger.Debug("GameKeys", "找到键值：" targetValueName)
+        ; 先确认注册表根真实存在，避免未安装区服（如 KR/EN）也被当成“读取失败”反复弹窗
+        if !ServerProfile.RegistryRootExists(serverId)
+            return result
+        result.rootExists := true
+
+        targetValueName := ""
+        try {
+            Loop Reg, root, "V" {
+                if (InStr(A_LoopRegName, "KEYBOARD_SETTING_V") = 1) {
+                    targetValueName := A_LoopRegName
+                    break
+                }
+            }
+        } catch Error as loopErr {
+            Logger.Debug("GameKeys", "区服 " serverId " 注册表枚举异常：" loopErr.Message)
+            return result
+        }
+
+        ; 如果枚举没找到，尝试已知键名
+        if (targetValueName = "") {
+            knownKeys := ["KEYBOARD_SETTING_V2_h476498874", "KEYBOARD_SETTING_DISPLAY_h1323456836"]
+            for keyName in knownKeys {
+                try {
+                    testRead := RegRead(root, keyName)
+                    if (testRead != "") {
+                        targetValueName := keyName
                         break
                     }
-                }
-            } catch Error as loopErr {
-                if (targetValueName = "")
-                    Logger.Warn("GameKeys", "注册表枚举异常：" loopErr.Message)
-            }
-
-            ; 如果枚举没找到，尝试已知键名
-            if (targetValueName = "") {
-                Logger.Debug("GameKeys", "枚举未找到，尝试已知键名")
-                knownKeys := ["KEYBOARD_SETTING_V2_h476498874"]
-                for keyName in knownKeys {
-                    try {
-                        testRead := RegRead("HKCU\Software\HyperGryph\Arknights", keyName)
-                        if (testRead != "") {
-                            targetValueName := keyName
-                            break
-                        }
-                    } catch {
-                        continue
-                    }
+                } catch {
+                    continue
                 }
             }
+        }
 
-            if (targetValueName = "") {
-                Logger.Warn("GameKeys", "未找到任何 KEYBOARD_SETTING_V* 键值")
-                return Map()
-            }
+        if (targetValueName = "") {
+            Logger.Debug("GameKeys", "区服 " serverId " 未找到 KEYBOARD_SETTING_V* 键值")
+            return result
+        }
 
-            Logger.Debug("GameKeys", "选用键值：" targetValueName)
-
-            ; RegRead 对于 REG_BINARY 返回 hex 字符串
-            try {
-                hexStr := RegRead("HKCU\Software\HyperGryph\Arknights", targetValueName)
-            } catch Error as readErr {
-                Logger.Warn("GameKeys", "RegRead 调用失败：" readErr.Message)
-                return Map()
-            }
-
+        try {
+            hexStr := RegRead(root, targetValueName)
             if (hexStr = "") {
-                Logger.Warn("GameKeys", "RegRead 返回空字符串")
-                return Map()
+                Logger.Warn("GameKeys", "区服 " serverId " RegRead 返回空字符串")
+                return result
             }
-
-            Logger.Debug("GameKeys", "读取成功，hex 长度：" StrLen(hexStr))
-            this._LastHex := hexStr
 
             ; hex 字符串 → UTF-8 文本
             bufSize := StrLen(hexStr) // 2
@@ -350,100 +405,93 @@ class GameKeys {
                 NumPut("UChar", byteVal, buf, A_Index - 1)
             }
             jsonStr := StrGet(buf, bufSize, "UTF-8")
-
             if (jsonStr = "") {
-                Logger.Warn("GameKeys", "hex→文本转换为空")
-                return Map()
+                Logger.Warn("GameKeys", "区服 " serverId " hex→文本转换为空")
+                return result
             }
 
-            Logger.Debug("GameKeys", "原始 JSON：" jsonStr)
-
-            result := this._ParseJson(jsonStr)
-            Logger.Debug("GameKeys", "解析完成，共 " result.Count " 个映射")
+            parsed := this._ParseJson(jsonStr)
+            result.success := true
+            result.bindings := parsed
+            result.hex := hexStr
             return result
         } catch Error as e {
-            Logger.Error("GameKeys", "整体异常：" e.Message "，行号：" e.Line)
-            return Map()
+            Logger.Error("GameKeys", "区服 " serverId " 读取异常：" e.Message)
+            return result
         }
     }
 
+    ; 合并默认值：注册表缺失的功能组/键全部用默认值补齐
+    static _MergeDefaults(bindings) {
+        result := Map()
+        for funcName, key in bindings
+            result[funcName] := key
+        for funcName, key in this._Defaults {
+            if !result.Has(funcName)
+                result[funcName] := key
+        }
+        return result
+    }
+
     ; ── 从 JSON 字符串解析按键映射 ──
-    ; 使用正则提取所有 "funcName":{"keyId":"xxx"} 模式
     static _ParseJson(jsonStr) {
         result := Map()
-        ; 匹配模式: "funcName":{"keyId":"alphaX"} 或 "funcName":{"keyId":"keyXxx"}
-        ; 不依赖 JSON 的嵌套结构，直接提取所有 keyId 对
         pos := 1
         while (pos := RegExMatch(jsonStr, '"(\w+)":\{"keyId":"([^"]+)"\}', &match, pos)) {
             funcName := match[1]
             keyId := match[2]
-
-            ; 转换 Unity keyId → AHK 键名
             ahkKey := this._ConvertKeyId(keyId)
             if (ahkKey != "") {
                 result[funcName] := ahkKey
             } else {
                 Logger.Warn("GameKeys", "未知 keyId：" keyId "（功能：" funcName "），使用默认值")
             }
-
             pos += match.Len[0]
         }
-
-        if (result.Count = 0) {
+        if (result.Count = 0)
             Logger.Warn("GameKeys", "JSON 解析结果为空，原始内容：" jsonStr)
-        }
-
         return result
     }
 
-    ; ── 转义正则特殊字符（用于 GetInterceptPattern） ──
+    ; ── 转义正则特殊字符 ──
     static _EscapeRegex(str) {
         return RegExReplace(str, "[.^$*+?()[{\\|]", "\$0")
     }
 
     ; ── 转换 Unity keyId → AHK 键名 ──
     static _ConvertKeyId(keyId) {
-        ; 1. 精确匹配
         if (this._UnityKeyMap.Has(keyId))
             return this._UnityKeyMap[keyId]
 
-        ; 2. 全小写匹配（兼容不同游戏版本的驼峰/全小写变体）
         lowerId := StrLower(keyId)
         if (this._UnityKeyMap.Has(lowerId))
             return this._UnityKeyMap[lowerId]
 
-        ; 3. 模式匹配：numX → 数字键
         if (SubStr(lowerId, 1, 3) = "num" && StrLen(lowerId) = 4) {
             digit := SubStr(lowerId, 4, 1)
             if (RegExMatch(digit, "^[0-9]$"))
                 return digit
         }
 
-        ; 4. 模式匹配：alphaX → 字母键
         if (SubStr(lowerId, 1, 5) = "alpha" && StrLen(lowerId) = 6) {
             letter := SubStr(lowerId, 6, 1)
             if (RegExMatch(letter, "^[a-z]$"))
                 return letter
         }
 
-        ; 5. 模式匹配：char* → 从已知符号表查找
         if (SubStr(lowerId, 1, 4) = "char") {
-            suffix := SubStr(lowerId, 5)  ; 去掉 "char"
-            ; 处理可能的 "l" 前缀变体（charlXxx → charXxx）
+            suffix := SubStr(lowerId, 5)
             if (SubStr(suffix, 1, 1) = "l" && StrLen(suffix) > 1) {
                 altSuffix := SubStr(suffix, 2)
-                ; 尝试 camelCase 形式："char" . "LeftCurlyBracket"
                 camelKey := "char" . Format("{:U}", SubStr(altSuffix, 1, 1)) . SubStr(altSuffix, 2)
                 if (this._UnityKeyMap.Has(camelKey))
                     return this._UnityKeyMap[camelKey]
-                ; 再尝试全小写形式
                 lowerKey := "char" . altSuffix
                 if (this._UnityKeyMap.Has(lowerKey))
                     return this._UnityKeyMap[lowerKey]
             }
         }
 
-        ; 6. 单字符 keyId（如 "a", "4", "-"）
         if (StrLen(keyId) = 1)
             return keyId
 
@@ -451,116 +499,104 @@ class GameKeys {
         return ""
     }
 
-    ; ── 定时器回调：检测注册表变更 ──
+    ; ── 定时器回调：检测各服注册表变更 ──
     static _OnPoll() {
         try {
-            ; 枚举找到 KEYBOARD_SETTING_V* 键值，找到即停
-            targetValueName := ""
-            try {
-                Loop Reg, "HKCU\Software\HyperGryph\Arknights", "V"
-                {
-                    if (InStr(A_LoopRegName, "KEYBOARD_SETTING_V") = 1) {
-                        targetValueName := A_LoopRegName
-                        break
+            changed := false
+            for serverId in ServerProfile.Ids() {
+                result := this._ReadServer(serverId)
+                if (!result.rootExists) {
+                    if (this._ServerReadSuccess.Has(serverId) && this._ServerReadSuccess[serverId]) {
+                        this._ServerReadSuccess[serverId] := false
+                        if (this._ServerBindings.Has(serverId))
+                            this._ServerBindings.Delete(serverId)
+                        if (this._ServerLastHex.Has(serverId))
+                            this._ServerLastHex.Delete(serverId)
+                        changed := true
+                        Logger.Info("GameKeys", "区服 " serverId " 注册表根消失，已从拦截并集移除")
+                    }
+                    continue
+                }
+
+                if (result.success) {
+                    if (!this._ServerReadSuccess.Has(serverId) || !this._ServerReadSuccess[serverId]) {
+                        this._ServerReadSuccess[serverId] := true
+                        this._ServerBindings[serverId] := this._MergeDefaults(result.bindings)
+                        this._ServerLastHex[serverId] := result.hex
+                        changed := true
+                        this._LogBindings(serverId)
+                        Logger.Info("GameKeys", "区服 " serverId " 注册表读取已恢复")
+                        continue
+                    }
+
+                    if (this._ServerLastHex.Has(serverId) && this._ServerLastHex[serverId] = result.hex)
+                        continue
+
+                    this._ServerBindings[serverId] := this._MergeDefaults(result.bindings)
+                    this._ServerLastHex[serverId] := result.hex
+                    changed := true
+                    this._LogBindings(serverId)
+                } else {
+                    if (this._ServerReadSuccess.Has(serverId) && this._ServerReadSuccess[serverId]) {
+                        this._ServerReadSuccess[serverId] := false
+                        this._ServerBindings[serverId] := this._MergeDefaults(Map())
+                        changed := true
+                        this._ShowWarning(serverId)
                     }
                 }
-            } catch {
-                ; 枚举异常且未找到则跳过本轮
             }
 
-            if (targetValueName = "") {
-                ; 注册表键突然消失
-                if (this._LastReadSuccess) {
-                    this._LastReadSuccess := false
-                    this._Bindings := this._Defaults.Clone()
-                    this._ShowWarning("注册表键值不存在")
-                }
-                return
+            if (changed) {
+                this._Bindings := this._GetBindingsForServer(this._ResolveServerId())
+                EventBus.Publish("GameKeysChanged", {bindings: this._Bindings, interceptPattern: this.GetInterceptPattern(), serverBindings: this._ServerBindings})
+                Logger.Info("GameKeys", "检测到按键变更，发布 GameKeysChanged")
             }
-
-            ; RegRead 对于 REG_BINARY 返回 hex 字符串
-            hexStr := RegRead("HKCU\Software\HyperGryph\Arknights", targetValueName)
-            if (hexStr = "") {
-                if (this._LastReadSuccess) {
-                    this._LastReadSuccess := false
-                    this._Bindings := this._Defaults.Clone()
-                    this._ShowWarning("RegRead 返回空值")
-                }
-                return
-            }
-
-            ; 与上次比对，相同则直接返回
-            if (hexStr = this._LastHex)
-                return
-
-            ; 有变更，将 hex 转为 UTF-8 文本
-            bufSize := StrLen(hexStr) // 2
-            buf := Buffer(bufSize)
-            Loop bufSize {
-                byteHex := SubStr(hexStr, (A_Index - 1) * 2 + 1, 2)
-                byteVal := Integer("0x" byteHex)
-                NumPut("UChar", byteVal, buf, A_Index - 1)
-            }
-            jsonStr := StrGet(buf, bufSize, "UTF-8")
-            if (jsonStr = "") {
-                Logger.Warn("GameKeys", "轮询：hex→文本转换失败")
-                this._LastHex := hexStr  ; 标记已处理，避免重复解析
-                return
-            }
-
-            newBindings := this._ParseJson(jsonStr)
-            if (newBindings.Count = 0) {
-                Logger.Warn("GameKeys", "轮询：JSON 解析结果为空")
-                this._LastHex := hexStr  ; 标记已处理，避免重复解析
-                return
-            }
-
-            ; 更新绑定
-            this._Bindings := newBindings
-            this._LastHex := hexStr
-            this._LogBindings()
-
-            ; 如果之前是失败状态，现在恢复了
-            if (!this._LastReadSuccess) {
-                this._LastReadSuccess := true
-                Logger.Info("GameKeys", "注册表读取已恢复")
-            }
-
-            ; 只发布变更事实，由 HotkeyService 决定是否重建（热键总开关关闭时不恢复热键）
-            Logger.Info("GameKeys", "检测到按键变更，发布 GameKeysChanged")
-            EventBus.Publish("GameKeysChanged", {bindings: this._Bindings})
         } catch Error as e {
             Logger.Error("GameKeys", "轮询异常：" e.Message)
         }
     }
 
-    ; ── 输出完整按键映射（Info）——启动首次读取与每次重建/恢复后调用 ──
-    static _LogBindings() {
+    ; ── 输出完整按键映射（Info）──
+    static _LogBindings(serverId) {
+        bindings := this._GetBindingsForServer(serverId)
         mapText := ""
-        for funcName, key in this._Bindings
+        for funcName, key in bindings
             mapText .= (mapText = "" ? "" : " | ") funcName "=" key
-        Logger.Info("GameKeys", "完整按键映射：" mapText)
+        Logger.Info("GameKeys", "区服 " serverId " 完整按键映射：" mapText)
     }
 
-    ; ── 弹出读取失败警告 ──
-    static _ShowWarning(detail := "") {
-        if (this._HasWarned)
+    ; ── 弹出读取失败警告（每服每会话只提示一次，多个区服合并为一个弹窗）──
+    static _ShowWarning(serverId) {
+        if (this._ServerWarned.Has(serverId) && this._ServerWarned[serverId])
             return
-        this._HasWarned := true
-        Logger.Warn("GameKeys", "读取失败，回退默认按键" (detail != "" ? "，原因：" detail : ""))
+        this._ServerWarned[serverId] := true
+        Logger.Warn("GameKeys", "区服 " serverId " 读取失败，回退默认按键")
 
-        msg := "无法读取游戏按键配置，AFA 将使用默认按键。"
-            . "如果您的游戏内按键为自定义设置，可能无法正常工作。"
-        if (detail != "")
-            msg .= "`n`n失败原因：" detail
-        msg .= "`n`n请尝试恢复游戏默认按键或联系 AFA 开发者进行修复。"
+        this._PendingWarningServers.Push(serverId)
+        if (!this._WarningScheduled) {
+            this._WarningScheduled := true
+            ; 延迟到启动流程基本完成后弹出，避免在 GuiManager 建控件期间被定时器打断导致 MessageBox 控件销毁。
+            SetTimer ObjBindMethod(GameKeys, "_FlushWarnings"), -3000
+        }
+    }
 
-        ; 延迟 100ms 执行，避免与启动流程冲突
-        fullMsg := msg
-        warnFunc := (*) => MessageBox.Warning(
-            fullMsg,
-            "AFA - 游戏按键读取失败"
-        )
-        SetTimer warnFunc, -100
+    ; 汇总所有读取失败区服后只弹一次窗，避免多个 MessageBox 互相覆盖
+    static _FlushWarnings() {
+        this._WarningScheduled := false
+        if (this._PendingWarningServers.Length = 0)
+            return
+
+        servers := this._PendingWarningServers
+        this._PendingWarningServers := []
+        serverList := ""
+        for serverId in servers
+            serverList .= (serverList = "" ? "" : "`n") . "- " serverId
+        msg := I18n.T("msg.gameKeysReadFailed", serverList)
+
+        try {
+            MessageBox.Warning(msg, I18n.T("msg.gameKeysReadFailedTitle"))
+        } catch Error as e {
+            Logger.Error("GameKeys", "游戏按键读取失败提示弹出失败：" e.Message)
+        }
     }
 }

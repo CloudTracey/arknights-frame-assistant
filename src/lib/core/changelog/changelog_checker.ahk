@@ -16,7 +16,7 @@ class ChangelogChecker {
         dismissedVersion := Config.GetImportant("DismissedChangelogVersion")
 
         if (dismissedVersion = currentVersion) {
-            Logger.Debug("Changelog", "已忽略当前版本 " currentVersion " 的公告，跳过")
+            Logger.Info("Changelog", "已忽略当前版本 " currentVersion " 的公告，跳过")
             return
         }
 
@@ -89,8 +89,10 @@ class ChangelogChecker {
             result := ""
             for i, entry in bodies {
                 unescapedBody := VersionUtils.UnescapeJsonString(entry.body)
+                ; 先按当前语言裁剪，再做日期标题替换
+                localizedBody := ChangelogFormat.LocalizeBody(unescapedBody)
                 dateHeaderPattern := "m)^## (\d{4}-\d{2}-\d{2})"
-                cleanBody := RegExReplace(unescapedBody, dateHeaderPattern, "## " entry.tag_name " ($1)")
+                cleanBody := RegExReplace(localizedBody, dateHeaderPattern, "## " entry.tag_name " ($1)")
                 if (i > 1)
                     result .= "`r`n`r`n---`r`n`r`n"
                 result .= cleanBody
