@@ -32,6 +32,7 @@ class Constants {
     ; 重要设置名称映射
     static ImportantNames := Map(
         "AutoExit", "自动退出",
+        "Language", "语言",
         "AutoOpenSettings", "自动打开设置界面",
         "ExitOnWindowClose", "关闭窗口时退出小助手",
         "Frame", "游戏内帧率设置（兼容旧版）",

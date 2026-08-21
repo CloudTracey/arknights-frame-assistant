@@ -11,6 +11,8 @@ class GuiManager {
     static BtnApply := ""
     static BtnCancel := ""
     static GuiFrame := ""
+    static TxtLanguage := ""
+    static TxtSwitchHotkey := ""
     static ClickDelay := ""
     static SwitchHotkey := ""
     static IsModified := false
@@ -26,7 +28,7 @@ class GuiManager {
     static TabWidth := this.GuiWidth / 4
     static ColWidth := this.GuiWidth / 2
     static GuiXMargin := 30
-    static BtnW := 100
+    static BtnW := 120
 
     ; 存储不同标签页的控件
     static KeybindControls := []      ; 常规作战相关控件
@@ -75,9 +77,10 @@ class GuiManager {
     static CurrentTab := ""    ; 当前显示的标签页
     static LastActiveTab := "keyBind"  ; 最后选中的功能性标签页（排除"其他设置"）
     static FrameSkipLabels := Map()     ; 过帧标签控件（用于动态更新文本）
+    static BindLabelControls := []      ; 热键名称标签，用于多语言字体适配
     static FrameSkipDelayKeys := ["FrameSkip16msDelay", "FrameSkip33msDelay", "FrameSkip166msDelay"]
     ; 具有对应 GUI 控件的 Important 设置；不直接遍历 Config.AllImportant，后者还包含内部字段
-    static GuiImportantKeys := ["Frame", "AutoExit", "AutoOpenSettings", "ExitOnWindowClose",
+    static GuiImportantKeys := ["Frame", "AutoExit", "Language", "AutoOpenSettings", "ExitOnWindowClose",
         "DefaultStrongHoldProtocol", "TabOrder", "HiddenTabs", "AutoRunGame", "AutoStartWithGame", "GamePath",
         "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause",
         "BackCeaseOperations", "InLevelGuard", "DebugEnabled"]
@@ -87,6 +90,7 @@ class GuiManager {
         if (this.MainGui != "")
             return
 
+        I18n.Init()
         ; 窗口设置
         this.WindowName := "明日方舟帧操小助手 ArknightsFrameAssistant - " Version.Get()
         this.MainGui := Gui(, this.WindowName)
@@ -126,6 +130,7 @@ class GuiManager {
         A_TrayMenu.Add("重启小助手", (*) => Reload())
         A_TrayMenu.Add("退出", (*) => ExitApp())
         A_TrayMenu.Default := "打开设置界面"
+        this._ApplyLocale()
 
         ; 根据设置决定是否自动显示
         if (Config.GetImportant("AutoOpenSettings") == "1") {
@@ -148,8 +153,9 @@ class GuiManager {
         ; 辅助函数：添加绑定行
         AddBindRow(LabelText, KeyVar) {
             controls := []
-            txt := this.MainGui.Add("Text", "xs+15 y+16 w120 Right +0x200", LabelText)
-            edit := this.MainGui.Add("Edit", "x+20 yp-4 w140 Center -TabStop Uppercase v" KeyVar, Config.GetHotkey(KeyVar))
+            txt := this.MainGui.Add("Text", "xs-25 y+16 w185 Right +0x200", LabelText)
+            this.BindLabelControls.Push(txt)
+            edit := this.MainGui.Add("Edit", "x+5 yp-4 w170 Center -TabStop Uppercase v" KeyVar, Config.GetHotkey(KeyVar))
             controls.Push(txt)
             controls.Push(edit)
             return controls
@@ -255,7 +261,7 @@ class GuiManager {
         this.NotOtherControls.Push(this.GuiFrame)
 
         ; 自动暂停开关（仅"常规作战"页显示）
-        checkboxAutoBeginPause := this.MainGui.Add("Checkbox", "x+84 yp+2 vAutoBeginPause", " 切换开局自动暂停")
+        checkboxAutoBeginPause := this.MainGui.Add("Checkbox", "x+84 yp-2 w170 h28 vAutoBeginPause", " 切换开局自动暂停")
         checkboxAutoBeginPause.OnEvent("Click", (*) => this.TrackChange("AutoBeginPause"))
         this.MainGui["AutoBeginPause"].Value := Config.GetImportant("AutoBeginPause")
         checkboxAutoBeginPause.GetPos(&cbPauseX, &cbPauseY)   ; 记录位置供快捷操作页复用
@@ -265,13 +271,13 @@ class GuiManager {
         this.KeybindControls.Push(editAutoBeginPauseSwitch)
 
         ; 使用"返回上级菜单"放弃行动（仅"快捷操作"页显示，复用自动暂停开关同一位置）
-        checkboxBackCease := this.MainGui.Add("Checkbox", "x" cbPauseX " y" cbPauseY " vBackCeaseOperations", " 使用“返回上级菜单”放弃行动")
+        checkboxBackCease := this.MainGui.Add("Checkbox", "x" cbPauseX " y" (cbPauseY - 4) " w300 h40 vBackCeaseOperations", " 使用“返回上级菜单”放弃行动")
         checkboxBackCease.OnEvent("Click", (*) => this.TrackChange("BackCeaseOperations"))
         this.MainGui["BackCeaseOperations"].Value := Config.GetImportant("BackCeaseOperations")
         this.QuickControls.Push(checkboxBackCease)
 
         ; 仅在常规作战场景启用常规作战热键（控制 GuardInLevel 关卡检测守卫，仅"常规作战"页显示）
-        checkboxCombatGuard := this.MainGui.Add("Checkbox", "x75 y+12 h24 vInLevelGuard", " 仅在关卡内启用常规作战热键（实验性）")
+        checkboxCombatGuard := this.MainGui.Add("Checkbox", "x75 y+12 w300 h40 vInLevelGuard", " 仅在关卡内启用常规作战热键（实验性）")
         checkboxCombatGuard.OnEvent("Click", (*) => this.TrackChange("InLevelGuard"))
         this.MainGui["InLevelGuard"].Value := Config.GetImportant("InLevelGuard")
         this.KeybindControls.Push(checkboxCombatGuard)
@@ -413,20 +419,28 @@ class GuiManager {
         this.LaunchControls.Push(sepLaunch)
         this.LaunchControls.Push(sepLaunchTxt)
 
+        ; 界面语言
+        this.TxtLanguage := this.MainGui.Add("Text", "xs y+12 w130 h24 +0x200", I18n.T("语言"))
+        dropdownLanguage := this.MainGui.Add("DropDownList", "xs+145 yp-2 w180 vLanguage AltSubmit", I18n.LanguageOptions())
+        dropdownLanguage.Value := I18n.LocaleIndex(Config.GetImportant("Language"))
+        dropdownLanguage.OnEvent("Change", (*) => this.TrackChange("Language"))
+        this.LaunchControls.Push(this.TxtLanguage)
+        this.LaunchControls.Push(dropdownLanguage)
+
         ; 自动关闭
-        checkboxAutoExit := this.MainGui.Add("Checkbox", "xs y+12 h24 vAutoExit", " 随游戏进程关闭自动退出（强烈建议开启）")
+        checkboxAutoExit := this.MainGui.Add("Checkbox", "xs y+12 w500 h30 vAutoExit", " 随游戏进程关闭自动退出（强烈建议开启）")
         checkboxAutoExit.OnEvent("Click", (*) => this.TrackChange("AutoExit"))
         this.MainGui["AutoExit"].Value := Config.GetImportant("AutoExit")
         this.LaunchControls.Push(checkboxAutoExit)
 
         ; 自动打开设置
-        checkboxAutoOpenSettings := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoOpenSettings", " 启动时打开设置窗口")
+        checkboxAutoOpenSettings := this.MainGui.Add("Checkbox", "xs y+10 w500 h30 vAutoOpenSettings", " 启动时打开设置窗口")
         checkboxAutoOpenSettings.OnEvent("Click", (*) => this.TrackChange("AutoOpenSettings"))
         this.MainGui["AutoOpenSettings"].Value := Config.GetImportant("AutoOpenSettings")
         this.LaunchControls.Push(checkboxAutoOpenSettings)
 
         ; 关闭窗口时退出
-        checkboxExitOnWindowClose := this.MainGui.Add("Checkbox", "xs y+10 h24 vExitOnWindowClose", " 点击关闭窗口按钮时退出小助手")
+        checkboxExitOnWindowClose := this.MainGui.Add("Checkbox", "xs y+10 w500 h30 vExitOnWindowClose", " 点击关闭窗口按钮时退出小助手")
         checkboxExitOnWindowClose.OnEvent("Click", (*) => this.TrackChange("ExitOnWindowClose"))
         this.MainGui["ExitOnWindowClose"].Value := Config.GetImportant("ExitOnWindowClose")
         this.LaunchControls.Push(checkboxExitOnWindowClose)
@@ -439,13 +453,13 @@ class GuiManager {
         this.LaunchControls.Push(checkboxDefaultStrongHoldProtocol)
 
         ; 启动小助手时自动启动游戏
-        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoRunGame", " 启动小助手时同时启动明日方舟")
+        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "xs y+10 w500 h30 vAutoRunGame", " 启动小助手时同时启动明日方舟")
         checkboxAutoRunGame.OnEvent("Click", (*) => this.TrackChange("AutoRunGame"))
         this.MainGui["AutoRunGame"].Value := Config.GetImportant("AutoRunGame")
         this.LaunchControls.Push(checkboxAutoRunGame)
 
         ; 启动游戏时自动启动小助手
-        checkboxAutoStartWithGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoStartWithGame", " 启动明日方舟时自动启动小助手")
+        checkboxAutoStartWithGame := this.MainGui.Add("Checkbox", "xs y+10 w500 h30 vAutoStartWithGame", " 启动明日方舟时自动启动小助手")
         checkboxAutoStartWithGame.OnEvent("Click", (*) => this.TrackChange("AutoStartWithGame"))
         this.MainGui["AutoStartWithGame"].Value := Config.GetImportant("AutoStartWithGame")
         this.LaunchControls.Push(checkboxAutoStartWithGame)
@@ -458,8 +472,8 @@ class GuiManager {
         this.LaunchControls.Push(hintGamePath)
 
         ; 游戏路径
-        txtGamePath := this.MainGui.Add("Text", "xs y+10 h24", " 游戏路径: ")
-        editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w462 h20 vGamePath -Multi +0x1", Config.GetImportant(
+        txtGamePath := this.MainGui.Add("Text", "xs y+10 w100 h24 +0x200", " 游戏路径: ")
+        editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w420 h20 vGamePath -Multi +0x1", Config.GetImportant(
             "GamePath"))
         editGamePath.OnEvent("Change", (*) => this.TrackChange("GamePath"))
         this.LaunchControls.Push(txtGamePath)
@@ -473,8 +487,8 @@ class GuiManager {
 
         ; 更新渠道
         txtUpdateChannel := this.MainGui.Add("Text", "xs y+10", "更新渠道")
-        dropdownUpdateChannel := this.MainGui.Add("DropDownList", "x+10 yp-2 w120 vUpdateChannel AltSubmit", ["正式版",
-            "测试版"])
+        dropdownUpdateChannel := this.MainGui.Add("DropDownList", "x+10 yp-2 w120 vUpdateChannel AltSubmit", [I18n.T("正式版"),
+            I18n.T("测试版")])
         dropdownUpdateChannel.OnEvent("Change", (*) => this.TrackChange("UpdateChannel"))
         dropdownUpdateChannel.Value := Config.GetImportant("UpdateChannel")
         this.UpdateControls.Push(txtUpdateChannel)
@@ -482,7 +496,7 @@ class GuiManager {
 
         ; 更新源
         txtUpdateSource := this.MainGui.Add("Text", "xs y+10", "更新源")
-        dropdownUpdateSource := this.MainGui.Add("DropDownList", "x+10 yp-2 w120 vUpdateSource AltSubmit", ["国内源",
+        dropdownUpdateSource := this.MainGui.Add("DropDownList", "x+10 yp-2 w120 vUpdateSource AltSubmit", [I18n.T("国内源"),
             "GitHub"])
         dropdownUpdateSource.OnEvent("Change", (*) => this.TrackChange("UpdateSource"))
         ; 选择国内源时自动灰掉 GitHub Token 行
@@ -492,7 +506,7 @@ class GuiManager {
         this.UpdateControls.Push(dropdownUpdateSource)
 
         ; 自动检查更新
-        checkboxAutoUpdate := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoUpdate", " 自动检查更新")
+        checkboxAutoUpdate := this.MainGui.Add("Checkbox", "xs y+10 w500 h30 vAutoUpdate", " 自动检查更新")
         checkboxAutoUpdate.OnEvent("Click", (*) => this.TrackChange("AutoUpdate"))
         this.MainGui["AutoUpdate"].Value := Config.GetImportant("AutoUpdate")
         this.UpdateControls.Push(checkboxAutoUpdate)
@@ -548,14 +562,14 @@ class GuiManager {
         this.CustomControls.Push(hintClickDelay)
 
         ; 启用/禁用热键快捷键
-        txtSwitchHotkey := this.MainGui.Add("Text", "xs y+16 Right +0x200", "启用/禁用热键快捷键")
-        this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom(
+        this.TxtSwitchHotkey := this.MainGui.Add("Text", "xs y+16 w280 h20 Left +0x200", "启用/禁用热键快捷键")
+        this.SwitchHotkey := this.MainGui.Add("Edit", "xs y+4 w140 h21 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom(
             "SwitchHotkey"))
-        this.CustomControls.Push(txtSwitchHotkey)
+        this.CustomControls.Push(this.TxtSwitchHotkey)
         this.CustomControls.Push(this.SwitchHotkey)
 
         ; 过帧档位1延迟
-        txtFrameSkip1 := this.MainGui.Add("Text", "xs y+16 Section", "过帧档位1")
+        txtFrameSkip1 := this.MainGui.Add("Text", "xs y+10 Section", "过帧档位1")
         editFrameSkip1 := this.MainGui.Add("Edit", "x+15 yp-2 w120 h21 vFrameSkip16msDelay Number", Config.GetCustom(
             "FrameSkip16msDelay"))
         editFrameSkip1.OnEvent("Change", (*) => this.TrackChange("FrameSkip16msDelay"))
@@ -579,7 +593,7 @@ class GuiManager {
         this.CustomControls.Push(editFrameSkip3)
 
         ; 失焦悬停操作热键开关（#213 功能开关，默认开启；保存/应用后生效）。整行通栏 w290，标签不换行。
-        checkboxHoverOperate := this.MainGui.Add("Checkbox", "xs y+14 w290 h24 vHoverOperate", " 游戏窗口未激活时允许鼠标悬停在窗口上触发热键")
+        checkboxHoverOperate := this.MainGui.Add("Checkbox", "xs y+10 w280 h40 vHoverOperate", " 游戏窗口未激活时允许鼠标悬停在窗口上触发热键")
         checkboxHoverOperate.OnEvent("Click", (*) => this.TrackChange("HoverOperate"))
         this.MainGui["HoverOperate"].Value := Config.GetCustom("HoverOperate")
         this.CustomControls.Push(checkboxHoverOperate)
@@ -631,7 +645,7 @@ class GuiManager {
         btnOpenLogDirectory.OnEvent("Click", (*) => LogExporter.OpenLogDirectory())
         this.LogControls.Push(btnOpenLogDirectory)
 
-        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 h24 vDebugEnabled", " 启用调试模式（实时日志窗口，日志额外记录调试信息）")
+        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 w500 h40 vDebugEnabled", " 启用调试模式（实时日志窗口，日志额外记录调试信息）")
         chkDebug.OnEvent("Click", (*) => this.TrackChange("DebugEnabled"))
         this.MainGui["DebugEnabled"].Value := Config.GetImportant("DebugEnabled")
         this.LogControls.Push(chkDebug)
@@ -697,7 +711,7 @@ class GuiManager {
         this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApplyRequested"))
         this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", "取消")
         this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancelRequested"))
-        this.HintUnsaved := this.MainGui.Add("Text", "x" (BtnX_Save - 155) " yp+8 w140 h24 Right cFF0000 Hidden",
+        this.HintUnsaved := this.MainGui.Add("Text", "x" (BtnX_Save - 180) " yp+8 w165 h24 Right cFF0000 Hidden",
         "修改尚未保存或应用！")
 
         ; 空白占位
@@ -716,9 +730,9 @@ class GuiManager {
     }
 
     static _UpdateFrameSkipLabels() {
-        try this.FrameSkipLabels["16ms"].Text := "前进 " this.MainGui["FrameSkip16msDelay"].Value "ms"
-        try this.FrameSkipLabels["33ms"].Text := "前进 " this.MainGui["FrameSkip33msDelay"].Value "ms"
-        try this.FrameSkipLabels["166ms"].Text := "前进 " this.MainGui["FrameSkip166msDelay"].Value "ms"
+        try this.FrameSkipLabels["16ms"].Text := I18n.T("前进") " " this.MainGui["FrameSkip16msDelay"].Value "ms"
+        try this.FrameSkipLabels["33ms"].Text := I18n.T("前进") " " this.MainGui["FrameSkip33msDelay"].Value "ms"
+        try this.FrameSkipLabels["166ms"].Text := I18n.T("前进") " " this.MainGui["FrameSkip166msDelay"].Value "ms"
     }
 
     ; 内部：更新其他控件值（从配置）
@@ -734,6 +748,8 @@ class GuiManager {
             try {
                 if (key = "Frame") {
                     this.MainGui[key].Value := this._FrameTextToIndex(Config.GetImportant("Frame"))
+                } else if (key = "Language") {
+                    this.MainGui[key].Value := I18n.LocaleIndex(Config.GetImportant("Language"))
                 } else {
                     this.MainGui[key].Value := value
                 }
@@ -751,13 +767,13 @@ class GuiManager {
         try {
             switch Config.TokenStorageStatus {
                 case "migration_failed":
-                    this.HintGithubToken.Text := "安全迁移失败，当前仍保留旧 Token；请重新保存设置后重试"
+                    this.HintGithubToken.Text := I18n.T("安全迁移失败，当前仍保留旧 Token；请重新保存设置后重试")
                 case "cleanup_failed":
-                    this.HintGithubToken.Text := "Token 已加密，但旧格式清理失败；请重新保存设置后重试"
+                    this.HintGithubToken.Text := I18n.T("Token 已加密，但旧格式清理失败；请重新保存设置后重试")
                 case "decrypt_failed":
-                    this.HintGithubToken.Text := "Token 无法解密，可能来自其他 Windows 用户或电脑；请重新输入并保存"
+                    this.HintGithubToken.Text := I18n.T("Token 无法解密，可能来自其他 Windows 用户或电脑；请重新输入并保存")
                 default:
-                    this.HintGithubToken.Text := "只要没有提示API配额超限，就不需要使用GitHub Token"
+                    this.HintGithubToken.Text := I18n.T("只要没有提示API配额超限，就不需要使用GitHub Token")
             }
         }
     }
@@ -815,11 +831,11 @@ class GuiManager {
         HideTrayTip()
         SetTimer HideTrayTip, 0
         if (data.enabled) {
-            A_IconTip := "AFA`n热键已启用"
-            ShowTrayTip("热键已启用", "AFA", "Mute")
+            A_IconTip := "AFA`n" I18n.T("热键已启用")
+            ShowTrayTip(I18n.T("热键已启用"), "AFA", "Mute")
         } else {
-            A_IconTip := "AFA`n热键已禁用"
-            ShowTrayTip("热键已禁用", "AFA", "Mute")
+            A_IconTip := "AFA`n" I18n.T("热键已禁用")
+            ShowTrayTip(I18n.T("热键已禁用"), "AFA", "Mute")
         }
         SetTimer HideTrayTip, -3000
     }
@@ -835,9 +851,9 @@ class GuiManager {
             HideTrayTip()
             SetTimer HideTrayTip, 0
             if (isStrongHold)
-                ShowTrayTip("已启用卫戍协议方案", "AFA", "Mute")
+                ShowTrayTip(I18n.T("已启用卫戍协议方案"), "AFA", "Mute")
             else
-                ShowTrayTip("已退出卫戍协议方案", "AFA", "Mute")
+                ShowTrayTip(I18n.T("已退出卫戍协议方案"), "AFA", "Mute")
             SetTimer HideTrayTip, -3000
         }
     }
@@ -845,13 +861,14 @@ class GuiManager {
     ; 处理切换键变化（托盘菜单文案）
     static _OnSwitchKeyChanged(data) {
         if (data.key = "")
-            A_TrayMenu.Rename("2&", "启用/禁用热键")
+            A_TrayMenu.Rename("2&", I18n.T("启用/禁用热键"))
         else
-            A_TrayMenu.Rename("2&", "启用/禁用热键(" KeyFormat.VirtualNewkeyFormat(data.key) ")")
+            A_TrayMenu.Rename("2&", I18n.T("启用/禁用热键") " (" KeyFormat.VirtualNewkeyFormat(data.key) ")")
     }
 
     ; 处理设置已保存
     static _OnSettingsSaved() {
+        this._ApplyLocale()
         this.CommitTabSettings()
         this.SetIsModifiedFalse()
         this.CaptureInitialSnapshot()
@@ -860,9 +877,50 @@ class GuiManager {
 
     ; 处理设置已应用
     static _OnSettingsApplied() {
+        this._ApplyLocale()
         this.CommitTabSettings()
         this.SetIsModifiedFalse()
         this.CaptureInitialSnapshot()
+    }
+
+    ; 应用当前语言到已创建的控件和托盘菜单。
+    static _ApplyLocale() {
+        I18n.SetLocale(Config.GetImportant("Language"))
+        this.WindowName := I18n.T("明日方舟帧操小助手 ArknightsFrameAssistant") " - " Version.Get()
+        try this.MainGui.Title := this.WindowName
+        for controls in [this.KeybindControls, this.QuickControls, this.StrongHoldProtocolControls,
+            this.OtherSettingsControls, this.NotOtherControls, this.LaunchControls, this.UpdateControls,
+            this.CustomControls, this.LogControls, this.AboutControls, this.NavItems] {
+            for control in controls
+                I18n.RefreshControl(control)
+        }
+        try this.MainGui["Language"].Value := I18n.LocaleIndex()
+        try {
+            updateChannel := this.MainGui["UpdateChannel"].Value
+            this.MainGui["UpdateChannel"].Delete()
+            this.MainGui["UpdateChannel"].Add([I18n.T("正式版"), I18n.T("测试版")])
+            this.MainGui["UpdateChannel"].Value := updateChannel
+        }
+        try {
+            updateSource := this.MainGui["UpdateSource"].Value
+            this.MainGui["UpdateSource"].Delete()
+            this.MainGui["UpdateSource"].Add([I18n.T("国内源"), "GitHub"])
+            this.MainGui["UpdateSource"].Value := updateSource
+        }
+        for control in [this.TxtKeybind, this.TxtQuick, this.TxtStrongHoldProtocol, this.TxtOther,
+            this.BtnDefaultHotkeys, this.BtnSave, this.BtnApply, this.BtnCancel, this.HintUnsaved]
+            I18n.RefreshControl(control)
+        try this.TxtStrongHoldProtocol.SetFont(I18n.Locale = "en-US" ? "s8" : "s9")
+        for labelControl in this.BindLabelControls
+            try labelControl.SetFont(I18n.Locale = "en-US" ? "s8" : "s9")
+        this._UpdateFrameSkipLabels()
+        if (this.CurrentTab != "")
+            this._UpdateTopTabBar(this.CurrentTab)
+        A_TrayMenu.Rename("1&", I18n.T("打开设置界面"))
+        A_TrayMenu.Rename("2&", I18n.T("启用/禁用热键"))
+        A_TrayMenu.Rename("3&", I18n.T("重启小助手"))
+        A_TrayMenu.Rename("4&", I18n.T("退出"))
+        try A_IconTip := "AFA`n" I18n.T(HotkeyService.HotkeyState ? "热键已启用" : "热键已禁用")
     }
 
     ; 处理设置已取消
@@ -922,7 +980,7 @@ class GuiManager {
 
     ; 处理调试控制台打开事件
     static _OnConsoleOpened() {
-        ShowTrayTip("调试日志控制台已打开", "AFA", "Mute")
+        ShowTrayTip(I18n.T("调试日志控制台已打开"), "AFA", "Mute")
     }
 
     ; 处理更新公告可用事件（展示由 ChangelogUI 负责，此处预留）
@@ -938,7 +996,7 @@ class GuiManager {
     static OnCheckUpdateComplete() {
         try {
             this.BtnCheckUpdate.Opt("-Disabled")
-            this.BtnCheckUpdate.Text := "手动检查更新"
+            this.BtnCheckUpdate.Text := I18n.T("手动检查更新")
         }
     }
 
@@ -946,7 +1004,7 @@ class GuiManager {
     static OnCheckUpdateStart() {
         try {
             this.BtnCheckUpdate.Opt("+Disabled")
-            this.BtnCheckUpdate.Text := "检查中..."
+            this.BtnCheckUpdate.Text := I18n.T("检查中...")
         }
     }
 
@@ -1040,10 +1098,10 @@ class GuiManager {
 
         try {
             if this.HasHotkeyConflicts {
-                this.HintUnsaved.Text := "存在按键冲突"
+                this.HintUnsaved.Text := I18n.T("存在按键冲突")
                 this.HintUnsaved.Visible := true
             } else {
-                this.HintUnsaved.Text := "修改尚未保存或应用"
+                this.HintUnsaved.Text := I18n.T("修改尚未保存或应用")
                 this.HintUnsaved.Visible := this.IsModified
             }
         }
@@ -1123,6 +1181,8 @@ class GuiManager {
         if (Config.AllImportant.Has(controlName)) {
             if (controlName = "Frame")
                 Config.SetImportant("Frame", Constants.FrameOptions[currentValue])
+            else if (controlName = "Language")
+                Config.SetImportant("Language", I18n.LocaleFromIndex(currentValue))
             else
                 Config.SetImportant(controlName, currentValue)
         }
@@ -1452,7 +1512,7 @@ class GuiManager {
             tabItem.ManagerLabel.Move(this.TabManagerX + 40, rowY + 4, 125, 18)
             tabItem.EyeControl.Move(this.TabManagerX + 171, rowY + 4, 24, 18)
 
-            tabItem.ManagerLabel.Text := tabItem.Label (tabItem.CanHide ? "" : "（无法隐藏）")
+            tabItem.ManagerLabel.Text := I18n.T(tabItem.Label) (tabItem.CanHide ? "" : I18n.T("（无法隐藏）"))
             tabItem.ManagerLabel.SetFont(tabItem.Visible ? "c333333" : "cA0A0A0")
             ; 眼睛图标统一用 U+E890（睁眼，MDL2 中确定存在），用颜色区分状态：蓝=显示，灰=隐藏。
             ; （不依赖"闭眼"字形——MDL2 无此字形，E9CE/E8F4 等均不可靠，可能显示为问号。）
@@ -1506,7 +1566,7 @@ class GuiManager {
             if tabItem.CanHide {
                 ; 边界保护：禁止隐藏最后一个可见功能标签，避免"仅剩其他设置"导致热键方案绑定到不可达标签。
                 if tabItem.Visible && this._CountVisibleFunctionalTabs() <= 1 {
-                    MessageBox.Info("至少保留一个功能标签页，不能隐藏全部功能标签。", "提示")
+                    MessageBox.Info(I18n.T("至少保留一个功能标签页，不能隐藏全部功能标签。"), I18n.T("提示"))
                 } else {
                     tabItem.Visible := !tabItem.Visible
                     this.SyncTabSettings()
@@ -1608,27 +1668,27 @@ class GuiManager {
         ; 计算目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页。
         ; 先算后比，仅当实际变化时才赋值，避免相同值触发重绘闪烁。
         if isStrongHold {
-            keybindText := "常规作战 ×"
-            quickText := "快捷操作 ×"
-            strongHoldText := "卫戍协议 √"
+            keybindText := I18n.T("常规作战") " ×"
+            quickText := I18n.T("快捷操作") " ×"
+            strongHoldText := I18n.T("卫戍协议") " √"
         } else if isOther {
             if !showModeStatus {
-                keybindText := "常规作战"
-                quickText := "快捷操作"
-                strongHoldText := "卫戍协议"
+                keybindText := I18n.T("常规作战")
+                quickText := I18n.T("快捷操作")
+                strongHoldText := I18n.T("卫戍协议")
             } else if (this.LastActiveTab = "strongHoldProtocol") {
-                keybindText := "常规作战 ×"
-                quickText := "快捷操作 ×"
-                strongHoldText := "卫戍协议 √"
+                keybindText := I18n.T("常规作战") " ×"
+                quickText := I18n.T("快捷操作") " ×"
+                strongHoldText := I18n.T("卫戍协议") " √"
             } else {
-                keybindText := "常规作战 √"
-                quickText := "快捷操作 √"
-                strongHoldText := "卫戍协议 ×"
+                keybindText := I18n.T("常规作战") " √"
+                quickText := I18n.T("快捷操作") " √"
+                strongHoldText := I18n.T("卫戍协议") " ×"
             }
         } else {
-            keybindText := showModeStatus ? "常规作战 √" : "常规作战"
-            quickText := showModeStatus ? "快捷操作 √" : "快捷操作"
-            strongHoldText := showModeStatus ? "卫戍协议 ×" : "卫戍协议"
+            keybindText := I18n.T("常规作战") (showModeStatus ? " √" : "")
+            quickText := I18n.T("快捷操作") (showModeStatus ? " √" : "")
+            strongHoldText := I18n.T("卫戍协议") (showModeStatus ? " ×" : "")
         }
         if (this.TxtKeybind.Text != keybindText)
             this.TxtKeybind.Text := keybindText
@@ -1768,7 +1828,7 @@ class GuiManager {
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
         changelogFile := configDir "\changelog.json"
         if (!FileExist(changelogFile)) {
-            MessageBox.Info("暂无更新公告，请先连接网络检查更新。", "提示")
+            MessageBox.Info(I18n.T("暂无更新公告，请先连接网络检查更新。"), I18n.T("提示"))
             return
         }
         ChangelogChecker.ChangelogFile := changelogFile
@@ -1776,7 +1836,7 @@ class GuiManager {
         if (body != "")
             ChangelogUI.Show(Version.Get(), body)
         else
-            MessageBox.Info("暂无更新公告。", "提示")
+            MessageBox.Info(I18n.T("暂无更新公告。"), I18n.T("提示"))
     }
 
     ; 启动 GUI 并注册 Alt+F4 退出热键（原为文件末尾顶层副作用）

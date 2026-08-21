@@ -13,6 +13,7 @@
 #Include ../../src/lib/base/hotkey_schema.ahk
 #Include ../../src/lib/base/constants.ahk
 #Include ../../src/lib/base/config.ahk
+#Include ../../src/lib/base/i18n.ahk
 #Include ../../src/lib/base/eventbus.ahk
 #Include ../../src/lib/base/file_extractor.ahk
 #Include ../../src/lib/base/timing.ahk
@@ -46,7 +47,7 @@
 #Include ../../src/lib/core/monitor/game_monitor.ahk
 
 ; 骨架断言：关键类/函数应已定义（类名在 AHK v2 中可作为值访问）
-if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema)
+if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema) || !IsSet(I18n)
     ExitApp 1
 if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyService)
     ExitApp 1
@@ -110,6 +111,33 @@ for group, constantsMap in Map("combat", Constants.CombatHotkeys, "quick", Const
 
 ; 探针：确认没有顶层副作用把 Config.IniFile 提前初始化（应仍为空）
 if (Config.IniFile != "")
+    ExitApp 1
+
+; ---- I18n 完整性与回退校验 ----
+I18n.SetLocale("en-US")
+if (I18n.T("卫戍协议") != "STRONGHOLD PROTOCOL")
+    ExitApp 1
+I18n.SetLocale("ja-JP")
+if (I18n.T("卫戍协议") != "堅守協定")
+    ExitApp 1
+if (I18n.T("肉鸽") != "統合戦略" || I18n.T("基建") != "基地")
+    ExitApp 1
+
+; 热键标签和主要设置控件必须同时具备英、日翻译，避免界面局部回退中文。
+for item in HotkeySchema.Items {
+    if !I18n.Texts["en-US"].Has(item.displayName) || !I18n.Texts["ja-JP"].Has(item.displayName)
+        ExitApp 1
+}
+requiredUiTexts := ["常规作战", "快捷操作", "卫戍协议", "其他设置", "语言", "游戏内帧率",
+    "  启动与退出设置  ", " 随游戏进程关闭自动退出（强烈建议开启）", " 启动时打开设置窗口",
+    "  更新设置  ", "更新渠道", "更新源", "  自定义设置  ", "点击延迟", "  日志设置  ",
+    "保存并关闭", "应用设置", "取消", "打开设置界面", "启用/禁用热键"]
+for sourceText in requiredUiTexts {
+    if !I18n.Texts["en-US"].Has(sourceText) || !I18n.Texts["ja-JP"].Has(sourceText)
+        ExitApp 1
+}
+I18n.SetLocale("invalid")
+if (I18n.Locale != "zh-CN")
     ExitApp 1
 
 ExitApp 0

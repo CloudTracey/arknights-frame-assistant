@@ -14,6 +14,7 @@ class Config {
     ; 内部：默认重要设置
     static _DefaultImportant := Map(
         "AutoExit", "1",
+        "Language", "zh-CN",
         "AutoOpenSettings", "1",
         "ExitOnWindowClose", "0",
         "Frame", "90",

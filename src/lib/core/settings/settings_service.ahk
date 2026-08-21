@@ -18,6 +18,7 @@ class SettingsService {
         Config.MigrateFrameRate()
         Config.MigrateGitHubToken()
         Config.LoadFromIni()
+        I18n.Init()
         this._RefreshRuntime()
     }
 
@@ -112,7 +113,7 @@ class SettingsService {
 
     ; 重置按键为默认值
     static Reset() {
-        result := MessageBox.Confirm("  确定重置*所有*按键为默认设置吗 ？", "重置按键设置")
+        result := MessageBox.Confirm(I18n.T("  确定重置*所有*按键为默认设置吗 ？"), I18n.T("重置按键设置"))
         if (result != "Yes")
             return
         EventBus.Publish("HotkeyOff")        ; Legacy
@@ -142,11 +143,11 @@ class SettingsService {
         if (isApply) {
             EventBus.Publish("SettingsApplied")
             Logger.Info("Settings", "设置已应用")
-            MessageBox.Info("设置已应用！", "应用成功")
+            MessageBox.Info(I18n.T("设置已应用！"), I18n.T("应用成功"))
         } else {
             EventBus.Publish("SettingsSaved")
             Logger.Info("Settings", "设置已保存并关闭")
-            MessageBox.Info("设置已保存！后续可双击右下角托盘区图标或通过右键菜单打开设置", "保存成功")
+            MessageBox.Info(I18n.T("设置已保存！后续可双击右下角托盘区图标或通过右键菜单打开设置"), I18n.T("保存成功"))
         }
     }
 

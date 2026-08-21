@@ -76,14 +76,14 @@ class KeyFormat {
         value := RegExReplace(value, "\+$", "")
 
         ; 将鼠标键位转为可读
-        value := RegExReplace(value, "i)XBUTTON1", "鼠标后侧键")
-        value := RegExReplace(value, "i)XBUTTON2", "鼠标前侧键")
-        value := RegExReplace(value, "i)MButton", "鼠标中键")
-        value := RegExReplace(value, "i)RBUTTON", "鼠标右键")
-        value := RegExReplace(value, "i)WHEELDOWN", "滚轮向后")
-        value := RegExReplace(value, "i)WHEELUP", "滚轮向前")
-        value := RegExReplace(value, "i)WHEELLEFT", "滚轮向左")
-        value := RegExReplace(value, "i)WHEELRIGHT", "滚轮向右")
+        value := RegExReplace(value, "i)XBUTTON1", I18n.T("鼠标后侧键"))
+        value := RegExReplace(value, "i)XBUTTON2", I18n.T("鼠标前侧键"))
+        value := RegExReplace(value, "i)MButton", I18n.T("鼠标中键"))
+        value := RegExReplace(value, "i)RBUTTON", I18n.T("鼠标右键"))
+        value := RegExReplace(value, "i)WHEELDOWN", I18n.T("滚轮向后"))
+        value := RegExReplace(value, "i)WHEELUP", I18n.T("滚轮向前"))
+        value := RegExReplace(value, "i)WHEELLEFT", I18n.T("滚轮向左"))
+        value := RegExReplace(value, "i)WHEELRIGHT", I18n.T("滚轮向右"))
         value := RegExReplace(value, "i)ESCAPE", "ESC")
         return value
     }
