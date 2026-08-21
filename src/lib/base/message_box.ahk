@@ -7,12 +7,6 @@ class MessageBox {
     static MinHeight := 120
     static MaxHeight := 400
 
-    ; 图标类型
-    static ICON_INFO := "info"
-    static ICON_WARNING := "warning"
-    static ICON_ERROR := "error"
-    static ICON_QUESTION := "question"
-
     ; 按钮类型
     static BTN_OK := "OK"
     static BTN_OK_CANCEL := "OKCancel"
@@ -97,24 +91,7 @@ class MessageBox {
         hWnd := dialog.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
 
-        ; 添加图标
-        ; iconX := 25
-        ; iconY := 25
-        ; iconSize := 32
-        ; hasIcon := false
-
-        ; if (parsedOptions.icon != "") {
-        ;     iconChar := this._GetIconCharacter(parsedOptions.icon)
-        ;     if (iconChar != "") {
-        ;         dialog.SetFont("s28", "Segoe UI Symbol")
-        ;         iconCtrl := dialog.Add("Text", "x" iconX " y" iconY " w" iconSize " h" iconSize " Center", iconChar)
-        ;         hasIcon := true
-        ;         dialog.SetFont("s10", Metrics.FontFor(I18n.GetCurrent()))
-        ;     }
-        ; }
-
         ; 计算文本区域
-        ; textX := hasIcon ? iconX + iconSize + 20 : 30
         textX := 30
         textY := 30
         textW := this.DefaultWidth - textX - 30
@@ -160,20 +137,10 @@ class MessageBox {
 
     ; 内部：解析选项字符串
     static _ParseOptions(options) {
-        result := {icon: "", buttons: "OK"}
+        result := {buttons: "OK"}
 
         if (options = "")
             return result
-
-        ; 解析图标
-        if (InStr(options, "Iconi"))
-            result.icon := this.ICON_INFO
-        else if (InStr(options, "Icon!"))
-            result.icon := this.ICON_WARNING
-        else if (InStr(options, "Iconx"))
-            result.icon := this.ICON_ERROR
-        else if (InStr(options, "Icon?"))
-            result.icon := this.ICON_QUESTION
 
         ; 解析按钮类型
         if (InStr(options, "YesNoCancel"))
@@ -186,17 +153,6 @@ class MessageBox {
             result.buttons := this.BTN_OK
 
         return result
-    }
-
-    ; 内部：获取图标字符（使用 Unicode 表情符号）
-    static _GetIconCharacter(iconType) {
-        switch iconType {
-            case this.ICON_INFO: return "ℹ"  ; 信息图标
-            case this.ICON_WARNING: return "⚠"  ; 警告图标
-            case this.ICON_ERROR: return "✕"  ; 错误图标
-            case this.ICON_QUESTION: return "?"  ; 问号
-            default: return ""
-        }
     }
 
     ; 内部：对长消息强制按字符换行，避免无空格的长字符串（如文件路径）溢出窗口

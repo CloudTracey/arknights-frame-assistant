@@ -2,7 +2,7 @@
 ; 「当前目标游戏窗口」的唯一 owner：Hwnd / Pid / ExePath / ServerId。
 ; 未绑定任何客户端实例时，宽松回退旧语义 ahk_exe Arknights.exe（决策 D2），
 ; 保证升级零回归、降级不弹窗。禁止其他模块再直接写 "ahk_exe Arknights.exe"。
-; 本模块只持有状态与查询 API；绑定 / 仲裁由 core/game/game_client_registry.ahk（阶段 A3）驱动。
+; 本模块只持有状态与查询 API；绑定 / 仲裁由 core/game/game_client_registry.ahk 驱动。
 
 class GameTarget {
     ; ── 状态（唯一 owner）──

@@ -9,7 +9,6 @@ class GuiManager {
     static BtnCheckGamePath := ""
     static ServerPathsText := ""
     static RunningClientsText := ""
-    ; 阶段 A 新增界面文案集中在这里，便于阶段 B 统一键化
     ; 语言代码顺序与下拉框显示顺序一致
     static LanguageCodes := ["auto", "zh-Hans", "zh-Hant", "ja-JP", "ko-KR", "en-US"]
     ; 下拉框显示名固定使用各语言自己的写法，不随当前界面语言变化
@@ -69,20 +68,20 @@ class GuiManager {
         "About", [this.AboutControls, 7]
     )
     static NotOtherControls := [] ; 仅非其他设置相关控件
-    static TxtKeybind := ""           ; I18n.T("tab.keyBind")标签文本
-    static TxtQuick := ""             ; I18n.T("tab.quick")标签文本
-    static TxtStrongHoldProtocol := ""  ; I18n.T("tab.strongHold")标签文本
-    static TxtOther := ""             ; I18n.T("tab.other")标签文本
-    static TabKeybind := ""           ; I18n.T("tab.keyBind")标签点击区域
-    static TabQuick := ""             ; I18n.T("tab.quick")标签点击区域
-    static TabStrongHoldProtocol := "" ; I18n.T("tab.strongHold")标签点击区域
-    static TabOther := ""             ; I18n.T("tab.other")标签点击区域
+    static TxtKeybind := ""           ; "常规作战"标签文本
+    static TxtQuick := ""             ; "快捷操作"标签文本
+    static TxtStrongHoldProtocol := ""  ; "卫戍协议"标签文本
+    static TxtOther := ""             ; "其他设置"标签文本
+    static TabKeybind := ""           ; "常规作战"标签点击区域
+    static TabQuick := ""             ; "快捷操作"标签点击区域
+    static TabStrongHoldProtocol := "" ; "卫戍协议"标签点击区域
+    static TabOther := ""             ; "其他设置"标签点击区域
     static TabItems := []              ; 标签描述，数组顺序为管理器中的待保存顺序
     static AppliedTabSettings := {Order: [], Visibility: Map()} ; 已保存或应用的顶部标签状态
     static TabFontState := Map() ; 各顶部标签当前字体颜色（key -> color）；空 Map 保证首次 _SetTabFontOnce 总会执行 SetFont，避免与控件创建颜色硬编码耦合
-    ; 标签管理器（"自定义"页右列）几何布局
-    static TabManagerX := 160          ; 管理器列左边缘（内容区左侧；按用户反馈从右列移入左列）
-    static TabManagerTitleY := 0       ; "顶部标签页"标题的 y（动态对齐左列第一项）
+    ; 标签管理器（"显示"页内容区左侧）几何布局
+    static TabManagerX := 160          ; 管理器列左边缘（内容区左侧）
+    static TabManagerTitleY := 0       ; "顶部标签页"标题的 y（锚定"显示"分类内容区顶部）
     static TabManagerRowStartY := 108  ; 第一行的上边缘
     static TabManagerRowWidth := 240   ; 行宽（含"（无法隐藏）"后缀，按最长语言留足空间）
     static TabManagerRowHeight := 30   ; 行高（含间距）
@@ -95,7 +94,7 @@ class GuiManager {
     static _EventsSubscribed := false
     static StrongHoldConflictHints := [] ; 非卫戍协议页面上的模式切换提示
     static CurrentTab := ""    ; 当前显示的标签页
-    static LastActiveTab := "keyBind"  ; 最后选中的功能性标签页（排除I18n.T("tab.other")）
+    static LastActiveTab := "keyBind"  ; 最后选中的功能性标签页（排除"其他设置"）
     static FrameSkipLabels := Map()     ; 过帧标签控件（用于动态更新文本）
     static FrameSkipDelayKeys := ["FrameSkip16msDelay", "FrameSkip33msDelay", "FrameSkip166msDelay"]
     ; 具有对应 GUI 控件的 Important 设置；不直接遍历 Config.AllImportant，后者还包含内部字段
@@ -285,7 +284,7 @@ class GuiManager {
         this.NotOtherControls.Push(txtFrame)
         this.NotOtherControls.Push(this.GuiFrame)
 
-        ; 自动暂停开关（仅I18n.T("tab.keyBind")页显示）。
+        ; 自动暂停开关（仅"常规作战"页显示）。
         ; 列栅格：C 输入框与右侧按键 Edit 列对齐（x515 w140），复选框贴其左侧（右缘 500），
         ; 复选框文案向右延伸时自动左移，任何语言都不会越窗。
         autoBeginW := Metrics.TextWidth(I18n.T("label.autoBeginPause"))
@@ -298,13 +297,13 @@ class GuiManager {
             Config.GetHotkey("AutoBeginPauseSwitch"))
         this.KeybindControls.Push(editAutoBeginPauseSwitch)
 
-        ; 使用"返回上级菜单"放弃行动（仅I18n.T("tab.quick")页显示，复用自动暂停开关同一位置）
+        ; 使用"返回上级菜单"放弃行动（仅"快捷操作"页显示，复用自动暂停开关同一位置）
         checkboxBackCease := this.MainGui.Add("Checkbox", "x" cbPauseX " y" cbPauseY " vBackCeaseOperations", I18n.T("label.backCease"))
         checkboxBackCease.OnEvent("Click", (*) => this.TrackChange("BackCeaseOperations"))
         this.MainGui["BackCeaseOperations"].Value := Config.GetImportant("BackCeaseOperations")
         this.QuickControls.Push(checkboxBackCease)
 
-        ; 仅在常规作战场景启用常规作战热键（控制 GuardInLevel 关卡检测守卫，仅I18n.T("tab.keyBind")页显示）。
+        ; 仅在常规作战场景启用常规作战热键（控制 GuardInLevel 关卡检测守卫，仅"常规作战"页显示）。
         ; 左缘与"切换开局暂停"复选框对齐（同类控件）；用实测宽度钳制，文案过长时自动左移不越窗。
         checkboxCombatGuard := this.MainGui.Add("Checkbox", "x0 y+12 h24 vInLevelGuard", I18n.T("label.combatGuard"))
         checkboxCombatGuard.GetPos(&cbGX, &cbGY, &cbGW)
@@ -323,7 +322,7 @@ class GuiManager {
         this.MainGui.SetFont("s9 cDefault")
         this.NotOtherControls.Push(hintFrame2)
 
-        ; 记录所有标签页底部基准 Y（取I18n.T("tab.keyBind")帧率提示的底部）
+        ; 记录所有标签页底部基准 Y（取"常规作战"帧率提示的底部）
         hintFrame2.GetPos(, &y, , &h)
         this._BottomBaseY := y + h
 
@@ -352,12 +351,10 @@ class GuiManager {
         this.MainGui.SetFont("s9 c1994d2")
         hintQuick1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center",
             I18n.T("hint.keyBindEdit"))
-        ; hintQuick2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", "“放弃行动”为模拟按下 ESC 和 V 的功能；“返回上级菜单”为模拟左键点击返回按钮的功能，兼容肉鸽编队等 ESC 键不便捷的界面")
         this.MainGui.SetFont("s9 c1994d2 bold")
         hintQuick3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", I18n.T("hint.conflictStrongHold"))
         this.MainGui.SetFont("s9 cDefault Norm")
         this.QuickControls.Push(hintQuick1)
-        ; this.QuickControls.Push(hintQuick2)
         this.QuickControls.Push(hintQuick3)
         this.StrongHoldConflictHints.Push(hintQuick3)
 
@@ -760,7 +757,7 @@ class GuiManager {
         this._HideOtherCategories()
         this._ShowControls(this.LaunchControls)  ; 默认显示"启动与退出"
 
-        ; 底部按钮区域锚点，使用I18n.T("tab.keyBind")帧率提示底部 + 30px 间距
+        ; 底部按钮区域锚点，"常规作战"帧率提示底部 + 20px 间距
         this.MainGui.Add("Text", "xm y" this._BottomBaseY + 20 " w0 h0 Section")
 
         ; -- 底部按钮 --
@@ -932,7 +929,7 @@ class GuiManager {
         this._UpdateTrayServer(data.serverId)
     }
 
-    ; 托盘提示带当前前台区服（阶段 A6）。
+    ; 托盘提示带当前前台区服。
     ; 只有前台确实是游戏客户端时才更新；切到桌面/非游戏窗口时保留上次游戏区服，避免显示“未知区服”。
     static _UpdateTrayServer(serverId) {
         if (serverId = "")
@@ -1140,7 +1137,7 @@ class GuiManager {
     static _OnChangelogAvailable() {
     }
 
-    ; 点击I18n.T("update.checkButton")按钮
+    ; 点击"手动检查更新"按钮
     static OnManualCheckClick() {
         EventBus.Publish("UpdateCheckRequested")
     }
@@ -1620,7 +1617,7 @@ class GuiManager {
             this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
     }
 
-    ; 解析回退标签：优先功能标签（排除I18n.T("tab.other")），仅剩I18n.T("tab.other")时返回它。
+    ; 解析回退标签：优先功能标签（排除"其他设置"），仅剩"其他设置"时返回它。
     static _ResolveFallbackTab() {
         fallbackTab := this.GetFirstVisibleTab(true)
         if (fallbackTab = "")
@@ -1628,7 +1625,7 @@ class GuiManager {
         return fallbackTab
     }
 
-    ; 统计当前可见的功能标签数量（排除I18n.T("tab.other")）。
+    ; 统计当前可见的功能标签数量（排除"其他设置"）。
     ; 直接读 tabItem.Visible（工作态），而非 IsTabVisible（读已应用快照），确保未应用时保护也生效。
     static _CountVisibleFunctionalTabs() {
         count := 0
@@ -1693,7 +1690,7 @@ class GuiManager {
     }
 
     static RegisterTabManagerMouseHandlers() {
-        ; 幂等守卫：重复调用不会叠加监听（B1 要求）
+        ; 幂等守卫：重复调用不会叠加监听
         if (this._TabManagerHandlersRegistered)
             return
         this._TabManagerHandlersRegistered := true
@@ -1837,7 +1834,7 @@ class GuiManager {
         this._SetTabFontOnce("strongHoldProtocol", isStrongHold ? "c1994d2" : "cDefault")
         this._SetTabFontOnce("other", isOther ? "c1994d2" : "cDefault")
 
-        ; 计算目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；I18n.T("tab.other")页额外随上次活动功能页。
+        ; 计算目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页。
         ; 先算后比，仅当实际变化时才赋值，避免相同值触发重绘闪烁。
         if isStrongHold {
             keybindText := I18n.T("tab.keyBind") " ×"
@@ -1984,7 +1981,7 @@ class GuiManager {
             return
         this.CurrentTab := tabName
 
-        ; 记录最后选中的标签页（排除I18n.T("tab.other")）
+        ; 记录最后选中的标签页（排除"其他设置"）
         if (tabName != "other") {
             this.LastActiveTab := tabName
         }

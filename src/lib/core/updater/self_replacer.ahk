@@ -67,7 +67,6 @@ class SelfReplacer {
             if FileExist(batchFile)
                 FileDelete(batchFile)
             FileAppend(batchContent, batchFile, "`n UTF-8-RAW")
-            ; FileAppend(batchContent, "E:\AFA\src\update_replacer.bat", "`n UTF-8-RAW")
         } catch Error as e {
             Logger.Error("SelfReplacer", "创建批处理脚本失败：" e.Message "（路径：" batchFile "）")
             return {
