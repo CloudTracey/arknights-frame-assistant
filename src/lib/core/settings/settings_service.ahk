@@ -166,12 +166,6 @@ class SettingsService {
         ; 登记本次会话中的敏感值，覆盖后续验证、外部设置和保存流程的日志。
         Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
 
-        ; 检查按键冲突
-        if (!this._CheckKeyConflicts()) {
-            Logger.Warn("Settings", "保存中止：检测到按键冲突")
-            return false
-        }
-
         ; 验证 GitHub Token（如果输入了的话，且相对已持久化值有变化）
         currentToken := Config.GetImportant("GitHubToken")
         persistedToken := Config.ReadImportantFromIni("GitHubToken")
@@ -289,34 +283,6 @@ class SettingsService {
             return false
         }
         return true
-    }
-
-    ; 内部：检查按键冲突
-    ; 检测规则：
-    ; 1. 常规作战 + 快捷操作 + SwitchHotkey 互相检测
-    ; 2. 卫戍协议按键 + SwitchHotkey 互相检测
-    ; 3. 卫戍协议按键不与作战/快捷操作检测冲突
-    static _CheckKeyConflicts() {
-        result := HotkeyConflictValidator.FindAll(
-            Config.AllHotkeys,
-            Config.AllCustom
-        )
-
-        if !result.HasConflicts
-            return true
-
-        conflict := result.Items[1]
-        this._ShowConflictError(
-            conflict.Key,
-            HotkeyConflictValidator.GetDisplayName(conflict.FirstControl),
-            HotkeyConflictValidator.GetDisplayName(conflict.SecondControl)
-        )
-        return false
-    }
-
-    ; 内部：显示冲突错误
-    static _ShowConflictError(conflictKey, prevName, currentName) {
-        MessageBox.Error(I18n.T("msg.keyConflict", conflictKey, prevName, currentName), I18n.T("msg.keyConflictTitle"))
     }
 
     ; 重置游戏状态
