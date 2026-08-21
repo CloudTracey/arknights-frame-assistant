@@ -288,12 +288,12 @@ class GuiManager {
         ; 列栅格：C 输入框与右侧按键 Edit 列对齐（x515 w140），复选框贴其左侧（右缘 500），
         ; 复选框文案向右延伸时自动左移，任何语言都不会越窗。
         autoBeginW := Metrics.TextWidth(I18n.T("label.autoBeginPause"))
-        checkboxAutoBeginPause := this.MainGui.Add("Checkbox", "x" (500 - autoBeginW - 20) " yp+2 h24 vAutoBeginPause", I18n.T("label.autoBeginPause"))
+        checkboxAutoBeginPause := this.MainGui.Add("Checkbox", "x" (500 - autoBeginW - 20) " yp-2 h24 vAutoBeginPause", I18n.T("label.autoBeginPause"))
         checkboxAutoBeginPause.OnEvent("Click", (*) => this.TrackChange("AutoBeginPause"))
         this.MainGui["AutoBeginPause"].Value := Config.GetImportant("AutoBeginPause")
         checkboxAutoBeginPause.GetPos(&cbPauseX, &cbPauseY)   ; 记录位置供快捷操作页复用
         this.KeybindControls.Push(checkboxAutoBeginPause)
-        editAutoBeginPauseSwitch := this.MainGui.Add("Edit", "x515 yp-4 w140 Center -TabStop Uppercase v" "AutoBeginPauseSwitch",
+        editAutoBeginPauseSwitch := this.MainGui.Add("Edit", "x515 yp w140 Center -TabStop Uppercase v" "AutoBeginPauseSwitch",
             Config.GetHotkey("AutoBeginPauseSwitch"))
         this.KeybindControls.Push(editAutoBeginPauseSwitch)
 
@@ -619,8 +619,7 @@ class GuiManager {
             "ClickDelay"))
         this.ClickDelay.OnEvent("Change", (*) => this.TrackChange("ClickDelay"))
         updownClickDelay := this.MainGui.Add("UpDown", , Config.GetCustom("ClickDelay"))
-        hintClickDelay := this.MainGui.Add("Text", "xs y+6 w270 h34 Wrap c9c9c9c",
-            I18n.T("custom.clickDelayHint"))
+        hintClickDelay := this.MainGui.Add("Text", "xs y+6 h17 Wrap c9c9c9c", I18n.T("custom.clickDelayHint"))
         this.CustomControls.Push(txtClickDelay)
         this.CustomControls.Push(this.ClickDelay)
         this.CustomControls.Push(updownClickDelay)
@@ -1819,27 +1818,27 @@ class GuiManager {
         ; 计算目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页。
         ; 先算后比，仅当实际变化时才赋值，避免相同值触发重绘闪烁。
         if isStrongHold {
-            keybindText := I18n.T("tab.keyBind") " ×"
-            quickText := I18n.T("tab.quick") " ×"
-            strongHoldText := I18n.T("tab.strongHold") " √"
+            keybindText := I18n.T("tab.keyBind") " ✗"
+            quickText := I18n.T("tab.quick") " ✗"
+            strongHoldText := I18n.T("tab.strongHold") " ✓"
         } else if isOther {
             if !showModeStatus {
                 keybindText := I18n.T("tab.keyBind")
                 quickText := I18n.T("tab.quick")
                 strongHoldText := I18n.T("tab.strongHold")
             } else if (this.LastActiveTab = "strongHoldProtocol") {
-                keybindText := I18n.T("tab.keyBind") " ×"
-                quickText := I18n.T("tab.quick") " ×"
-                strongHoldText := I18n.T("tab.strongHold") " √"
+                keybindText := I18n.T("tab.keyBind") " ✗"
+                quickText := I18n.T("tab.quick") " ✗"
+                strongHoldText := I18n.T("tab.strongHold") " ✓"
             } else {
-                keybindText := I18n.T("tab.keyBind") " √"
-                quickText := I18n.T("tab.quick") " √"
-                strongHoldText := I18n.T("tab.strongHold") " ×"
+                keybindText := I18n.T("tab.keyBind") " ✓"
+                quickText := I18n.T("tab.quick") " ✓"
+                strongHoldText := I18n.T("tab.strongHold") " ✗"
             }
         } else {
-            keybindText := showModeStatus ? I18n.T("tab.keyBind") " √" : I18n.T("tab.keyBind")
-            quickText := showModeStatus ? I18n.T("tab.quick") " √" : I18n.T("tab.quick")
-            strongHoldText := showModeStatus ? I18n.T("tab.strongHold") " ×" : I18n.T("tab.strongHold")
+            keybindText := showModeStatus ? I18n.T("tab.keyBind") " ✓" : I18n.T("tab.keyBind")
+            quickText := showModeStatus ? I18n.T("tab.quick") " ✓" : I18n.T("tab.quick")
+            strongHoldText := showModeStatus ? I18n.T("tab.strongHold") " ✗" : I18n.T("tab.strongHold")
         }
         if (this.TxtKeybind.Text != keybindText)
             this.TxtKeybind.Text := keybindText
