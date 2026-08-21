@@ -14,6 +14,16 @@
 #Include ../../src/lib/base/constants.ahk
 #Include ../../src/lib/base/config.ahk
 #Include ../../src/lib/base/eventbus.ahk
+#Include ../../src/lib/base/i18n.ahk
+#Include ../../src/lib/base/changelog_format.ahk
+#Include ../../src/lib/base/metrics.ahk
+#Include ../../src/lib/base/locales/zh_hans.ahk
+#Include ../../src/lib/base/locales/ja_jp.ahk
+#Include ../../src/lib/base/locales/ko_kr.ahk
+#Include ../../src/lib/base/locales/en_us.ahk
+#Include ../../src/lib/base/locales/zh_hant.ahk
+#Include ../../src/lib/base/server_profile.ahk
+#Include ../../src/lib/base/game_target.ahk
 #Include ../../src/lib/base/file_extractor.ahk
 #Include ../../src/lib/base/timing.ahk
 #Include ../../src/lib/base/window.ahk
@@ -21,6 +31,7 @@
 #Include ../../src/lib/base/tray.ahk
 #Include ../../src/lib/base/version_utils.ahk
 #Include ../../src/lib/base/touch_injection.ahk
+#Include ../../src/lib/core/game/game_client_registry.ahk
 #Include ../../src/lib/core/diagnostics/log_exporter.ahk
 #Include ../../src/lib/core/launch/app_context.ahk
 #Include ../../src/lib/core/launch/game_auto_start.ahk
@@ -46,7 +57,7 @@
 #Include ../../src/lib/core/monitor/game_monitor.ahk
 
 ; 骨架断言：关键类/函数应已定义（类名在 AHK v2 中可作为值访问）
-if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema)
+if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema) || !IsSet(I18n)
     ExitApp 1
 if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyService)
     ExitApp 1

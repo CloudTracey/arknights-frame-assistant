@@ -21,3 +21,6 @@ jobs:
 
       - name: Run event contract check
         run: python3 tools/event_contract_check.py
+
+      - name: Run i18n check
+        run: python3 tools/i18n_check.py

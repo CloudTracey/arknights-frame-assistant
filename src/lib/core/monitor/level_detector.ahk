@@ -99,12 +99,12 @@ class LevelDetector {
     static Poll() {
         this._PollCount += 1
         ; 游戏进程不存在 → 复位关卡状态
-        if !ProcessExist("Arknights.exe") {
+        if !GameTarget.Exists() {
             this._SetInLevel(false)
             return
         }
         ; 游戏窗口未激活 → 跳过（保持现有状态，回前台自愈）
-        if !WinActive("ahk_exe Arknights.exe")
+        if !GameTarget.IsActive()
             return
         oldCtx := 0
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")

@@ -149,7 +149,9 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             "ClickDelay", 1,
             "FrameSkip16msDelay", 1,
             "FrameSkip33msDelay", 1,
-            "FrameSkip166msDelay", 1
+            "FrameSkip166msDelay", 1,
+            "ServerPathsText", 1,
+            "RunningClientsText", 1
         )
         if nonKeybindEdits.Has(KeyBinder.ControlObj.Name) {
             return
@@ -158,7 +160,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
         if(KeyBinder.LastEditObject == "") {
             ; 记录点击前的控件值，并修改值，以及记录本次点击
             KeyBinder.OriginalValue := KeyBinder.ControlObj.Value ; OriginalValue为原先值
-            KeyBinder.ControlObj.Value := "请按键"
+            KeyBinder.ControlObj.Value := I18n.T("keyBind.pressKey")
             KeyBinder.LastEditObject := KeyBinder.ControlObj
             KeyBinder.WaitingModify := true
             ; 释放可能存在的Hook
@@ -177,7 +179,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
                 ; 恢复上一次点击的edit控件的值
                 KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
                 KeyBinder.OriginalValue := KeyBinder.ControlObj.Value ; OriginalValue为原先值
-                KeyBinder.ControlObj.Value := "请按键"
+                KeyBinder.ControlObj.Value := I18n.T("keyBind.pressKey")
                 KeyBinder.LastEditObject := KeyBinder.ControlObj
                 ; 释放可能存在的Hook
                 KeyBinder.StopHook()
@@ -209,6 +211,9 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
 
 ; 窗口活动监控
 WatchActiveWindow(){
+    ; 重建期间 MainGui 可能暂时为空，避免访问已销毁窗口
+    if (GuiManager.MainGui = "")
+        return
     ; 当窗口失去焦点时
     if(WinActive("ahk_id " GuiManager.MainGui.Hwnd) == 0) {
         ; 如果上次点击的是edit控件

@@ -54,6 +54,8 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 | `core/hotkey/hotkey_service.ahk`（`HotkeyService`） | 热键注册/注销/分组切换。三组热键：CombatHotkeys（常规作战）、QuickHotkeys（快捷操作）、StrongHoldHotkeys（卫戍协议）。按标签页启用对应组，组间互斥。拦截正则由 `GameKeys.GetInterceptPattern()` 动态生成。`ActionCallbacks` 数据化（`{Fn, Guarded}`）声明守卫标志，为守卫拦截键注册 Up 变体补发透传 |
 | `core/hotkey/hotkey_actions.ahk`（`HotkeyActions`） | 热键触发后的具体功能实现（`Action*` 函数）。触控注入初始化由 `App.Bootstrap()` 调用 `HotkeyActionsStart()` 完成；所有游戏按键通过 `GameKeys.SendDown`/`SendUp`/`Tap` 发送，不再硬编码。常规作战 14 个功能带关卡守卫（`GuardInLevel`，读 `LevelDetector.IsInLevel()` 判定），拦截时经 `KeyForward` 透传原键 |
 | `base/touch_injection.ahk` | Windows Touch Injection API 封装（`TouchInjector` 类）。用于暂停选人/技能/撤退等操作的模拟点击，通过 `InitializeTouchInjection`/`InjectTouchInput` 实现，不抢夺鼠标焦点 |
+| `base/i18n.ahk` + `base/locales/*.ahk` | 国际化核心（`I18n` 类）与五语言资源（`LocaleZhHans`/`LocaleZhHant`/`LocaleJaJP`/`LocaleKoKR`/`LocaleEnUS`）。`Init(localeId)`/`SetLocale()`/`T(key, args*)`；回退链 请求语言 → zh-Hans → key 本身；`Data` 超约 19KB 拆分 `Data2` |
+| `base/metrics.ahk` | UI 度量与字体（`Metrics` 类）：`FontFor(locale)` 返回各语言推荐字体，`TextWidth()` 估算文本像素宽度（供控件宽度按语言自适应） |
 | `ui/key_bind.ahk` | 按键绑定捕获（InputHook），处理用户在设置界面的按键录制 |
 | `ui/gui.ahk` | 设置窗口 GUI 全部逻辑（标签页切换、控件事件、托盘菜单）。`UpdateSaveButtonState()` 根据 `IsModified` 和 `HasHotkeyConflicts` 决定保存/应用按钮状态。`RefreshHotkeyConflicts()` 调用 `HotkeyConflictValidator` 进行增量字体标红（仅更新冲突状态变化的控件，使用 `_PrevConflictedControls` 做 diff）。`SwitchTab()` 确认放弃修改后调用 `Config.LoadFromIni()` 显式丢弃内存修改 |
 | `base/logger.ahk` | 双轨日志系统（`Logger` 类）。普通日志（15 MiB）和关键日志 WARN/ERROR（5 MiB）分轨滚动存储到 `%AppData%\ArknightsFrameAssistant\PC\logs\`。支持会话级文件命名（`afa-{timestamp}-{pid}-{tick}.log`）、7 天过期清理、敏感值脱敏（`RegisterSecret`/`Redact`）、异常退出检测（启动时检查上一会话是否含 Shutdown 标记）、全局未处理异常回调。所有模块通过 `Logger.Info`/`Warn`/`Error`/`Debug`/`Exception` 写日志 |
@@ -66,13 +68,19 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 | `core/launch/game_auto_start.ahk` | 随明日方舟启动自动启动小助手（`GameAutoStartManager` 类）。审核事务临时启用 `SeSecurityPrivilege`，通过 `AuditQuerySystemPolicy` 读取优先，仅在成功审核缺失时调用 `AuditSetSystemPolicy`，复查后恢复令牌权限原状态；错误 1450 按 250/750ms 有限重试。计划任务按动作、参数、工作目录、事件订阅、主体和设置做语义比较，一致时不重写，缺失或漂移时才修复。手动启动执行校准；`--game-autostart` 触发启动在配置开启时跳过校准，配置关闭时尽力删除遗留任务后退出。启动校准失败保留配置和任务，仅在 GUI 就绪后显示一次托盘通知；设置页显式保存仍严格失败且不持久化。`Disable()` 只删除当前用户任务并保留系统审核。任务按 SID 独立命名（`ArknightsFrameAssistant-AutoStartWithGame-{SID}`） |
 | `core/launch/app_context.ahk` | 应用启动上下文：`StartedByGameAutoStart` 唯一 owner，Bootstrap 写入，GameAutoStartManager/LogExporter 读取 |
 | `core/hotkey/timing_service.ahk` | 时序服务：`CurrentDelay`/`ClickDelay` 唯一 owner，提供 getter 与 `Refresh()` |
-| `base/message_box.ahk` | 自定义消息框（`MessageBox` 类），替代原生 `MsgBox`。支持同步/异步模式、多种图标和按钮组合，窗口通过忙等循环实现同步 |
+| `base/message_box.ahk` | 自定义消息框（`MessageBox` 类），替代原生 `MsgBox`。支持同步/异步模式、按钮组合与按语言自适应的布局（背景色/字体由 `Metrics.FontFor` 提供），窗口通过忙等循环实现同步。注意：右键/图标渲染已移除 |
 | `core/monitor/level_detector.ahk` | 关卡检测投票状态机（`LevelDetector` 类）。每 333ms 轮询对 3 个关卡内专属对象（关卡内文本/退出按钮/暂停按钮）做 PixelSearch 颜色检测（区域用相对比例定位，低分辨率时文本容差放宽到 20），命中 ≥2 个 → 私有 `InLevel=true`，<2 → `false`。维护守卫判定依据；守卫关闭（`InLevelGuard=0`）时停止轮询并强制 `InLevel=true` |
 | `core/monitor/game_monitor.ahk`（`GameMonitor` 类） | 三合一游戏状态监控：(1) **自动退出**：游戏进程退出时自动退出 AFA；(2) **自动开局暂停**：通过 17 点全屏黑屏检测 → 三条扫描线 Loading 识别 → 暂停按钮颜色识别的三阶段状态机，在进关卡时自动暂停；(3) 定时器频率随状态动态调整（400ms → 黑屏后 200ms → 8 秒超时恢复 400ms）。包含 `LoadingPosition()`、`BlackScreenPoints()`、`StopSearchLoading()` 三个辅助函数 |
 
 ### 关键设计
 
-- **Constants 类**：常量定义。`Delay30`~`Delay240` 是各帧率对应的延迟毫秒值（取 `ceil(1000/fps)`，例外：`Delay144=8` 多 1ms 余量），`TimingService.GetCurrentDelay()` 依此计算。`FrameOptions` 定义下拉框选项数组，`FrameTextToOldIndex`/`FrameOldIndexToText` 用于 Frame155 双写转换。`KeyNames` 是一个 `Map(keyName, displayName)`，定义所有热键 key 到 GUI 中文显示名的映射——新增热键功能时**必须**在此 Map 中同步添加条目。`CustomNames` 对应自定义设置的显示名，新增自定义配置项时也需同步添加，否则设置无法保存；同时需在 `Config._DefaultCustom` 加默认值——老用户已有 INI 缺新键时由 `LoadFromIni` 的 `_BackfillMissingCustomDefaults()`（v1.9.0+）自动补齐，无需手工迁移。
+- **多区服与热路径预算（v2.0.0+）**：`GameTarget` 是“目标游戏窗口”的唯一 owner，禁止在热键/监控路径再直接写 `ahk_exe Arknights.exe`（宽松回退集中在 `GameTarget`）。热键触发路径只允许 O(1) 内存查表 + 最多 2 次轻量 Win32 调用（`GetForegroundWindow` / `GetWindowThreadProcessId`）；`ProcessGetPath`、WMI、`RegRead`、`PixelSearch`、文件 IO 一律走定时器慢路径。`GameClientRegistry` 维护 PID→区服缓存并由 `GameMonitor` 400ms 轮询刷新；`GameKeys` 按前台区服取映射，拦截正则为所有已安装区服并集。
+
+- **FileDelete/Map.Delete 陷阱**：`FileDelete` 对不存在的文件会抛异常，与 `Map.Delete` 同类，删除前必须先 `FileExist`/`Has` 判断。
+
+- **不用 AHK 执行/编译脚本**：默认不编译或启动 AFA；涉及 GUI、提权、计划任务和真实游戏联动的验收仍由用户操作并反馈。脚本取不到输出时直接问用户。
+
+- **Constants 类**：常量定义。`Delay30`~`Delay240` 是各帧率对应的延迟毫秒值（取 `ceil(1000/fps)`，例外：`Delay144=8` 多 1ms 余量），`TimingService.GetCurrentDelay()` 依此计算。`FrameOptions` 定义下拉框选项数组，`FrameTextToOldIndex`/`FrameOldIndexToText` 用于 Frame155 双写转换。`KeyNames` 是 `Map(热键id, i18n键名)`（由 `HotkeySchema` 生成），显示名经 `I18n.T(nameKey)` 获取——新增热键功能时**必须**在 `HotkeySchema.Items` 中同步添加带 `nameKey` 的条目。`CustomNames` 对应自定义设置的显示名，新增自定义配置项时也需同步添加，否则设置无法保存；同时需在 `Config._DefaultCustom` 加默认值——老用户已有 INI 缺新键时由 `LoadFromIni` 的 `_BackfillMissingCustomDefaults()`（v1.9.0+）自动补齐，无需手工迁移。
 - **Logger 日志系统**（v1.5.10+）：双轨滚动存储，普通日志（`afa-*.log`）保留 15 MiB，关键日志 WARN/ERROR（`critical-*.log`）单独保留 5 MiB，总容量 20 MiB。按会话隔离（文件名含时间戳+PID+tick），支持 7 天过期清理和容量驱动的分段轮换。`RegisterSecret(value)` 注册敏感值，`_BuildLine` 自动调用 `Redact` 脱敏。启动时检测上一会话是否异常退出（无 Shutdown 标记的上一会话日志文件受保护不被清理）。`SetDebugEnabled(enabled)` 控制 DEBUG 级别是否持久化。所有日志通过 `OutputDebug` 同步输出到 DebugView。容量清理依赖缓存指标（`CachedOrdinaryFiles`/`CachedOrdinaryBytes` 等），每 64 次写入或有容量压力时触发。
 - **实时调试控制台**（v1.9.0+，logger.ahk）：`SetConsoleEnabled` 经 `AllocConsole` 创建「AFA 调试日志」窗口。输出**必须用 `WriteConsoleW` DllCall 直接写入**——`FileOpen("CONOUT$")`+`WriteLine` 因 File 对象内部缓冲、控制台不关闭不刷新而空屏。`SetConsoleTextAttribute` 按级别着色（ERROR红/WARN黄/DEBUG灰/INFO白）；打开时显示亮蓝横幅并回放 `RecentLines` 最近日志。安全措施：X 按钮置灰、`SetConsoleCtrlHandler(NULL, TRUE)` 忽略 Ctrl+C/Break、`SetConsoleMode` 清除 `ENABLE_QUICK_EDIT_MODE(0x0040)` 并置 `ENABLE_EXTENDED_FLAGS(0x0080)`（否则点击控制台进入选择态、阻塞进程控制台 I/O 卡死 AFA）。`AllocConsole` 失败（进程已有控制台，如从终端启动）→ 静默降级并**复位 `ConsoleEnabled=false`**（避免 `CloseConsole` 误 `FreeConsole` 脱离调用方终端）。`ConsoleTipShown` 内存标志控"当次会话仅首次"提示。`DebugEnabled`（Important）经 `SettingsService.Initialize()` 接线同时控制持久化与控制台；`version_checker.IsDebugLogging()` 直接读 `Logger.DebugEnabled`（单源，勿重读 INI 造成双源）。
 - **Config 读写分离与工作副本**（v1.5.10+）：`GetHotkey()`/`GetImportant()`/`GetCustom()` 返回内存工作副本（`_HotkeySettings`/`_ImportantSettings`/`_CustomSettings`），供 GUI 显示和冲突检测使用。`SetHotkey()`/`SetImportant()`/`SetCustom()` 仅写内存。`LoadFromIni()` 一次性从 INI 重载全部三组设置，用于显式丢弃内存中的未保存修改（取消设置时）。热键注册和运行时逻辑不应触碰工作副本，应使用 `ReadHotkeyFromIni()`/`ReadImportantFromIni()`/`ReadCustomFromIni()` 直接从 INI 读取——这三个方法不会修改内存 Map。`AllHotkeys`/`AllImportant`/`AllCustom` 三个属性直接返回内存 Map 的引用，供遍历使用——注意 `AllHotkeys` 的值是"真实键值"（`RealNewkeyFormat`），而 GUI 显示的是 `VirtualNewkeyFormat` 后的可读值。`TrackChange()` 在检测控件变更时同步将新值写入 Config 内存（确保切换标签页后编辑不丢失）。`SetImportant("Frame", value)` 内部自动同步 `Frame155`，调用方无需手动双写。`UpdateSource`（`"1"` = 国内源默认，`"2"` = GitHub）为 v1.5.6+ 新增的 Important 配置项。三组设置分别通过 `GetHotkey`/`GetImportant`/`GetCustom` 懒加载，各自对应 `_DefaultHotkeys`/`_DefaultImportant`/`_DefaultCustom` 默认值 Map
@@ -114,6 +122,17 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - **AHK DPI 与坐标换算**：AHK v2 是 **system DPI aware**（非 per-monitor，官方文档明确"not marked as per-monitor DPI-aware"）。`A_ScreenDPI`=主屏 DPI 是正确基准，系统对副屏做 bitmap scaling 并统一坐标——多屏不同缩放下用 `A_ScreenDPI` 换算即可，不要用 `GetDpiForWindow`。`MouseGetPos` 在 `CoordMode "Mouse","Client"` 下返回**物理像素**，而 GUI `Move()` 用**逻辑像素**（DPI 缩放），两者换算：`物理像素 * 96 / A_ScreenDPI`。
 - **AHK Text 控件运行时改背景色不可靠**：`Opt("Background" color)` 对已创建 Text 控件改背景色，文档明确"the control might choose to ignore it"——高亮能显示但取消高亮不刷新，`Sleep -1`/`Redraw()` 均无法绕过。需要运行时切换背景时用**双控件叠加**（固定背景层 + 高亮层，通过 `Visible` 切换），并将高亮层加入命中测试（`GetTabManagerHit`）。注意 `_ShowControls` 会把组内所有控件设为可见（含高亮层），需在分类切换后重绘重置。
 - **动态对齐 vs 绝对坐标**：GUI 中右列对齐左列时，用 `GetPos` 动态读取左列控件实际 y 存入类成员（如 `TabManagerTitleY`），而非硬编码绝对坐标——AHK 的 `y+10` 相对"前一个控件底部"（非 Section），绝对坐标估算易随字体/布局漂移。控件尺寸/垂直偏移（`y+4` 等）在各子控件间应统一，否则视觉高度不齐。
+
+### i18n 多语言（v2.0.0+）
+
+- **语言 id 用 BCP-47**：`zh-Hans` / `zh-Hant` / `ja-JP` / `ko-KR` / `en-US`；`Language=auto` 用 `GetUserDefaultUILanguage()` 检测（`A_Language` 是系统区域设置，不是 UI 语言；四语覆盖，其余回退 `en-US`）。
+- **资源 = 编译内置 Map**：`base/locales/*.ahk` 的 `LocaleXxx.Data`。**AHK 单条静态 `Map(...)` 声明约 19KB 解析上限**——大资源表拆 `Data2`，`I18n._Lookup` 按 `Data → Data2` 顺序查找（键数 >254 或语句超约 19KB 时沿用此约定，勿合并回单表）。`tools/i18n_check.py` 校验源码字面 `I18n.T("key")` 与 zh 资源键集合；`hotkey.*` / `important.*` 等经变量动态引用的键报 INFO 属预期。
+- **`I18n.T(key, args*)`**：回退链 请求语言 → `zh-Hans` → key 本身；缺键每键仅 `Warn` 一次；占位符用 `Format` 风格 `{1}`，**禁止拼接句子**；`I18n` 未 `Init` 前调用会惰性加载兜底，正常流程在 `SettingsService.Initialize()` 内完成 `I18n.Init`（崩溃提示等展示须在 Init 之后）。
+- **新增用户可见文案必须键化**（GUI/托盘/弹窗/消息字段）；以下**保持中文不翻译**：`Logger.*`、`VersionChecker._Log`、`OutputDebug`、调试控制台横幅、诊断包（`read-errors.txt` / `diagnostics.txt`）、热键明细日志（"战斗=/快捷="）、内部 `throw Error("...")` 及仅被日志消费的 message 字段。键化前先确认文案是否展示给用户。
+- **`self_replacer.ahk` 批处理控制台**（含 `update-*.log` 内容）：zh-Hans/zh-Hant 保留中文与求饶文案，**其它语言统一英文**（`batch.*` 键，ja/ko 值与 en 相同）；批处理行尾必须 ASCII（`chcp 65001` 陷阱见上）。
+- **控件宽度按语言自适应**：`Metrics.TextWidth()` 仅作快速估算；关键长标签（绑定行、帧率标签等）用**独立临时 Gui 探测真实字形宽度**（`Gui()` + `Add("Text")` + `GetPos` + `probeGui.Destroy()`），不要在主窗口建隐藏探测控件。列栅格约定：编辑控件列固定（左列 x155 / 右列 x515，w140），左侧标签右缘固定 135 右对齐、宽出向左延伸（列内上限 135px）；消息框/更新/下载弹窗的按钮宽度与窗口尺寸按实际控件位置动态计算。
+- **AHK 控件无 `Destroy()`**：Gui 控件对象没有 `Destroy`/`Delete` 方法（只有 `Gui` 窗口可 `Destroy()`）；Text 控件改 `.Value` **不会**自动重新量宽（需 `Move`）。"测量后重定位"一律用临时 Gui 窗口或 `GetPos` + `Move`。
+- **布局/文案改动后须五语言人工验证**：按 `test/test_i18n_four_language_regression.md` 逐语言核对换行/截断/对齐（中文为基准；中文界面默认要求不动）。优先"测量真实宽度"，不要按估算值设死宽度。
 
 ## 代码规范
 
