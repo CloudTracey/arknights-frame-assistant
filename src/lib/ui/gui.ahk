@@ -288,12 +288,12 @@ class GuiManager {
         ; 列栅格：C 输入框与右侧按键 Edit 列对齐（x515 w140），复选框贴其左侧（右缘 500），
         ; 复选框文案向右延伸时自动左移，任何语言都不会越窗。
         autoBeginW := Metrics.TextWidth(I18n.T("label.autoBeginPause"))
-        checkboxAutoBeginPause := this.MainGui.Add("Checkbox", "x" (500 - autoBeginW - 20) " yp+2 h24 vAutoBeginPause", I18n.T("label.autoBeginPause"))
+        checkboxAutoBeginPause := this.MainGui.Add("Checkbox", "x" (500 - autoBeginW - 20) " yp-2 h24 vAutoBeginPause", I18n.T("label.autoBeginPause"))
         checkboxAutoBeginPause.OnEvent("Click", (*) => this.TrackChange("AutoBeginPause"))
         this.MainGui["AutoBeginPause"].Value := Config.GetImportant("AutoBeginPause")
         checkboxAutoBeginPause.GetPos(&cbPauseX, &cbPauseY)   ; 记录位置供快捷操作页复用
         this.KeybindControls.Push(checkboxAutoBeginPause)
-        editAutoBeginPauseSwitch := this.MainGui.Add("Edit", "x515 yp-4 w140 Center -TabStop Uppercase v" "AutoBeginPauseSwitch",
+        editAutoBeginPauseSwitch := this.MainGui.Add("Edit", "x515 yp w140 Center -TabStop Uppercase v" "AutoBeginPauseSwitch",
             Config.GetHotkey("AutoBeginPauseSwitch"))
         this.KeybindControls.Push(editAutoBeginPauseSwitch)
 
@@ -619,8 +619,7 @@ class GuiManager {
             "ClickDelay"))
         this.ClickDelay.OnEvent("Change", (*) => this.TrackChange("ClickDelay"))
         updownClickDelay := this.MainGui.Add("UpDown", , Config.GetCustom("ClickDelay"))
-        hintClickDelay := this.MainGui.Add("Text", "xs y+6 w270 h34 Wrap c9c9c9c",
-            I18n.T("custom.clickDelayHint"))
+        hintClickDelay := this.MainGui.Add("Text", "xs y+6 h17 Wrap c9c9c9c", I18n.T("custom.clickDelayHint"))
         this.CustomControls.Push(txtClickDelay)
         this.CustomControls.Push(this.ClickDelay)
         this.CustomControls.Push(updownClickDelay)
