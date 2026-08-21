@@ -1819,27 +1819,27 @@ class GuiManager {
         ; 计算目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页。
         ; 先算后比，仅当实际变化时才赋值，避免相同值触发重绘闪烁。
         if isStrongHold {
-            keybindText := I18n.T("tab.keyBind") " ×"
-            quickText := I18n.T("tab.quick") " ×"
-            strongHoldText := I18n.T("tab.strongHold") " √"
+            keybindText := I18n.T("tab.keyBind") " ✗"
+            quickText := I18n.T("tab.quick") " ✗"
+            strongHoldText := I18n.T("tab.strongHold") " ✓"
         } else if isOther {
             if !showModeStatus {
                 keybindText := I18n.T("tab.keyBind")
                 quickText := I18n.T("tab.quick")
                 strongHoldText := I18n.T("tab.strongHold")
             } else if (this.LastActiveTab = "strongHoldProtocol") {
-                keybindText := I18n.T("tab.keyBind") " ×"
-                quickText := I18n.T("tab.quick") " ×"
-                strongHoldText := I18n.T("tab.strongHold") " √"
+                keybindText := I18n.T("tab.keyBind") " ✗"
+                quickText := I18n.T("tab.quick") " ✗"
+                strongHoldText := I18n.T("tab.strongHold") " ✓"
             } else {
-                keybindText := I18n.T("tab.keyBind") " √"
-                quickText := I18n.T("tab.quick") " √"
-                strongHoldText := I18n.T("tab.strongHold") " ×"
+                keybindText := I18n.T("tab.keyBind") " ✓"
+                quickText := I18n.T("tab.quick") " ✓"
+                strongHoldText := I18n.T("tab.strongHold") " ✗"
             }
         } else {
-            keybindText := showModeStatus ? I18n.T("tab.keyBind") " √" : I18n.T("tab.keyBind")
-            quickText := showModeStatus ? I18n.T("tab.quick") " √" : I18n.T("tab.quick")
-            strongHoldText := showModeStatus ? I18n.T("tab.strongHold") " ×" : I18n.T("tab.strongHold")
+            keybindText := showModeStatus ? I18n.T("tab.keyBind") " ✓" : I18n.T("tab.keyBind")
+            quickText := showModeStatus ? I18n.T("tab.quick") " ✓" : I18n.T("tab.quick")
+            strongHoldText := showModeStatus ? I18n.T("tab.strongHold") " ✗" : I18n.T("tab.strongHold")
         }
         if (this.TxtKeybind.Text != keybindText)
             this.TxtKeybind.Text := keybindText
