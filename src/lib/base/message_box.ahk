@@ -46,27 +46,27 @@ class MessageBox {
     }
 
     ; 显示信息框
-    static Info(message, title := "提示") {
+    static Info(message, title := I18n.T("msg.hintTitle")) {
         return this.Show(message, title, "Iconi")
     }
 
     ; 显示警告框
-    static Warning(message, title := "警告") {
+    static Warning(message, title := I18n.T("msg.titleWarning")) {
         return this.Show(message, title, "Icon!")
     }
 
     ; 显示错误框
-    static Error(message, title := "错误") {
+    static Error(message, title := I18n.T("msg.titleError")) {
         return this.Show(message, title, "Iconx")
     }
 
     ; 显示确认框（Yes/No）
-    static Confirm(message, title := "确认") {
+    static Confirm(message, title := I18n.T("msg.titleConfirm")) {
         return this.Show(message, title, "YesNo Icon?")
     }
 
     ; 显示确认框（OK/Cancel）
-    static ConfirmCancel(message, title := "确认") {
+    static ConfirmCancel(message, title := I18n.T("msg.titleConfirm")) {
         return this.Show(message, title, "OKCancel Icon?")
     }
 
@@ -90,10 +90,10 @@ class MessageBox {
         parsedOptions := this._ParseOptions(options)
 
         ; 创建GUI
-        dialog := Gui(, title != "" ? title : "提示")
+        dialog := Gui(, title != "" ? title : I18n.T("msg.hintTitle"))
         dialog.Opt("+AlwaysOnTop -MinimizeBox +Owner")
         dialog.BackColor := "FFFFFF"
-        dialog.SetFont("s10", "Microsoft YaHei UI")
+        dialog.SetFont("s10", Metrics.FontFor(I18n.GetCurrent()))
         hWnd := dialog.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
 
@@ -109,7 +109,7 @@ class MessageBox {
         ;         dialog.SetFont("s28", "Segoe UI Symbol")
         ;         iconCtrl := dialog.Add("Text", "x" iconX " y" iconY " w" iconSize " h" iconSize " Center", iconChar)
         ;         hasIcon := true
-        ;         dialog.SetFont("s10", "Microsoft YaHei UI")
+        ;         dialog.SetFont("s10", Metrics.FontFor(I18n.GetCurrent()))
         ;     }
         ; }
 
@@ -120,7 +120,7 @@ class MessageBox {
         textW := this.DefaultWidth - textX - 30
 
         ; 添加消息文本
-        dialog.SetFont("s9", "Microsoft YaHei UI")
+        dialog.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
         textCtrl := dialog.Add("Text", "x" textX " y" textY " w" textW, this._WrapMessage(message))
         textCtrl.Opt("Center")
         textCtrl.GetPos(, , , &textH)
@@ -200,8 +200,12 @@ class MessageBox {
     }
 
     ; 内部：对长消息强制按字符换行，避免无空格的长字符串（如文件路径）溢出窗口
-    ; textW=280px, s9 字体下约可容纳 36 个半角字符/行
-    static _WrapMessage(message, maxChars := 36) {
+    ; textW=280px, s9 字体下：拉丁字符约可容纳 36 字符/行；CJK/假名/谚文约 21 字符/行
+    static _WrapMessage(message, maxChars := "") {
+        if (maxChars = "") {
+            ; 按当前语言选择每行字符上限（280px ≈ 23 个 12px CJK 字形 ≈ 40 个半角字符）
+            maxChars := InStr("|zh-Hans|zh-Hant|ja-JP|ko-KR|", "|" I18n.GetCurrent() "|") ? 21 : 36
+        }
         lines := StrSplit(message, "`n", "`r")
         result := ""
         for line in lines {
@@ -237,32 +241,32 @@ class MessageBox {
         switch btnType {
             case this.BTN_OK:
                 btnX := (this.DefaultWidth - btnW) / 2
-                buttons.OK := dialog.Add("Button", "x" btnX " y" btnY " w" btnW " h" btnH " Default", "确定")
+                buttons.OK := dialog.Add("Button", "x" btnX " y" btnY " w" btnW " h" btnH " Default", I18n.T("msg.btnOk"))
                 buttons.DefaultBtn := buttons.OK
 
             case this.BTN_OK_CANCEL:
                 spacing := 20
                 totalW := btnW * 2 + spacing
                 startX := (this.DefaultWidth - totalW) / 2
-                buttons.OK := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", "确定")
-                buttons.Cancel := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, "取消")
+                buttons.OK := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("msg.btnOk"))
+                buttons.Cancel := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("msg.btnCancel"))
                 buttons.DefaultBtn := buttons.OK
 
             case this.BTN_YES_NO:
                 spacing := 20
                 totalW := btnW * 2 + spacing
                 startX := (this.DefaultWidth - totalW) / 2
-                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", "是(&Y)")
-                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, "否(&N)")
+                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("msg.btnYes"))
+                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("msg.btnNo"))
                 buttons.DefaultBtn := buttons.Yes
 
             case this.BTN_YES_NO_CANCEL:
                 spacing := 15
                 totalW := btnW * 3 + spacing * 2
                 startX := (this.DefaultWidth - totalW) / 2
-                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", "是(&Y)")
-                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, "否(&N)")
-                buttons.Cancel := dialog.Add("Button", "x" (startX + (btnW + spacing) * 2) " y" btnY " w" btnW " h" btnH, "取消(&C)")
+                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("msg.btnYes"))
+                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("msg.btnNo"))
+                buttons.Cancel := dialog.Add("Button", "x" (startX + (btnW + spacing) * 2) " y" btnY " w" btnW " h" btnH, I18n.T("msg.btnCancel"))
                 buttons.DefaultBtn := buttons.Yes
         }
 
