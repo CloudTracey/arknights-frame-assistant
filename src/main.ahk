@@ -106,12 +106,6 @@ class App {
         Logger.Init()
         Logger.Info("Startup", "管理员进程启动，脚本=" A_ScriptName)
 
-        ; 上一会话异常退出（Logger.PreviousAbnormalFile 在 Logger.Init 已识别）时提示用户。
-        if (Logger.PreviousAbnormalFile != "") {
-            Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
-            MessageBox.Info("检测到上次运行崩溃。`n建议在设置中开启「调试模式」记录日志，并用「生成日志压缩包」导出诊断包反馈给开发者。", "AFA")
-        }
-
         ; ---- 初始化各模块 ----
         Config.InitPath()
         GameClientRegistry.Init()
@@ -133,6 +127,13 @@ class App {
         Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
         Logger.RegisterSecret(A_ScriptFullPath)
         Logger.Info("Startup", "配置加载完成，版本=" Version.Get())
+
+        ; 上一会话异常退出（Logger.PreviousAbnormalFile 在 Logger.Init 已识别）时提示用户。
+        ; 放在 I18n.Init 之后，保证提示使用用户选择的界面语言。
+        if (Logger.PreviousAbnormalFile != "") {
+            Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
+            MessageBox.Info(I18n.T("msg.lastCrashWarning"), "AFA")
+        }
 
         ; 写入启动来源状态，并校准随游戏自动启动的 Windows 审核和计划任务
         AppContext.SetStartedByGameAutoStart(startedByGameAutoStart)
@@ -167,11 +168,11 @@ class App {
 
         ; 启动校准失败只在 GUI 就绪后用托盘提示一次，不阻塞主流程，也不改变已保存配置。
         if (IsSet(pendingAutoStartWarning))
-            ShowTrayTip(pendingAutoStartWarning, "随游戏自动启动校准失败", 2)
+            ShowTrayTip(pendingAutoStartWarning, I18n.T("msg.autoStartCalibrationFailedTitle"), 2)
 
         tokenStorageWarning := Config.GetTokenStorageWarning()
         if (tokenStorageWarning != "")
-            MessageBox.Warning(tokenStorageWarning, "GitHub Token 存储提示")
+            MessageBox.Warning(tokenStorageWarning, I18n.T("msg.githubTokenStorageTitle"))
 
         ; 触发应用启动事件（触发自动更新检查和游戏自动启动）
         EventBus.Publish("AppStartCompleted")

@@ -57,7 +57,7 @@ class GameLauncher {
             return
         }
 
-        MessageBox.Warning("未检测到游戏进程，且未在常见目录找到游戏路径。`n请先启动游戏，或手动填写游戏路径。", "识别失败")
+        MessageBox.Warning(I18n.T("msg.gameDetectFailed"), I18n.T("msg.gameDetectFailedTitle"))
     }
 
     ; 启动游戏
@@ -67,29 +67,29 @@ class GameLauncher {
         ; 检查是否已运行（任意区服客户端都算已运行）
         if GameClientRegistry.HasClients() || GameTarget.ProcessExists() {
             Logger.Info("GameLauncher", "游戏已在运行，跳过启动")
-            return { success: true, message: "游戏已在运行" }
+            return { success: true, message: I18n.T("launch.msgAlreadyRunning") }
         }
 
         ; 检查游戏路径配置
         if (gamePath = "" || gamePath = "游戏路径") {
             Logger.Warn("GameLauncher", "游戏路径未配置")
-            return { success: false, message: "游戏路径未配置，请在设置中指定" }
+            return { success: false, message: I18n.T("launch.msgPathNotConfigured") }
         }
 
         ; 检查游戏文件是否存在
         if !FileExist(gamePath) {
             Logger.Warn("GameLauncher", "游戏文件不存在：" gamePath)
-            return { success: false, message: "游戏文件不存在，请检查路径配置" }
+            return { success: false, message: I18n.T("launch.msgFileMissing") }
         }
 
         ; 启动游戏
         try {
             Run(gamePath)
             Logger.Info("GameLauncher", "游戏已启动：" gamePath)
-            return { success: true, message: "游戏启动成功" }
+            return { success: true, message: I18n.T("launch.msgLaunchSuccess") }
         } catch Error as e {
             Logger.Error("GameLauncher", "启动失败：" e.Message)
-            return { success: false, message: "启动失败：" e.Message }
+            return { success: false, message: I18n.T("launch.msgLaunchFailed", e.Message) }
         }
     }
 

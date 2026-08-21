@@ -147,12 +147,12 @@ class UpdateDownloader {
                 ; 连接阶段停滞（readyState<3）超过 ConnStallTimeout
                 if (rs < 3 && A_TickCount - stallStart > this.ConnStallTimeout) {
                     try http.Abort()
-                    throw Error("HEAD请求连接超时")
+                    throw Error(I18n.T("dl.headConnTimeout"))
                 }
                 ; 绝对超时安全网
                 if (A_TickCount - headStart > this.HeadTimeout) {
                     try http.Abort()
-                    throw Error("HEAD请求超时")
+                    throw Error(I18n.T("dl.headTimeout"))
                 }
                 Sleep(25)
             }
@@ -218,11 +218,11 @@ class UpdateDownloader {
                     }
                     if (rs < 3 && A_TickCount - stallStart > this.ConnStallTimeout) {
                         try http.Abort()
-                        throw Error("下载请求连接超时")
+                        throw Error(I18n.T("dl.connTimeout"))
                     }
                     if (A_TickCount - fullStart > this.FullMaxTimeout) {
                         try http.Abort()
-                        throw Error("下载请求超时")
+                        throw Error(I18n.T("dl.requestTimeout"))
                     }
                     Sleep(25)
                 }
@@ -234,7 +234,7 @@ class UpdateDownloader {
                 }
 
                 if (http.Status != 200) {
-                    throw Error("下载失败，HTTP状态: " http.Status)
+                    throw Error(I18n.T("dl.httpStatus", http.Status))
                 }
 
                 responseBody := http.ResponseBody
@@ -273,7 +273,7 @@ class UpdateDownloader {
         ; 分块间停滞检测：非首块时，若长时间无分块完成则判停滞
         if (this.ChunkIndex > 0 && this.LastChunkTime > 0 && A_TickCount - this.LastChunkTime > this.StallTimeout) {
             this._Cleanup()
-            this._HandleErrorObj(Error("下载停滞：" (this.StallTimeout // 1000) "秒无新数据"))
+            this._HandleErrorObj(Error(I18n.T("dl.stalled", this.StallTimeout // 1000)))
             return
         }
 
@@ -312,17 +312,17 @@ class UpdateDownloader {
                 if (rs < 3 && A_TickCount - stallStart > this.ConnStallTimeout) {
                     try http.Abort()
                     this._InvalidateChunkHttp()
-                    throw Error("下载分块连接超时")
+                    throw Error(I18n.T("dl.chunkConnTimeout"))
                 }
                 if (rs >= 3 && A_TickCount - stallStart > this.StallTimeout) {
                     try http.Abort()
                     this._InvalidateChunkHttp()
-                    throw Error("下载分块数据停滞")
+                    throw Error(I18n.T("dl.chunkStalled"))
                 }
                 if (A_TickCount - chunkStart > this.ChunkMaxTimeout) {
                     try http.Abort()
                     this._InvalidateChunkHttp()
-                    throw Error("下载分块超时")
+                    throw Error(I18n.T("dl.chunkTimeout"))
                 }
                 Sleep(25)
             }
@@ -334,7 +334,7 @@ class UpdateDownloader {
             }
 
             if (http.Status != 206 && http.Status != 200) {
-                throw Error("下载分块失败，HTTP状态: " http.Status)
+                throw Error(I18n.T("dl.chunkHttpStatus", http.Status))
             }
 
             responseBody := http.ResponseBody
@@ -397,7 +397,7 @@ class UpdateDownloader {
             this.MasterStream := ""
 
             if !FileExist(this.TempFile) {
-                throw Error("文件保存失败")
+                throw Error(I18n.T("dl.saveFailed"))
             }
 
             ; 校验 SHA-256（可选）：哈希不匹配则删除文件并中止更新
@@ -407,7 +407,7 @@ class UpdateDownloader {
                     Logger.Error("UpdateDownloader", "SHA-256 校验失败：期望=" this.ExpectedHash "，实际=" actualHash)
                     FileDelete(this.TempFile)
                     this._Cleanup()
-                    this._HandleErrorObj(Error("文件哈希校验失败：下载的文件与发布版本不一致，可能被篡改或下载不完整。已中止更新，请重新下载。"))
+                    this._HandleErrorObj(Error(I18n.T("dl.hashMismatch")))
                     return
                 }
                 Logger.Info("UpdateDownloader", "SHA-256 校验通过")
@@ -470,7 +470,7 @@ class UpdateDownloader {
     ; 内部：触发取消回调
     static _FireCancel() {
         this.IsDownloading := false
-        cancelInfo := {message: "用户取消了下载"}
+        cancelInfo := {message: I18n.T("dl.userCancelled")}
         if (this.OnCancel != "" && (Type(this.OnCancel) = "Func" || Type(this.OnCancel) = "Closure"))
             this.OnCancel.Call(cancelInfo)
         this._Cleanup()
@@ -480,7 +480,7 @@ class UpdateDownloader {
     static _HandleErrorObj(err) {
         this.IsDownloading := false
         errorInfo := {
-            message: "下载失败: " err.Message,
+            message: I18n.T("dl.failedWithReason", err.Message),
             reason: err.Message,  ; 不含前缀的原始失败原因，供重试 UI 展示避免重复
             version: this.RemoteVersion
         }

@@ -61,7 +61,7 @@ class Updater {
                         ; 保存失败时恢复内存值，避免配置文件与当前状态不一致。
                         Config.SetImportant("LastDismissedVersion", dismissedVersion)
                         Logger.Warn("Updater", "清除已忽略版本记录失败：" saveResult.message)
-                        MessageBox.Warning("当前版本已是最新，但忽略版本记录未能清除：`n" saveResult.message, "配置未保存")
+                        MessageBox.Warning(I18n.T("msg.upToDateDismissFailed", saveResult.message), I18n.T("msg.configNotSavedTitle"))
                     }
                 }
 
@@ -260,7 +260,7 @@ class Updater {
 
         if (!replaceResult.success) {
             Logger.Error("Updater", "自替换启动失败：" replaceResult.error)
-            MessageBox.Error("启动更新失败：`n" replaceResult.error, "更新失败")
+            MessageBox.Error(I18n.T("msg.updateStartFailed", replaceResult.error), I18n.T("msg.updateFailedTitle"))
         } else {
             Logger.Info("Updater", "自替换已启动，即将退出程序")
         }
@@ -274,9 +274,9 @@ class Updater {
 
         ; 显示提示
         if (saveResult.success)
-            MessageBox.Info("已忽略版本 " data.remoteVersion " 的更新提示。`n`n下次自动检查更新时将不再提示此版本。", "已忽略")
+            MessageBox.Info(I18n.T("msg.updateIgnored", data.remoteVersion), I18n.T("msg.updateIgnoredTitle"))
         else
-            MessageBox.Warning("已关闭本次更新提示，但忽略状态未能写入配置：`n" saveResult.message, "配置未保存")
+            MessageBox.Warning(I18n.T("msg.updateIgnoreSaveFailed", saveResult.message), I18n.T("msg.configNotSavedTitle"))
     }
 
     ; 处理手动下载

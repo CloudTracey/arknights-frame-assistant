@@ -12,15 +12,15 @@ class LogExporter {
 
     static CreateArchiveInteractive() {
         defaultName := A_Desktop "\AFA-Logs-" Version.Get() "-" FormatTime(, "yyyyMMdd-HHmmss") ".zip"
-        target := FileSelect("S", defaultName, "生成日志压缩包", "ZIP 压缩包 (*.zip)")
+        target := FileSelect("S", defaultName, I18n.T("log.createArchive"), "ZIP 压缩包 (*.zip)")
         if (target = "")
-            return {success: false, cancelled: true, path: "", message: "用户取消导出。"}
+            return {success: false, cancelled: true, path: "", message: I18n.T("log.userCancelled")}
 
         result := this.CreateArchive(target)
         if (result.success)
-            MessageBox.Info("日志压缩包已生成：`n" result.path, "导出成功")
+            MessageBox.Info(I18n.T("msg.logArchiveCreated", result.path), I18n.T("msg.logArchiveCreatedTitle"))
         else
-            MessageBox.Error(result.message, "导出失败")
+            MessageBox.Error(result.message, I18n.T("msg.logExportFailedTitle"))
         return result
     }
 
@@ -57,20 +57,20 @@ class LogExporter {
             command := "powershell.exe -NoProfile -NonInteractive -Command `"" psCode "`""
             exitCode := RunWait(command, A_ScriptDir, "Hide")
             if (exitCode != 0 || !FileExist(tempZip)) {
-                result.message := "压缩日志失败，PowerShell 返回码：" exitCode
+                result.message := I18n.T("log.psFailed", exitCode)
                 return result
             }
 
             FileMove(tempZip, targetPath, true)
             result.success := (FileExist(targetPath) != "")
             if (!result.success)
-                result.message := "压缩包已生成但无法移动到目标位置。"
+                result.message := I18n.T("log.moveFailed")
             else {
                 SplitPath(targetPath, &targetName)
                 Logger.Info("Diagnostics", "日志压缩包已生成：" targetName)
             }
         } catch Error as e {
-            result.message := "生成日志压缩包失败：" e.Message
+            result.message := I18n.T("log.archiveFailed", e.Message)
             Logger.Exception("Diagnostics", e, "压缩包导出失败")
         } finally {
             try {
@@ -93,7 +93,7 @@ class LogExporter {
             Run(logDirectory)
         } catch Error as e {
             Logger.Exception("Diagnostics", e, "打开日志目录失败")
-            MessageBox.Error("无法打开日志目录：`n" e.Message, "打开失败")
+            MessageBox.Error(I18n.T("msg.logOpenFailed", e.Message), I18n.T("msg.logOpenFailedTitle"))
         }
     }
 
@@ -138,6 +138,7 @@ class LogExporter {
     }
 
     static _BuildSanitizedSettings() {
+        gamePath := Config.GetImportant("GamePath")
         lines := ["[Hotkeys]"]
         for key, value in Config.AllHotkeys
             lines.Push(key "=" value)

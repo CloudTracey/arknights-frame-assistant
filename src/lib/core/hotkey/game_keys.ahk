@@ -588,14 +588,13 @@ class GameKeys {
 
         servers := this._PendingWarningServers
         this._PendingWarningServers := []
-        msg := "以下区服的游戏按键配置读取失败，AFA 将使用默认按键。`n`n"
+        serverList := ""
         for serverId in servers
-            msg .= "- " serverId "`n"
-        msg .= "`n如果您的游戏内按键为自定义设置，可能无法正常工作。"
-            . "`n请尝试恢复游戏默认按键或联系 AFA 开发者进行修复。"
+            serverList .= (serverList = "" ? "" : "`n") . "- " serverId
+        msg := I18n.T("msg.gameKeysReadFailed", serverList)
 
         try {
-            MessageBox.Warning(msg, "AFA - 游戏按键读取失败")
+            MessageBox.Warning(msg, I18n.T("msg.gameKeysReadFailedTitle"))
         } catch Error as e {
             Logger.Error("GameKeys", "游戏按键读取失败提示弹出失败：" e.Message)
         }

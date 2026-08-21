@@ -160,7 +160,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
         if(KeyBinder.LastEditObject == "") {
             ; 记录点击前的控件值，并修改值，以及记录本次点击
             KeyBinder.OriginalValue := KeyBinder.ControlObj.Value ; OriginalValue为原先值
-            KeyBinder.ControlObj.Value := "请按键"
+            KeyBinder.ControlObj.Value := I18n.T("keyBind.pressKey")
             KeyBinder.LastEditObject := KeyBinder.ControlObj
             KeyBinder.WaitingModify := true
             ; 释放可能存在的Hook
@@ -179,7 +179,7 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
                 ; 恢复上一次点击的edit控件的值
                 KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
                 KeyBinder.OriginalValue := KeyBinder.ControlObj.Value ; OriginalValue为原先值
-                KeyBinder.ControlObj.Value := "请按键"
+                KeyBinder.ControlObj.Value := I18n.T("keyBind.pressKey")
                 KeyBinder.LastEditObject := KeyBinder.ControlObj
                 ; 释放可能存在的Hook
                 KeyBinder.StopHook()

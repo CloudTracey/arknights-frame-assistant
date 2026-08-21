@@ -48,6 +48,8 @@ class I18n {
 
     ; 翻译：key → 当前语言 → zh-Hans → key 本身
     static T(key, args*) {
+        if (this._Locales.Count = 0)
+            this.Init(this.Current)  ; 防御：I18n.Init 之前的调用惰性加载，避免返回 key 本身
         value := this._Lookup(this.Current, key)
         if (value = "")
             value := this._Lookup("zh-Hans", key)
@@ -67,9 +69,12 @@ class I18n {
         if !this._Locales.Has(localeId)
             return ""
         cls := this._Locales[localeId]
-        if !cls.HasOwnProp("Data") || !cls.Data.Has(key)
-            return ""
-        return cls.Data[key]
+        ; 资源表按 Data → Data2 顺序查找（Data2 存放超出 AHK 单条静态声明上限的键）
+        if cls.HasOwnProp("Data") && cls.Data.Has(key)
+            return cls.Data[key]
+        if cls.HasOwnProp("Data2") && cls.Data2.Has(key)
+            return cls.Data2[key]
+        return ""
     }
 
     ; 系统 UI 语言 → BCP-47。
