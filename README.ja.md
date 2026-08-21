@@ -6,9 +6,9 @@
 
 # アークナイツフレーム操作アシスタント
 
-[!\[License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-orange.svg)](https://spdx.org/licenses/GPL-3.0-only.html)
-[!\[Language: AutoHotkey v2](https://img.shields.io/badge/Language-AutoHotkey\_v2-6594B9.svg)](https://www.autohotkey.com/)
-[!\[Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-orange.svg)](https://spdx.org/licenses/GPL-3.0-only.html)
+[![Language: AutoHotkey v2](https://img.shields.io/badge/Language-AutoHotkey_v2-6594B9.svg)](https://www.autohotkey.com/)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 <img alt="stars" src="https://img.shields.io/github/stars/CloudTracey/arknights-frame-assistant?style=social">
 <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/CloudTracey/arknights-frame-assistant/total?style=social">
 
