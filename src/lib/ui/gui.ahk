@@ -1225,6 +1225,15 @@ class GuiManager {
     ; 根据修改状态和冲突状态更新提示与保存按钮。
     static UpdateSaveButtonState() {
         canSave := this.IsModified && !this.HasHotkeyConflicts
+
+        ; #287：若当前焦点在即将被禁用的“保存/应用”按钮上，先移到始终可用的“取消”，
+        ; 否则系统会按 Tab 顺序把焦点甩到当前分类第一个可聚焦控件（自定义页即“点击延迟”）。
+        if (!canSave
+            && IsObject(this.BtnSave) && IsObject(this.BtnApply)
+            && (this.BtnSave.Focused || this.BtnApply.Focused)) {
+            try this.BtnCancel.Focus()
+        }
+
         try this.BtnSave.Enabled := canSave
         try this.BtnApply.Enabled := canSave
 
