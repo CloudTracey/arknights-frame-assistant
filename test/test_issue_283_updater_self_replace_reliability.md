@@ -18,26 +18,26 @@
 > 本更改不涉及可独立测试的单一 GUI 控件；批处理为更新流程内部实现，转入集成测试验证。
 > 可顺带检查生成物本身：
 
-- [ ] **操作**：触发一次更新确认（或经调试在自替换步骤暂停），打开 `%TEMP%\ArknightsFrameAssistant` 目录。（跳过：自替换完成过快，未能观察；重建后复测时将先清空临时目录再触发）
-- [ ] **预期**：目录中同时存在 `update_replacer.bat`（主脚本）与（zh 语言时）`update_replacer_text.bat`；用记事本打开主脚本，内容为纯 ASCII，无任何中文可见字符。（跳过：同上）
-- [ ] **操作**：用支持 UTF-8 的编辑器打开 `update_replacer_text.bat`。（跳过：同上）
-- [ ] **预期**：内容为 `set "MSG_*=中文..."` 形式，每行以 ASCII 双引号结尾；首行无 BOM。（跳过：同上）
+- [x] **操作**：触发一次更新确认（或经调试在自替换步骤暂停），打开 `%TEMP%\ArknightsFrameAssistant` 目录。（本轮复测：清空目录后触发，观察到 `update_replacer.bat` 与 `update_replacer_text.bat` 生成；替换完成后目录被清空）
+- [x] **预期**：目录中同时存在 `update_replacer.bat`（主脚本）与（zh 语言时）`update_replacer_text.bat`；用记事本打开主脚本，内容为纯 ASCII，无任何中文可见字符。
+- [x] **操作**：用支持 UTF-8 的编辑器打开 `update_replacer_text.bat`。
+- [x] **预期**：内容为 `set "MSG_*=中文..."` 形式，每行以 ASCII 双引号结尾；首行无 BOM。
 
 ---
 
 ## 集成测试
 
-### 流程：正常自动更新（zh-Hans 中文系统）
+### 流程：正常自动更新（zh 中文语言，zh-Hans/zh-Hant 同一生成路径）
 
 > 涉及模块：`updater_manager.ahk`、`self_replacer.ahk`、`Run` 批处理、`LogExporter`
 
-- [ ] **前置**：语言为简体中文；AFA 版本落后于仓库最新版本（或使用任意便于验证的模拟流程）。
-- [ ] **操作**：在更新提示中确认更新，等待下载完成后进入自替换。
-- [ ] **预期**：更新 cmd 窗口标题为「AFA更新中...」；控制台输出中文（含「正在等待程序关闭...」及求饶彩蛋），**无** `is not recognized` / `'�我'` 类乱码报错。
-- [ ] **预期**：AFA 退出后 1~3 秒内，update 日志出现 `程序已关闭 - PID <pid>`；随后「正在替换文件...」→「替换成功！」→「正在启动新版本...」→「新版本已启动」→「更新流程结束」。
-- [ ] **预期**：新版本 AFA 正常启动；`%TEMP%\ArknightsFrameAssistant` 中 `update_replacer.bat`、`update_replacer_text.bat`、备份文件与更新文件均被清理（目录为空或被删除）。
-- [ ] **操作**：查看 `%AppData%\ArknightsFrameAssistant\PC\logs\update-*.log`。
-- [ ] **预期**：日志为 UTF-8、无乱码；首行带 `[2026-xx-xx xx:xx:xx] 开始更新流程`；进程行含精确 PID。（本轮观察到的 zh-Hant"成功"日志首行为 `[周六 2026/08/22 ...]` 旧版格式且无 PID 后缀，属**旧版构建产物，结果无效**，见问题反馈1）
+- [x] **前置**：语言为简体中文；AFA 版本落后于仓库最新版本（或使用任意便于验证的模拟流程）。
+- [x] **操作**：在更新提示中确认更新，等待下载完成后进入自替换。
+- [x] **预期**：更新 cmd 窗口标题为「AFA更新中...」；控制台输出中文（含「正在等待程序关闭...」及求饶彩蛋），**无** `is not recognized` / `'�我'` 类乱码报错。
+- [x] **预期**：AFA 退出后 1~3 秒内，update 日志出现 `程序已关闭 - PID <pid>`；随后「正在替换文件...」→「替换成功！」→「正在启动新版本...」→「新版本已启动」→「更新流程结束」。
+- [x] **预期**：新版本 AFA 正常启动；`%TEMP%\ArknightsFrameAssistant` 中 `update_replacer.bat`、`update_replacer_text.bat`、备份文件与更新文件均被清理（目录为空或被删除）。
+- [x] **操作**：查看 `%AppData%\ArknightsFrameAssistant\PC\logs\update-*.log`。
+- [x] **预期**：日志为 UTF-8、无乱码；首行带 `[2026-xx-xx xx:xx:xx] 开始更新流程`；进程行含精确 PID。（本轮取证：`update-20260822213205-8380.log` 首行 `[2026-08-22 21:32:05]` ISO 格式、`[21:32:06.31] 程式已關閉 - PID 29264`、全流程到「更新流程結束」，临时目录清空——**新版批处理验证通过**；本轮日志为 zh-Hant，与 zh-Hans 走同一文案子脚本路径）
 
 ### 流程：等待超时路径
 
@@ -78,24 +78,29 @@
 
 ### 功能：诊断包导出
 
-- [x] 验证：更新后通过「生成日志压缩包」导出诊断包，`update-*.log` 可正常被包含并读取（本轮日志文件存在且可解析；注意本轮日志为旧版格式）。
+- [x] 验证：更新后通过「生成日志压缩包」导出诊断包，`update-*.log` 可正常被包含并读取（本轮日志文件存在且可解析）。
 
 ### 功能：手动运行残留批处理
 
-- [ ] 验证：将历史遗留的 `update_replacer.bat`（旧版格式）手动删除后触发更新，新生成批处理正常（无旧文件残留冲突）。（待重建后补测）
+- [ ] 验证：将历史遗留的 `update_replacer.bat`（旧版格式）手动删除后触发更新，新生成批处理正常（无旧文件残留冲突）。（待补测）
 
 ---
 
 ## 测试结果
 
-- [ ] 全部通过
+- [ ] 全部通过（流程1 已通过，其余待测：流程5 / 超时与失败路径 / 子脚本缺失）
 - [x] 存在问题（详见下方问题反馈）
 
 ## 问题反馈
 
-### 问题1：本轮测试构建未包含 #283 修复，结果无效，需重建后复测
+### 问题1：测试构建未包含 #283 修复（首轮结果无效）——已解决
 
-- [ ] **现象**：zh-Hant"成功"与 ja/ko/en"卡死"均发生在旧版批处理上。证据：`update-*.log` 首行为 `[周六 2026/08/22 20:55:25.31]`（旧版 `%date% %time%` 格式，新版应为 `[2026-08-22 20:55:25]` ISO 格式）；等待与进程行无 `- PID <pid>` 后缀；英文文案为 `Waiting for program to close...`（旧版 I18n 译值，新版默认值为 `Waiting for AFA to exit...`）。
-- [ ] **根因**：测试用 `main.exe` 为旧构建（20:55~21:00 的更新把 `src/main.exe` 替换成了 GitHub 最新 release，其自替换器为旧版）。
-- [ ] **处理**：从 `fix/issue-283-updater-self-replace-reliability` 重建测试 exe（注意保留 `src/lib/base/version.ahk` 的本地版本号改低，以便更新检查提示新版本），复测流程1与流程5；复测前先清空 `%TEMP%\ArknightsFrameAssistant`。
-- [ ] 已解决
+- [x] **现象**：zh-Hant"成功"与 ja/ko/en"卡死"均发生在旧版批处理上。证据：`update-*.log` 首行为 `[周六 2026/08/22 20:55:25.31]`（旧版 `%date% %time%` 格式，新版应为 `[2026-08-22 20:55:25]` ISO 格式）；等待与进程行无 `- PID <pid>` 后缀；英文文案为 `Waiting for program to close...`（旧版 I18n 译值，新版默认值为 `Waiting for AFA to exit...`）。
+- [x] **根因**：测试用 `main.exe` 为旧构建（20:55~21:00 的更新把 `src/main.exe` 替换成了 GitHub 最新 release，其自替换器为旧版）。
+- [x] **处理**：从修复分支重建测试 exe 后复测，流程1 已通过（取证见上）。
+
+### 问题2：编译/运行时错误（开发期发现并修复，非测试缺陷）
+
+- [x] 编译期 `Missing space or operator before this`（self_replacer.ahk 引号拼接）→ 已修复（`283: afa62a8` / `285: 6fdf27d`）。
+- [x] 运行期 `This value of type "Float" has no property named "5"`（AHK v2 无 `1..5` 范围语法）→ 已修复（`283: 9235c44` / `285: e522bdc`），AGENTS.md 已记录陷阱。
+- [x] 已解决
