@@ -1,9 +1,31 @@
+# AHK 编译打包生成的 exe
 *.exe
+
+# 误将输出重定向到保留设备名产生的文件（如 "nul"）
 nul
+
+# 用户反馈的或测试运行期产生的日志与导出的诊断日志包
+logs/
+
+# 工具自动备份、本地临时工作与个人杂项目录
 backup/
 other/
-.worktrees/
-.superpowers/
-docs/superpowers
-logs/
 .scratch
+
+# 本地维护的上下文文件与未定稿文档（如 ADR 记录）
+CONTEXT.md
+docs/adr
+docs/architecture
+docs/plan
+
+# DSH 项目根：忽略本地运行状态，保留 skills 目录
+.dsh/*
+!.dsh/skills/
+!.dsh/skills/**
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+
+# Python 工具缓存
+__pycache__/
+*.pyc

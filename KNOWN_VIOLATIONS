@@ -1,0 +1,2 @@
+# AFA 耦合治理基线（由 tools/layer_check.py --update-baseline 生成）
+# 每次更新只允许删除条目，不允许新增条目。

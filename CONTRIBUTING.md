@@ -37,41 +37,56 @@
 
 ```
 ├── src/                          # 源代码目录
-│   ├── main.ahk                  # 主入口文件（程序启动点）
-│   └── lib/                      # 核心库模块
-│       ├── changelog/            # 更新公告模块
-│       │   ├── changelog.ahk     # 更新公告核心逻辑（兼容骨架）
-│       │   ├── changelog_checker.ahk  # 更新公告检查器
-│       │   └── changelog_ui.ahk  # 更新公告 UI
-│       ├── config.ahk            # 配置管理（Config/State/Constants 类）
-│       ├── eventbus.ahk          # 事件总线（模块间解耦通信）
-│       ├── file_extractor.ahk    # 嵌入资源的运行时提取
-│       ├── game_auto_start.ahk   # 随明日方舟自动启动小助手
-│       ├── game_keys.ahk         # 游戏按键注册表识别
-│       ├── game_launcher.ahk     # 随小助手自动启动游戏
-│       ├── game_monitor.ahk      # 游戏监控（自动退出 + 自动开局暂停）
-│       ├── gui.ahk               # 设置窗口 GUI
-│       ├── hotkey_actions.ahk    # 热键动作实现（功能函数）
-│       ├── hotkey_control.ahk    # 热键注册/注销/分组切换
-│       ├── key_bind.ahk          # 按键绑定（InputHook 捕获按键）
-│       ├── log_exporter.ahk      # 诊断日志压缩包导出
-│       ├── logger.ahk            # 双轨日志系统
-│       ├── message_box.ahk       # 自定义消息框
-│       ├── settings/             # 设置管理模块
-│       │   ├── actions.ahk       # 设置操作（重置/保存/应用/取消）
-│       │   ├── hotkey_conflict_validator.ahk  # 热键冲突验证
-│       │   ├── loader.ahk        # 设置加载
-│       │   ├── saver.ahk         # 设置保存（含验证逻辑）
-│       │   └── settings_manager.ahk  # 设置管理器入口
-│       ├── token_protector.ahk   # GitHub Token DPAPI 加密保护
-│       ├── touch_injection.ahk   # Touch Injection 模拟点击
-│       ├── updater/              # 自动更新模块
-│       │   ├── downloader.ahk    # 更新下载器
-│       │   ├── self_replacer.ahk # 自替换脚本（批处理生成）
-│       │   ├── updater_manager.ahk   # 更新协调器（流程控制）
-│       │   ├── updater_ui.ahk    # 更新 UI（对话框）
-│       │   └── version_checker.ahk   # 版本检查器（GitHub + 国内源）
-│       └── version.ahk           # 内置版本号
+│   ├── main.ahk                  # 主入口文件（仅加载定义，App.Bootstrap() 启动）
+│   └── lib/                      # 按四层架构组织
+│       ├── base/                 # 基础层：不依赖 core/ui
+│       │   ├── config.ahk        # 配置管理（Config 类）
+│       │   ├── constants.ahk     # 全局常量
+│       │   ├── eventbus.ahk      # 事件总线（模块间解耦通信）
+│       │   ├── file_extractor.ahk # 嵌入资源的运行时提取
+│       │   ├── hotkey_schema.ahk # 热键元数据唯一来源
+│       │   ├── key_format.ahk    # 热键键值格式化工具
+│       │   ├── logger.ahk        # 双轨日志系统
+│       │   ├── message_box.ahk   # 自定义消息框
+│       │   ├── timing.ahk        # 高精度延迟工具
+│       │   ├── token_protector.ahk # GitHub Token DPAPI 加密保护
+│       │   ├── touch_injection.ahk # Touch Injection 模拟点击
+│       │   ├── tray.ahk          # 托盘提示封装
+│       │   ├── version.ahk       # 内置版本号
+│       │   ├── version_utils.ahk # 版本/JSON 纯工具
+│       │   └── window.ahk        # 窗口判定工具
+│       ├── core/                 # 核心层：依赖 base，不依赖 ui
+│       │   ├── changelog/        # 更新公告检查
+│       │   │   └── changelog_checker.ahk
+│       │   ├── diagnostics/      # 诊断导出
+│       │   │   └── log_exporter.ahk
+│       │   ├── hotkey/           # 热键域
+│       │   │   ├── game_keys.ahk
+│       │   │   ├── hotkey_actions.ahk
+│       │   │   ├── hotkey_service.ahk
+│       │   │   └── timing_service.ahk
+│       │   ├── launch/           # 启动相关
+│       │   │   ├── app_context.ahk
+│       │   │   ├── game_auto_start.ahk
+│       │   │   └── game_launcher.ahk
+│       │   ├── monitor/          # 游戏监控
+│       │   │   ├── game_monitor.ahk
+│       │   │   └── level_detector.ahk
+│       │   ├── settings/         # 设置域
+│       │   │   ├── hotkey_conflict_validator.ahk
+│       │   │   └── settings_service.ahk
+│       │   └── updater/          # 自动更新模块
+│       │       ├── downloader.ahk
+│       │       ├── github_token_service.ahk
+│       │       ├── release_repository.ahk
+│       │       ├── self_replacer.ahk
+│       │       ├── updater_manager.ahk
+│       │       └── version_checker.ahk
+│       └── ui/                   # UI 层：依赖 core/base
+│           ├── changelog_ui.ahk  # 更新公告 UI
+│           ├── gui.ahk           # 设置窗口 GUI
+│           ├── key_bind.ahk      # 按键绑定（InputHook 捕获按键）
+│           └── updater_ui.ahk    # 更新 UI（对话框）
 ├── .github/                      # GitHub 配置
 │   ├── CODEOWNERS                # 代码所有者
 │   ├── ISSUE_TEMPLATE/           # Issue 模板
@@ -250,7 +265,7 @@ git checkout -b feature/your-feature-name
 
 ## 测试流程
 
-本项目**没有自动化测试框架**，所有测试均为**手工验证**。
+本项目暂时**没有自动化测试框架**，所有测试均为**手工验证**。
 
 ### 测试清单创建
 
@@ -260,24 +275,54 @@ git checkout -b feature/your-feature-name
 2. 文件名格式：`test_[更改主题].md`（英文，如 `test_download_progress_bar.md`）
 3. 文件内每小步添加复选框，方便逐项标记
 
-> 测试清单模板说明：可以交由 AI 根据模板生成测试清单以节约工作量（本项目使用 Claude Code 的 `test-checklist` skill 工作流，已同步至.claude/skills目录内，开发时可沿用）。
+> 测试清单模板说明：可以交由 AI 根据模板生成测试清单以节约工作量（项目使用我自行编写的 `test-checklist` skill 生成，技能位于 `.dsh/skills/test-checklist`，由 DeepSeek Harness 等编码 Agent 自动发现调用）。
 
 ### 测试完成标记
 
 当测试完成后，将测试清单文件重命名为 `finished_test_[更改主题].md`（可参考 `test/` 目录下已有的 `finished_test_*.md` 文件）。
 
-## 版本发布流程
+## 关于 AI编程
 
-> 该流程仅由维护者执行。
+本项目不排斥AI编程，自AFA v1.5.0+版本开始本项目便大量使用了AI来提高开发速度。
+AI编程的优点是一些重复性较高的工作得以快速完成，复杂度较高的功能也能快速开发出原型用于后续迭代。
+缺点也很突出，AI根据反馈找BUG和修BUG的速度很快，但写BUG的速度更快，审查代码的时候稍微犯点懒跳过几项，等发版之后就可能会给你来点大惊喜；
+然后就是屎山堆积，原先我古法编程写出来的东西虽然也是屎山，但好歹还是我自己能读明白的屎山，AI编程整多了之后一些地方是想手动修都不知道从哪里开始修。
+因此如果您使用AI编程进行开发并希望提交PR，请遵循以下规则：
 
-1. 更新 `src/lib/version.ahk` 中 `Version.Number` 为新的版本号
-2. 按 [RELEASE_TEMPLATE.md](.github/RELEASE_TEMPLATE.md) 撰写发布说明（新增 / 改进 / 修复）
-3. 在 GitHub 创建 Release（tag 形如 `v1.6.2`）
-4. GitHub Action（`.github/workflows/release-sync.yml`）自动将 exe 和 version.json 同步到国内源 COS 并刷新 CDN
+### 对使用者自身的要求
 
-**版本号格式：** [语义化版本](https://semver.org/lang/zh-CN/)
-- `主版本号.次版本号.修订号`（如 `1.0.0`）
-- 预发布版本：`1.0.0-alpha.1`、`1.0.0-beta.1`
+1. 具备一定的软件工程知识，了解软件开发的流程（不用AI编程也是需要了解的，但是用AI编程就更需要了解了）
+2. 具备一定的架构设计能力，能清晰界定待开发任务的功能范围、模块边界和依赖约束（比如明确“这个功能归哪个模块管，哪个部分能动哪个部分不能动”），避免AI自由发挥，破坏现有结构
+3. 能读懂AI写出来的代码，知道AI在写什么东西
+4. 能对自己使用AI写出来的代码进行全面的审查
+
+### 使用的模型和Harness
+
+1. **不要使用各路AI厂商的网页端和APP端进行开发**，不要把项目文件丢给什么豆包、DeepSeek的网页端、App端然后跟它们说“豆包豆包我要做一个xxxx请你帮帮我”，在缺乏上下文引导、没有Harness辅助和限制、模型参数微调、免费端模型的智力限制、工具缺失的情况下，这么写出来的东西一定是**纯粹的屎**
+2. 关于使用的AI模型：只要模型能力不是太差一般都没啥问题，个人目前使用的是DeepSeek 官方 API，即便经过涨价依旧是性价比最高的模型之一
+3. 关于使用的Harness：当前主流的几个Harness一般也没啥问题，比如Claude Code、Codex、ZCode、DeepSeek Harness之类的
+4. 目前项目里的.dsh和AGENTS.md可以根据自己使用的模型和Harness进行重命名，比如使用Claude就改成.claude和CLAUDE.md
+
+### 一点经验分享
+
+#### 模型
+
+先说说我用过的模型，Kimi使用起来的效果还不错，就是实在是太贵了，用了几下额度就爆炸了。
+然后是Minimax，这个很便宜，给的额度也多，但是当时用了一轮对话就感觉这家伙的脑子不太好使，用了两轮后要修的Bug比写出来的功能还多。
+再然后是阿里的Qwen，当时订了一个月的Plan，也是用了一天就感觉不太行，前后一个月加起来可能只用了五次。
+然后是Claude，我用了半天的Opus，强是真的强，号没的也是真的快，A/你赢了。上面的几个模型都是浅尝辄止，2026年初到四月份这段时间大部分时间还是在古法编程，直到四月底DeepSeek v4预览版发布。
+DSv4预览版也不太聪明，但是实在是太便宜了。当时我大部分功能还是手搓的，只有一些简单的重复性工作会交给AI，因此DS v4 Flash很好地扮演了苦力的角色（比如项目内的注释、文档的修改补充、新添加按键重复逻辑的编写等等），Pro则用来做代码审查和一些Bug的分析。
+再然后就是DS v4 Flash正式版了，这个直到现在还是我的主力，在你能极其详细地描述你的需求、你的思路、以及阐明各种限制的时候，v4 Flash正式版真的是个非常好的打手。至于v4 Pro正式版，我的使用很有限，大部分时候我都是自己去想方案，并不需要它来帮我构思或者设计什么，主要还是输出速度太慢了，只有Flash二分之一的输出速度，目前只用它来细化了一下AFA v2.0.0的解耦方案设计
+
+#### Harness
+
+然后是Harness，我使用过的有OpenCode、Claude Code、Codex和DeepSeek Harness，其中OpenCode在年初使用了一段时间，Bug真的奇多，可能是因为当时刚发布没多久的原因吧，听说现在好像也变成了屎山，准备新开一个OpenCode v2了。
+然后是Claude Code，这是我使用时间最长也是最熟悉的Harness，真的好用，非常顺手，但是封了我一次号，导致我后面只敢接DeepSeek开发，没能深入体验完全体，略微遗憾。被封号之后一怒之下转了一天的Codex，用不习惯又转回Claude Code了。
+最后是现在在用的DeepSeek Harness，V4 Pro正式版出来之后换的，目前为止感觉**没有**Claude Code那么好用，一切皆插件的想法很好，但是现在社区充斥着无数的Vibe Coding的屎山插件，踩了几天的雷给我用得身心俱疲。先说一下不加插件的Harness本身，首先是界面，只有Web UI，没有TUI，我个人还是比较喜欢TUI的，轻量，操作起来也很方便，Web UI用起来还是太重了，不管是长对话的内存占用和优化还是各种操作上；然后是回滚功能，DeepSeek Harness本体目前没有回滚功能，想回滚只能通过Git回滚，或者打字叫AI帮你回滚，这就非常麻烦，Git回滚没法回滚被.gitignore忽略的本地文档，AI回滚又慢还要浪费Token；再然后是Diff的审查，Claude Code的话AI所有的修改都会立刻直接显示在TUI界面上，一目了然非常直观，可以很明显看到AI先改了哪个再改了哪个，DeepSeek Harness浏览起来就非常麻烦，只显示了Edit的操作但不显示修改的内容，想看修改的内容还得去IDE里看，但IDE里又不显示修改的先后顺序。不过DeepSeek Harness毕竟还是开发预览版，进步空间还很大，至于插件，我感觉这东西的上限取决于大模型的上限，毕竟大部分的插件最后都是丢给模型去写的，个人还是保持乐观的，毕竟大模型能力还是越来越强的。
+
+#### Skills
+
+目前我最常用的Skill只有我自己写的test-checklist，用来手动生成测试清单，已经放在仓库里了。然后就是mattpocock的这套Skills：https://github.com/mattpocock/skills ，基本上能满足大部分的开发需求了
 
 ## 社区行为准则
 
