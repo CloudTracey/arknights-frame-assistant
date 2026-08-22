@@ -174,8 +174,9 @@ class SelfReplacer {
         ; 求饶彩蛋（仅 zh 子脚本定义 MSG_RITUAL 时显示；用延迟展开避免值中的括号破坏 if 块）
         lines.Push("if defined MSG_RITUAL (")
         lines.Push("    echo !MSG_RITUAL!")
-        for pleadIndex in 1..5 {
-            lines.Push("    echo !MSG_PLEAD" pleadIndex "!")
+        ; AHK v2 无 1..5 范围运算符（会解析为对 Float 取属性 "5" 而运行时报错），用 loop + A_Index
+        loop 5 {
+            lines.Push("    echo !MSG_PLEAD" A_Index "!")
         }
         lines.Push("    echo.")
         lines.Push("    echo ================")
