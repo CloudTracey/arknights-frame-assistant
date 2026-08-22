@@ -91,6 +91,11 @@ class SelfReplacer {
             if (textContent != "")
                 FileAppend(textContent, textBatch, "`n UTF-8-RAW")
         } catch Error as e {
+            ; #283 审查回复（PR #304）：写盘失败时清理批处理文件，避免异常路径留下半成品
+            if FileExist(mainBatch)
+                FileDelete(mainBatch)
+            if FileExist(textBatch)
+                FileDelete(textBatch)
             Logger.Error("SelfReplacer", "创建批处理脚本失败：" e.Message "（路径：" mainBatch "）")
             return {
                 success: false,
@@ -102,6 +107,12 @@ class SelfReplacer {
         try {
             Run mainBatch
         } catch Error as e {
+            ; 仅清理两个批处理文件；不能用 CleanupAll()——它会递归清空临时目录，
+            ; 连带删除已下载的更新文件与历史备份，破坏失败后重试/手动处理路径
+            if FileExist(mainBatch)
+                FileDelete(mainBatch)
+            if FileExist(textBatch)
+                FileDelete(textBatch)
             Logger.Error("SelfReplacer", "启动替换脚本失败：" e.Message)
             return {
                 success: false,
