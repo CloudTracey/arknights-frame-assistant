@@ -4,7 +4,7 @@ class LocaleJaJP {
         "server.jp", "日本サーバー",
         "server.kr", "韓国サーバー",
         "server.en", "国際サーバー",
-        "gui.windowTitle", "アークナイツフレーム操作AFA ArknightsFrameAssistant - {1}",
+        "gui.windowTitle", "アークナイツフレーム操作アシスタント ArknightsFrameAssistant - {1}",
         "tray.hotkeyEnabled", "ホットキー有効",
         "tray.hotkeyDisabled", "ホットキー無効",
         "msg.settingsSaved", "設定を保存しました！後でタスクトレイのアイコンをダブルクリックするか、右クリックメニューから設定を開けます",
