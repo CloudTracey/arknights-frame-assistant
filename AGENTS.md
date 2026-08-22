@@ -125,7 +125,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 
 ### i18n 多语言（v2.0.0+）
 
-- **语言 id 用 BCP-47**：`zh-Hans` / `zh-Hant` / `ja-JP` / `ko-KR` / `en-US`；`Language=auto` 用 `GetUserDefaultUILanguage()` 检测（`A_Language` 是系统区域设置，不是 UI 语言；五语覆盖，其余回退 `en-US`）。
+- **语言 id 用 BCP-47**：`zh-Hans` / `zh-Hant` / `ja-JP` / `ko-KR` / `en-US`；`Language=auto` 用 `GetUserDefaultUILanguage()` 检测（`A_Language` 是系统区域设置，不是 UI 语言；四语覆盖，其余回退 `en-US`）。
 - **资源 = 编译内置 Map**：`base/locales/*.ahk` 的 `LocaleXxx.Data`。**AHK 单条静态 `Map(...)` 声明约 19KB 解析上限**——大资源表拆 `Data2`，`I18n._Lookup` 按 `Data → Data2` 顺序查找（键数 >254 或语句超约 19KB 时沿用此约定，勿合并回单表）。`tools/i18n_check.py` 校验源码字面 `I18n.T("key")` 与 zh 资源键集合；`hotkey.*` / `important.*` 等经变量动态引用的键报 INFO 属预期。
 - **`I18n.T(key, args*)`**：回退链 请求语言 → `zh-Hans` → key 本身；缺键每键仅 `Warn` 一次；占位符用 `Format` 风格 `{1}`，**禁止拼接句子**；`I18n` 未 `Init` 前调用会惰性加载兜底，正常流程在 `SettingsService.Initialize()` 内完成 `I18n.Init`（崩溃提示等展示须在 Init 之后）。
 - **新增用户可见文案必须键化**（GUI/托盘/弹窗/消息字段）；以下**保持中文不翻译**：`Logger.*`、`VersionChecker._Log`、`OutputDebug`、调试控制台横幅、诊断包（`read-errors.txt` / `diagnostics.txt`）、热键明细日志（"战斗=/快捷="）、内部 `throw Error("...")` 及仅被日志消费的 message 字段。键化前先确认文案是否展示给用户。
