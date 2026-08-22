@@ -1,6 +1,8 @@
 ; == 国际化（i18n） ==
 ; 轻量本地化核心：资源为编译内置 AHK Map，回退链为 请求语言 → zh-Hans → key 本身。
 ; 语言 id 使用 BCP-47：zh-Hans / zh-Hant / ja-JP / ko-KR / en-US。
+; 现行键约定：键即中文原文（source-as-key），zh-Hans 资源表为空，回退链天然命中原文；
+; zh-Hant / ja-JP / ko-KR / en-US 四张表以中文原文为键、各语言为值。
 
 class I18n {
     static Current := "zh-Hans"
@@ -46,7 +48,9 @@ class I18n {
         return this.Current
     }
 
-    ; 翻译：key → 当前语言 → zh-Hans → key 本身
+    ; 翻译：key → 当前语言 → zh-Hans（空表）→ key 本身（key 即中文原文）。
+    ; 缺键时仅对非 zh-Hans 语言 Warn（zh-Hans 命中原文属预期）；回退路径同样执行 Format，
+    ; 保证带 {1} 占位符的中文键在 zh-Hans 下也能正确插值。
     static T(key, args*) {
         if (this._Locales.Count = 0)
             this.Init(this.Current)  ; 防御：I18n.Init 之前的调用惰性加载，避免返回 key 本身
@@ -54,11 +58,13 @@ class I18n {
         if (value = "")
             value := this._Lookup("zh-Hans", key)
         if (value = "") {
-            if !this._WarnedKeys.Has(key) {
-                this._WarnedKeys[key] := true
-                Logger.Warn("I18n", "缺失翻译键：" key)
+            if (this.Current != "zh-Hans") {
+                if !this._WarnedKeys.Has(key) {
+                    this._WarnedKeys[key] := true
+                    Logger.Warn("I18n", "缺失翻译键：" key)
+                }
             }
-            return key
+            value := key
         }
         if (args.Length > 0)
             return Format(value, args*)
