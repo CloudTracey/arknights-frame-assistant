@@ -103,10 +103,22 @@ class SelfReplacer {
             }
         }
 
+        ; #285：AFA 调试控制台由 AllocConsole 创建。若带着该控制台 Run cmd.exe，
+        ; cmd 会附加到同一控制台，AFA 退出时的 [Shutdown] 日志会混入更新窗口。
+        ; 先关闭控制台，让批处理自建独立控制台窗口。
+        hadDebugConsole := Logger.ConsoleEnabled
+        if (hadDebugConsole) {
+            Logger.Info("SelfReplacer", "启动更新脚本前关闭调试控制台，避免退出日志混入更新窗口")
+            Logger.CloseConsole()
+        }
+
         ; 启动批处理脚本（可见窗口，用户可看到更新进度）
         try {
             Run mainBatch
         } catch Error as e {
+            ; 启动失败时恢复调试控制台，避免用户丢失实时日志
+            if (hadDebugConsole)
+                Logger.SetConsoleEnabled(true)
             ; 仅清理两个批处理文件；不能用 CleanupAll()——它会递归清空临时目录，
             ; 连带删除已下载的更新文件与历史备份，破坏失败后重试/手动处理路径
             if FileExist(mainBatch)
