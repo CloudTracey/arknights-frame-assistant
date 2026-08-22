@@ -59,9 +59,9 @@
 
 ### 流程：ja-JP / ko-KR / en-US 语言
 
-- [ ] **前置**：在设置中将语言切换为 en-US（或 ja-JP / ko-KR）并应用，重启 AFA。
-- [ ] **操作**：确认更新进入自替换。
-- [ ] **预期**：控制台与 update 日志均为英文文案（仅生成主脚本，不生成 `update_replacer_text.bat`）；流程完整无报错。（本轮 ja/ko/en 观察到的卡死形态 `Waiting for program to close...`（旧版 I18n 译值）日志停留在两行——是**旧版批处理的复现**，并非新代码行为，见问题反馈1）
+- [x] **前置**：在设置中将语言切换为 en-US（或 ja-JP / ko-KR）并应用，重启 AFA。
+- [x] **操作**：确认更新进入自替换。
+- [x] **预期**：控制台与 update 日志均为英文文案（仅生成主脚本，不生成 `update_replacer_text.bat`）；流程完整无报错。（本轮取证：`update-20260822213655-8840.log` 全英文 `Update process started` / `Waiting for AFA to exit...` / `AFA process has exited - PID 29968` / ... / `Update finished`，临时目录仅主脚本且已清理——**en-US 路径验证通过**；此前卡死形态为旧版批处理复现，见问题反馈1）
 
 ##### 异常路径
 
