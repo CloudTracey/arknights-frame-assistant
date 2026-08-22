@@ -1112,6 +1112,7 @@ class GuiManager {
     ; 处理调试控制台打开事件
     static _OnConsoleOpened() {
         ShowTrayTip(I18n.T("调试日志控制台已打开"), "AFA", "Mute")
+        SetTimer HideTrayTip, -3000
     }
 
     ; 处理更新公告可用事件（展示由 ChangelogUI 负责，此处预留）
