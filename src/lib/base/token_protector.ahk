@@ -30,20 +30,20 @@ class TokenProtector {
                 , "Ptr", outputBlob
                 , "Int") {
                 errorCode := A_LastError
-                return this._Failure(I18n.T("token.dpapiEncryptFailed", errorCode))
+                return this._Failure(I18n.T("DPAPI 加密失败，错误码：{1}", errorCode))
             }
 
             outputSize := NumGet(outputBlob, 0, "UInt")
             outputPointer := NumGet(outputBlob, this.BLOB_POINTER_OFFSET, "Ptr")
             if (outputSize <= 0 || !outputPointer)
-                return this._Failure(I18n.T("token.dpapiEncryptNoData"))
+                return this._Failure(I18n.T("DPAPI 加密未返回有效数据。"))
 
             encoded := this._Base64Encode(outputPointer, outputSize)
             if (!encoded.success)
                 return encoded
             return {success: true, storedValue: this.STORAGE_PREFIX encoded.value, message: ""}
         } catch Error as e {
-            return this._Failure(I18n.T("token.dpapiEncryptException", e.Message))
+            return this._Failure(I18n.T("DPAPI 加密异常：{1}", e.Message))
         } finally {
             if (outputPointer)
                 DllCall("Kernel32\LocalFree", "Ptr", outputPointer)
@@ -60,7 +60,7 @@ class TokenProtector {
 
         if (InStr(storedValue, this.STORAGE_PREFIX) != 1) {
             if (InStr(storedValue, "dpapi:") = 1)
-                return this._Failure(I18n.T("token.unsupportedFormat"))
+                return this._Failure(I18n.T("不支持的 Token 加密格式。"))
             return {success: true, plainText: storedValue, format: "legacy", message: ""}
         }
 
@@ -84,18 +84,18 @@ class TokenProtector {
                 , "Ptr", outputBlob
                 , "Int") {
                 errorCode := A_LastError
-                return this._Failure(I18n.T("token.dpapiDecryptFailed", errorCode))
+                return this._Failure(I18n.T("DPAPI 解密失败，错误码：{1}", errorCode))
             }
 
             outputSize := NumGet(outputBlob, 0, "UInt")
             outputPointer := NumGet(outputBlob, this.BLOB_POINTER_OFFSET, "Ptr")
             if (outputSize <= 0 || !outputPointer)
-                return this._Failure(I18n.T("token.dpapiDecryptNoData"))
+                return this._Failure(I18n.T("DPAPI 解密未返回有效数据。"))
 
             plainText := StrGet(outputPointer, "UTF-8")
             return {success: true, plainText: plainText, format: "protected", message: ""}
         } catch Error as e {
-            return this._Failure(I18n.T("token.dpapiDecryptException", e.Message))
+            return this._Failure(I18n.T("DPAPI 解密异常：{1}", e.Message))
         } finally {
             if (outputPointer)
                 DllCall("Kernel32\LocalFree", "Ptr", outputPointer)
@@ -124,7 +124,7 @@ class TokenProtector {
             , "UInt*", &characterCount
             , "Int") {
             errorCode := A_LastError
-            return this._Failure(I18n.T("token.base64EncodeFailed", errorCode))
+            return this._Failure(I18n.T("Token Base64 编码失败，错误码：{1}", errorCode))
         }
 
         outputBuffer := Buffer((characterCount + 1) * 2, 0)
@@ -136,7 +136,7 @@ class TokenProtector {
             , "UInt*", &characterCount
             , "Int") {
             errorCode := A_LastError
-            return this._Failure(I18n.T("token.base64EncodeFailed", errorCode))
+            return this._Failure(I18n.T("Token Base64 编码失败，错误码：{1}", errorCode))
         }
         return {success: true, value: StrGet(outputBuffer, characterCount, "UTF-16"), message: ""}
     }
@@ -144,7 +144,7 @@ class TokenProtector {
     ; 使用 Crypt32 将 Base64 解码为二进制数据。
     static _Base64Decode(encoded) {
         if (encoded = "")
-            return this._Failure(I18n.T("token.encryptedDataEmpty"))
+            return this._Failure(I18n.T("Token 加密数据为空。"))
 
         byteCount := 0
         if !DllCall("Crypt32\CryptStringToBinaryW"
@@ -157,7 +157,7 @@ class TokenProtector {
             , "Ptr", 0
             , "Int") {
             errorCode := A_LastError
-            return this._Failure(I18n.T("token.base64DecodeFailed", errorCode))
+            return this._Failure(I18n.T("Token Base64 解码失败，错误码：{1}", errorCode))
         }
 
         outputBuffer := Buffer(byteCount, 0)
@@ -172,7 +172,7 @@ class TokenProtector {
             , "Int") {
             errorCode := A_LastError
             this._SecureZero(outputBuffer)
-            return this._Failure(I18n.T("token.base64DecodeFailed", errorCode))
+            return this._Failure(I18n.T("Token Base64 解码失败，错误码：{1}", errorCode))
         }
         return {success: true, buffer: outputBuffer, size: byteCount, message: ""}
     }

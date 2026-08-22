@@ -266,7 +266,7 @@ class Config {
     static PrepareGitHubTokenForStorage(plainToken) {
         ; 解密失败时禁止在外部设置变更前用空值覆盖仍可能可恢复的原加密配置。
         if (this.TokenStorageStatus = "decrypt_failed" && plainToken = "")
-            return {success: false, message: I18n.T("config.tokenDecryptPreventOverwrite")}
+            return {success: false, message: I18n.T("GitHub Token 无法解密。为避免覆盖原加密配置，请重新输入 Token 后再保存。")}
         return TokenProtector.Protect(plainToken)
     }
 
@@ -282,11 +282,11 @@ class Config {
     static GetTokenStorageWarning() {
         switch this.TokenStorageStatus {
             case "migration_failed":
-                return I18n.T("token.warningMigrationFailed")
+                return I18n.T("旧版 GitHub Token 未能完成加密迁移，原配置已保留。请恢复 Settings.ini 的写入权限后重启 AFA。")
             case "cleanup_failed":
-                return I18n.T("token.warningCleanupFailed")
+                return I18n.T("GitHub Token 已完成加密，但旧明文未能删除。请恢复 Settings.ini 的写入权限后重新保存设置。")
             case "decrypt_failed":
-                return I18n.T("token.warningDecryptFailed")
+                return I18n.T("GitHub Token 无法解密，可能来自其他 Windows 用户或电脑。请重新输入 Token 并保存。")
             default:
                 return ""
         }
@@ -427,7 +427,7 @@ class Config {
             requestedToken := settingsMap.HasProp("GitHubToken") ? settingsMap.GitHubToken : ""
             ; 解密失败时禁止用空值覆盖仍可能可恢复的原加密配置。
             if (this.TokenStorageStatus = "decrypt_failed" && requestedToken = "")
-                return {success: false, message: I18n.T("config.tokenDecryptPreventOverwrite")}
+                return {success: false, message: I18n.T("GitHub Token 无法解密。为避免覆盖原加密配置，请重新输入 Token 后再保存。")}
 
             if !IsObject(tokenStorage)
                 tokenStorage := this.PrepareGitHubTokenForStorage(requestedToken)
@@ -500,7 +500,7 @@ class Config {
             return {success: true, message: ""}
         } catch Error as e {
             Logger.Error("Config", "配置文件写入失败：" e.Message)
-            return {success: false, message: I18n.T("config.writeFailed", e.Message)}
+            return {success: false, message: I18n.T("配置文件写入失败：{1}", e.Message)}
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
@@ -520,7 +520,7 @@ class Config {
         try {
             ; 非 GUI 保存同样不能在解密失败时用空值覆盖原加密配置。
             if (this.TokenStorageStatus = "decrypt_failed" && this._ImportantSettings.Has("GitHubToken") && this._ImportantSettings["GitHubToken"] = "")
-                return {success: false, message: I18n.T("config.tokenDecryptKeptOriginal")}
+                return {success: false, message: I18n.T("GitHub Token 无法解密，已保留原加密配置。请重新输入 Token 后保存。")}
 
             tokenStorage := this.PrepareGitHubTokenForStorage(this._ImportantSettings.Has("GitHubToken") ? this._ImportantSettings["GitHubToken"] : "")
             if !tokenStorage.success
@@ -565,7 +565,7 @@ class Config {
             return {success: true, message: ""}
         } catch Error as e {
             Logger.Error("Config", "配置文件保存失败：" e.Message)
-            return {success: false, message: I18n.T("config.writeFailed", e.Message)}
+            return {success: false, message: I18n.T("配置文件写入失败：{1}", e.Message)}
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
@@ -620,7 +620,7 @@ class Config {
             return {success: true, message: ""}
         } catch Error as e {
             Logger.Error("Config", "单键配置写入失败：" e.Message)
-            return {success: false, message: I18n.T("config.writeFailed", e.Message)}
+            return {success: false, message: I18n.T("配置文件写入失败：{1}", e.Message)}
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
@@ -674,7 +674,7 @@ class Config {
             return {success: true, message: ""}
         } catch Error as e {
             Logger.Error("Config", "热键设置写入失败：" e.Message)
-            return {success: false, message: I18n.T("config.writeFailed", e.Message)}
+            return {success: false, message: I18n.T("配置文件写入失败：{1}", e.Message)}
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
