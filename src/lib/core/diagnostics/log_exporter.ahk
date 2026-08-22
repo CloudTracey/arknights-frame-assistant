@@ -12,15 +12,15 @@ class LogExporter {
 
     static CreateArchiveInteractive() {
         defaultName := A_Desktop "\AFA-Logs-" Version.Get() "-" FormatTime(, "yyyyMMdd-HHmmss") ".zip"
-        target := FileSelect("S", defaultName, I18n.T("log.createArchive"), "ZIP 压缩包 (*.zip)")
+        target := FileSelect("S", defaultName, I18n.T("生成日志压缩包"), "ZIP 压缩包 (*.zip)")
         if (target = "")
-            return {success: false, cancelled: true, path: "", message: I18n.T("log.userCancelled")}
+            return {success: false, cancelled: true, path: "", message: I18n.T("用户取消导出。")}
 
         result := this.CreateArchive(target)
         if (result.success)
-            MessageBox.Info(I18n.T("msg.logArchiveCreated", result.path), I18n.T("msg.logArchiveCreatedTitle"))
+            MessageBox.Info(I18n.T("日志压缩包已生成：`n{1}", result.path), I18n.T("导出成功"))
         else
-            MessageBox.Error(result.message, I18n.T("msg.logExportFailedTitle"))
+            MessageBox.Error(result.message, I18n.T("导出失败"))
         return result
     }
 
@@ -57,20 +57,20 @@ class LogExporter {
             command := "powershell.exe -NoProfile -NonInteractive -Command `"" psCode "`""
             exitCode := RunWait(command, A_ScriptDir, "Hide")
             if (exitCode != 0 || !FileExist(tempZip)) {
-                result.message := I18n.T("log.psFailed", exitCode)
+                result.message := I18n.T("压缩日志失败，PowerShell 返回码：{1}", exitCode)
                 return result
             }
 
             FileMove(tempZip, targetPath, true)
             result.success := (FileExist(targetPath) != "")
             if (!result.success)
-                result.message := I18n.T("log.moveFailed")
+                result.message := I18n.T("压缩包已生成但无法移动到目标位置。")
             else {
                 SplitPath(targetPath, &targetName)
                 Logger.Info("Diagnostics", "日志压缩包已生成：" targetName)
             }
         } catch Error as e {
-            result.message := I18n.T("log.archiveFailed", e.Message)
+            result.message := I18n.T("生成日志压缩包失败：{1}", e.Message)
             Logger.Exception("Diagnostics", e, "压缩包导出失败")
         } finally {
             try {
@@ -93,7 +93,7 @@ class LogExporter {
             Run(logDirectory)
         } catch Error as e {
             Logger.Exception("Diagnostics", e, "打开日志目录失败")
-            MessageBox.Error(I18n.T("msg.logOpenFailed", e.Message), I18n.T("msg.logOpenFailedTitle"))
+            MessageBox.Error(I18n.T("无法打开日志目录：`n{1}", e.Message), I18n.T("打开失败"))
         }
     }
 

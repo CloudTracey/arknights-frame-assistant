@@ -165,14 +165,14 @@ class VersionChecker {
     static _ParseNetworkError(errorCode) {
         ; WinHttp错误码解析（每次调用按当前语言构建，避免函数静态缓存过期文案）
         ErrorMessages := Map(
-            0x80070057, I18n.T("ver.paramError"),
-            0x80072EE7, I18n.T("ver.dnsFailed"),
-            0x80072EFD, I18n.T("ver.connectFailed"),
-            0x80072EE2, I18n.T("ver.connectTimeout"),
-            0x80072F06, I18n.T("ver.sslCertError"),
-            0x80072F0D, I18n.T("ver.sslCertInvalid"),
-            0x80072F76, I18n.T("ver.sslHandshakeFailed"),
-            0x80004005, I18n.T("ver.unknownError")
+            0x80070057, I18n.T("参数错误：请求参数无效"),
+            0x80072EE7, I18n.T("DNS解析失败：无法解析服务器域名"),
+            0x80072EFD, I18n.T("连接失败：无法连接到服务器"),
+            0x80072EE2, I18n.T("连接超时：服务器响应超时"),
+            0x80072F06, I18n.T("SSL证书错误：无法验证服务器身份"),
+            0x80072F0D, I18n.T("SSL证书无效：服务器证书不受信任"),
+            0x80072F76, I18n.T("SSL握手失败：无法建立安全连接"),
+            0x80004005, I18n.T("未知错误：请求失败")
         )
 
         hexCode := Format("0x{:08X}", errorCode)
@@ -184,15 +184,15 @@ class VersionChecker {
 
         ; 检查是否为超时错误（0x80072EE2 是常见的超时错误）
         if ((errorCode & 0xFFFF) = 0x2EE2) {
-            return {code: hexCode, desc: I18n.T("ver.requestTimeoutDesc")}
+            return {code: hexCode, desc: I18n.T("请求超时：服务器未在规定时间内响应")}
         }
 
         ; 通用网络错误
         if ((errorCode & 0xFFFF0000) = 0x80070000) {
-            return {code: hexCode, desc: I18n.T("ver.networkErrorDesc")}
+            return {code: hexCode, desc: I18n.T("网络错误：请求过程中发生错误")}
         }
 
-        return {code: hexCode, desc: I18n.T("ver.networkUnknownDesc")}
+        return {code: hexCode, desc: I18n.T("网络错误：未知错误类型")}
     }
 
     ; 内部：解析错误对象信息（AHK v2 兼容）
@@ -222,15 +222,15 @@ class VersionChecker {
         }
 
         ; 无法获取具体错误码，根据消息内容判断
-        desc := I18n.T("ver.networkErrorPrefix")
+        desc := I18n.T("网络错误：")
         if (InStr(errMsg, "timeout") || InStr(errMsg, "超时")) {
-            desc .= I18n.T("ver.timeoutPart")
+            desc .= I18n.T("请求超时")
         } else if (InStr(errMsg, "DNS") || InStr(errMsg, "resolve")) {
-            desc .= I18n.T("ver.dnsPart")
+            desc .= I18n.T("DNS解析失败")
         } else if (InStr(errMsg, "SSL") || InStr(errMsg, "certificate")) {
-            desc .= I18n.T("ver.sslPart")
+            desc .= I18n.T("SSL证书错误")
         } else if (InStr(errMsg, "connect") || InStr(errMsg, "连接")) {
-            desc .= I18n.T("ver.connectPart")
+            desc .= I18n.T("连接失败")
         } else {
             desc .= errMsg
         }
@@ -256,7 +256,7 @@ class VersionChecker {
                         tokenResult := GitHubTokenService.Validate(gitHubToken)
                         if (!tokenResult.valid) {
                             this._Log("Token验证失败，阻止更新检查")
-                            return {status: "token_invalid", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: tokenResult.message "`n`n" I18n.T("ver.tokenCheckHint")}
+                            return {status: "token_invalid", localVersion: localVersion, remoteVersion: "", downloadUrl: "", message: tokenResult.message "`n`n" I18n.T("请检查GitHub Token设置。")}
                         }
                     }
                 }
@@ -285,7 +285,7 @@ class VersionChecker {
             }
         }
         ; 保留最后一次的真实错误信息，追加重试次数说明
-        lastResult.message .= "`n" I18n.T("ver.retriedSuffix", maxRetries)
+        lastResult.message .= "`n" I18n.T("（已重试 {1} 次）", maxRetries)
         return lastResult
     }
 
@@ -315,7 +315,7 @@ class VersionChecker {
         fallbackResult := this._CheckSingleSource(fallbackFn, fallbackName, localVersion)
 
         if (fallbackResult.status = "check_failed") {
-            fallbackResult.message := I18n.T("ver.bothSourcesFailed")
+            fallbackResult.message := I18n.T("两个更新源均不可用，请检查网络连接")
         }
 
         return fallbackResult

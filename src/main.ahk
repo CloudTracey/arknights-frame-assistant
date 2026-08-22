@@ -76,8 +76,12 @@ class App {
         ProcessSetPriority "High"
         SendMode "Input"
         SetKeyDelay -1, -1
-        ; 提高热键触发频率阈值：被拦截的游戏键每个按键触发 down+up 两个热键，极速连打 WASD 等键易超默认 66/2000ms 触发警告弹窗
+        ; #279：高分辨率/无级滚轮可超过 200 次/2000ms，AHK 会弹出警告并发出系统提示音。
+        ; 决策：全局关闭洪峰警告（grilling 确认）。代价是失去“热键自触发循环”的告警兜底；
+        ; 若未来出现按键自触发循环，需另行评估热键注册/InputLevel 加固，而不是恢复此提示。
+        ; A_MaxHotkeysPerInterval := 200 保留用于记录洪峰阈值，但 A_HotkeyInterval := 0 时该警告已被全局关闭
         A_MaxHotkeysPerInterval := 200
+        A_HotkeyInterval := 0
         SetMouseDelay -1
         SetWinDelay -1
         SetDefaultMouseSpeed 0
@@ -132,7 +136,7 @@ class App {
         ; 放在 I18n.Init 之后，保证提示使用用户选择的界面语言。
         if (Logger.PreviousAbnormalFile != "") {
             Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
-            MessageBox.Info(I18n.T("msg.lastCrashWarning"), "AFA")
+            MessageBox.Info(I18n.T("检测到上次运行崩溃。`n建议在设置中开启「调试模式」记录日志，并用「生成日志压缩包」导出诊断包反馈给开发者。"), "AFA")
         }
 
         ; 写入启动来源状态，并校准随游戏自动启动的 Windows 审核和计划任务
@@ -168,11 +172,11 @@ class App {
 
         ; 启动校准失败只在 GUI 就绪后用托盘提示一次，不阻塞主流程，也不改变已保存配置。
         if (IsSet(pendingAutoStartWarning))
-            ShowTrayTip(pendingAutoStartWarning, I18n.T("msg.autoStartCalibrationFailedTitle"), 2)
+            ShowTrayTip(pendingAutoStartWarning, I18n.T("随游戏自动启动校准失败"), 2)
 
         tokenStorageWarning := Config.GetTokenStorageWarning()
         if (tokenStorageWarning != "")
-            MessageBox.Warning(tokenStorageWarning, I18n.T("msg.githubTokenStorageTitle"))
+            MessageBox.Warning(tokenStorageWarning, I18n.T("GitHub Token 存储提示"))
 
         ; 触发应用启动事件（触发自动更新检查和游戏自动启动）
         EventBus.Publish("AppStartCompleted")

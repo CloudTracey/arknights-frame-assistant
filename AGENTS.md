@@ -20,6 +20,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - 不使用worktree进行开发
 - 提前查看.gitignore，以确认哪些更改不需要commit
 - 用户没有要求的话，不要擅自commit，不要擅自Push，不创建PR，不创建或改变branch，这些操作由用户自行进行
+- 如果用户要求提交，请对diff进行详细分类，并分开提交，提交的标题和描述要通顺易懂
 
 ## 架构概览
 
@@ -54,7 +55,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 | `core/hotkey/hotkey_service.ahk`（`HotkeyService`） | 热键注册/注销/分组切换。三组热键：CombatHotkeys（常规作战）、QuickHotkeys（快捷操作）、StrongHoldHotkeys（卫戍协议）。按标签页启用对应组，组间互斥。拦截正则由 `GameKeys.GetInterceptPattern()` 动态生成。`ActionCallbacks` 数据化（`{Fn, Guarded}`）声明守卫标志，为守卫拦截键注册 Up 变体补发透传 |
 | `core/hotkey/hotkey_actions.ahk`（`HotkeyActions`） | 热键触发后的具体功能实现（`Action*` 函数）。触控注入初始化由 `App.Bootstrap()` 调用 `HotkeyActionsStart()` 完成；所有游戏按键通过 `GameKeys.SendDown`/`SendUp`/`Tap` 发送，不再硬编码。常规作战 14 个功能带关卡守卫（`GuardInLevel`，读 `LevelDetector.IsInLevel()` 判定），拦截时经 `KeyForward` 透传原键 |
 | `base/touch_injection.ahk` | Windows Touch Injection API 封装（`TouchInjector` 类）。用于暂停选人/技能/撤退等操作的模拟点击，通过 `InitializeTouchInjection`/`InjectTouchInput` 实现，不抢夺鼠标焦点 |
-| `base/i18n.ahk` + `base/locales/*.ahk` | 国际化核心（`I18n` 类）与五语言资源（`LocaleZhHans`/`LocaleZhHant`/`LocaleJaJP`/`LocaleKoKR`/`LocaleEnUS`）。`Init(localeId)`/`SetLocale()`/`T(key, args*)`；回退链 请求语言 → zh-Hans → key 本身；`Data` 超约 19KB 拆分 `Data2` |
+| `base/i18n.ahk` + `base/locales/*.ahk` | 国际化核心（`I18n` 类）与五语言资源（`LocaleZhHans`/`LocaleZhHant`/`LocaleJaJP`/`LocaleKoKR`/`LocaleEnUS`）。`Init(localeId)`/`SetLocale()`/`T(key, args*)`；回退链 请求语言 → zh-Hans → key 本身；**键即中文原文**（`LocaleZhHans.Data` 为空表，zh-Hans 命中原文）；`Data` 超约 19KB 拆分 `Data2` |
 | `base/metrics.ahk` | UI 度量与字体（`Metrics` 类）：`FontFor(locale)` 返回各语言推荐字体，`TextWidth()` 估算文本像素宽度（供控件宽度按语言自适应） |
 | `ui/key_bind.ahk` | 按键绑定捕获（InputHook），处理用户在设置界面的按键录制 |
 | `ui/gui.ahk` | 设置窗口 GUI 全部逻辑（标签页切换、控件事件、托盘菜单）。`UpdateSaveButtonState()` 根据 `IsModified` 和 `HasHotkeyConflicts` 决定保存/应用按钮状态。`RefreshHotkeyConflicts()` 调用 `HotkeyConflictValidator` 进行增量字体标红（仅更新冲突状态变化的控件，使用 `_PrevConflictedControls` 做 diff）。`SwitchTab()` 确认放弃修改后调用 `Config.LoadFromIni()` 显式丢弃内存修改 |
@@ -105,7 +106,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - **Frame155 双写机制**（v1.5.5+）：帧率存储有两个 INI 键 — `Frame155` 存文本值（如 "90"、"180"、"240+"），`Frame` 存旧版索引（1~7，180 映射为 6）。新版优先读取 Frame155，回退读 Frame 旧序号并转换。保存时双写两个键，`MigrateFrameRate()` 在启动时自动将旧序号迁移到 Frame155。新增帧率时需同步更新 3 处：`Constants.FrameOptions`（下拉框选项）、`Constants.FrameTextToOldIndex`（文本→旧序号）、`Constants.FrameOldIndexToText`（旧序号→文本）。
 - **DropDownList.Value 陷阱**：AHK v2 的 `DropDownList.Value` **始终使用索引**（1-based），与 `AltSubmit` 无关。`AltSubmit` 只影响 `Gui.Submit()` 的返回值格式（有→索引，无→文本）。如果下拉框去掉 `AltSubmit` 以让 Submit 返回文本，赋值 `.Value` 时仍需传索引，需做文本→索引转换。
 - **Map.Delete 陷阱**：AHK v2 的 `Map.Delete(key)` 对不存在的键抛 `UnsetItemError`（`Item has no value`），删除前需 `Has` 检查（带默认值参数的是 `Get`，`Delete` 没有）。
-- **热键频率阈值**：AHK v2 用内置变量 `A_MaxHotkeysPerInterval`（默认 66 热键/2000ms）而非 v1 的 `#MaxHotkeysPerInterval` 指令；被拦截的游戏键每个按键触发 down+up 两个热键，极速连打 WASD 等易超默认值弹警告框，main.ahk 已设 200。
+- **热键频率阈值**：AHK v2 用内置变量 `A_MaxHotkeysPerInterval`（默认 66 热键/2000ms）而非 v1 的 `#MaxHotkeysPerInterval` 指令；被拦截的游戏键每个按键触发 down+up 两个热键，极速连打 WASD 等易超默认值弹警告框，main.ahk 已设 200。**#279 起同时设 `A_HotkeyInterval := 0`**：高分辨率/无级滚轮可轻松超过 200 次/2000ms，触发警告弹窗与系统“嘟嘟”提示音；设 0 的含义是**永久关闭该洪峰告警**（不是调高上限）。已接受的代价：未来若出现“热键自触发循环”将不再有告警兜底，需另行评估热键注册/InputLevel 加固，**不得擅自恢复该告警**。
 - **明日方舟按键限制**：游戏设置禁止将 Ctrl 绑定为游戏内按键，故 Ctrl 不命中拦截正则——纯 Ctrl 热键的卡键路径无法在真实环境复现/测试。
 - **Send 注入会触发热键**：AHK 的 Send 命令注入的按键事件默认会被自身钩子捕获并触发热键。Up 变体回调用 Send 补发 key up 时，若放行条件不含递归抑制，注入的 up 会再次触发 Up 变体 → 无限循环补发 → 系统键盘状态被轰炸、按键完全失灵。回调内"Send 同键"的机制必须加防递归标志（如 `KeyForward.SuppressUp`，**须键级作用域**——用 `Map(pureKey→true)` 而非全局布尔，全局布尔会在多键同松时让第二个键的物理 Up 落在第一个键补发窗口内被误挡，`HotkeyContext` 条件失败→物理 up 被吞→卡键）。
 - **AHK 线程优先级 vs Critical/NoTimers**（v1.9.4+，core/hotkey/hotkey_actions.ahk）：AHK 优先级规则是"**新线程优先级低于当前线程才不能中断**"，且低优先级事件按下会被**直接丢弃（not buffered）**而非排队（`misc/Threads.htm#Priority`）——"提高热键优先级、降低定时器优先级"的方案有静默丢键风险（动作快结束时按的低优先级热键会整个丢失），AHK 文档明确 Critical 因能缓冲事件而优于 Priority。`Thread "NoTimers"` 是"只挡定时器、放行热键"的精确工具（`Thread.htm`："similar to Critical except that it only prevents interruptions from timers"），线程级设置、无需改热键注册。选用原则：需"防定时器轮询抖动、但允许其他热键中断"时用 `Thread "NoTimers"` 代替 Critical；需"完全不可中断"（帧数精确）时保留 Critical。
@@ -113,6 +114,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - **File.Read 只接受 1 参数**：AHK v2 的 `File.Read(Characters)` 只读字符串，不支持 v1 的 `Read(&Buffer, Count)` 二参形式——传 2 参会抛 `Too many parameters passed to function.`。读原始字节到 Buffer 须用 `File.RawRead(&Buffer, Bytes)`（返回实际读取字节数）；哈希等二进制读取建议分块流式，避免大文件整体载入内存。
 - **AHK 箭头函数限制与函数名引用**：AHK v2 的箭头函数 `(p) => expr` **只支持单一表达式，不支持 `{ }` 语句块**——多行逻辑需用**嵌套函数闭包**实现（`Functions.htm#closures`：在函数内 `Name(params) { ... }`，捕获外层局部变量即闭包，可用于 Hotkey 回调）。另外 `ActionCallbacks` 等 Map 里的 `Fn: ActionBack` 存的是**函数引用（Func 对象）**而非字符串——AHK v2 中函数定义即同名只读变量、其值即 Func 对象，可直接 `Fn(ThisHotkey)` 调用（`Hotkey` 回调同样接受函数对象）。AHK v2 的 `Func()` 只接受**函数名字符串**，对函数对象套 `IsObject(fn) ? fn : Func(fn)` 规范化是死代码（v1 残留认知），空 `catch` 还会掩盖动作内部真实异常（修复见 core/hotkey/hotkey_service.ahk 的 `_WrapAction`）。
 - **`SetTimer Func, 0` 是解除定时器**：AHK v2 中它取消待触发的回调、**不调用函数**；与 `SetTimer Func, -8000`（一次性定时调用）含义不同，勿混淆（曾有审查误判"0 会触发回调"）。
+- **AHK v2 无 `..` 范围运算符**：`for i in 1..5` 不是 v2 语法——`1..5` 会被解析为对 Float 取属性 `"5"`，**编译不报错**，运行时报 `This value of type "Float" has no property named "5"`（#283 debug 实测踩坑）。循环用 `loop 5` + `A_Index`，或数组字面量（如 `[1,2,3,4,5]`）；不要使用 `..` 连写。
 - **FrameSkip 自定义延迟**（v1.5.5+）：三档过帧延迟（16ms/33ms/166ms）可通过"自定义"分类中的"过帧档位1/2/3" Edit 控件自定义。延迟值存为 `FrameSkip*Delay` 自定义配置项，Action 函数通过 `Config.GetCustom()` 读取。`GuiManager` 维护 `FrameSkipDelayKeys` 列表和 `FrameSkipLabels` Map，`_UpdateFrameSkipLabels()` 在保存/应用后动态更新"常规作战"标签页的过帧行文本。
 - **FileInstall 嵌入资源**：编译时通过 `FileInstall` 将 `logo.ico`、`resources/images/TakeOverButton_*.png`（三张代理作战按钮截图）和关卡检测模板（保留备用，PixelSearch 方案不依赖）打包进 exe，运行时由 `FileExtractor.EnsureExtracted()` **统一提取到 `%AppData%\ArknightsFrameAssistant\PC\resources\` 子目录**（避免散落根目录）。`logo.ico` 使用文件大小校验（`FileGetSize`）判断是否需要重新提取以防止旧版本残留。新增需要嵌入的资源时遵循此模式，在 `FileExtractor` 类中添加路径和提取逻辑。
 - **GitHub Action 发布同步**（v1.5.6+）：`.github/workflows/release-sync.yml` 监听 Release 发布事件，将 `AFA.exe` 和 `version.json` 上传到 COS 并刷新 CDN。`.github/scripts/build_version_json.py` 构建含全量 releases 历史的 `version.json`，处理首次初始化（COS 上无文件时自动创建），支持 stable/beta 双通道独立 version.json。Action 需要 5 个 GitHub Secrets（`COS_SECRET_ID`/`COS_SECRET_KEY`/`COS_BUCKET`/`COS_REGION`/`CDN_DOMAIN`）。`release-sync.yml` 不在 `.gitignore` 中，会被 git 跟踪。发布时对 `AFA.exe` 计算 sha256 写入 `version.json`（`--sha256` 参数）；**GitHub Actions step outputs 大小写敏感**——输出键名须用小写 `sha256`，否则引用为空。
@@ -125,10 +127,12 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 
 ### i18n 多语言（v2.0.0+）
 
+- **键 = 中文原文（source-as-key / gettext 风格）**：调用点直接写中文，如 `I18n.T("常规作战")`、`I18n.T("前进 {1}ms", delay)`。**简体中文不需要维护资源表**（`LocaleZhHans.Data` 保持空 Map，回退链命中 key 本身即原文）；改文案 = 全局替换中文串 + 同步 4 张翻译表，**无需再起英文点键名**。**新增用户可见文案**（GUI/托盘/弹窗/消息字段）即以中文原文为键，并同步 zh-Hant / ja-JP / ko-KR / en-US 四表。
+- **重复中文文案共享同一键**：相同原文合并为一个键（如「取消」= 旧 `btn.cancel`/`msg.btnCancel`）；若不同上下文需要不同翻译，先区分中文原文（改措辞）再建新键。
 - **语言 id 用 BCP-47**：`zh-Hans` / `zh-Hant` / `ja-JP` / `ko-KR` / `en-US`；`Language=auto` 用 `GetUserDefaultUILanguage()` 检测（`A_Language` 是系统区域设置，不是 UI 语言；四语覆盖，其余回退 `en-US`）。
-- **资源 = 编译内置 Map**：`base/locales/*.ahk` 的 `LocaleXxx.Data`。**AHK 单条静态 `Map(...)` 声明约 19KB 解析上限**——大资源表拆 `Data2`，`I18n._Lookup` 按 `Data → Data2` 顺序查找（键数 >254 或语句超约 19KB 时沿用此约定，勿合并回单表）。`tools/i18n_check.py` 校验源码字面 `I18n.T("key")` 与 zh 资源键集合；`hotkey.*` / `important.*` 等经变量动态引用的键报 INFO 属预期。
-- **`I18n.T(key, args*)`**：回退链 请求语言 → `zh-Hans` → key 本身；缺键每键仅 `Warn` 一次；占位符用 `Format` 风格 `{1}`，**禁止拼接句子**；`I18n` 未 `Init` 前调用会惰性加载兜底，正常流程在 `SettingsService.Initialize()` 内完成 `I18n.Init`（崩溃提示等展示须在 Init 之后）。
-- **新增用户可见文案必须键化**（GUI/托盘/弹窗/消息字段）；以下**保持中文不翻译**：`Logger.*`、`VersionChecker._Log`、`OutputDebug`、调试控制台横幅、诊断包（`read-errors.txt` / `diagnostics.txt`）、热键明细日志（"战斗=/快捷="）、内部 `throw Error("...")` 及仅被日志消费的 message 字段。键化前先确认文案是否展示给用户。
+- **资源 = 编译内置 Map**：`base/locales/*.ahk` 的 `LocaleXxx.Data`（键 = 中文原文，值 = 各语言翻译；zh-Hant/ja-JP/ko-KR/en-US 需要维护）。**AHK 单条静态 `Map(...)` 声明约 19KB 解析上限**——大资源表拆 `Data2`，`I18n._Lookup` 按 `Data → Data2` 顺序查找（键数 >254 或语句超约 19KB 时沿用此约定，勿合并回单表）。`tools/i18n_check.py` 校验源码字面 `I18n.T("key")` 与四语言资源键集合（使用键必须在所有语言中存在；残留旧点键或未同步翻译会报 FAIL）；`HotkeySchema.nameKey` / `Constants.*Names` / `DisplayNameKey` 等经变量动态引用的键报 INFO 属预期。
+- **`I18n.T(key, args*)`**：回退链 请求语言 → `zh-Hans`（空表）→ key 本身（即中文原文）；缺键仅对非 zh-Hans 语言每键 `Warn` 一次（zh-Hans 命中原文属预期不告警）；回退路径同样执行 `Format`（带 `{1}` 的中文键在 zh-Hans 下也能正确插值）；占位符用 `Format` 风格 `{1}`，**禁止拼接句子**；`I18n` 未 `Init` 前调用会惰性加载兜底，正常流程在 `SettingsService.Initialize()` 内完成 `I18n.Init`（崩溃提示等展示须在 Init 之后）。
+- 以下**保持中文不翻译**：`Logger.*`、`VersionChecker._Log`、`OutputDebug`、调试控制台横幅、诊断包（`read-errors.txt` / `diagnostics.txt`）、热键明细日志（"战斗=/快捷="）、内部 `throw Error("...")` 及仅被日志消费的 message 字段。键化前先确认文案是否展示给用户。
 - **`self_replacer.ahk` 批处理控制台**（含 `update-*.log` 内容）：zh-Hans/zh-Hant 保留中文与求饶文案，**其它语言统一英文**（`batch.*` 键，ja/ko 值与 en 相同）；批处理行尾必须 ASCII（`chcp 65001` 陷阱见上）。
 - **控件宽度按语言自适应**：`Metrics.TextWidth()` 仅作快速估算；关键长标签（绑定行、帧率标签等）用**独立临时 Gui 探测真实字形宽度**（`Gui()` + `Add("Text")` + `GetPos` + `probeGui.Destroy()`），不要在主窗口建隐藏探测控件。列栅格约定：编辑控件列固定（左列 x155 / 右列 x515，w140），左侧标签右缘固定 135 右对齐、宽出向左延伸（列内上限 135px）；消息框/更新/下载弹窗的按钮宽度与窗口尺寸按实际控件位置动态计算。
 - **AHK 控件无 `Destroy()`**：Gui 控件对象没有 `Destroy`/`Delete` 方法（只有 `Gui` 窗口可 `Destroy()`）；Text 控件改 `.Value` **不会**自动重新量宽（需 `Move`）。"测量后重定位"一律用临时 Gui 窗口或 `GetPos` + `Move`。
