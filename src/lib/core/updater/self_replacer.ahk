@@ -18,7 +18,7 @@ class SelfReplacer {
             Logger.Warn("SelfReplacer", "自替换验证失败：新文件不存在=" newFilePath)
             return {
                 success: false,
-                error: I18n.T("selfReplacer.newFileMissing", newFilePath)
+                error: I18n.T("新文件不存在: {1}", newFilePath)
             }
         }
 
@@ -71,7 +71,7 @@ class SelfReplacer {
             Logger.Error("SelfReplacer", "创建批处理脚本失败：" e.Message "（路径：" batchFile "）")
             return {
                 success: false,
-                error: I18n.T("selfReplacer.batchCreateFailed", e.Message, batchFile)
+                error: I18n.T("创建批处理脚本失败: {1} (路径: {2})", e.Message, batchFile)
             }
         }
 
@@ -82,7 +82,7 @@ class SelfReplacer {
             Logger.Error("SelfReplacer", "启动替换脚本失败：" e.Message)
             return {
                 success: false,
-                error: I18n.T("selfReplacer.batchStartFailed", e.Message)
+                error: I18n.T("启动替换脚本失败: {1}", e.Message)
             }
         }
 
@@ -111,7 +111,7 @@ class SelfReplacer {
         lines.Push("@echo off")
         lines.Push("setlocal enabledelayedexpansion")
         lines.Push("chcp 65001 >nul")
-        lines.Push("title " I18n.T("selfReplacer.title"))
+        lines.Push("title " I18n.T("AFA更新中..."))
         ; 设置日志文件路径
         lines.Push("set `"LOG_FILE=" logFile "`"")
         ; 创建日志目录（如果不存在）
@@ -121,11 +121,11 @@ class SelfReplacer {
         SplitPath(currentExePath, &currentExeName)
 
         ; 初始化日志，记录开始时间
-        lines.Push("echo [%date% %time%] " I18n.T("batch.logStart") " >> `"%LOG_FILE%`"")
-        lines.Push("echo " I18n.T("selfReplacer.waitClose") " >> `"%LOG_FILE%`"")
+        lines.Push("echo [%date% %time%] " I18n.T("开始更新流程") " >> `"%LOG_FILE%`"")
+        lines.Push("echo " I18n.T("正在等待程序关闭...") " >> `"%LOG_FILE%`"")
         ; 正在学习阿梅利亚干员先进经验
         if (I18n.GetCurrent() = "zh-Hans" || I18n.GetCurrent() = "zh-Hant") {
-            lines.Push("echo " I18n.T("selfReplacer.ritual"))
+            lines.Push("echo " I18n.T("(正在施展阿梅利亚神秘仪式)"))
             lines.Push("echo 求求你了360安全卫士放过我 求求你了360杀毒放过我 求求你了腾讯电脑管家放过我 求求你了火绒安全软件放过我...")
             lines.Push("echo 求求你了金山毒霸放过我 求求你了瑞星杀毒软件放过我 求求你了联想电脑管家放过我 求求你了华为电脑管家放过我...")
             lines.Push("echo 求求你了卡巴斯基放过我 求求你了ESETNOD32放过我 求求你了诺顿放过我 求求你了迈克菲放过我...")
@@ -136,7 +136,7 @@ class SelfReplacer {
             lines.Push("echo ================")
             lines.Push("echo.")
         }
-        lines.Push("echo " I18n.T("selfReplacer.waitClose"))
+        lines.Push("echo " I18n.T("正在等待程序关闭..."))
 
         ; 等待循环：检测进程是否退出
         lines.Push("set wait_count=0")
@@ -146,19 +146,19 @@ class SelfReplacer {
         lines.Push("if not errorlevel 1 (")
         lines.Push("    set /a wait_count+=1")
         lines.Push("    if !wait_count! geq 30 (")
-        lines.Push("        echo [%date% %time%] " I18n.T("batch.timeoutContinue") " >> `"%LOG_FILE%`"")
-        lines.Push("        echo " I18n.T("selfReplacer.timeoutContinue"))
+        lines.Push("        echo [%date% %time%] " I18n.T("等待超时（30秒），继续尝试替换") " >> `"%LOG_FILE%`"")
+        lines.Push("        echo " I18n.T("等待超时，尝试继续..."))
         lines.Push("        goto continue_update")
         lines.Push("    )")
         lines.Push("    goto wait_loop")
         lines.Push(")")
-        lines.Push("echo [%date% %time%] " I18n.T("selfReplacer.programClosed") " >> `"%LOG_FILE%`"")
-        lines.Push("echo " I18n.T("selfReplacer.programClosed"))
+        lines.Push("echo [%date% %time%] " I18n.T("程序已关闭") " >> `"%LOG_FILE%`"")
+        lines.Push("echo " I18n.T("程序已关闭"))
 
         ; 继续更新
         lines.Push(":continue_update")
-        lines.Push("echo " I18n.T("selfReplacer.replacing") " >> `"%LOG_FILE%`"")
-        lines.Push("echo " I18n.T("selfReplacer.replacing"))
+        lines.Push("echo " I18n.T("正在替换文件...") " >> `"%LOG_FILE%`"")
+        lines.Push("echo " I18n.T("正在替换文件..."))
         lines.Push("set retry_count=0")
         lines.Push(":retry_loop")
 
@@ -168,9 +168,9 @@ class SelfReplacer {
             lines.Push("if not exist `"" backupPath "`" (")
             lines.Push("    copy /Y `"" currentExePath "`" `"" backupPath "`" >nul 2>&1")
             lines.Push("    if errorlevel 1 (")
-            lines.Push("        echo [%date% %time%] " I18n.T("batch.backupFailed") " >> `"%LOG_FILE%`"")
+            lines.Push("        echo [%date% %time%] " I18n.T("备份原文件失败") " >> `"%LOG_FILE%`"")
             lines.Push("    ) else (")
-            lines.Push("        echo [%date% %time%] " I18n.T("batch.backedUp", backupName) " >> `"%LOG_FILE%`"")
+            lines.Push("        echo [%date% %time%] " I18n.T("原文件已备份为 {1}", backupName) " >> `"%LOG_FILE%`"")
             lines.Push("    )")
             lines.Push(")")
         }
@@ -179,33 +179,33 @@ class SelfReplacer {
         lines.Push("del /F /Q `"" currentExePath "`" >nul 2>&1")
         lines.Push("set del_result=%errorlevel%")
         lines.Push("if %del_result% neq 0 (")
-        lines.Push("    echo [%date% %time%] " I18n.T("batch.deleteFailed") " >> `"%LOG_FILE%`"")
+        lines.Push("    echo [%date% %time%] " I18n.T("删除原文件失败（错误码: %del_result%）") " >> `"%LOG_FILE%`"")
         lines.Push(") else (")
-        lines.Push("    echo [%date% %time%] " I18n.T("batch.deleted") " >> `"%LOG_FILE%`"")
+        lines.Push("    echo [%date% %time%] " I18n.T("原文件已删除") " >> `"%LOG_FILE%`"")
         lines.Push(")")
 
         ; 复制新文件
         lines.Push("copy /Y `"" newFilePath "`" `"" currentExePath "`" >nul 2>&1")
         lines.Push("set copy_result=%errorlevel%")
         lines.Push("if %copy_result% neq 0 (")
-        lines.Push("    echo [%date% %time%] " I18n.T("batch.copyFailed") " >> `"%LOG_FILE%`"")
+        lines.Push("    echo [%date% %time%] " I18n.T("复制新文件失败（错误码: %copy_result%）") " >> `"%LOG_FILE%`"")
         lines.Push(") else (")
-        lines.Push("    echo [%date% %time%] " I18n.T("batch.copySucceeded") " >> `"%LOG_FILE%`"")
+        lines.Push("    echo [%date% %time%] " I18n.T("新文件复制成功") " >> `"%LOG_FILE%`"")
         lines.Push(")")
 
         ; 检查替换是否成功：必须同时满足：原文件删除成功 AND 新文件复制成功 AND 文件存在
         lines.Push("if %del_result% equ 0 if %copy_result% equ 0 if exist `"" currentExePath "`" (")
-        lines.Push("    echo [%date% %time%] " I18n.T("batch.replaceSuccess") " >> `"%LOG_FILE%`"")
+        lines.Push("    echo [%date% %time%] " I18n.T("替换成功！") " >> `"%LOG_FILE%`"")
         if (I18n.GetCurrent() = "zh-Hans" || I18n.GetCurrent() = "zh-Hant")
-            lines.Push("    echo " I18n.T("selfReplacer.replaceSuccess"))
+            lines.Push("    echo " I18n.T("替换成功！阿梅利亚式祈祷是对的！"))
         lines.Push("    goto launch")
         lines.Push(")")
-        lines.Push("echo [%date% %time%] " I18n.T("batch.existCheck") ": del_result=%del_result%, copy_result=%copy_result%, exist check failed >> `"%LOG_FILE%`"")
+        lines.Push("echo [%date% %time%] " I18n.T("文件存在性检查") ": del_result=%del_result%, copy_result=%copy_result%, exist check failed >> `"%LOG_FILE%`"")
 
         ; 重试机制
         lines.Push("set /a retry_count+=1")
         lines.Push("if %retry_count% lss 5 (")
-        lines.Push("    echo [%date% %time%] " I18n.T("batch.retryFailed") " >> `"%LOG_FILE%`"")
+        lines.Push("    echo [%date% %time%] " I18n.T("替换失败，第%retry_count%次重试...") " >> `"%LOG_FILE%`"")
         lines.Push("    timeout /t 2 /nobreak >nul")
         lines.Push("    goto retry_loop")
         lines.Push(")")
@@ -215,38 +215,38 @@ class SelfReplacer {
 
         ; 启动新版本
         lines.Push(":launch")
-        lines.Push("echo " I18n.T("selfReplacer.starting") " >> `"%LOG_FILE%`"")
-        lines.Push("echo " I18n.T("selfReplacer.starting"))
+        lines.Push("echo " I18n.T("正在启动新版本...") " >> `"%LOG_FILE%`"")
+        lines.Push("echo " I18n.T("正在启动新版本..."))
         lines.Push("start `"`" `"" currentExePath "`"")
         lines.Push("timeout /t 2 /nobreak >nul")
-        lines.Push("echo [%date% %time%] " I18n.T("batch.newVersionStarted") " >> `"%LOG_FILE%`"")
+        lines.Push("echo [%date% %time%] " I18n.T("新版本已启动") " >> `"%LOG_FILE%`"")
         lines.Push("goto cleanup")
 
         ; 失败后的清理：先尝试用备份还原原文件，避免程序从原位置消失
         lines.Push(":cleanup_failed")
-        lines.Push("echo [%date% %time%] " I18n.T("batch.autoRestore") " >> `"%LOG_FILE%`"")
+        lines.Push("echo [%date% %time%] " I18n.T("替换失败，正在尝试自动还原原文件...") " >> `"%LOG_FILE%`"")
         if (I18n.GetCurrent() = "zh-Hans" || I18n.GetCurrent() = "zh-Hant")
-            lines.Push("echo " I18n.T("selfReplacer.notLetGo"))
-        lines.Push("echo " I18n.T("selfReplacer.restoreFailed"))
+            lines.Push("echo " I18n.T("！？不放过我？！"))
+        lines.Push("echo " I18n.T("还原原文件失败，请手动从备份恢复"))
         if (backupPath != "") {
             lines.Push("if exist `"" backupPath "`" (")
             lines.Push("    copy /Y `"" backupPath "`" `"" currentExePath "`" >nul 2>&1")
             lines.Push("    if errorlevel 1 (")
-            lines.Push("        echo [%date% %time%] " I18n.T("selfReplacer.restoreFailed") " >> `"%LOG_FILE%`"")
-            lines.Push("        echo " I18n.T("selfReplacer.restoreFailed"))
+            lines.Push("        echo [%date% %time%] " I18n.T("还原原文件失败，请手动从备份恢复") " >> `"%LOG_FILE%`"")
+            lines.Push("        echo " I18n.T("还原原文件失败，请手动从备份恢复"))
             lines.Push("    ) else (")
-            lines.Push("        echo [%date% %time%] " I18n.T("selfReplacer.restored") " >> `"%LOG_FILE%`"")
-            lines.Push("        echo " I18n.T("selfReplacer.restored"))
+            lines.Push("        echo [%date% %time%] " I18n.T("原文件已还原") " >> `"%LOG_FILE%`"")
+            lines.Push("        echo " I18n.T("原文件已还原"))
             lines.Push("    )")
             lines.Push(")")
         }
         ; 提示用户失败的可能原因（指向新文件：下载的更新文件被删除/损坏，而非原文件）
-        lines.Push("echo [%date% %time%] " I18n.T("selfReplacer.copyFailed") " >> `"%LOG_FILE%`"")
-        lines.Push("echo " I18n.T("selfReplacer.copyFailed"))
+        lines.Push("echo [%date% %time%] " I18n.T("复制新文件失败：下载的更新文件可能已损坏或被安全软件删除，请检查后手动处理，或向开发者反馈此问题") " >> `"%LOG_FILE%`"")
+        lines.Push("echo " I18n.T("复制新文件失败：下载的更新文件可能已损坏或被安全软件删除，请检查后手动处理，或向开发者反馈此问题"))
         if (backupPath != "") {
-            lines.Push("echo " I18n.T("selfReplacer.backupLocation") " `"" backupPath "`"")
+            lines.Push("echo " I18n.T("备份文件位置:") " `"" backupPath "`"")
         }
-        lines.Push("echo " I18n.T("selfReplacer.newFileLocation") " `"" newFilePath "`"")
+        lines.Push("echo " I18n.T("新文件位置:") " `"" newFilePath "`"")
         ; 暂停让用户看到失败信息，按键后关闭窗口
         lines.Push("pause")
         ; 只删除批处理自身，保留其他所有文件
@@ -255,8 +255,8 @@ class SelfReplacer {
 
         ; 成功后的清理
         lines.Push(":cleanup")
-        lines.Push("echo [%date% %time%] " I18n.T("batch.cleanStart") " >> `"%LOG_FILE%`"")
-        lines.Push("echo " I18n.T("selfReplacer.cleaning"))
+        lines.Push("echo [%date% %time%] " I18n.T("开始清理临时文件...") " >> `"%LOG_FILE%`"")
+        lines.Push("echo " I18n.T("正在清理临时文件..."))
 
         ; 先关闭日志文件句柄（通过复制到新日志然后切换）
         lines.Push("set final_log=%LOG_FILE%.final")
@@ -266,9 +266,9 @@ class SelfReplacer {
         lines.Push("if exist `"" newFilePath "`" (")
         lines.Push("    del /F /Q `"" newFilePath "`" >nul 2>&1")
         lines.Push("    if exist `"" newFilePath "`" (")
-        lines.Push("        echo [%date% %time%] " I18n.T("batch.cleanUpdateFailed") " >> `"%final_log%`"")
+        lines.Push("        echo [%date% %time%] " I18n.T("清理更新文件失败（文件仍被占用）") " >> `"%final_log%`"")
         lines.Push("    ) else (")
-        lines.Push("        echo [%date% %time%] " I18n.T("batch.cleanUpdateDone") " >> `"%final_log%`"")
+        lines.Push("        echo [%date% %time%] " I18n.T("更新文件已删除") " >> `"%final_log%`"")
         lines.Push("    )")
         lines.Push(")")
 
@@ -277,9 +277,9 @@ class SelfReplacer {
             lines.Push("if exist `"" backupPath "`" (")
             lines.Push("    del /F /Q `"" backupPath "`" >nul 2>&1")
             lines.Push("    if exist `"" backupPath "`" (")
-            lines.Push("        echo [%date% %time%] " I18n.T("batch.cleanBackupFailed") " >> `"%final_log%`"")
+            lines.Push("        echo [%date% %time%] " I18n.T("清理备份文件失败（文件仍被占用）") " >> `"%final_log%`"")
             lines.Push("    ) else (")
-            lines.Push("        echo [%date% %time%] " I18n.T("batch.cleanBackupDone") " >> `"%final_log%`"")
+            lines.Push("        echo [%date% %time%] " I18n.T("备份文件已删除") " >> `"%final_log%`"")
             lines.Push("    )")
             lines.Push(")")
         }
@@ -289,7 +289,7 @@ class SelfReplacer {
             lines.Push("if exist `"" oldBackup "`" (")
             lines.Push("    del /F /Q `"" oldBackup "`" >nul 2>&1")
             lines.Push("    if not exist `"" oldBackup "`" (")
-            lines.Push("        echo [%date% %time%] " I18n.T("batch.cleanOldBackup", oldBackup) " >> `"%final_log%`"")
+            lines.Push("        echo [%date% %time%] " I18n.T("清理旧备份文件 {1}", oldBackup) " >> `"%final_log%`"")
             lines.Push("    )")
             lines.Push(")")
         }
@@ -308,7 +308,7 @@ class SelfReplacer {
         lines.Push("rmdir `"%Temp%\ArknightsFrameAssistant`" 2>nul")
 
         ; 删除批处理文件自身（使用批处理经典自删除方法）
-        lines.Push("echo [%date% %time%] " I18n.T("batch.logEnd") " >> `"%LOG_FILE%`"")
+        lines.Push("echo [%date% %time%] " I18n.T("更新流程结束") " >> `"%LOG_FILE%`"")
         lines.Push("del /F /Q `"%~f0`" >nul 2>&1")
         lines.Push("exit")
 

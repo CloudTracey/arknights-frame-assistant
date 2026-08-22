@@ -15,20 +15,20 @@ class GameAutoStartManager {
     static ValidateGamePath(gamePath) {
         gamePath := Trim(gamePath)
         if (gamePath = "")
-            return {success: false, message: I18n.T("msg.gamePathMissing")}
+            return {success: false, message: I18n.T("请先设置明日方舟的游戏路径。")}
 
         normalizedPath := this._NormalizePath(gamePath)
         if (normalizedPath = "")
-            return {success: false, message: I18n.T("autoStart.pathNotFull", gamePath)}
+            return {success: false, message: I18n.T("无法将游戏路径转换为完整路径：`n{1}", gamePath)}
 
         fileAttributes := FileExist(normalizedPath)
         if (!fileAttributes || InStr(fileAttributes, "D"))
-            return {success: false, message: I18n.T("autoStart.pathNotExist", normalizedPath)}
+            return {success: false, message: I18n.T("游戏路径不存在或不是文件：`n{1}", normalizedPath)}
 
         normalizedPath := this._GetLongPath(normalizedPath)
         SplitPath(normalizedPath, &fileName)
         if (StrLower(fileName) != "arknights.exe")
-            return {success: false, message: I18n.T("autoStart.pathNotExe", normalizedPath)}
+            return {success: false, message: I18n.T("游戏路径的文件名必须是 Arknights.exe：`n{1}", normalizedPath)}
 
         return {success: true, path: normalizedPath}
     }
@@ -64,7 +64,7 @@ class GameAutoStartManager {
         if (enabled) {
             paths := this._AsPathArray(gamePath)
             if (paths.Length = 0)
-                return {success: false, message: I18n.T("msg.gamePathMissing")}
+                return {success: false, message: I18n.T("请先设置明日方舟的游戏路径。")}
             validated := []
             for path in paths {
                 validation := this.ValidateGamePath(path)
@@ -108,7 +108,7 @@ class GameAutoStartManager {
     static Enable(gamePaths) {
         paths := this._AsPathArray(gamePaths)
         if (paths.Length = 0)
-            return {success: false, message: I18n.T("msg.gamePathMissing")}
+            return {success: false, message: I18n.T("请先设置明日方舟的游戏路径。")}
         auditResult := this.EnableProcessCreationAudit()
         if (!auditResult.success)
             return auditResult
@@ -116,7 +116,7 @@ class GameAutoStartManager {
         try {
             taskResult := this.EnsureTask(paths)
             return this._Result(true, {
-                message: I18n.T("autoStart.enabled"),
+                message: I18n.T("随游戏自动启动已启用。"),
                 skipped: auditResult.skipped && taskResult.skipped,
                 auditChanged: auditResult.auditChanged,
                 taskChanged: taskResult.taskChanged,
@@ -125,7 +125,7 @@ class GameAutoStartManager {
         } catch Error as e {
             Logger.Error("GameAutoStart", "计划任务注册失败：" e.Message)
             return this._Result(false, {stage: "task_ensure", reason: "task_ensure_failed",
-                message: I18n.T("autoStart.taskRegisterFailed", e.Message)})
+                message: I18n.T("计划任务注册失败：`n{1}", e.Message)})
         }
     }
 
@@ -141,16 +141,16 @@ class GameAutoStartManager {
             } catch Error as e {
                 errorCode := this._GetWin32ErrorCode(e)
                 if (errorCode = 2 || errorCode = 3)
-                    return this._Result(true, {message: I18n.T("autoStart.disabled"), skipped: true})
+                    return this._Result(true, {message: I18n.T("随游戏自动启动已关闭。"), skipped: true})
                 throw e
             }
             rootFolder.DeleteTask(taskName, 0)
             Logger.Info("GameAutoStart", "计划任务已删除")
-            return this._Result(true, {message: I18n.T("autoStart.disabled"), taskChanged: true})
+            return this._Result(true, {message: I18n.T("随游戏自动启动已关闭。"), taskChanged: true})
         } catch Error as e {
             Logger.Error("GameAutoStart", "计划任务删除失败：" e.Message)
             return this._Result(false, {stage: "task_delete", reason: "task_delete_failed",
-                message: I18n.T("autoStart.taskDeleteFailed", e.Message)})
+                message: I18n.T("计划任务删除失败：`n{1}", e.Message)})
         }
     }
 
@@ -160,7 +160,7 @@ class GameAutoStartManager {
         if (AppContext.GetStartedByGameAutoStart()) {
             if (enabled) {
                 Logger.Info("GameAutoStart", "触发启动已跳过审核与计划任务校准")
-                return this._Result(true, {message: I18n.T("autoStart.noCalibration"), skipped: true})
+                return this._Result(true, {message: I18n.T("触发启动无需校准。"), skipped: true})
             }
             result := this.Disable()
             result.shouldExit := true
@@ -205,14 +205,14 @@ class GameAutoStartManager {
                 "Int"
             )
             if (parseResult != 0)
-                return this._AuditError("audit_guid_invalid", I18n.T("autoStart.auditGuidInvalid"), parseResult)
+                return this._AuditError("audit_guid_invalid", I18n.T("无法解析 Windows 进程创建审核标识"), parseResult)
 
             queryResult := this._QueryAuditPolicy(subCategoryGuid)
             if (!queryResult.success)
                 return queryResult
             if (queryResult.flags & this.POLICY_AUDIT_EVENT_SUCCESS)
                 return this._Result(true, {stage: "audit_query", reason: "already_enabled",
-                    skipped: true, message: I18n.T("autoStart.auditEnabled")})
+                    skipped: true, message: I18n.T("进程创建审核已启用。")})
 
             ; AUDIT_POLICY_INFORMATION = SubCategoryGuid(16) + AuditingInformation(4) + CategoryGuid(16)
             policyInfo := Buffer(36, 0)
@@ -229,15 +229,15 @@ class GameAutoStartManager {
             )
             setError := A_LastError
             if (!setSucceeded)
-                return this._AuditError("audit_set_failed", I18n.T("autoStart.auditSetFailed"), setError)
+                return this._AuditError("audit_set_failed", I18n.T("Windows 进程创建审核设置失败"), setError)
 
             verifyResult := this._QueryAuditPolicy(subCategoryGuid, "audit_verify")
             if (!verifyResult.success)
                 return verifyResult
             if !(verifyResult.flags & this.POLICY_AUDIT_EVENT_SUCCESS)
-                return this._AuditError("audit_verify_mismatch", I18n.T("autoStart.auditVerifyMismatch"), 0)
+                return this._AuditError("audit_verify_mismatch", I18n.T("Windows 进程创建审核设置未生效"), 0)
             return this._Result(true, {stage: "audit_verify", reason: "enabled",
-                auditChanged: true, message: I18n.T("autoStart.auditEnabled")})
+                auditChanged: true, message: I18n.T("进程创建审核已启用。")})
         } finally {
             this._RestoreSecurityAuditPrivilege(privilegeResult)
         }
@@ -255,7 +255,7 @@ class GameAutoStartManager {
         )
         queryError := A_LastError
         if (!querySucceeded)
-            return this._AuditError(stage "_failed", I18n.T("autoStart.auditReadFailed"), queryError, stage)
+            return this._AuditError(stage "_failed", I18n.T("无法读取 Windows 进程创建审核状态"), queryError, stage)
         try
             return this._Result(true, {stage: stage, reason: "queried", flags: NumGet(policyPointer, 16, "UInt")})
         finally {
@@ -277,7 +277,7 @@ class GameAutoStartManager {
             "Ptr*", &tokenHandle,
             "Int"
         )
-            return this._AuditError("token_open_failed", I18n.T("autoStart.tokenOpenFailed"), A_LastError)
+            return this._AuditError("token_open_failed", I18n.T("无法打开当前进程令牌"), A_LastError)
 
         try {
             privilegeLuid := Buffer(8, 0)
@@ -288,7 +288,7 @@ class GameAutoStartManager {
                 "Ptr", privilegeLuid,
                 "Int"
             )
-                return this._AuditError("privilege_lookup_failed", I18n.T("autoStart.privilegeLookupFailed"), A_LastError)
+                return this._AuditError("privilege_lookup_failed", I18n.T("无法查找 Windows 审核权限"), A_LastError)
 
             tokenPrivileges := Buffer(16, 0)
             previousState := Buffer(16, 0)
@@ -310,13 +310,13 @@ class GameAutoStartManager {
             )
             adjustError := A_LastError
             if (!adjusted)
-                return this._AuditError("privilege_enable_failed", I18n.T("autoStart.privilegeEnableFailed"), adjustError)
+                return this._AuditError("privilege_enable_failed", I18n.T("无法启用 Windows 审核权限"), adjustError)
             if (adjustError = this.ERROR_NOT_ALL_ASSIGNED)
-                return this._AuditError("privilege_not_assigned", I18n.T("autoStart.privilegeNotAssigned"), adjustError)
+                return this._AuditError("privilege_not_assigned", I18n.T("当前 Windows 账户未被授予审核权限"), adjustError)
 
             keepHandle := true
             return this._Result(true, {stage: "privilege_enable", reason: "enabled",
-                tokenHandle: tokenHandle, previousState: previousState, message: I18n.T("autoStart.privilegeEnabled")})
+                tokenHandle: tokenHandle, previousState: previousState, message: I18n.T("Windows 审核权限已启用。")})
         } finally {
             if (!keepHandle && tokenHandle)
                 DllCall("Kernel32\CloseHandle", "Ptr", tokenHandle)
@@ -346,13 +346,13 @@ class GameAutoStartManager {
             || errorCode = this.ERROR_NOT_ALL_ASSIGNED
             || errorCode = this.ERROR_PRIVILEGE_NOT_HELD) {
             message := action "。`n"
-            message .= I18n.T("autoStart.seSecurityMissing", errorCode)
+            message .= I18n.T("当前账户缺少“管理审核和安全日志”(SeSecurityPrivilege) 用户权利。`n请由系统管理员检查本地或域组策略，重新登录 Windows 后再试。`n错误码：{1}", errorCode)
 
             return this._Result(false, {stage: stage != "" ? stage : reason,
                 reason: reason, errorCode: errorCode, message: message})
         }
 
-        detail := errorCode ? OSError(errorCode).Message : I18n.T("autoStart.unknownOsError")
+        detail := errorCode ? OSError(errorCode).Message : I18n.T("未知 Windows 错误")
         message := action "。`n" detail
         return this._Result(false, {stage: stage != "" ? stage : reason,
             reason: reason, errorCode: errorCode, message: message})
@@ -362,7 +362,7 @@ class GameAutoStartManager {
     static EnsureTask(gamePaths) {
         paths := this._AsPathArray(gamePaths)
         if (paths.Length = 0)
-            return this._Result(false, {message: I18n.T("msg.autoStartNoPath"), reason: "empty_paths"})
+            return this._Result(false, {message: I18n.T("请先设置至少一个游戏路径。"), reason: "empty_paths"})
         userSid := this.GetCurrentUserSid()
         accountName := this.GetCurrentUserName()
         taskName := this.GetTaskName(userSid)
@@ -376,7 +376,7 @@ class GameAutoStartManager {
             if (this._IsTaskEquivalent(existingTask.Definition, desiredTask, userSid)) {
                 Logger.Info("GameAutoStart", "计划任务已匹配，跳过重写")
                 return this._Result(true, {stage: "task_compare", reason: "already_current",
-                    skipped: true, message: I18n.T("autoStart.taskUpToDate")})
+                    skipped: true, message: I18n.T("计划任务已是最新状态。")})
             }
         } catch Error as e {
             errorCode := this._GetWin32ErrorCode(e)
@@ -389,7 +389,7 @@ class GameAutoStartManager {
             pathSummary .= (pathSummary = "" ? "" : " | ") p
         Logger.Info("GameAutoStart", "计划任务已创建或更新：" pathSummary)
         return this._Result(true, {stage: "task_register", reason: "created_or_updated",
-            taskChanged: true, message: I18n.T("autoStart.taskCreated")})
+            taskChanged: true, message: I18n.T("计划任务已创建或更新。")})
     }
 
     static RegisterTask(gamePaths) => this.EnsureTask(gamePaths)
@@ -399,7 +399,7 @@ class GameAutoStartManager {
         taskDefinition := service.NewTask(0)
 
         taskDefinition.RegistrationInfo.Author := "Arknights Frame Assistant"
-        taskDefinition.RegistrationInfo.Description := I18n.T("autoStart.taskDescription")
+        taskDefinition.RegistrationInfo.Description := I18n.T("检测明日方舟启动并自动启动 Arknights Frame Assistant")
 
         settings := taskDefinition.Settings
         settings.Enabled := true
@@ -549,11 +549,11 @@ class GameAutoStartManager {
         nameLength := 0
         DllCall("Secur32\GetUserNameExW", "Int", nameFormat, "Ptr", 0, "UInt*", &nameLength)
         if (nameLength <= 0)
-            throw Error(I18n.T("autoStart.accountNameFailed", A_LastError))
+            throw Error(I18n.T("无法读取当前用户账户名，错误码：{1}", A_LastError))
 
         nameBuffer := Buffer(nameLength * 2, 0)
         if !DllCall("Secur32\GetUserNameExW", "Int", nameFormat, "Ptr", nameBuffer, "UInt*", &nameLength)
-            throw Error(I18n.T("autoStart.accountNameFailed", A_LastError))
+            throw Error(I18n.T("无法读取当前用户账户名，错误码：{1}", A_LastError))
         return StrGet(nameBuffer, "UTF-16")
     }
 
@@ -600,22 +600,22 @@ class GameAutoStartManager {
         tokenHandle := 0
         currentProcess := DllCall("GetCurrentProcess", "Ptr")
         if !DllCall("Advapi32\OpenProcessToken", "Ptr", currentProcess, "UInt", 0x0008, "Ptr*", &tokenHandle)
-            throw Error(I18n.T("autoStart.userTokenOpenFailed", A_LastError))
+            throw Error(I18n.T("无法打开当前用户令牌，错误码：{1}", A_LastError))
 
         try {
             requiredSize := 0
             DllCall("Advapi32\GetTokenInformation", "Ptr", tokenHandle, "Int", 1, "Ptr", 0, "UInt", 0, "UInt*", &requiredSize)
             if (requiredSize <= 0)
-                throw Error(I18n.T("autoStart.userTokenSizeFailed", A_LastError))
+                throw Error(I18n.T("无法读取当前用户令牌大小，错误码：{1}", A_LastError))
 
             tokenInfo := Buffer(requiredSize, 0)
             if !DllCall("Advapi32\GetTokenInformation", "Ptr", tokenHandle, "Int", 1, "Ptr", tokenInfo, "UInt", requiredSize, "UInt*", &requiredSize)
-                throw Error(I18n.T("autoStart.userSidReadFailed", A_LastError))
+                throw Error(I18n.T("无法读取当前用户 SID，错误码：{1}", A_LastError))
 
             sidPointer := NumGet(tokenInfo, 0, "Ptr")
             stringSidPointer := 0
             if !DllCall("Advapi32\ConvertSidToStringSidW", "Ptr", sidPointer, "Ptr*", &stringSidPointer)
-                throw Error(I18n.T("autoStart.userSidConvertFailed", A_LastError))
+                throw Error(I18n.T("无法转换当前用户 SID，错误码：{1}", A_LastError))
 
             try {
                 return StrGet(stringSidPointer)

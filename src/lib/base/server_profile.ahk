@@ -11,10 +11,10 @@ class ServerProfile {
     ; 内置区服元数据表。
     ; DirectoryHint 仅用于 app.info 缺失时的宽松回退。
     static Profiles := Map(
-        "CN", {Id: "CN", DisplayNameKey: "server.cn", Company: "HyperGryph", Product: "Arknights", DirectoryHint: "Arknights Game", Locale: "zh-CN"},
-        "JP", {Id: "JP", DisplayNameKey: "server.jp", Company: "Yostar", Product: "Arknights_JP", DirectoryHint: "Arknights_JP", Locale: "ja-JP"},
-        "KR", {Id: "KR", DisplayNameKey: "server.kr", Company: "Yostar", Product: "Arknights_KR", DirectoryHint: "Arknights_KR", Locale: "ko-KR"},
-        "EN", {Id: "EN", DisplayNameKey: "server.en", Company: "Yostar", Product: "Arknights_EN", DirectoryHint: "Arknights_EN", Locale: "en-US"}
+        "CN", {Id: "CN", DisplayNameKey: "国服", Company: "HyperGryph", Product: "Arknights", DirectoryHint: "Arknights Game", Locale: "zh-CN"},
+        "JP", {Id: "JP", DisplayNameKey: "日服", Company: "Yostar", Product: "Arknights_JP", DirectoryHint: "Arknights_JP", Locale: "ja-JP"},
+        "KR", {Id: "KR", DisplayNameKey: "韩服", Company: "Yostar", Product: "Arknights_KR", DirectoryHint: "Arknights_KR", Locale: "ko-KR"},
+        "EN", {Id: "EN", DisplayNameKey: "国际服", Company: "Yostar", Product: "Arknights_EN", DirectoryHint: "Arknights_EN", Locale: "en-US"}
     )
 
     ; 按 serverId 获取元数据；不存在返回 ""

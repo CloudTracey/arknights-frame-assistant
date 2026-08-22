@@ -52,7 +52,7 @@ class UpdateUI {
 
         this.UpdateDialogParams := params
 
-        title := I18n.T("ui.updateFoundTitle")
+        title := I18n.T("发现新版本")
         this.UpdateDialog := Gui(, title)
         this.UpdateDialog.Opt("+Owner")
         this.UpdateDialog.BackColor := "FFFFFF"
@@ -61,15 +61,15 @@ class UpdateUI {
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
 
         if (isManual) {
-            message := I18n.T("ui.updateDialogManual", localVersion, remoteVersion)
+            message := I18n.T("当前版本: {1}`n最新版本: {2}`n`n是否立即更新？", localVersion, remoteVersion)
         } else {
-            message := I18n.T("ui.updateDialogAuto", localVersion, remoteVersion)
+            message := I18n.T("检测到新版本可用！`n当前版本: {1}`n最新版本: {2}`n`n是否立即更新？", localVersion, remoteVersion)
         }
 
         ; 按钮宽度按当前语言最长按钮文本估算，对话框宽度随之调整（避免长文案截断）
-        btnW := Max(100, Metrics.TextWidth(I18n.T("msg.btnYes")),
-            Metrics.TextWidth(I18n.T("msg.btnNo")),
-            Metrics.TextWidth(I18n.T("ui.btnIgnoreVersion"))) + 18
+        btnW := Max(100, Metrics.TextWidth(I18n.T("是(&Y)")),
+            Metrics.TextWidth(I18n.T("否(&N)")),
+            Metrics.TextWidth(I18n.T("忽略此版本(&I)"))) + 18
         btnH := 28
         btnGap := 14
         startX := 20
@@ -85,9 +85,9 @@ class UpdateUI {
         btnY := lastY + lastH + 12
         dialogH := btnY + btnH + 14
 
-        btnYes := this.UpdateDialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("msg.btnYes"))
-        btnNo := this.UpdateDialog.Add("Button", "x" (startX + btnW + btnGap) " y" btnY " w" btnW " h" btnH, I18n.T("msg.btnNo"))
-        btnIgnore := this.UpdateDialog.Add("Button", "x" (startX + (btnW + btnGap) * 2) " y" btnY " w" btnW " h" btnH, I18n.T("ui.btnIgnoreVersion"))
+        btnYes := this.UpdateDialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("是(&Y)"))
+        btnNo := this.UpdateDialog.Add("Button", "x" (startX + btnW + btnGap) " y" btnY " w" btnW " h" btnH, I18n.T("否(&N)"))
+        btnIgnore := this.UpdateDialog.Add("Button", "x" (startX + (btnW + btnGap) * 2) " y" btnY " w" btnW " h" btnH, I18n.T("忽略此版本(&I)"))
 
         btnYes.OnEvent("Click", (*) => this.OnUpdateYes())
         btnNo.OnEvent("Click", (*) => this.OnUpdateNo())
@@ -166,24 +166,24 @@ class UpdateUI {
 
     ; 显示已是最新版本的提示
     static ShowUpToDateDialog(version) {
-        MessageBox.Info(I18n.T("msg.upToDate", version), I18n.T("msg.noUpdateTitle"))
+        MessageBox.Info(I18n.T("当前版本 {1} 已是最新版本。", version), I18n.T("无需更新"))
     }
 
     ; 显示更新检查失败的提示
     static ShowCheckFailedDialog(message := "", suggestToken := false) {
         if (message = "") {
-            message := I18n.T("msg.checkUpdateFailedDefault")
+            message := I18n.T("检查更新失败，请检查网络连接后重试。")
         }
 
         if (suggestToken) {
             ; 显示带有Token配置引导的对话框
-            result := MessageBox.Confirm(message "`n`n" I18n.T("msg.configureTokenConfirm"), I18n.T("msg.checkFailedTitle"))
+            result := MessageBox.Confirm(message "`n`n" I18n.T("是否现在配置GitHub Token？"), I18n.T("检查失败"))
             if (result = "Yes") {
                 ; 打开设置界面
                 EventBus.Publish("SettingsShowRequested")
             }
         } else {
-            MessageBox.Error(message, I18n.T("msg.checkFailedTitle"))
+            MessageBox.Error(message, I18n.T("检查失败"))
         }
     }
 
@@ -195,7 +195,7 @@ class UpdateUI {
         this.CloseDownloadingDialog()
 
         ; 创建非模态GUI窗口
-        title := I18n.T("ui.downloadingTitle")
+        title := I18n.T("下载中")
         this.DownloadingDialog := Gui(, title)
         this.DownloadingDialog.Opt("+AlwaysOnTop +Owner")
         this.DownloadingDialog.BackColor := "FFFFFF"
@@ -205,16 +205,16 @@ class UpdateUI {
 
         ; 根据重试次数显示不同消息（reason 存在时拼入提示；窗口高度按控件实际位置动态计算）
         if (retryCount = 0) {
-            message := I18n.T("ui.downloadingMessage")
+            message := I18n.T("正在下载更新，请稍候...")
         } else {
-            message := I18n.T("ui.downloadingRetryMessage", retryCount)
+            message := I18n.T("正在下载更新，请稍候...`n（第 {1} 次重试，如多次下载失败请尝试手动下载）", retryCount)
             if (reason != "")
-                message .= "`n" I18n.T("ui.lastFailReason", reason)
+                message .= "`n" I18n.T("上次失败原因: {1}", reason)
         }
 
         ; 按钮宽度按当前语言最长按钮文本估算；对话框宽度随之调整（避免长文案截断）
-        btnW := Max(110, Metrics.TextWidth(I18n.T("ui.btnManualDownload")),
-            Metrics.TextWidth(I18n.T("ui.btnCancelDownload"))) + 18
+        btnW := Max(110, Metrics.TextWidth(I18n.T("手动下载(&M)")),
+            Metrics.TextWidth(I18n.T("取消下载(&C)"))) + 18
         btnH := 26
         padding := 20
         btnGap := 12
@@ -240,9 +240,9 @@ class UpdateUI {
         manualBtnX := padding
         cancelBtnX := padding + btnW + btnGap
 
-        manualBtn := this.DownloadingDialog.Add("Button", "x" manualBtnX " y" btnY " w" btnW " h" btnH, I18n.T("ui.btnManualDownload"))
+        manualBtn := this.DownloadingDialog.Add("Button", "x" manualBtnX " y" btnY " w" btnW " h" btnH, I18n.T("手动下载(&M)"))
         manualBtn.OnEvent("Click", (*) => this.RequestManualDownload())
-        this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " y" btnY " w" btnW " h" btnH, I18n.T("ui.btnCancelDownload"))
+        this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " y" btnY " w" btnW " h" btnH, I18n.T("取消下载(&C)"))
         this.DownloadingCancelBtn.OnEvent("Click", (*) => this.OnDownloadCancel())
         this.DownloadingDialog.OnEvent("Close", (*) => this.OnDownloadCancel())
 
@@ -264,7 +264,7 @@ class UpdateUI {
                 ; 禁用取消按钮，防止重复点击
                 this.DownloadingCancelBtn.Opt("+Disabled")
                 ; 更新文本为取消中
-                this.DownloadingDialog["DownloadText"].Value := I18n.T("ui.cancellingDownload")
+                this.DownloadingDialog["DownloadText"].Value := I18n.T("正在取消下载...")
             }
         }
         ; 发布取消命令
@@ -274,7 +274,7 @@ class UpdateUI {
     ; 显示正在切换更新源的提示（复用下载窗口，非模态，不阻塞降级检查）
     static ShowFallbackNotice() {
         if (this.DownloadingDialog != "") {
-            try this.DownloadingDialog["DownloadText"].Value := I18n.T("ui.switchingSource")
+            try this.DownloadingDialog["DownloadText"].Value := I18n.T("正在尝试更换更新源进行更新，请稍候...")
         }
     }
 
@@ -311,7 +311,7 @@ class UpdateUI {
 
         ; 更新速度文本
         try {
-            speedText := I18n.T("ui.downloadSpeed", FormatSpeed(speedBytes))
+            speedText := I18n.T("下载速度: {1}", FormatSpeed(speedBytes))
             this.DownloadingSpeedText.Value := speedText
         }
 
@@ -319,9 +319,9 @@ class UpdateUI {
         try {
             if (total > 0 && loaded < total && speedBytes > 0) {
                 remainingSeconds := (total - loaded) / speedBytes
-                remainingText := I18n.T("ui.estimatedRemaining", FormatDuration(remainingSeconds))
+                remainingText := I18n.T("预计剩余: {1}", FormatDuration(remainingSeconds))
             } else if (loaded > 0) {
-                remainingText := I18n.T("ui.estimatedRemainingCalc")
+                remainingText := I18n.T("预计剩余: 计算中...")
             } else {
                 remainingText := ""
             }
@@ -331,9 +331,9 @@ class UpdateUI {
         ; 更新大小文本
         try {
             if (total > 0) {
-                sizeText := I18n.T("ui.downloadedSizeTotal", FormatSize(loaded), FormatSize(total))
+                sizeText := I18n.T("已下载: {1} / {2}", FormatSize(loaded), FormatSize(total))
             } else {
-                sizeText := I18n.T("ui.downloadedSize", FormatSize(loaded))
+                sizeText := I18n.T("已下载: {1}", FormatSize(loaded))
             }
             this.DownloadingSizeText.Value := sizeText
         }
@@ -341,25 +341,25 @@ class UpdateUI {
 
     ; 显示下载完成的提示
     static ShowDownloadCompleteDialog() {
-        MessageBox.Info(I18n.T("msg.downloadComplete"), I18n.T("msg.downloadCompleteTitle"))
+        MessageBox.Info(I18n.T("下载完成！程序将在重启后应用更新。"), I18n.T("下载完成"))
     }
 
     ; 显示下载失败的提示
     static ShowDownloadFailedDialog(message := "") {
         if (message = "") {
-            message := I18n.T("msg.downloadUpdateFailedDefault")
+            message := I18n.T("下载更新失败，请检查网络连接后重试。")
         }
-        MessageBox.Error(message, I18n.T("msg.downloadFailedTitle"))
+        MessageBox.Error(message, I18n.T("下载失败"))
     }
 
     ; 显示下载取消的提示
     static ShowDownloadCancelledDialog() {
-        MessageBox.Info(I18n.T("msg.downloadCancelled"), I18n.T("msg.downloadCancelledTitle"))
+        MessageBox.Info(I18n.T("下载已取消。"), I18n.T("下载取消"))
     }
 
     ; 显示自动更新已禁用的提示
     static ShowAutoUpdateDisabledDialog() {
-        MessageBox.Info(I18n.T("msg.autoUpdateDisabled"), I18n.T("msg.hintTitle"))
+        MessageBox.Info(I18n.T("自动检查更新已禁用。`n如需开启，请在配置文件中设置 AutoUpdate=1"), I18n.T("提示"))
     }
 }
 
@@ -390,7 +390,7 @@ FormatSpeed(bytesPerSec) {
 FormatDuration(totalSeconds) {
     totalSeconds := Integer(totalSeconds)
     if (totalSeconds < 0)
-        return I18n.T("ui.calculating")
+        return I18n.T("计算中...")
     if (totalSeconds < 60)
         return totalSeconds "s"
     if (totalSeconds < 3600) {
