@@ -32,7 +32,7 @@ class GitHubTokenService {
             req := VersionChecker._CreateHttpRequest(this.TokenValidateUrl, token)
             if (req.error != "") {
                 VersionChecker._Log("创建HTTP请求失败: " req.error)
-                return {valid: false, message: I18n.T("token.networkError", req.error), username: "", rateLimit: ""}
+                return {valid: false, message: I18n.T("网络错误: {1}", req.error), username: "", rateLimit: ""}
             }
 
             req.http.Send()
@@ -44,7 +44,7 @@ class GitHubTokenService {
                 if (A_TickCount - tokenStart > this.TimeoutMs) {
                     try req.http.Abort()
                     VersionChecker._Log("Token验证超时")
-                    return {valid: false, message: I18n.T("token.timeout"), username: "", rateLimit: ""}
+                    return {valid: false, message: I18n.T("请求超时，请检查网络连接"), username: "", rateLimit: ""}
                 }
             }
             resp := VersionChecker._GetResponseInfo(req.http)
@@ -57,25 +57,25 @@ class GitHubTokenService {
                 username := VersionUtils.ExtractJsonValue(resp.body, "login")
                 this.TokenValidated := true
                 VersionChecker._Log("Token验证成功")
-                return {valid: true, message: I18n.T("token.valid"), username: username, rateLimit: rateInfo.remaining "/" rateInfo.limit}
+                return {valid: true, message: I18n.T("Token有效"), username: username, rateLimit: rateInfo.remaining "/" rateInfo.limit}
             } else if (resp.statusCode = 401) {
                 this.TokenValidated := false
                 VersionChecker._Log("Token无效（401未授权）")
-                return {valid: false, message: I18n.T("token.invalid"), username: "", rateLimit: ""}
+                return {valid: false, message: I18n.T("Token无效，请检查是否正确"), username: "", rateLimit: ""}
             } else if (resp.statusCode = 403) {
                 this.TokenValidated := false
                 VersionChecker._Log("Token可能已超限（403禁止访问）")
-                return {valid: false, message: I18n.T("token.rateLimited"), username: "", rateLimit: "0/" rateInfo.limit}
+                return {valid: false, message: I18n.T("API请求频率已超限"), username: "", rateLimit: "0/" rateInfo.limit}
             } else {
                 this.TokenValidated := false
                 VersionChecker._Log("Token验证失败，状态码: " resp.statusCode)
-                return {valid: false, message: I18n.T("token.validateFailedHttp", resp.statusCode), username: "", rateLimit: ""}
+                return {valid: false, message: I18n.T("验证失败，HTTP {1}", resp.statusCode), username: "", rateLimit: ""}
             }
         } catch as err {
             this.TokenValidated := false
             errorInfo := VersionChecker._ParseErrorInfo(err)
             VersionChecker._Log("Token验证异常: " errorInfo.desc)
-            return {valid: false, message: I18n.T("token.networkError", errorInfo.desc), username: "", rateLimit: ""}
+            return {valid: false, message: I18n.T("网络错误: {1}", errorInfo.desc), username: "", rateLimit: ""}
         }
     }
 }

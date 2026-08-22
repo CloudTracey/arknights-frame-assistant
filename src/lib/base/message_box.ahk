@@ -40,27 +40,27 @@ class MessageBox {
     }
 
     ; 显示信息框
-    static Info(message, title := I18n.T("msg.hintTitle")) {
+    static Info(message, title := I18n.T("提示")) {
         return this.Show(message, title, "Iconi")
     }
 
     ; 显示警告框
-    static Warning(message, title := I18n.T("msg.titleWarning")) {
+    static Warning(message, title := I18n.T("警告")) {
         return this.Show(message, title, "Icon!")
     }
 
     ; 显示错误框
-    static Error(message, title := I18n.T("msg.titleError")) {
+    static Error(message, title := I18n.T("错误")) {
         return this.Show(message, title, "Iconx")
     }
 
     ; 显示确认框（Yes/No）
-    static Confirm(message, title := I18n.T("msg.titleConfirm")) {
+    static Confirm(message, title := I18n.T("确认")) {
         return this.Show(message, title, "YesNo Icon?")
     }
 
     ; 显示确认框（OK/Cancel）
-    static ConfirmCancel(message, title := I18n.T("msg.titleConfirm")) {
+    static ConfirmCancel(message, title := I18n.T("确认")) {
         return this.Show(message, title, "OKCancel Icon?")
     }
 
@@ -84,7 +84,7 @@ class MessageBox {
         parsedOptions := this._ParseOptions(options)
 
         ; 创建GUI
-        dialog := Gui(, title != "" ? title : I18n.T("msg.hintTitle"))
+        dialog := Gui(, title != "" ? title : I18n.T("提示"))
         dialog.Opt("+AlwaysOnTop -MinimizeBox +Owner")
         dialog.BackColor := "FFFFFF"
         dialog.SetFont("s10", Metrics.FontFor(I18n.GetCurrent()))
@@ -197,32 +197,32 @@ class MessageBox {
         switch btnType {
             case this.BTN_OK:
                 btnX := (this.DefaultWidth - btnW) / 2
-                buttons.OK := dialog.Add("Button", "x" btnX " y" btnY " w" btnW " h" btnH " Default", I18n.T("msg.btnOk"))
+                buttons.OK := dialog.Add("Button", "x" btnX " y" btnY " w" btnW " h" btnH " Default", I18n.T("确定"))
                 buttons.DefaultBtn := buttons.OK
 
             case this.BTN_OK_CANCEL:
                 spacing := 20
                 totalW := btnW * 2 + spacing
                 startX := (this.DefaultWidth - totalW) / 2
-                buttons.OK := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("msg.btnOk"))
-                buttons.Cancel := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("msg.btnCancel"))
+                buttons.OK := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("确定"))
+                buttons.Cancel := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("取消"))
                 buttons.DefaultBtn := buttons.OK
 
             case this.BTN_YES_NO:
                 spacing := 20
                 totalW := btnW * 2 + spacing
                 startX := (this.DefaultWidth - totalW) / 2
-                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("msg.btnYes"))
-                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("msg.btnNo"))
+                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("是(&Y)"))
+                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("否(&N)"))
                 buttons.DefaultBtn := buttons.Yes
 
             case this.BTN_YES_NO_CANCEL:
                 spacing := 15
                 totalW := btnW * 3 + spacing * 2
                 startX := (this.DefaultWidth - totalW) / 2
-                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("msg.btnYes"))
-                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("msg.btnNo"))
-                buttons.Cancel := dialog.Add("Button", "x" (startX + (btnW + spacing) * 2) " y" btnY " w" btnW " h" btnH, I18n.T("msg.btnCancel"))
+                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("是(&Y)"))
+                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("否(&N)"))
+                buttons.Cancel := dialog.Add("Button", "x" (startX + (btnW + spacing) * 2) " y" btnY " w" btnW " h" btnH, I18n.T("取消"))
                 buttons.DefaultBtn := buttons.Yes
         }
 

@@ -132,7 +132,7 @@ class App {
         ; 放在 I18n.Init 之后，保证提示使用用户选择的界面语言。
         if (Logger.PreviousAbnormalFile != "") {
             Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
-            MessageBox.Info(I18n.T("msg.lastCrashWarning"), "AFA")
+            MessageBox.Info(I18n.T("检测到上次运行崩溃。`n建议在设置中开启「调试模式」记录日志，并用「生成日志压缩包」导出诊断包反馈给开发者。"), "AFA")
         }
 
         ; 写入启动来源状态，并校准随游戏自动启动的 Windows 审核和计划任务
@@ -168,11 +168,11 @@ class App {
 
         ; 启动校准失败只在 GUI 就绪后用托盘提示一次，不阻塞主流程，也不改变已保存配置。
         if (IsSet(pendingAutoStartWarning))
-            ShowTrayTip(pendingAutoStartWarning, I18n.T("msg.autoStartCalibrationFailedTitle"), 2)
+            ShowTrayTip(pendingAutoStartWarning, I18n.T("随游戏自动启动校准失败"), 2)
 
         tokenStorageWarning := Config.GetTokenStorageWarning()
         if (tokenStorageWarning != "")
-            MessageBox.Warning(tokenStorageWarning, I18n.T("msg.githubTokenStorageTitle"))
+            MessageBox.Warning(tokenStorageWarning, I18n.T("GitHub Token 存储提示"))
 
         ; 触发应用启动事件（触发自动更新检查和游戏自动启动）
         EventBus.Publish("AppStartCompleted")
