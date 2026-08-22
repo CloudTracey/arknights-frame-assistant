@@ -76,8 +76,12 @@ class App {
         ProcessSetPriority "High"
         SendMode "Input"
         SetKeyDelay -1, -1
-        ; 提高热键触发频率阈值：被拦截的游戏键每个按键触发 down+up 两个热键，极速连打 WASD 等键易超默认 66/2000ms 触发警告弹窗
+        ; #279：高分辨率/无级滚轮可超过 200 次/2000ms，AHK 会弹出警告并发出系统提示音。
+        ; 决策：全局关闭洪峰警告（grilling 确认）。代价是失去“热键自触发循环”的告警兜底；
+        ; 若未来出现按键自触发循环，需另行评估热键注册/InputLevel 加固，而不是恢复此提示。
+        ; A_MaxHotkeysPerInterval := 200 保留用于记录洪峰阈值，但 A_HotkeyInterval := 0 时该警告已被全局关闭
         A_MaxHotkeysPerInterval := 200
+        A_HotkeyInterval := 0
         SetMouseDelay -1
         SetWinDelay -1
         SetDefaultMouseSpeed 0
