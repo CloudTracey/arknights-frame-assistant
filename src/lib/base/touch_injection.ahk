@@ -127,5 +127,29 @@ class TouchInjector {
         this._Down := false
         return true
     }
+
+    ; 将屏幕坐标换算到当前目标游戏窗口客户区，并执行无接触移动（供启动预热使用）。
+    ; 与 Move 的“客户区坐标”契约分离：签名即坐标系，调用方不得混用。
+    static MoveFromScreen(screenX, screenY) {
+        if (!this._Initialized) {
+            this.LastError := 87
+            return false
+        }
+        hwnd := WinExist(GameTarget.WinTitle())
+        if (!hwnd) {
+            this.LastError := 87
+            return false
+        }
+        pt := Buffer(8, 0)
+        NumPut("Int", screenX, pt, 0)
+        NumPut("Int", screenY, pt, 4)
+        if (!DllCall("User32.dll\ScreenToClient", "Ptr", hwnd, "Ptr", pt)) {
+            this.LastError := A_LastError
+            return false
+        }
+        clientX := NumGet(pt, 0, "Int")
+        clientY := NumGet(pt, 4, "Int")
+        return this.Move(clientX, clientY)
+    }
 }
 

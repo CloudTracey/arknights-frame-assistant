@@ -721,7 +721,16 @@ HotkeyActionsStart() {
     KeyForward.DownHandled.CaseSense := false
     KeyForward.SuppressUp.CaseSense := false
     TouchInjector.Init(3, 1)
-    MouseGetPos &xpos, &ypos
-    TouchInjector.Move(xpos, ypos)
-    MouseMove xpos, ypos
+
+    ; #289：Client 模式下 MouseGetPos 相对“当前活动窗口”，启动时可能是托盘菜单/资源管理器。
+    ; 统一切到 Screen 取点；触控注入由 MoveFromScreen 换算成游戏客户区坐标；
+    ; MouseMove 在 Screen 模式下还原光标，不受活动窗口切换影响。
+    prevMouseCoordMode := CoordMode("Mouse", "Screen")
+    try {
+        MouseGetPos &screenX, &screenY
+        TouchInjector.MoveFromScreen(screenX, screenY)
+        MouseMove screenX, screenY, 0
+    } finally {
+        CoordMode("Mouse", prevMouseCoordMode)
+    }
 }
