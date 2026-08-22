@@ -174,7 +174,7 @@ class SelfReplacer {
         lines.Push("set wait_count=0")
         lines.Push(":wait_loop")
         lines.Push("timeout /t 1 /nobreak >nul")
-        lines.Push(`"%SystemRoot%\System32\tasklist.exe`" /fi `"PID eq `" currentPid "`" /nh 2>nul | `"%SystemRoot%\System32\find.exe`" `"" currentPid "`" >nul")
+        lines.Push("`"%SystemRoot%\System32\tasklist.exe`" /fi `"PID eq " currentPid "`" /nh 2>nul | `"%SystemRoot%\System32\find.exe`" `"" currentPid "`" >nul")
         lines.Push("if errorlevel 1 goto process_exited")
         lines.Push("set /a wait_count+=1")
         lines.Push("if !wait_count! equ 5 echo [!time!] !MSG_WAITING! - PID " currentPid ", 5s >> `"%LOG_FILE%`"")
