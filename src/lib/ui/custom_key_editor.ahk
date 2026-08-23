@@ -144,11 +144,12 @@ class CustomKeyEditor {
     }
 
     ; ── 坐标拾取会话（编辑窗口打开期间有效） ──
-    ; 触发键暂用键盘 0（诊断期替代 LButton；条件命中时吞键、未命中透传，输入 0 不受影响）
+    ; 触发键为 LButton（无 ~：条件命中时吞掉该次点击，D12）；条件未命中（游戏外/编辑窗口内）时点击正常透传。
+    ; 条件对象必须为唯一实例（箭头函数静态属性），注册/注销按同一对象匹配变体。
     static _StartPicking() {
         SetTimer ObjBindMethod(CustomKeyEditor, "_PickPoll"), 50
         HotIf(this.PickContext)
-        Hotkey("0", ObjBindMethod(CustomKeyEditor, "_OnPickKey"), "On")
+        Hotkey("LButton", ObjBindMethod(CustomKeyEditor, "_OnPickKey"), "On")
         HotIf
     }
 
@@ -156,7 +157,7 @@ class CustomKeyEditor {
         SetTimer ObjBindMethod(CustomKeyEditor, "_PickPoll"), 0
         ToolTip  ; 清除拾取提示
         HotIf(this.PickContext)
-        try Hotkey("0", "Off")
+        try Hotkey("LButton", "Off")
         HotIf
     }
 
