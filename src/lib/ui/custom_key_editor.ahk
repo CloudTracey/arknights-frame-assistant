@@ -177,7 +177,7 @@ class CustomKeyEditor {
     static _StartPicking() {
         if this.PollFn = ""
             this.PollFn := ObjBindMethod(CustomKeyEditor, "_PickPoll")
-        SetTimer this.PollFn, 50
+        SetTimer this.PollFn, 8   ; 约 120 次/秒：轮询仅做轻量 Win32 读取且只在光标位于游戏客户区时刷新 ToolTip，CPU 开销可忽略
         HotIf(this.PickContext)
         Hotkey("LButton", ObjBindMethod(CustomKeyEditor, "_OnPickKey"), "On")
         HotIf
@@ -199,40 +199,75 @@ class CustomKeyEditor {
         }
     }
 
-    ; HotIf 条件：编辑窗口存在 且 游戏窗口为前台 且 光标在游戏客户区内——
-    ; 拾取只对游戏 client 区域生效，游戏外的左键一律正常透传（不吞）。
-    ; 短路求值：编辑器未开时零 Win32 调用；该条件只对 LButton 按压求值，
-    ; 不属于"游戏热键判定热路径预算"约束对象（那是 HotkeyContext 的专属约束）。
+    ; HotIf 条件：编辑窗口存在 且 光标在游戏**客户区内**（不要求游戏前台——游戏未聚焦时第一次点击即可拾取）。
+    ; 拾取只对游戏 client 区域生效：游戏外、编辑窗口内、游戏标题栏（客户区 y<0）的左键一律正常透传（不吞）。
+    ; 该条件只对 LButton 按压求值，不属于"游戏热键判定热路径预算"约束对象（那是 HotkeyContext 的专属约束）。
     static IsPicking() {
         try {
             if this.GuiObj = "" || !WinExist("ahk_id " this.GuiObj.Hwnd)
                 return false
-            return WinActive(GameTarget.WinTitle()) && IsMouseInClient()
+            return this._CursorOverGame()
         } catch {
             return false
         }
     }
 
-    ; 50ms 慢路径定时器：游戏前台时在光标旁显示"即将插入的比例坐标"
+    ; 光标是否位于游戏窗口客户区内：Screen 取点 → ScreenToClient 换算（游戏非前台时 Client 模式坐标会相对错误窗口，
+    ; #289 同款思路），并排除标题栏/边框（客户区坐标 <0）。
+    static _CursorOverGame() {
+        gameHwnd := WinExist(GameTarget.WinTitle())
+        if !gameHwnd
+            return false
+        prevCoord := CoordMode("Mouse", "Screen")
+        MouseGetPos(&sx, &sy, &hwndUnder)
+        CoordMode("Mouse", prevCoord)
+        if hwndUnder != gameHwnd
+            return false
+        if !this._ScreenToClient(gameHwnd, sx, sy, &mx, &my)
+            return false
+        return mx >= 0 && my >= 0
+    }
+
+    ; 屏幕坐标 → 游戏客户区坐标
+    static _ScreenToClient(gameHwnd, sx, sy, &mx, &my) {
+        pt := Buffer(8, 0)
+        NumPut("Int", sx, pt, 0)
+        NumPut("Int", sy, pt, 4)
+        if !DllCall("User32.dll\ScreenToClient", "Ptr", gameHwnd, "Ptr", pt)
+            return false
+        mx := NumGet(pt, 0, "Int")
+        my := NumGet(pt, 4, "Int")
+        return true
+    }
+
+    ; 8ms 轮询：光标位于游戏客户区时在光标旁显示"即将插入的比例坐标"（ToolTip 用屏幕坐标定位，游戏可非前台）
     static _PickPoll() {
         try {
             if this.GuiObj = "" || !WinExist("ahk_id " this.GuiObj.Hwnd) {
                 this._StopPicking()
                 return
             }
-            if !WinActive(GameTarget.WinTitle()) {
+            if !this._CursorOverGame() {
                 ToolTip
                 return
             }
-            MouseGetPos(&mx, &my)   ; 启动默认 CoordMode Mouse=Client；活动窗口=游戏 → 客户端物理像素
+            prevCoord := CoordMode("Mouse", "Screen")
+            MouseGetPos(&sx, &sy)
+            CoordMode("Mouse", prevCoord)
+            gameHwnd := WinExist(GameTarget.WinTitle())
+            if !gameHwnd || !this._ScreenToClient(gameHwnd, sx, sy, &mx, &my) {
+                ToolTip
+                return
+            }
             if !SafeWinGetClientPos(&ww, &wh) {
                 ToolTip
                 return
             }
             fx := Round(mx / ww, 4)
             fy := Round(my / wh, 4)
-            ToolTip("(" fx ", " fy ")  " I18n.T("左键点击拾取坐标"), mx + 20, my + 20)
-            ; ToolTip X/Y 默认相对活动窗口客户区（=游戏），直接落在光标旁
+            prevTip := CoordMode("ToolTip", "Screen")
+            ToolTip("(" fx ", " fy ")  " I18n.T("左键点击拾取坐标"), sx + 20, sy + 20)
+            CoordMode("ToolTip", prevTip)
         } catch Error as e {
             Logger.Warn("CustomKeyEditor", "拾取轮询异常：" e.Message)
         }
@@ -245,7 +280,13 @@ class CustomKeyEditor {
             return
         try {
             ToolTip
-            MouseGetPos(&mx, &my)
+            ; 屏幕取点 → ScreenToClient（游戏可能非前台，Client 模式坐标会相对错误窗口）
+            prevCoord := CoordMode("Mouse", "Screen")
+            MouseGetPos(&sx, &sy)
+            CoordMode("Mouse", prevCoord)
+            gameHwnd := WinExist(GameTarget.WinTitle())
+            if !gameHwnd || !this._ScreenToClient(gameHwnd, sx, sy, &mx, &my)
+                return
             if !SafeWinGetClientPos(&ww, &wh)
                 return
             fx := Round(mx / ww, 4)
