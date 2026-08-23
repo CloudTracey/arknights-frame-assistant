@@ -1,24 +1,25 @@
-; == 自定义按键编辑窗口（含坐标拾取与帮助窗口） ==
+; == 自定义按键编辑窗口（含坐标拾取） ==
 ; 独立顶层 Gui（非 MainGui）——KeyBinder.WM_LBUTTONDOWN 的父窗口检查据此自动豁免按键录制。
 ; 设计见 docs/plan/custom_hotkeys_design.md 第 8 节：
 ;   - 单编辑窗口：再次打开直接切换目标行（未保存修改丢弃，D10）；
-;   - 打开期间游戏前台时 50ms 轮询显示光标处比例坐标，左键拾取插入 "(x, y)" 并激活编辑窗口（点击被吞，D12）；
-;   - 保存时校验命名（50 字符 + 字符集白名单）与指令语法，非法拒绝并弹窗；
-;   - 帮助按钮打开只读说明窗口（D16）。
+;   - 字段：命名 / 按键类型 / 按键功能（目前仅「单击」）/ 坐标（(x, y) 单值）；
+;   - 拾取：光标在游戏客户区内按左键，把比例坐标**整体覆盖**进坐标框（点击被吞，D12）；
+;   - 保存时校验命名（50 字符 + 字符集白名单）与「功能 + 坐标」，非法拒绝并弹窗。
 
 class CustomKeyEditor {
     static GuiObj := ""      ; 编辑窗口
     static RowIndex := 0     ; 目标行号（1-based）
     static NameEdit := ""
     static TypeDDL := ""
-    static ScriptEdit := ""
+    static FuncDDL := ""
+    static CoordEdit := ""
+    static BtnCancel := ""   ; 「取消」按钮（默认焦点：误按 Enter 无副作用）
     static PickContext := (*) => CustomKeyEditor.IsPicking()  ; 拾取 HotIf 条件对象（唯一实例，与 KeyBinder 同款箭头模式）：
                                                               ; AHK 按条件对象区分热键变体，注册/注销必须用同一对象
     static PollFn := ""        ; _PickPoll 定时器函数对象（唯一实例）：
                                ; AHK v2 的 SetTimer 按函数对象身份匹配，取消定时器必须用启动时的同一对象，
-                               ; 每次新建对象会导致取消失效、50ms 定时器永不停歇地刷日志
+                               ; 每次新建对象会导致取消失效、定时器永不停歇地刷日志
     static PickingActive := false  ; 拾取会话是否激活（用于日志：无会话时 Close 不记"结束"）
-    static BtnHelp := ""           ; 「帮助」按钮（默认焦点，误按 Enter 只打开无害的帮助窗口）
 
     ; 打开（或切换目标到）指定行；index 越界时忽略
     static Open(index) {
@@ -55,21 +56,26 @@ class CustomKeyEditor {
         this.TypeDDL.Value := this._TypeToIndex(entry.Type)
         this.GuiObj.Add("Text", "xs y+8 c9c9c9c", I18n.T("此设置影响按键生效的范围"))
 
-        ; 指令
-        this.GuiObj.Add("Text", "xs y+12", I18n.T("指令"))
-        this.ScriptEdit := this.GuiObj.Add("Edit", "xs y+6 w420 r10 +VScroll vCustomKeyScript", entry.Script)
+        ; 按键功能（目前仅「单击」；未来功能在此扩展）
+        this.GuiObj.Add("Text", "xs y+12", I18n.T("按键功能"))
+        funcLabels := []
+        for opt in Constants.CustomHotkeyFuncOptions
+            funcLabels.Push(I18n.T(opt.nameKey))
+        this.FuncDDL := this.GuiObj.Add("DropDownList", "x+10 yp-4 w160 vCustomKeyFunc", funcLabels)
+        this.FuncDDL.Value := this._FuncToIndex(entry.Func)
 
-        ; 底部按钮：帮助 / 删除 / 保存 / 取消（删除功能内置于编辑窗口，行上不放 ✕）
-        ; 对齐：帮助左缘对齐上方 Edit 左缘(x20)，取消右缘对齐 Edit 右缘(x440)，删除/保存按 10px 间距分列两侧
-        btnHelp := this.GuiObj.Add("Button", "x20 y+14 w80 h28", I18n.T("帮助"))
-        btnHelp.OnEvent("Click", (*) => this._OnHelp())
-        this.BtnHelp := btnHelp
-        btnDelete := this.GuiObj.Add("Button", "x110 yp w80 h28", I18n.T("删除"))
+        ; 坐标（单值：只接受 (x, y) 格式；游戏内左键拾取会整体覆盖）
+        this.GuiObj.Add("Text", "xs y+12", I18n.T("坐标（点击游戏窗口即可直接获取）"))
+        this.CoordEdit := this.GuiObj.Add("Edit", "xs y+6 w140 vCustomKeyCoord", entry.Arg)
+
+        ; 底部按钮：删除 / 保存 / 取消（对齐上方 Edit 左右边缘：删除 x20、取消右缘 x440）
+        btnDelete := this.GuiObj.Add("Button", "x20 y+14 w80 h28", I18n.T("删除"))
         btnDelete.OnEvent("Click", (*) => this._OnDelete())
         btnSave := this.GuiObj.Add("Button", "x270 yp w80 h28 Default", I18n.T("保存"))
         btnSave.OnEvent("Click", (*) => this._OnSave())
         btnCancel := this.GuiObj.Add("Button", "x360 yp w80 h28", I18n.T("取消"))
         btnCancel.OnEvent("Click", (*) => this._OnCancel())
+        this.BtnCancel := btnCancel
         this.GuiObj.OnEvent("Close", (*) => this._OnCancel())
 
         this._StartPicking()
@@ -78,15 +84,15 @@ class CustomKeyEditor {
         Logger.Info("CustomKeyEditor", "打开编辑窗口：行=" index)
     }
 
-    ; 激活编辑窗口并把默认焦点放在「帮助」按钮——误按 Enter 只会打开无害的帮助窗口；
-    ; 不再聚焦指令框（聚焦会导致内容被全选，下一次拾取插入会覆盖整段脚本）。
+    ; 激活编辑窗口并把默认焦点放在「取消」按钮——误按 Enter 无副作用；
+    ; 不聚焦坐标框（聚焦会全选内容，后续拾取覆盖行为与用户输入会互相干扰）。
     static _ActivateAndFocus() {
         try {
             WinActivate("ahk_id " this.GuiObj.Hwnd)
             WinWaitActive("ahk_id " this.GuiObj.Hwnd, , 0.5)
         } catch {
         }
-        try this.BtnHelp.Focus()
+        try this.BtnCancel.Focus()
     }
 
     ; 关闭（取消语义，不写回）；被 GuiManager 在增删行/重置/Rebuild 前调用（D11）
@@ -94,17 +100,18 @@ class CustomKeyEditor {
         this._StopPicking()
         if this.GuiObj != "" {
             gui := this.GuiObj
-            this.GuiObj := ""   ; 先置空再销毁：防止 50ms 拾取轮询/条件回调在销毁瞬间访问已销毁 Gui 的 Hwnd（"Gui has no window"）
+            this.GuiObj := ""   ; 先置空再销毁：防止 8ms 拾取轮询/条件回调在销毁瞬间访问已销毁 Gui 的 Hwnd（"Gui has no window"）
             try gui.Destroy()
         }
         this.RowIndex := 0
         this.NameEdit := ""
         this.TypeDDL := ""
-        this.ScriptEdit := ""
-        this.BtnHelp := ""
+        this.FuncDDL := ""
+        this.CoordEdit := ""
+        this.BtnCancel := ""
     }
 
-    ; ── 类型码 ↔ 下拉框索引 ──
+    ; ── 类型/功能码 ↔ 下拉框索引 ──
     static _TypeToIndex(type) {
         for i, opt in Constants.CustomHotkeyTypeOptions {
             if opt.code = type
@@ -119,7 +126,21 @@ class CustomKeyEditor {
         return "global"
     }
 
-    ; ── 保存/取消/帮助 ──
+    static _FuncToIndex(func) {
+        for i, opt in Constants.CustomHotkeyFuncOptions {
+            if opt.code = func
+                return i
+        }
+        return 1
+    }
+
+    static _IndexToFunc(index) {
+        if index >= 1 && index <= Constants.CustomHotkeyFuncOptions.Length
+            return Constants.CustomHotkeyFuncOptions[index].code
+        return "click"
+    }
+
+    ; ── 保存/取消/删除 ──
     static _OnSave() {
         ; ① 命名校验：长度 + 字符集白名单（D14，保证存储文件严格读取无歧义）
         name := Trim(this.NameEdit.Value)
@@ -131,9 +152,10 @@ class CustomKeyEditor {
             MessageBox.Error(I18n.T("按键名称不能包含引号或反斜杠"), I18n.T("提示"))
             return
         }
-        ; ② 指令语法校验：不合法拒绝保存并弹窗（窗口保持打开）
-        script := this.ScriptEdit.Value
-        result := CustomScriptEngine.Validate(script)
+        ; ② 功能 + 坐标校验：不合法拒绝保存并弹窗（窗口保持打开）
+        funcCode := this._IndexToFunc(this.FuncDDL.Value)
+        arg := Trim(this.CoordEdit.Value)
+        result := CustomScriptEngine.Validate(funcCode, arg)
         if (!result.success) {
             MessageBox.Error(result.message, I18n.T("自定义指令语法错误"))
             return
@@ -141,12 +163,13 @@ class CustomKeyEditor {
         ; ③ 写工作副本 → 刷新行标签 → 脏值 → 冲突刷新（类型变化影响冲突组）→ 关闭
         typeCode := this._IndexToType(this.TypeDDL.Value)
         Config.SetCustomHotkeyField(this.RowIndex, "Name", name)
+        Config.SetCustomHotkeyField(this.RowIndex, "Func", funcCode)
+        Config.SetCustomHotkeyField(this.RowIndex, "Arg", arg)
         Config.SetCustomHotkeyField(this.RowIndex, "Type", typeCode)
-        Config.SetCustomHotkeyField(this.RowIndex, "Script", script)
         GuiManager.RefreshCustomRow(this.RowIndex)
         GuiManager.TrackCustomHotkeysChange()
         GuiManager.RefreshHotkeyConflicts()
-        Logger.Info("CustomKeyEditor", "保存编辑窗口：行=" this.RowIndex ", 类型=" typeCode)
+        Logger.Info("CustomKeyEditor", "保存编辑窗口：行=" this.RowIndex ", 功能=" funcCode ", 类型=" typeCode)
         this.Close()
     }
 
@@ -167,12 +190,8 @@ class CustomKeyEditor {
         this.Close()
     }
 
-    static _OnHelp() {
-        CustomKeyHelp.Show()
-    }
-
     ; ── 坐标拾取会话（编辑窗口打开期间有效） ──
-    ; 触发键为 LButton（无 ~：条件命中时吞掉该次点击，D12）；条件未命中（游戏外/编辑窗口内）时点击正常透传。
+    ; 触发键为 LButton（无 ~：条件命中时吞掉该次点击，D12）；条件未命中（游戏外/编辑窗口内/游戏标题栏）时点击正常透传。
     ; 条件对象必须为唯一实例（箭头函数静态属性），注册/注销按同一对象匹配变体。
     static _StartPicking() {
         if this.PollFn = ""
@@ -240,7 +259,7 @@ class CustomKeyEditor {
         return true
     }
 
-    ; 8ms 轮询：光标位于游戏客户区时在光标旁显示"即将插入的比例坐标"（ToolTip 用屏幕坐标定位，游戏可非前台）
+    ; 8ms 轮询：光标位于游戏客户区时在光标旁显示"即将拾取的比例坐标"（ToolTip 用屏幕坐标定位，游戏可非前台）
     static _PickPoll() {
         try {
             if this.GuiObj = "" || !WinExist("ahk_id " this.GuiObj.Hwnd) {
@@ -273,7 +292,8 @@ class CustomKeyEditor {
         }
     }
 
-    ; 游戏前台且光标在客户区内时按下拾取键：把比例坐标插入指令 Edit 光标处，激活编辑窗口（拾取自终止）
+    ; 光标在游戏客户区内时按下左键：把比例坐标**整体覆盖**进坐标框，激活编辑窗口（拾取自终止）。
+    ; 游戏未聚焦时该次点击同样被吞（直接拾取），游戏窗口保持原状、不会被激活。
     static _OnPickKey(*) {
         ; 双重守卫：即使热键被异常触发，条件不满足时立即返回（不执行任何拾取逻辑）
         if !this.IsPicking()
@@ -291,56 +311,11 @@ class CustomKeyEditor {
                 return
             fx := Round(mx / ww, 4)
             fy := Round(my / wh, 4)
-            EditPaste("(" fx ", " fy ")", this.ScriptEdit)   ; 光标处插入 (x, y)（D3：纯坐标文本，用户自行补全 tap）
+            this.CoordEdit.Value := "(" fx ", " fy ")"   ; 整体覆盖：坐标框只保留最新拾取的坐标
             Logger.Info("CustomKeyEditor", "拾取坐标：(" fx ", " fy ")")
             WinActivate("ahk_id " this.GuiObj.Hwnd)
-            ; 不调用 ScriptEdit.Focus()：聚焦会全选内容，后续拾取插入将覆盖整段脚本
         } catch Error as e {
             Logger.Error("CustomKeyEditor", "坐标拾取失败：" e.Message)
         }
-    }
-}
-
-; == 编辑按键说明窗口（只读，样式参照 ChangelogUI） ==
-class CustomKeyHelp {
-    static GuiObj := ""
-
-    static Show() {
-        if this.GuiObj != "" {
-            try WinActivate("ahk_id " this.GuiObj.Hwnd)
-            return
-        }
-        this.GuiObj := Gui("+AlwaysOnTop", I18n.T("编辑按键说明"))
-        this.GuiObj.MarginX := 20
-        this.GuiObj.MarginY := 20
-        ; 样式对齐主设置窗口：白底 + 亮色标题栏
-        this.GuiObj.BackColor := "FFFFFF"
-        hWnd := this.GuiObj.Hwnd
-        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 20, "int*", false, "int", 4)
-        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 35, "uint*", 0x00FFFFFF, "int", 4)
-        this.GuiObj.SetFont("s10", Metrics.FontFor(I18n.GetCurrent()))
-
-        body := ""
-        body .= I18n.T("每行输入一条指令，目前支持：") "`n"
-        body .= "`n- " I18n.T("tap(x, y)：单击游戏窗口客户端坐标。x、y 为 0-1 之间的小数比例（0.5 即窗口中央），最多 4 位小数。") "`n"
-        body .= "- " I18n.T("usleep(ms)：等待 ms 毫秒后继续执行下一条。") "`n`n"
-        body .= I18n.T("示例：") "`n"
-        body .= "tap(0.5, 0.5)`nusleep(600)`ntap(0.3125, 0.4567)`n`n"
-        body .= I18n.T("拾取坐标：编辑窗口打开时切换到游戏窗口，按下鼠标左键即可把当前光标位置的客户端坐标（已换算为比例）插入指令光标处。") "`n`n"
-        body .= I18n.T("函数名不区分大小写；tap 参数为 0-1 之间的小数，usleep 参数为非负整数；最多 500 行；空行可随意使用。") "`n`n"
-        body .= I18n.T("注意：比例坐标会自动适配窗口大小变化；游戏界面改版导致按钮位置变化时，请重新拾取坐标。")
-
-        this.GuiObj.Add("Edit", "w420 r14 ReadOnly +VScroll", body)
-        btn := this.GuiObj.Add("Button", "x170 y+12 w80 Default", I18n.T("确定"))
-        btn.OnEvent("Click", (*) => this._Close())
-        this.GuiObj.OnEvent("Close", (*) => this._Close())
-        this.GuiObj.Show()
-        btn.Focus()
-    }
-
-    static _Close() {
-        if this.GuiObj != ""
-            try this.GuiObj.Destroy()
-        this.GuiObj := ""
     }
 }
