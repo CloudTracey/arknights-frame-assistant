@@ -13,6 +13,7 @@ class GameClientRegistry {
     static _LastClientsSignature := ""
     static _Initialized := false
     static _RefreshScheduled := false
+    static _RefreshInProgress := false  ; 重入保护：Refresh 可由 GameMonitor 400ms 定时器 / ScheduleRefresh 一次性定时器 / Init 三入口交错调用
 
     ; 初始化（由 Bootstrap 或 GameMonitor 首次轮询前调用）
     static Init() {
@@ -76,45 +77,55 @@ class GameClientRegistry {
     }
 
     ; 刷新客户端列表与前台客户端。由 GameMonitor 400ms 定时器调用。
+    ; 重入保护：AHK 单线程下新线程可打断正在执行的 Refresh（三入口交错），
+    ; 内层刷新中途替换 Clients/ClientList 会使外层比较读到不一致状态
+    ; （历史报错：_ClientsChanged 读到缺 hwnd 的旧条目、ClientList := [] 触发 Invalid memory read/write）。
     static Refresh() {
-        newClients := Map()
+        if (this._RefreshInProgress)
+            return
+        this._RefreshInProgress := true
         try {
-            hwnds := WinGetList("ahk_exe Arknights.exe")
-            for hwnd in hwnds {
-                try pid := WinGetPID("ahk_id " hwnd)
-                catch Error
-                    continue
-                if (pid = 0 || newClients.Has(pid))
-                    continue
-                exePath := this._GetProcessPath(pid)
-                info := ServerProfile.FromExePath(exePath)
-                newClients[pid] := {
-                    pid: pid,
-                    hwnd: hwnd,
-                    exePath: exePath,
-                    serverId: info.serverId
+            newClients := Map()
+            try {
+                hwnds := WinGetList("ahk_exe Arknights.exe")
+                for hwnd in hwnds {
+                    try pid := WinGetPID("ahk_id " hwnd)
+                    catch Error
+                        continue
+                    if (pid = 0 || newClients.Has(pid))
+                        continue
+                    exePath := this._GetProcessPath(pid)
+                    info := ServerProfile.FromExePath(exePath)
+                    newClients[pid] := {
+                        pid: pid,
+                        hwnd: hwnd,
+                        exePath: exePath,
+                        serverId: info.serverId
+                    }
                 }
+            } catch Error as e {
+                Logger.Warn("GameClientRegistry", "枚举游戏客户端失败：" e.Message)
             }
-        } catch Error as e {
-            Logger.Warn("GameClientRegistry", "枚举游戏客户端失败：" e.Message)
-        }
 
-        ; 比较并更新客户端集合
-        if (this._ClientsChanged(newClients)) {
-            this.Clients := newClients
-            this.ClientList := []
-            for _, client in this.Clients
-                this.ClientList.Push(client)
-            EventBus.Publish("GameClientsChanged", {clients: this.GetClients()})
-            Logger.Info("GameClientRegistry", "客户端集合变化，当前数量=" this.ClientList.Length)
-        } else {
-            this.Clients := newClients
-            this.ClientList := []
-            for _, client in this.Clients
-                this.ClientList.Push(client)
-        }
+            ; 比较并更新客户端集合
+            if (this._ClientsChanged(newClients)) {
+                this.Clients := newClients
+                this.ClientList := []
+                for _, client in this.Clients
+                    this.ClientList.Push(client)
+                EventBus.Publish("GameClientsChanged", {clients: this.GetClients()})
+                Logger.Info("GameClientRegistry", "客户端集合变化，当前数量=" this.ClientList.Length)
+            } else {
+                this.Clients := newClients
+                this.ClientList := []
+                for _, client in this.Clients
+                    this.ClientList.Push(client)
+            }
 
-        this._RefreshForeground()
+            this._RefreshForeground()
+        } finally {
+            this._RefreshInProgress := false
+        }
     }
 
     ; 比较两个客户端集合是否一致（不考虑对象引用，只比较字段）
