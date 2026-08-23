@@ -18,6 +18,7 @@ class CustomKeyEditor {
                                ; AHK v2 的 SetTimer 按函数对象身份匹配，取消定时器必须用启动时的同一对象，
                                ; 每次新建对象会导致取消失效、50ms 定时器永不停歇地刷日志
     static PickingActive := false  ; 拾取会话是否激活（用于日志：无会话时 Close 不记"结束"）
+    static BtnHelp := ""           ; 「帮助」按钮（默认焦点，误按 Enter 只打开无害的帮助窗口）
 
     ; 打开（或切换目标到）指定行；index 越界时忽略
     static Open(index) {
@@ -34,6 +35,11 @@ class CustomKeyEditor {
         this.GuiObj := Gui(, I18n.T("编辑按键"))
         this.GuiObj.MarginX := 20
         this.GuiObj.MarginY := 20
+        ; 样式对齐主设置窗口：白底 + 亮色标题栏（DWM 属性与 GuiManager.Init 一致）
+        this.GuiObj.BackColor := "FFFFFF"
+        hWnd := this.GuiObj.Hwnd
+        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 20, "int*", false, "int", 4)
+        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 35, "uint*", 0x00FFFFFF, "int", 4)
         this.GuiObj.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
 
         ; 按键命名
@@ -56,6 +62,7 @@ class CustomKeyEditor {
         ; 底部按钮：帮助 / 删除 / 保存 / 取消（删除功能内置于编辑窗口，行上不放 ✕）
         btnHelp := this.GuiObj.Add("Button", "x55 y+14 w80 h28", I18n.T("帮助"))
         btnHelp.OnEvent("Click", (*) => this._OnHelp())
+        this.BtnHelp := btnHelp
         btnDelete := this.GuiObj.Add("Button", "x145 yp w80 h28", I18n.T("删除"))
         btnDelete.OnEvent("Click", (*) => this._OnDelete())
         btnSave := this.GuiObj.Add("Button", "x255 yp w80 h28 Default", I18n.T("保存"))
@@ -70,14 +77,15 @@ class CustomKeyEditor {
         Logger.Info("CustomKeyEditor", "打开编辑窗口：行=" index)
     }
 
-    ; 激活编辑窗口并聚焦指令框——消除 Show 后窗口尚未激活导致的"首次键盘输入被吞"竞态
+    ; 激活编辑窗口并把默认焦点放在「帮助」按钮——误按 Enter 只会打开无害的帮助窗口；
+    ; 不再聚焦指令框（聚焦会导致内容被全选，下一次拾取插入会覆盖整段脚本）。
     static _ActivateAndFocus() {
         try {
             WinActivate("ahk_id " this.GuiObj.Hwnd)
             WinWaitActive("ahk_id " this.GuiObj.Hwnd, , 0.5)
         } catch {
         }
-        try this.ScriptEdit.Focus()
+        try this.BtnHelp.Focus()
     }
 
     ; 关闭（取消语义，不写回）；被 GuiManager 在增删行/重置/Rebuild 前调用（D11）
@@ -92,6 +100,7 @@ class CustomKeyEditor {
         this.NameEdit := ""
         this.TypeDDL := ""
         this.ScriptEdit := ""
+        this.BtnHelp := ""
     }
 
     ; ── 类型码 ↔ 下拉框索引 ──
@@ -243,7 +252,7 @@ class CustomKeyEditor {
             EditPaste("(" fx ", " fy ")", this.ScriptEdit)   ; 光标处插入 (x, y)（D3：纯坐标文本，用户自行补全 tap）
             Logger.Info("CustomKeyEditor", "拾取坐标：(" fx ", " fy ")")
             WinActivate("ahk_id " this.GuiObj.Hwnd)
-            this.ScriptEdit.Focus()
+            ; 不调用 ScriptEdit.Focus()：聚焦会全选内容，后续拾取插入将覆盖整段脚本
         } catch Error as e {
             Logger.Error("CustomKeyEditor", "坐标拾取失败：" e.Message)
         }
@@ -262,6 +271,11 @@ class CustomKeyHelp {
         this.GuiObj := Gui("+AlwaysOnTop", I18n.T("编辑按键说明"))
         this.GuiObj.MarginX := 20
         this.GuiObj.MarginY := 20
+        ; 样式对齐主设置窗口：白底 + 亮色标题栏
+        this.GuiObj.BackColor := "FFFFFF"
+        hWnd := this.GuiObj.Hwnd
+        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 20, "int*", false, "int", 4)
+        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 35, "uint*", 0x00FFFFFF, "int", 4)
         this.GuiObj.SetFont("s10", Metrics.FontFor(I18n.GetCurrent()))
 
         body := ""
