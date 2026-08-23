@@ -2074,6 +2074,7 @@ class GuiManager {
             this.TabIndicator.Move(x, 23)
         }
         this.TabIndicator.Redraw()
+    }
 
     static _UpdateTabUI(tabName) {
         ; 首先隐藏所有标签页的控件
