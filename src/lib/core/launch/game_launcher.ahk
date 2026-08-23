@@ -14,50 +14,52 @@ class GameLauncher {
         }
     }
 
-    ; 获取游戏路径：优先识别正在运行的实例；没有进程时按已知目录特征扫描常见安装位置
+    ; 获取游戏路径：识别正在运行的实例（权威），并合并按目录特征扫描到的已安装区服路径。
     static CheckGamePath() {
         GameClientRegistry.Refresh()
         clients := GameClientRegistry.GetClients()
-        if (clients.Length > 0) {
-            firstPath := ""
-            defaultGamePath := Config.GetImportant("GamePath")
-            for client in clients {
-                if (client.exePath = "")
-                    continue
-                if (firstPath = "" && defaultGamePath = "")
-                    firstPath := client.exePath
-                if (client.serverId != "" && client.serverId != "Unknown") {
-                    key := "GamePath" client.serverId
-                    SettingsService.UpdatePersistedValue(key, client.exePath)
-                    Logger.Info("GameLauncher", "识别到 " client.serverId " 游戏路径：" client.exePath)
-                } else if (defaultGamePath = "") {
-                    SettingsService.UpdatePersistedValue("GamePath", client.exePath)
-                    Logger.Info("GameLauncher", "识别到未知区服游戏路径：" client.exePath)
-                }
+        firstPath := ""
+        detected := false
+        defaultGamePath := Config.GetImportant("GamePath")
+        identified := Map()  ; 已由运行中客户端识别的区服，扫描不再重复写入/记录
+
+        ; 1. 识别正在运行的客户端实例
+        for client in clients {
+            if (client.exePath = "")
+                continue
+            detected := true
+            if (firstPath = "" && defaultGamePath = "")
+                firstPath := client.exePath
+            if (client.serverId != "" && client.serverId != "Unknown") {
+                identified[client.serverId] := true
+                key := "GamePath" client.serverId
+                SettingsService.UpdatePersistedValue(key, client.exePath)
+                Logger.Info("GameLauncher", "识别到 " client.serverId " 游戏路径：" client.exePath)
+            } else if (defaultGamePath = "") {
+                SettingsService.UpdatePersistedValue("GamePath", client.exePath)
+                Logger.Info("GameLauncher", "识别到未知区服游戏路径：" client.exePath)
             }
-            if (firstPath != "")
-                EventBus.Publish("GamePathDetected", {path: firstPath, clients: clients})
-            return
         }
 
-        ; 没有运行中的客户端时，尝试按固定目录特征直接扫描
+        ; 2. 未运行区服按已知目录特征扫描（FindInstalledPaths 内部优先保留已配置且存在的路径，
+        ;    与运行中客户端一致；已识别区服跳过，避免覆盖运行实例路径与重复日志）
         installed := ServerProfile.FindInstalledPaths()
-        if (installed.Count > 0) {
-            firstPath := ""
-            defaultGamePath := Config.GetImportant("GamePath")
-            for serverId, path in installed {
-                if (firstPath = "" && defaultGamePath = "")
-                    firstPath := path
-                key := "GamePath" serverId
-                SettingsService.UpdatePersistedValue(key, path)
-                Logger.Info("GameLauncher", "扫描识别到 " serverId " 游戏路径：" path)
-            }
-            if (firstPath != "")
-                EventBus.Publish("GamePathDetected", {path: firstPath, installed: installed})
-            return
+        for serverId, path in installed {
+            detected := true
+            if (firstPath = "" && defaultGamePath = "")
+                firstPath := path
+            if (identified.Has(serverId))
+                continue
+            key := "GamePath" serverId
+            SettingsService.UpdatePersistedValue(key, path)
+            Logger.Info("GameLauncher", "扫描识别到 " serverId " 游戏路径：" path)
         }
 
-        MessageBox.Warning(I18n.T("未检测到游戏进程，且未在常见目录找到游戏路径。`n请先启动游戏，或手动填写游戏路径。"), I18n.T("识别失败"))
+        ; 识别到任意有效路径即发布事件刷新 GUI（firstPath 为空仅表示不填充默认 GamePath，不代表识别失败）
+        if (detected)
+            EventBus.Publish("GamePathDetected", {path: firstPath, clients: clients, installed: installed})
+        else
+            MessageBox.Warning(I18n.T("未检测到游戏进程，且未在常见目录找到游戏路径。`n请先启动游戏，或手动填写游戏路径。"), I18n.T("识别失败"))
     }
 
     ; 启动游戏
@@ -124,4 +126,3 @@ class GameLauncher {
         return false
     }
 }
-
