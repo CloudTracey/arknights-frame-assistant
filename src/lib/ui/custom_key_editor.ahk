@@ -69,8 +69,9 @@ class CustomKeyEditor {
     static Close() {
         this._StopPicking()
         if this.GuiObj != "" {
-            try this.GuiObj.Destroy()
-            this.GuiObj := ""
+            gui := this.GuiObj
+            this.GuiObj := ""   ; 先置空再销毁：防止 50ms 拾取轮询/条件回调在销毁瞬间访问已销毁 Gui 的 Hwnd（"Gui has no window"）
+            try gui.Destroy()
         }
         this.RowIndex := 0
         this.NameEdit := ""
@@ -166,30 +167,38 @@ class CustomKeyEditor {
     ; 短路求值：编辑器未开时零 Win32 调用；该条件只对 LButton 按压求值，
     ; 不属于"游戏热键判定热路径预算"约束对象（那是 HotkeyContext 的专属约束）。
     static IsPicking() {
-        if this.GuiObj = "" || !WinExist("ahk_id " this.GuiObj.Hwnd)
+        try {
+            if this.GuiObj = "" || !WinExist("ahk_id " this.GuiObj.Hwnd)
+                return false
+            return WinActive(GameTarget.WinTitle()) && IsMouseInClient()
+        } catch {
             return false
-        return WinActive(GameTarget.WinTitle()) && IsMouseInClient()
+        }
     }
 
     ; 50ms 慢路径定时器：游戏前台时在光标旁显示"即将插入的比例坐标"
     static _PickPoll() {
-        if this.GuiObj = "" || !WinExist("ahk_id " this.GuiObj.Hwnd) {
-            this._StopPicking()
-            return
+        try {
+            if this.GuiObj = "" || !WinExist("ahk_id " this.GuiObj.Hwnd) {
+                this._StopPicking()
+                return
+            }
+            if !WinActive(GameTarget.WinTitle()) {
+                ToolTip
+                return
+            }
+            MouseGetPos(&mx, &my)   ; 启动默认 CoordMode Mouse=Client；活动窗口=游戏 → 客户端物理像素
+            if !SafeWinGetClientPos(&ww, &wh) {
+                ToolTip
+                return
+            }
+            fx := Round(mx / ww, 4)
+            fy := Round(my / wh, 4)
+            ToolTip("(" fx ", " fy ")  " I18n.T("左键点击拾取坐标"), mx + 20, my + 20)
+            ; ToolTip X/Y 默认相对活动窗口客户区（=游戏），直接落在光标旁
+        } catch Error as e {
+            Logger.Warn("CustomKeyEditor", "拾取轮询异常：" e.Message)
         }
-        if !WinActive(GameTarget.WinTitle()) {
-            ToolTip
-            return
-        }
-        MouseGetPos(&mx, &my)   ; 启动默认 CoordMode Mouse=Client；活动窗口=游戏 → 客户端物理像素
-        if !SafeWinGetClientPos(&ww, &wh) {
-            ToolTip
-            return
-        }
-        fx := Round(mx / ww, 4)
-        fy := Round(my / wh, 4)
-        ToolTip("(" fx ", " fy ")  " I18n.T("左键点击拾取坐标"), mx + 20, my + 20)
-        ; ToolTip X/Y 默认相对活动窗口客户区（=游戏），直接落在光标旁
     }
 
     ; 游戏前台且光标在客户区内时按下拾取键：把比例坐标插入指令 Edit 光标处，激活编辑窗口（拾取自终止）
