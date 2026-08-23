@@ -860,7 +860,7 @@ class GuiManager {
         rowY := this.CustomHotkeyRowStartY + Mod(i - 1, half) * this.CustomHotkeyRowHeight
         label := this.MainGui.Add("Text", "x" colX " y" rowY " w135 Right +0x200 Hidden", "")
         edit := this.MainGui.Add("Edit", "x" (colX + 155) " y" (rowY - 4) " w140 Center -TabStop Uppercase vCustomHotkey" i "Key Hidden", "")
-        gear := this.MainGui.Add("Button", "x" (colX + 301) " y" (rowY - 4) " w20 h20 vCustomHotkey" i "Gear Hidden", Chr(0xE713))
+        gear := this.MainGui.Add("Button", "x" (colX + 301) " y" (rowY - 2) " w20 h20 vCustomHotkey" i "Gear Hidden", Chr(0xE713))
         gear.SetFont("s11 c1994d2", "Segoe MDL2 Assets")
         gear.OnEvent("Click", ObjBindMethod(GuiManager, "_OnCustomGearClick", i))
         ; 行控件不入 CustomKeyControls——_ShowControls 会把组内控件全量置可见，切页时出现"行闪烁"；
