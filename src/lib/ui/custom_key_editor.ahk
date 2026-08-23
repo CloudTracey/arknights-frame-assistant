@@ -47,12 +47,14 @@ class CustomKeyEditor {
         this.GuiObj.Add("Text", "xs y+12", I18n.T("指令"))
         this.ScriptEdit := this.GuiObj.Add("Edit", "xs y+6 w420 r10 +VScroll vCustomKeyScript", entry.Script)
 
-        ; 底部按钮：帮助 / 保存 / 取消
-        btnHelp := this.GuiObj.Add("Button", "x100 y+14 w80 h28", I18n.T("帮助"))
+        ; 底部按钮：帮助 / 删除 / 保存 / 取消（删除功能内置于编辑窗口，行上不放 ✕）
+        btnHelp := this.GuiObj.Add("Button", "x55 y+14 w80 h28", I18n.T("帮助"))
         btnHelp.OnEvent("Click", (*) => this._OnHelp())
-        btnSave := this.GuiObj.Add("Button", "x190 yp w80 h28 Default", I18n.T("保存"))
+        btnDelete := this.GuiObj.Add("Button", "x145 yp w80 h28", I18n.T("删除"))
+        btnDelete.OnEvent("Click", (*) => this._OnDelete())
+        btnSave := this.GuiObj.Add("Button", "x255 yp w80 h28 Default", I18n.T("保存"))
         btnSave.OnEvent("Click", (*) => this._OnSave())
-        btnCancel := this.GuiObj.Add("Button", "x280 yp w80 h28", I18n.T("取消"))
+        btnCancel := this.GuiObj.Add("Button", "x345 yp w80 h28", I18n.T("取消"))
         btnCancel.OnEvent("Click", (*) => this._OnCancel())
         this.GuiObj.OnEvent("Close", (*) => this._OnCancel())
 
@@ -120,6 +122,18 @@ class CustomKeyEditor {
     }
 
     static _OnCancel() {
+        this.Close()
+    }
+
+    ; 删除当前行：确认 → 移除工作副本条目（整体前移）→ 刷新行/脏值/冲突 → 关闭编辑窗口
+    static _OnDelete() {
+        result := MessageBox.Confirm(I18n.T("确定删除该自定义按键吗？"), I18n.T("删除自定义按键"))
+        if result != "Yes"
+            return
+        Config.RemoveCustomHotkeyAt(this.RowIndex)
+        GuiManager.RefreshCustomHotkeyRows()
+        GuiManager.TrackCustomHotkeysChange()
+        GuiManager.RefreshHotkeyConflicts()
         this.Close()
     }
 
