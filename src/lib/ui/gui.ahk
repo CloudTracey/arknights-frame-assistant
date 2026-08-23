@@ -36,7 +36,7 @@ class GuiManager {
 
     ; 窗口尺寸常量
     static GuiWidth := 720
-    static TabWidth := this.GuiWidth / 4
+    static TabWidth := this.GuiWidth / 5   ; 顶部标签创建期宽度（5 个默认标签等分；可见数变化由 LayoutTopTabs 动态重排）
     static ColWidth := this.GuiWidth / 2
     static GuiXMargin := 30
     static BtnW := 100
@@ -99,7 +99,7 @@ class GuiManager {
     static FrameSkipDelayKeys := ["FrameSkip16msDelay", "FrameSkip33msDelay", "FrameSkip166msDelay"]
     ; 自定义按键页
     static CustomKeyControls := []      ; 自定义按键页静态控件（按钮/GroupBox/提示语；行控件不入此列表，由行刷新控制显隐）
-    static CustomRows := []             ; 预建 14 行：Array<{Label, Edit, Gear, Del}>
+    static CustomRows := []             ; 预建 12 行：Array<{Label, Edit, Gear}>
     static CustomHotkeyRowStartY := 86  ; 首行 y（GroupBox y70 内 +16，对齐常规作战行链）
     static CustomHotkeyRowHeight := 37  ; 行高（含间距，对齐 AddBindRow 的 y+16 链）
     static _InitialCustomHotkeys := []  ; 自定义按键快照（脏值对比）
@@ -414,26 +414,25 @@ class GuiManager {
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
 
         ; -- 自定义按键 --
-        ; 布局对齐"常规作战"页：顶部新增按钮 + 两列 GroupBox（每列 7 行）+ 底部两行居中提示
+        ; 布局对齐"常规作战"页：顶部新增按钮 + 内联提示 + 两列 GroupBox（每列 6 行）+ 底部两行居中提示
         btnAddCustom := this.MainGui.Add("Button", "x" this.GuiXMargin " y40 w110 h24 vBtnAddCustom", I18n.T("新增按键"))
         btnAddCustom.OnEvent("Click", (*) => this._OnAddCustomHotkey())
         this.CustomKeyControls.Push(btnAddCustom)
+        hintCustom1 := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", I18n.T("点击齿轮编辑名称、类型与指令"))
+        this.CustomKeyControls.Push(hintCustom1)
 
         this.MainGui.Add("GroupBox", "x0 y70 w" this.ColWidth " h0 Section vCustomLeftGroup", "")
         this.CustomKeyControls.Push(this.MainGui["CustomLeftGroup"])
         this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vCustomRightGroup", "")
         this.CustomKeyControls.Push(this.MainGui["CustomRightGroup"])
 
-        ; 14 行预建（两列 × 7 行，显隐 + 重写值实现增删；AHK 控件无法运行时创建/销毁）
+        ; 12 行预建（两列 × 6 行，显隐 + 重写值实现增删；AHK 控件无法运行时创建/销毁）
         loop Constants.CustomHotkeyMax
             this._CreateCustomHotkeyRow(A_Index)
 
         ; 自定义按键提示语（两行居中，参照常规作战页提示风格）
         this.MainGui.SetFont("s9 c1994d2")
-        hintCustom1 := this.MainGui.Add("Text", "x0 y+20 w" this.GuiWidth " Center",
-            I18n.T("点击齿轮编辑名称、类型与指令；点击 ✕ 删除"))
-        this.CustomKeyControls.Push(hintCustom1)
-        hintCustom2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center",
+        hintCustom2 := this.MainGui.Add("Text", "x0 y+20 w" this.GuiWidth " Center",
             I18n.T("按键类型决定生效范围：全局按键始终生效；常规作战类仅在作战关卡内生效；"))
         this.CustomKeyControls.Push(hintCustom2)
         hintCustom3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center",
@@ -852,8 +851,8 @@ class GuiManager {
         try this.FrameSkipLabels["166ms"].Text := I18n.T("前进 {1}ms", this.MainGui["FrameSkip166msDelay"].Value)
     }
 
-    ; 内部：预建一行自定义按键控件（label + 绑定 Edit + 齿轮 + ✕，初始隐藏）
-    ; 栅格对齐 AddBindRow：label 右缘 colX+135、Edit x colX+155 w140；齿轮/✕ 在 Edit 右侧。
+    ; 内部：预建一行自定义按键控件（label + 绑定 Edit + 齿轮，初始隐藏）
+    ; 栅格对齐 AddBindRow：label 右缘 colX+135、Edit x colX+155 w140；齿轮在 Edit 右侧（删除功能在编辑窗口内，行上不放 ✕）。
     ; 事件用 ObjBindMethod 绑定行号，避免 for 循环闭包变量捕获陷阱。
     static _CreateCustomHotkeyRow(i) {
         half := Constants.CustomHotkeyMax / 2
@@ -863,12 +862,10 @@ class GuiManager {
         edit := this.MainGui.Add("Edit", "x" (colX + 155) " y" (rowY - 4) " w140 Center -TabStop Uppercase vCustomHotkey" i "Key Hidden", "")
         gear := this.MainGui.Add("Button", "x" (colX + 301) " y" (rowY - 4) " w20 h20 vCustomHotkey" i "Gear Hidden", Chr(0xE713))
         gear.SetFont("s11 c1994d2", "Segoe MDL2 Assets")
-        del := this.MainGui.Add("Button", "x" (colX + 325) " y" (rowY - 4) " w20 h20 vCustomHotkey" i "Del Hidden", "✕")
         gear.OnEvent("Click", ObjBindMethod(GuiManager, "_OnCustomGearClick", i))
-        del.OnEvent("Click", ObjBindMethod(GuiManager, "_OnCustomDelClick", i))
         ; 行控件不入 CustomKeyControls——_ShowControls 会把组内控件全量置可见，切页时出现"行闪烁"；
         ; 行显隐仅由 _RefreshCustomHotkeyRows 按条目数控制。
-        this.CustomRows.Push({Label: label, Edit: edit, Gear: gear, Del: del})
+        this.CustomRows.Push({Label: label, Edit: edit, Gear: gear})
     }
 
     ; 从 Config 工作副本刷新全部自定义行（显隐、名称标签、绑定值、新增按钮可用态）
@@ -880,7 +877,6 @@ class GuiManager {
             try row.Label.Visible := visible
             try row.Edit.Visible := visible
             try row.Gear.Visible := visible
-            try row.Del.Visible := visible
             if visible {
                 name := Trim(entries[i].Name)
                 row.Label.Text := name != "" ? name : I18n.T("自定义按键 {1}", i)
@@ -888,6 +884,11 @@ class GuiManager {
             }
         }
         try this.MainGui["BtnAddCustom"].Enabled := count < Constants.CustomHotkeyMax
+    }
+
+    ; 公开入口：编辑窗口删除行后刷新全部行（供 CustomKeyEditor 回调）
+    static RefreshCustomHotkeyRows() {
+        this._RefreshCustomHotkeyRows()
     }
 
     ; 编辑窗口保存后刷新单行标签（供 CustomKeyEditor 回调）
@@ -914,19 +915,7 @@ class GuiManager {
         this.RefreshHotkeyConflicts()
     }
 
-    ; 点击某行的 ✕（删除确认后移除并前移后续行）
-    static _OnCustomDelClick(index, ctrl, info) {
-        result := MessageBox.Confirm(I18n.T("确定删除该自定义按键吗？"), I18n.T("删除自定义按键"))
-        if result != "Yes"
-            return
-        CustomKeyEditor.Close()   ; D11
-        Config.RemoveCustomHotkeyAt(index)
-        this._RefreshCustomHotkeyRows()
-        this.TrackCustomHotkeysChange()
-        this.RefreshHotkeyConflicts()
-    }
-
-    ; 点击某行的齿轮（单编辑窗口：未保存修改丢弃，直接切换目标行）
+    ; 点击某行的齿轮（单编辑窗口：未保存修改丢弃，直接切换目标行；删除功能在编辑窗口内）
     static _OnCustomGearClick(index, ctrl, info) {
         CustomKeyEditor.Open(index)
     }
@@ -1594,7 +1583,6 @@ class GuiManager {
                 try row.Label.Visible := false
                 try row.Edit.Visible := false
                 try row.Gear.Visible := false
-                try row.Del.Visible := false
             }
         }
         for ctrl in this.OtherSettingsControls {
