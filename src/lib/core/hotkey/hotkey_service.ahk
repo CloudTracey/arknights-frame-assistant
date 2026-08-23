@@ -132,8 +132,9 @@ class HotkeyService {
 
     ; 处理 UI 标签页切换请求
     static _HandleActiveTabChangeRequested(data) {
-        ; “其他设置”页不是功能标签页，不改变热键组/不重建热键
-        if (data.tabName = "other")
+        ; “其他设置”页与“自定义按键”页是管理型标签页，不改变热键组/不重建热键
+        ; （自定义按键的生效范围由其“按键类型”决定，与所在标签页无关）
+        if (data.tabName = "other" || data.tabName = "customKeys")
             return
         this._ActiveTab := data.tabName
         if (this._ActiveTab = "strongHoldProtocol")
@@ -214,6 +215,9 @@ class HotkeyService {
     ; 已激活热键映射表
     static ActiveHotkeys := Map()
 
+    ; 自定义按键注册信息（重建热键时由 _BuildCustomProfiles 刷新）：id -> {key, group, profile}
+    static CustomProfiles := Map()
+
     ; 已激活启用/禁用热键快捷键
     static ActiveSwitchHotkey := ""
 
@@ -279,6 +283,10 @@ class HotkeyService {
             }
         }
         HotIf
+        ; 自定义按键：启动默认常规作战组 + 全局类型（与标准热键同一判定上下文）
+        this._BuildCustomProfiles()
+        this._EnableCustomGroup("combatQuick")
+        this._EnableCustomGroup("all")
         Logger.Info("Hotkey", "热键已启用，数量=" this.ActiveHotkeys.Count ", 明细: " this._BuildDetailList(Constants.KeyNames))
     }
 
@@ -364,14 +372,67 @@ class HotkeyService {
     ; 根据标签页启用对应热键组
     static EnableByTab(tabName) {
         this.HotkeyOff(true)  ; 先静默禁用所有热键，重建完成后记录最终状态
+        this._BuildCustomProfiles()
+        ; 防御：customKeys 为管理型标签页（正常不会作为参数传入），按当前组重建
+        if (tabName = "customKeys")
+            tabName := this._ActiveTab
         if (tabName = "keyBind" || tabName = "quick") {
             this.EnableGroup(Constants.CombatHotkeys)
             this.EnableGroup(Constants.QuickHotkeys)
+            this._EnableCustomGroup("combatQuick")
         }
         else if (tabName = "strongHoldProtocol") {
             this.EnableGroup(Constants.StrongHoldHotkeys)
+            this._EnableCustomGroup("strongHoldProtocol")
         }
-        Logger.Info("Hotkey", "热键已重建，数量=" this.ActiveHotkeys.Count ", 标签页=" tabName ", 明细: " this._BuildDetailForActiveTab(tabName))
+        this._EnableCustomGroup("all")  ; 全局类型任何标签下都注册
+        Logger.Info("Hotkey", "热键已重建，数量=" this.ActiveHotkeys.Count ", 标签页=" tabName
+            ", 明细: " this._BuildDetailForActiveTab(tabName) ", 自定义: " this._BuildCustomDetailList())
+    }
+
+    ; 内部：从存储文件读取自定义按键并构建注册信息（慢路径：含文件 IO 与功能校验，重建热键前调用）
+    static _BuildCustomProfiles() {
+        CustomScriptEngine.Reload()
+        this.CustomProfiles := Map()
+        for entry in Config.ReadCustomHotkeys() {
+            id := "CustomHotkey" entry.Index
+            meta := HotkeySchema.CustomTypeProfiles.Has(entry.Type)
+                ? HotkeySchema.CustomTypeProfiles[entry.Type]
+                : HotkeySchema.CustomTypeProfiles["global"]
+            if entry.Key = "" || !CustomScriptEngine.IsRegistered(id) {
+                Logger.Info("Hotkey", "跳过自定义按键注册：" id "（未绑定或参数非法）")
+                continue
+            }
+            profile := {Fn: CustomScriptEngine.RunById.Bind(CustomScriptEngine, id)}
+            if meta.Guarded
+                profile.Guarded := true
+            this.CustomProfiles[id] := {key: entry.Key, group: meta.Group, profile: profile}
+        }
+    }
+
+    ; 内部：注册指定生效组的自定义按键（"all" | "combatQuick" | "strongHoldProtocol"；
+    ; group="all" 的条目任何调用都会注册）
+    static _EnableCustomGroup(group) {
+        HotIf(HotkeyContext)
+        pattern := GameKeys.GetInterceptPattern()
+        for id, info in this.CustomProfiles {
+            if info.group = group || info.group = "all" {
+                try this._RegisterOne(info.key, info.profile, pattern)
+                catch Error as e
+                    Logger.Error("Hotkey", "注册自定义热键失败：key=" id ", value=" info.key ", error=" e.Message)
+            }
+        }
+        HotIf
+    }
+
+    ; 构建自定义按键明细列表（用于日志）
+    static _BuildCustomDetailList() {
+        list := ""
+        for id, info in this.CustomProfiles
+            list .= (list = "" ? "" : ", ") id "=" info.key
+        if list = ""
+            return "(无)"
+        return list
     }
 
     ; 切换热键启用/禁用（只发布事实，托盘文案/图标由 UI 订阅更新）

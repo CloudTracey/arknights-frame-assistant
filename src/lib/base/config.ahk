@@ -4,6 +4,7 @@ class Config {
     static _HotkeySettings := Map()
     static _ImportantSettings := Map()
     static _CustomSettings := Map()
+    static _CustomHotkeySettings := []   ; 自定义按键工作副本：Array<{Key, Name, Func, Arg, Type}>
     static _IsLoaded := false
     static GITHUB_TOKEN_PROTECTED_KEY := "GitHubTokenProtected"
     static TokenStorageStatus := "ok"
@@ -150,6 +151,73 @@ class Config {
     ; 设置自定义设置（仅写内存工作副本）
     static SetCustom(key, value) {
         this._CustomSettings[key] := value
+    }
+
+    ; ── 自定义按键（独立存储文件 CustomHotkeys.json；工作副本模式与三组设置一致） ──
+
+    ; 获取全部自定义按键（工作副本数组引用，供 GUI/冲突检测遍历）
+    static AllCustomHotkeys => this._CustomHotkeySettings
+
+    ; 从存储文件读取（运行时热键注册用，不触碰工作副本）
+    ; 返回 Array<{Index, Key, Name, Func, Arg, Type}>；type/func 非法时宽容回退并记日志
+    static ReadCustomHotkeys() {
+        entries := CustomHotkeyStore.Load()
+        result := []
+        for i, entry in entries {
+            if !HotkeySchema.CustomTypeProfiles.Has(entry.Type) {
+                Logger.Warn("Config", "自定义按键类型非法，回退 global：" entry.Type)
+                entry.Type := "global"
+            }
+            if !this._IsValidFunc(entry.Func) {
+                Logger.Warn("Config", "自定义按键功能非法，回退 click：" entry.Func)
+                entry.Func := "click"
+            }
+            result.Push({Index: i, Key: entry.Key, Name: entry.Name, Func: entry.Func, Arg: entry.Arg, Type: entry.Type})
+        }
+        return result
+    }
+
+    ; 内部：功能码是否为已知功能（Constants.CustomHotkeyFuncOptions）
+    static _IsValidFunc(func) {
+        for opt in Constants.CustomHotkeyFuncOptions {
+            if opt.code = func
+                return true
+        }
+        return false
+    }
+
+    ; 追加空条目（上限由 GUI 守卫；持久化经 SettingsService → CustomHotkeyStore.Save）
+    static AddCustomHotkey() {
+        this._CustomHotkeySettings.Push({Key: "", Name: "", Func: "click", Arg: "", Type: "global"})
+    }
+
+    ; 删除指定行（1-based）并整体前移；越界忽略
+    static RemoveCustomHotkeyAt(index) {
+        if index < 1 || index > this._CustomHotkeySettings.Length
+            return
+        this._CustomHotkeySettings.RemoveAt(index)
+    }
+
+    ; 更新单行字段（仅写内存）；field ∈ {"Key","Name","Arg","Func","Type"}；Func/Type 非法值忽略；越界忽略
+    static SetCustomHotkeyField(index, field, value) {
+        if index < 1 || index > this._CustomHotkeySettings.Length
+            return
+        entry := this._CustomHotkeySettings[index]
+        switch field {
+            case "Key", "Name", "Arg":
+                entry.%field% := value
+            case "Func":
+                if this._IsValidFunc(value)
+                    entry.Func := value
+            case "Type":
+                if HotkeySchema.CustomTypeProfiles.Has(value)
+                    entry.Type := value
+        }
+    }
+
+    ; 工作副本条目数
+    static CustomHotkeyCount() {
+        return this._CustomHotkeySettings.Length
     }
 
     ; 帧率设置数据迁移：从旧版Frame序号迁移到Frame155文本值
@@ -326,6 +394,9 @@ class Config {
         } else {
             this._BackfillMissingCustomDefaults()
         }
+
+        ; 加载自定义按键（独立存储文件 CustomHotkeys.json；文件缺失/损坏时 Store 返回空列表）
+        this._CustomHotkeySettings := CustomHotkeyStore.Load()
 
         this._IsLoaded := true
     }

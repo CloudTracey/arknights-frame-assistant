@@ -36,7 +36,7 @@ class GuiManager {
 
     ; 窗口尺寸常量
     static GuiWidth := 720
-    static TabWidth := this.GuiWidth / 4
+    static TabWidth := this.GuiWidth / 5   ; 顶部标签创建期宽度（5 个默认标签等分；可见数变化由 LayoutTopTabs 动态重排）
     static ColWidth := this.GuiWidth / 2
     static GuiXMargin := 30
     static BtnW := 100
@@ -97,6 +97,14 @@ class GuiManager {
     static LastActiveTab := "keyBind"  ; 最后选中的功能性标签页（排除"其他设置"）
     static FrameSkipLabels := Map()     ; 过帧标签控件（用于动态更新文本）
     static FrameSkipDelayKeys := ["FrameSkip16msDelay", "FrameSkip33msDelay", "FrameSkip166msDelay"]
+    ; 自定义按键页
+    static CustomKeyControls := []      ; 自定义按键页静态控件（按钮/GroupBox/提示语；行控件不入此列表，由行刷新控制显隐）
+    static CustomRows := []             ; 预建 12 行：Array<{Label, Edit, Gear}>
+    static CustomHotkeyRowStartY := 86  ; 首行 y（GroupBox y70 内 +16，对齐常规作战行链）
+    static CustomHotkeyRowHeight := 37  ; 行高（含间距，对齐 AddBindRow 的 y+16 链）
+    static _InitialCustomHotkeys := []  ; 自定义按键快照（脏值对比）
+    static TxtCustomKeys := ""          ; "自定义按键"标签文本
+    static TabCustomKeys := ""          ; "自定义按键"标签点击区域
     ; 具有对应 GUI 控件的 Important 设置；不直接遍历 Config.AllImportant，后者还包含内部字段
     static GuiImportantKeys := ["Frame", "AutoExit", "AutoOpenSettings", "ExitOnWindowClose",
         "DefaultStrongHoldProtocol", "TabOrder", "HiddenTabs", "AutoRunGame", "AutoStartWithGame", "GamePath",
@@ -188,11 +196,14 @@ class GuiManager {
         this.TabStrongHoldProtocol := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
         this.TxtOther := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("其他设置"))
         this.TabOther := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtCustomKeys := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("自定义按键"))
+        this.TabCustomKeys := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
         ; 为标签添加点击事件
         this.TabKeybind.OnEvent("Click", (*) => this.SwitchTab("keyBind"))
         this.TabQuick.OnEvent("Click", (*) => this.SwitchTab("quick"))
         this.TabStrongHoldProtocol.OnEvent("Click", (*) => this.SwitchTab("strongHoldProtocol"))
         this.TabOther.OnEvent("Click", (*) => this.SwitchTab("other"))
+        this.TabCustomKeys.OnEvent("Click", (*) => this.SwitchTab("customKeys"))
         this.TabItems := [
             {
                 Id: "keyBind",
@@ -219,6 +230,14 @@ class GuiManager {
                 Visible: true
             },
             {
+                Id: "customKeys",
+                Label: I18n.T("自定义按键"),
+                TextControl: this.TxtCustomKeys,
+                ClickControl: this.TabCustomKeys,
+                CanHide: true,
+                Visible: true
+            },
+            {
                 Id: "other",
                 Label: I18n.T("其他设置"),
                 TextControl: this.TxtOther,
@@ -228,8 +247,11 @@ class GuiManager {
             }
         ]
 
-        this.TabIndicator := this.MainGui.Add("Text", "xs y23 w" this.TabWidth " h2 Background1994d2") ; 选中指示线
+        this.TabIndicator := this.MainGui.Add("Text", "x0 y23 w" this.TabWidth " h2 Background1994d2") ; 选中指示线（绝对 x0，避免 Section 锚到第 5 个标签 x720 处溢出）
         this.MainGui.Add("Text", "x0 y25 w" this.GuiWidth " h1 Backgroundd0d0d0") ; 分割线
+        ; 标签数 ≠ 4 时（新增/隐藏标签），创建期立即按实际可见数等分布局，
+        ; 避免首显前窗口宽度按 TabWidth(180) × 标签数计算导致顶部溢出/整窗变宽。
+        this.LayoutTopTabs()
 
         ; -- 常规作战 --
         ; 常规作战 - 左列（由 Schema 顺序生成，前半列）
@@ -390,6 +412,33 @@ class GuiManager {
         this.MainGui.SetFont("s9 cDefault Norm")
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol1)
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
+
+        ; -- 自定义按键 --
+        ; 布局对齐"常规作战"页：顶部新增按钮 + 内联提示 + 两列 GroupBox（每列 6 行）+ 底部两行居中提示
+        btnAddCustom := this.MainGui.Add("Button", "x" this.GuiXMargin " y40 w110 h24 vBtnAddCustom", I18n.T("新增按键"))
+        btnAddCustom.OnEvent("Click", (*) => this._OnAddCustomHotkey())
+        this.CustomKeyControls.Push(btnAddCustom)
+        hintCustom1 := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", I18n.T("点击齿轮编辑按键"))
+        this.CustomKeyControls.Push(hintCustom1)
+
+        this.MainGui.Add("GroupBox", "x0 y70 w" this.ColWidth " h0 Section vCustomLeftGroup", "")
+        this.CustomKeyControls.Push(this.MainGui["CustomLeftGroup"])
+        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vCustomRightGroup", "")
+        this.CustomKeyControls.Push(this.MainGui["CustomRightGroup"])
+
+        ; 12 行预建（两列 × 6 行，显隐 + 重写值实现增删；AHK 控件无法运行时创建/销毁）
+        loop Constants.CustomHotkeyMax
+            this._CreateCustomHotkeyRow(A_Index)
+
+        ; 自定义按键提示语（两行居中，参照常规作战页提示风格）
+        this.MainGui.SetFont("s9 c1994d2")
+        hintCustom2 := this.MainGui.Add("Text", "x0 y+20 w" this.GuiWidth " Center",
+            I18n.T("按键类型决定生效范围：全局按键始终生效；常规作战类仅在作战关卡内生效；"))
+        this.CustomKeyControls.Push(hintCustom2)
+        hintCustom3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center",
+            I18n.T("快捷操作类在未启用卫戍协议方案时全局生效；卫戍协议类仅在启用卫戍协议方案时生效"))
+        this.CustomKeyControls.Push(hintCustom3)
+        this.MainGui.SetFont("s9 cDefault")
 
         ; -- 其他设置 --
         ; 导航区域右侧分割线——高度跟随内容到底部按钮上方
@@ -802,6 +851,120 @@ class GuiManager {
         try this.FrameSkipLabels["166ms"].Text := I18n.T("前进 {1}ms", this.MainGui["FrameSkip166msDelay"].Value)
     }
 
+    ; 内部：预建一行自定义按键控件（label + 绑定 Edit + 齿轮，初始隐藏）
+    ; 栅格对齐 AddBindRow：label 右缘 colX+135、Edit x colX+155 w140；齿轮在 Edit 右侧（删除功能在编辑窗口内，行上不放 ✕）。
+    ; 事件用 ObjBindMethod 绑定行号，避免 for 循环闭包变量捕获陷阱。
+    static _CreateCustomHotkeyRow(i) {
+        half := Constants.CustomHotkeyMax / 2
+        colX := (i <= half) ? 0 : this.ColWidth
+        rowY := this.CustomHotkeyRowStartY + Mod(i - 1, half) * this.CustomHotkeyRowHeight
+        label := this.MainGui.Add("Text", "x" colX " y" rowY " w135 Right +0x200 Hidden", "")
+        edit := this.MainGui.Add("Edit", "x" (colX + 155) " y" (rowY - 4) " w140 Center -TabStop Uppercase vCustomHotkey" i "Key Hidden", "")
+        gear := this.MainGui.Add("Button", "x" (colX + 301) " y" (rowY - 2) " w20 h20 vCustomHotkey" i "Gear Hidden", Chr(0xE713))
+        gear.SetFont("s11 c1994d2", "Segoe MDL2 Assets")
+        gear.OnEvent("Click", ObjBindMethod(GuiManager, "_OnCustomGearClick", i))
+        ; 行控件不进 _ShowControls 组：行显隐仅由 _RefreshCustomHotkeyRows 按条目数控制，
+        ; 进组会被全量置可见，切页时行会闪一下。
+        this.CustomRows.Push({Label: label, Edit: edit, Gear: gear})
+    }
+
+    ; 从 Config 工作副本刷新全部自定义行（显隐、名称标签、绑定值、新增按钮可用态）
+    ; 显隐必须受"当前标签页"门控：本方法挂在 _UpdateTabUI 末尾对每个标签页都会执行，
+    ; 若无条件置可见，切到其他页面时行会在 _HideAllControls 之后被立即重新显示（控件串页）。
+    static _RefreshCustomHotkeyRows() {
+        entries := Config.AllCustomHotkeys
+        count := entries.Length
+        showRows := this.CurrentTab = "customKeys"
+        for i, row in this.CustomRows {
+            visible := showRows && i <= count
+            try row.Label.Visible := visible
+            try row.Edit.Visible := visible
+            try row.Gear.Visible := visible
+            if visible {
+                name := Trim(entries[i].Name)
+                row.Label.Text := name != "" ? name : I18n.T("自定义按键 {1}", i)
+                row.Edit.Value := KeyFormat.VirtualNewkeyFormat(entries[i].Key)
+            }
+        }
+        try this.MainGui["BtnAddCustom"].Enabled := count < Constants.CustomHotkeyMax
+    }
+
+    ; 公开入口：编辑窗口删除行后刷新全部行（供 CustomKeyEditor 回调）
+    static RefreshCustomHotkeyRows() {
+        this._RefreshCustomHotkeyRows()
+    }
+
+    ; 编辑窗口保存后刷新单行标签（供 CustomKeyEditor 回调）
+    static RefreshCustomRow(index) {
+        if index < 1 || index > this.CustomRows.Length
+            return
+        entries := Config.AllCustomHotkeys
+        if index > entries.Length
+            return
+        name := Trim(entries[index].Name)
+        this.CustomRows[index].Label.Text := name != "" ? name : I18n.T("自定义按键 {1}", index)
+    }
+
+    ; 点击"新增按键"
+    static _OnAddCustomHotkey() {
+        if Config.CustomHotkeyCount() >= Constants.CustomHotkeyMax {
+            MessageBox.Info(I18n.T("最多可添加 {1} 个自定义按键", Constants.CustomHotkeyMax), I18n.T("提示"))
+            return
+        }
+        CustomKeyEditor.Close()   ; 行集合变化前先关编辑窗口
+        Config.AddCustomHotkey()
+        this._RefreshCustomHotkeyRows()
+        this.TrackCustomHotkeysChange()
+        this.RefreshHotkeyConflicts()
+        Logger.Info("Gui", "新增自定义按键，总数=" Config.CustomHotkeyCount())
+    }
+
+    ; 点击某行的齿轮（单编辑窗口：未保存修改丢弃，直接切换目标行；删除功能在编辑窗口内）
+    static _OnCustomGearClick(index, ctrl, info) {
+        CustomKeyEditor.Open(index)
+    }
+
+    ; 快照深拷贝（自定义按键工作副本 → 字符串对象数组）
+    static _CloneCustomHotkeys(entries) {
+        result := []
+        for entry in entries
+            result.Push({Key: entry.Key, Name: entry.Name, Func: entry.Func, Arg: entry.Arg, Type: entry.Type})
+        return result
+    }
+
+    ; 自定义按键工作副本与快照逐行对比
+    static _CustomHotkeysEqual(a, b) {
+        if a.Length != b.Length
+            return false
+        loop a.Length {
+            if a[A_Index].Key != b[A_Index].Key
+                || a[A_Index].Name != b[A_Index].Name
+                || a[A_Index].Func != b[A_Index].Func
+                || a[A_Index].Arg != b[A_Index].Arg
+                || a[A_Index].Type != b[A_Index].Type
+                return false
+        }
+        return true
+    }
+
+    ; 自定义按键变更后的脏值评估（绑定改键/编辑窗口保存/增删行后调用）
+    static TrackCustomHotkeysChange() {
+        if !this._CustomHotkeysEqual(Config.AllCustomHotkeys, this._InitialCustomHotkeys) {
+            this.SetIsModifiedTrue()
+            return
+        }
+        if this._AllControlsMatchSnapshot()
+            this.SetIsModifiedFalse()
+    }
+
+    ; 冲突检测用投影：工作副本 → Array<{Index, Key, Type}>
+    static _ProjectCustomHotkeys() {
+        result := []
+        for i, entry in Config.AllCustomHotkeys
+            result.Push({Index: i, Key: entry.Key, Type: entry.Type})
+        return result
+    }
+
     ; 内部：更新其他控件值（从配置）
     static _UpdateImportantControlsFromConfig() {
         tabSettingsChanged := false
@@ -1004,6 +1167,7 @@ class GuiManager {
         this._UpdateHotkeyControlsFromConfig()
         this._UpdateImportantControlsFromConfig()
         this._UpdateCustomControlsFromConfig()
+        this._RefreshCustomHotkeyRows()
         this.SetIsModifiedFalse()
         this.CaptureInitialSnapshot()
         this.Hide()
@@ -1012,8 +1176,10 @@ class GuiManager {
     ; 处理按键已重置
     static _OnSettingsReset() {
         ; 重置只持久化热键相关项；非热键未保存修改应继续保持“已修改”状态。
+        ; 自定义按键不随重置清除，行刷新保持原状。
         this._UpdateHotkeyControlsFromConfig()
         this._UpdateCustomControlsFromConfig()
+        this._RefreshCustomHotkeyRows()
         ; 仅把热键与 SwitchHotkey 的初始快照更新为已保存的默认值
         for key in Config.AllHotkeys {
             try this._InitialValues[key] := this.MainGui[key].Value
@@ -1105,6 +1271,7 @@ class GuiManager {
         this._UpdateHotkeyControlsFromConfig()
         this._UpdateImportantControlsFromConfig()
         this._UpdateCustomControlsFromConfig()
+        this._RefreshCustomHotkeyRows()
         this._RefreshServerPathsText()
         this._RefreshRunningClientsText()
     }
@@ -1252,7 +1419,8 @@ class GuiManager {
     static RefreshHotkeyConflicts() {
         result := HotkeyConflictValidator.FindAll(
             Config.AllHotkeys,
-            Config.AllCustom
+            Config.AllCustom,
+            this._ProjectCustomHotkeys()
         )
 
         ; 构建本次冲突控件集合
@@ -1308,10 +1476,17 @@ class GuiManager {
         try {
             this._InitialValues["HoverOperate"] := this.MainGui["HoverOperate"].Value
         }
+        ; 自定义按键（深拷贝快照，供 TrackCustomHotkeysChange 对比）
+        this._InitialCustomHotkeys := this._CloneCustomHotkeys(Config.AllCustomHotkeys)
     }
 
     ; 跟踪控件变更——与初始快照对比，决定按钮启用/禁用
     static TrackChange(controlName) {
+        ; 自定义按键绑定控件：委托给自定义行对比逻辑
+        if RegExMatch(controlName, "^CustomHotkey\d+Key$") {
+            this.TrackCustomHotkeysChange()
+            return
+        }
         try {
             currentValue := this.MainGui[controlName].Value
         } catch {
@@ -1333,42 +1508,49 @@ class GuiManager {
         }
         if (this._InitialValues.Has(controlName) && currentValue == this._InitialValues[controlName]) {
             ; 该控件值已恢复初始——检查所有控件是否全部一致
-            for key in Config.AllHotkeys {
-                try {
-                    if (this.MainGui[key].Value != this._InitialValues[key])
-                        return
-                }
-            }
-            for key in this.GuiImportantKeys {
-                try {
-                    if (this.MainGui[key].Value != this._InitialValues[key])
-                        return
-                }
-            }
-            try {
-                if (this.MainGui["SwitchHotkey"].Value != this._InitialValues["SwitchHotkey"])
-                    return
-            }
-            try {
-                if (this.MainGui["ClickDelay"].Value != this._InitialValues["ClickDelay"])
-                    return
-            }
-            for key in this.FrameSkipDelayKeys {
-                try {
-                    if (this.MainGui[key].Value != this._InitialValues[key])
-                        return
-                }
-            }
-            try {
-                if (this.MainGui["HoverOperate"].Value != this._InitialValues["HoverOperate"])
-                    return
-            }
-            ; 全部一致
-            this.SetIsModifiedFalse()
+            if this._AllControlsMatchSnapshot()
+                this.SetIsModifiedFalse()
         } else {
             ; 有差异
             this.SetIsModifiedTrue()
         }
+    }
+
+    ; 所有控件（热键/重要/自定义/自定义按键）是否与初始快照一致
+    static _AllControlsMatchSnapshot() {
+        for key in Config.AllHotkeys {
+            try {
+                if (this.MainGui[key].Value != this._InitialValues[key])
+                    return false
+            }
+        }
+        for key in this.GuiImportantKeys {
+            try {
+                if (this.MainGui[key].Value != this._InitialValues[key])
+                    return false
+            }
+        }
+        try {
+            if (this.MainGui["SwitchHotkey"].Value != this._InitialValues["SwitchHotkey"])
+                return false
+        }
+        try {
+            if (this.MainGui["ClickDelay"].Value != this._InitialValues["ClickDelay"])
+                return false
+        }
+        for key in this.FrameSkipDelayKeys {
+            try {
+                if (this.MainGui[key].Value != this._InitialValues[key])
+                    return false
+            }
+        }
+        try {
+            if (this.MainGui["HoverOperate"].Value != this._InitialValues["HoverOperate"])
+                return false
+        }
+        if !this._CustomHotkeysEqual(Config.AllCustomHotkeys, this._InitialCustomHotkeys)
+            return false
+        return true
     }
 
     ; 内部：隐藏所有标签页的控件
@@ -1394,6 +1576,18 @@ class GuiManager {
         for ctrl in this.StrongHoldProtocolControls {
             if (IsObject(ctrl)) {
                 try ctrl.Visible := false
+            }
+        }
+        for ctrl in this.CustomKeyControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
+            }
+        }
+        for row in this.CustomRows {
+            if (IsObject(row)) {
+                try row.Label.Visible := false
+                try row.Edit.Visible := false
+                try row.Gear.Visible := false
             }
         }
         for ctrl in this.OtherSettingsControls {
@@ -1439,7 +1633,9 @@ class GuiManager {
         }
     }
 
-    ; 按 id 数组构建标签顺序：按给定顺序去重取已有项，再追加未出现的项（未来新增标签自动落尾）。
+    ; 按 id 数组构建标签顺序：按给定顺序去重取已有项，再追加未出现的项。
+    ; 追加规则："other"（其他设置）恒置尾；其余未出现的新标签（如老配置升级后新增的 customKeys）
+    ; 插到 "other" 之前——保证管理型入口「其他设置」永远在最后一位。
     static _BuildOrderedTabsFromIds(idList) {
         tabById := Map()
         for tabItem in this.TabItems
@@ -1455,7 +1651,23 @@ class GuiManager {
             }
         }
         for tabItem in this.TabItems {
-            if !addedIds.Has(tabItem.Id)
+            if addedIds.Has(tabItem.Id)
+                continue
+            addedIds[tabItem.Id] := true
+            if tabItem.Id = "other" {
+                orderedTabs.Push(tabItem)
+                continue
+            }
+            otherIndex := 0
+            for i, t in orderedTabs {
+                if t.Id = "other" {
+                    otherIndex := i
+                    break
+                }
+            }
+            if otherIndex > 0
+                orderedTabs.InsertAt(otherIndex, tabItem)
+            else
                 orderedTabs.Push(tabItem)
         }
         return orderedTabs
@@ -1604,8 +1816,9 @@ class GuiManager {
 
         try this.MainGui["DefaultStrongHoldProtocol"].Enabled := this.IsTabVisible("strongHoldProtocol")
         this.TabIndicator.GetPos(&indicatorX, &indicatorY, &indicatorW, &indicatorH)
-        if (indicatorW != tabWidth)
-            this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
+        ; 指示线无条件重设宽度并重绘：按"宽度未变则跳过"会在标签数变化时留下零宽指示线
+        this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
+        this.TabIndicator.Redraw()
     }
 
     ; 解析回退标签：优先功能标签（排除"其他设置"），仅剩"其他设置"时返回它。
@@ -1805,6 +2018,8 @@ class GuiManager {
                     this.TxtQuick.SetFont(color)
                 case "strongHoldProtocol":
                     this.TxtStrongHoldProtocol.SetFont(color)
+                case "customKeys":
+                    this.TxtCustomKeys.SetFont(color)
                 default:
                     this.TxtOther.SetFont(color)
             }
@@ -1816,14 +2031,16 @@ class GuiManager {
     static _UpdateTopTabBar(tabName) {
         showModeStatus := this.IsTabVisible("strongHoldProtocol")
         isStrongHold := tabName = "strongHoldProtocol"
-        isOther := tabName = "other"
+        ; "其他设置"与"自定义按键"均为管理型标签页：自身不显示 ✓/✗，其余标签按 LastActiveTab 标注
+        isOther := tabName = "other" || tabName = "customKeys"
 
         ; 更新标签样式：仅当目标颜色与记录不一致时才 SetFont，
         ; 避免对相同颜色重复重建字体触发文字重绘闪烁。
         this._SetTabFontOnce("keyBind", tabName = "keyBind" ? "c1994d2" : "cDefault")
         this._SetTabFontOnce("quick", tabName = "quick" ? "c1994d2" : "cDefault")
         this._SetTabFontOnce("strongHoldProtocol", isStrongHold ? "c1994d2" : "cDefault")
-        this._SetTabFontOnce("other", isOther ? "c1994d2" : "cDefault")
+        this._SetTabFontOnce("other", tabName = "other" ? "c1994d2" : "cDefault")
+        this._SetTabFontOnce("customKeys", tabName = "customKeys" ? "c1994d2" : "cDefault")
 
         ; 计算目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页。
         ; 先算后比，仅当实际变化时才赋值，避免相同值触发重绘闪烁。
@@ -1867,10 +2084,14 @@ class GuiManager {
         } else if isStrongHold {
             this.TxtStrongHoldProtocol.GetPos(&x)
             this.TabIndicator.Move(x, 23)
+        } else if (tabName = "customKeys") {
+            this.TxtCustomKeys.GetPos(&x)
+            this.TabIndicator.Move(x, 23)
         } else {
             this.TxtOther.GetPos(&x)
             this.TabIndicator.Move(x, 23)
         }
+        this.TabIndicator.Redraw()
     }
 
     static _UpdateTabUI(tabName) {
@@ -1903,6 +2124,13 @@ class GuiManager {
             this._ShowControls(this.NotOtherControls)
         }
 
+        ; 切换到自定义按键页（管理型标签页：不改变热键组）
+        else if (tabName = "customKeys") {
+            this._UpdateTopTabBar("customKeys")
+            this._ShowControls(this.CustomKeyControls)
+            this._ShowControls(this.NotOtherControls)
+        }
+
         ; 切换到其他设置页
         else if (tabName = "other") {
             this._UpdateTopTabBar("other")
@@ -1917,6 +2145,7 @@ class GuiManager {
         this._UpdateHotkeyControlsFromConfig()
         this._UpdateImportantControlsFromConfig()
         this._UpdateCustomControlsFromConfig()
+        this._RefreshCustomHotkeyRows()
     }
 
     ; 内部：切换其他设置页面的分类
@@ -1972,8 +2201,8 @@ class GuiManager {
             return
         this.CurrentTab := tabName
 
-        ; 记录最后选中的标签页（排除"其他设置"）
-        if (tabName != "other") {
+        ; 记录最后选中的功能标签页（排除"其他设置"与"自定义按键"两个管理型标签页）
+        if (tabName != "other" && tabName != "customKeys") {
             this.LastActiveTab := tabName
         }
 
@@ -2013,6 +2242,7 @@ class GuiManager {
     ; 重建设置窗口（语言切换等场景）。当前实现保证可重建主窗口；
     ; 控件数组原地清空以保持 OtherCategories 引用有效。
     static Rebuild() {
+        CustomKeyEditor.Close()   ; 主窗口重建（切换语言）前先关闭编辑窗口
         if (this.MainGui = "") {
             this.Init()
             return
@@ -2030,6 +2260,8 @@ class GuiManager {
             this.KeybindControls,
             this.QuickControls,
             this.StrongHoldProtocolControls,
+            this.CustomKeyControls,
+            this.CustomRows,
             this.OtherSettingsControls,
             this.NavItems,
             this.NavIndicators,
@@ -2054,6 +2286,7 @@ class GuiManager {
         this._PrevConflictedControls := Map()
         this.TabFontState := Map()
         this.FrameSkipLabels := Map()
+        this._InitialCustomHotkeys := []
         this.AppliedTabSettings := {Order: [], Visibility: Map()}
         this.CurrentTab := ""
     }
