@@ -203,8 +203,8 @@ class HotkeyService {
         "StrongHoldProtocolLButtonClick", HotkeyActions.ActionLButtonClick.Bind(HotkeyActions),
         "Upgrade", HotkeyActions.ActionUpgrade.Bind(HotkeyActions),
         "Sell", HotkeyActions.ActionSell.Bind(HotkeyActions),
-        "StrongHoldProtocolRetreat", HotkeyActions.ActionRetreat.Bind(HotkeyActions),
-        "StrongHoldProtocolOneClickRetreat", HotkeyActions.ActionOneClickRetreat.Bind(HotkeyActions),
+        "StrongHoldProtocolRetreat", HotkeyActions.ActionStrongHoldProtocolRetreat.Bind(HotkeyActions),
+        "StrongHoldProtocolOneClickRetreat", HotkeyActions.ActionStrongHoldProtocolOneClickRetreat.Bind(HotkeyActions),
         "OneClickSell", HotkeyActions.ActionOneClickSell.Bind(HotkeyActions),
         "OneClickPurchase", HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions)
     )
