@@ -14,6 +14,10 @@ class CustomKeyEditor {
     static ScriptEdit := ""
     static PickContext := (*) => CustomKeyEditor.IsPicking()  ; 拾取 HotIf 条件对象（唯一实例，与 KeyBinder 同款箭头模式）：
                                                               ; AHK 按条件对象区分热键变体，注册/注销必须用同一对象
+    static PollFn := ""        ; _PickPoll 定时器函数对象（唯一实例）：
+                               ; AHK v2 的 SetTimer 按函数对象身份匹配，取消定时器必须用启动时的同一对象，
+                               ; 每次新建对象会导致取消失效、50ms 定时器永不停歇地刷日志
+    static PickingActive := false  ; 拾取会话是否激活（用于日志：无会话时 Close 不记"结束"）
 
     ; 打开（或切换目标到）指定行；index 越界时忽略
     static Open(index) {
@@ -161,20 +165,28 @@ class CustomKeyEditor {
     ; 触发键为 LButton（无 ~：条件命中时吞掉该次点击，D12）；条件未命中（游戏外/编辑窗口内）时点击正常透传。
     ; 条件对象必须为唯一实例（箭头函数静态属性），注册/注销按同一对象匹配变体。
     static _StartPicking() {
-        SetTimer ObjBindMethod(CustomKeyEditor, "_PickPoll"), 50
+        if this.PollFn = ""
+            this.PollFn := ObjBindMethod(CustomKeyEditor, "_PickPoll")
+        SetTimer this.PollFn, 50
         HotIf(this.PickContext)
         Hotkey("LButton", ObjBindMethod(CustomKeyEditor, "_OnPickKey"), "On")
         HotIf
+        this.PickingActive := true
         Logger.Debug("CustomKeyEditor", "坐标拾取会话开始")
     }
 
     static _StopPicking() {
-        SetTimer ObjBindMethod(CustomKeyEditor, "_PickPoll"), 0
+        if this.PollFn = ""
+            this.PollFn := ObjBindMethod(CustomKeyEditor, "_PickPoll")
+        SetTimer this.PollFn, 0
         ToolTip  ; 清除拾取提示
         HotIf(this.PickContext)
         try Hotkey("LButton", "Off")
         HotIf
-        Logger.Debug("CustomKeyEditor", "坐标拾取会话结束")
+        if this.PickingActive {
+            this.PickingActive := false
+            Logger.Debug("CustomKeyEditor", "坐标拾取会话结束")
+        }
     }
 
     ; HotIf 条件：编辑窗口存在 且 游戏窗口为前台 且 光标在游戏客户区内——
