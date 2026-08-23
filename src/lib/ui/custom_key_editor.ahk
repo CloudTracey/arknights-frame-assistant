@@ -60,14 +60,15 @@ class CustomKeyEditor {
         this.ScriptEdit := this.GuiObj.Add("Edit", "xs y+6 w420 r10 +VScroll vCustomKeyScript", entry.Script)
 
         ; 底部按钮：帮助 / 删除 / 保存 / 取消（删除功能内置于编辑窗口，行上不放 ✕）
-        btnHelp := this.GuiObj.Add("Button", "x55 y+14 w80 h28", I18n.T("帮助"))
+        ; 对齐：帮助左缘对齐上方 Edit 左缘(x20)，取消右缘对齐 Edit 右缘(x440)，删除/保存按 10px 间距分列两侧
+        btnHelp := this.GuiObj.Add("Button", "x20 y+14 w80 h28", I18n.T("帮助"))
         btnHelp.OnEvent("Click", (*) => this._OnHelp())
         this.BtnHelp := btnHelp
-        btnDelete := this.GuiObj.Add("Button", "x145 yp w80 h28", I18n.T("删除"))
+        btnDelete := this.GuiObj.Add("Button", "x110 yp w80 h28", I18n.T("删除"))
         btnDelete.OnEvent("Click", (*) => this._OnDelete())
-        btnSave := this.GuiObj.Add("Button", "x255 yp w80 h28 Default", I18n.T("保存"))
+        btnSave := this.GuiObj.Add("Button", "x270 yp w80 h28 Default", I18n.T("保存"))
         btnSave.OnEvent("Click", (*) => this._OnSave())
-        btnCancel := this.GuiObj.Add("Button", "x345 yp w80 h28", I18n.T("取消"))
+        btnCancel := this.GuiObj.Add("Button", "x360 yp w80 h28", I18n.T("取消"))
         btnCancel.OnEvent("Click", (*) => this._OnCancel())
         this.GuiObj.OnEvent("Close", (*) => this._OnCancel())
 
