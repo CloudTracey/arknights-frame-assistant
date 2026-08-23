@@ -98,10 +98,10 @@ class GuiManager {
     static FrameSkipLabels := Map()     ; 过帧标签控件（用于动态更新文本）
     static FrameSkipDelayKeys := ["FrameSkip16msDelay", "FrameSkip33msDelay", "FrameSkip166msDelay"]
     ; 自定义按键页
-    static CustomKeyControls := []      ; 自定义按键页全部控件
-    static CustomRows := []             ; 预建 16 行：Array<{Label, Edit, Gear, Del}>
-    static CustomHotkeyRowStartY := 76  ; 首行 y
-    static CustomHotkeyRowHeight := 34  ; 行高（含间距）
+    static CustomKeyControls := []      ; 自定义按键页静态控件（按钮/GroupBox/提示语；行控件不入此列表，由行刷新控制显隐）
+    static CustomRows := []             ; 预建 14 行：Array<{Label, Edit, Gear, Del}>
+    static CustomHotkeyRowStartY := 86  ; 首行 y（GroupBox y70 内 +16，对齐常规作战行链）
+    static CustomHotkeyRowHeight := 37  ; 行高（含间距，对齐 AddBindRow 的 y+16 链）
     static _InitialCustomHotkeys := []  ; 自定义按键快照（脏值对比）
     static TxtCustomKeys := ""          ; "自定义按键"标签文本
     static TabCustomKeys := ""          ; "自定义按键"标签点击区域
@@ -247,8 +247,11 @@ class GuiManager {
             }
         ]
 
-        this.TabIndicator := this.MainGui.Add("Text", "xs y23 w" this.TabWidth " h2 Background1994d2") ; 选中指示线
+        this.TabIndicator := this.MainGui.Add("Text", "x0 y23 w" this.TabWidth " h2 Background1994d2") ; 选中指示线（绝对 x0，避免 Section 锚到第 5 个标签 x720 处溢出）
         this.MainGui.Add("Text", "x0 y25 w" this.GuiWidth " h1 Backgroundd0d0d0") ; 分割线
+        ; 标签数 ≠ 4 时（新增/隐藏标签），创建期立即按实际可见数等分布局，
+        ; 避免首显前窗口宽度按 TabWidth(180) × 标签数计算导致顶部溢出/整窗变宽。
+        this.LayoutTopTabs()
 
         ; -- 常规作战 --
         ; 常规作战 - 左列（由 Schema 顺序生成，前半列）
@@ -411,23 +414,32 @@ class GuiManager {
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
 
         ; -- 自定义按键 --
-        ; 新增按键按钮与提示
+        ; 布局对齐"常规作战"页：顶部新增按钮 + 两列 GroupBox（每列 7 行）+ 底部两行居中提示
         btnAddCustom := this.MainGui.Add("Button", "x" this.GuiXMargin " y40 w110 h24 vBtnAddCustom", I18n.T("新增按键"))
         btnAddCustom.OnEvent("Click", (*) => this._OnAddCustomHotkey())
         this.CustomKeyControls.Push(btnAddCustom)
-        hintCustom1 := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", I18n.T("点击齿轮编辑名称、类型与指令；点击 ✕ 删除"))
-        this.CustomKeyControls.Push(hintCustom1)
 
-        ; 16 行预建（两列 × 8 行，显隐 + 重写值实现增删；AHK 控件无法运行时创建/销毁）
+        this.MainGui.Add("GroupBox", "x0 y70 w" this.ColWidth " h0 Section vCustomLeftGroup", "")
+        this.CustomKeyControls.Push(this.MainGui["CustomLeftGroup"])
+        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vCustomRightGroup", "")
+        this.CustomKeyControls.Push(this.MainGui["CustomRightGroup"])
+
+        ; 14 行预建（两列 × 7 行，显隐 + 重写值实现增删；AHK 控件无法运行时创建/销毁）
         loop Constants.CustomHotkeyMax
             this._CreateCustomHotkeyRow(A_Index)
 
-        ; 自定义按键提示语
+        ; 自定义按键提示语（两行居中，参照常规作战页提示风格）
         this.MainGui.SetFont("s9 c1994d2")
-        hintCustom2 := this.MainGui.Add("Text", "x0 y+15 w" this.GuiWidth " Center",
-            I18n.T("按键类型决定生效范围：全局按键始终生效；常规作战类受关卡守卫限制"))
-        this.MainGui.SetFont("s9 cDefault")
+        hintCustom1 := this.MainGui.Add("Text", "x0 y+20 w" this.GuiWidth " Center",
+            I18n.T("点击齿轮编辑名称、类型与指令；点击 ✕ 删除"))
+        this.CustomKeyControls.Push(hintCustom1)
+        hintCustom2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center",
+            I18n.T("按键类型决定生效范围：全局按键始终生效；常规作战类仅在作战关卡内生效；"))
         this.CustomKeyControls.Push(hintCustom2)
+        hintCustom3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center",
+            I18n.T("快捷操作类在未启用卫戍协议方案时全局生效；卫戍协议类仅在启用卫戍协议方案时生效"))
+        this.CustomKeyControls.Push(hintCustom3)
+        this.MainGui.SetFont("s9 cDefault")
 
         ; -- 其他设置 --
         ; 导航区域右侧分割线——高度跟随内容到底部按钮上方
@@ -841,24 +853,22 @@ class GuiManager {
     }
 
     ; 内部：预建一行自定义按键控件（label + 绑定 Edit + 齿轮 + ✕，初始隐藏）
+    ; 栅格对齐 AddBindRow：label 右缘 colX+135、Edit x colX+155 w140；齿轮/✕ 在 Edit 右侧。
     ; 事件用 ObjBindMethod 绑定行号，避免 for 循环闭包变量捕获陷阱。
     static _CreateCustomHotkeyRow(i) {
         half := Constants.CustomHotkeyMax / 2
         colX := (i <= half) ? 0 : this.ColWidth
         rowY := this.CustomHotkeyRowStartY + Mod(i - 1, half) * this.CustomHotkeyRowHeight
         label := this.MainGui.Add("Text", "x" colX " y" rowY " w135 Right +0x200 Hidden", "")
-        edit := this.MainGui.Add("Edit", "x" (colX + 155) " y" (rowY - 4) " w120 Center -TabStop Uppercase vCustomHotkey" i "Key Hidden", "")
-        gear := this.MainGui.Add("Button", "x" (colX + 281) " y" (rowY - 4) " w20 h20 vCustomHotkey" i "Gear Hidden", Chr(0xE713))
+        edit := this.MainGui.Add("Edit", "x" (colX + 155) " y" (rowY - 4) " w140 Center -TabStop Uppercase vCustomHotkey" i "Key Hidden", "")
+        gear := this.MainGui.Add("Button", "x" (colX + 301) " y" (rowY - 4) " w20 h20 vCustomHotkey" i "Gear Hidden", Chr(0xE713))
         gear.SetFont("s11 c1994d2", "Segoe MDL2 Assets")
-        del := this.MainGui.Add("Button", "x" (colX + 305) " y" (rowY - 4) " w20 h20 vCustomHotkey" i "Del Hidden", "✕")
+        del := this.MainGui.Add("Button", "x" (colX + 325) " y" (rowY - 4) " w20 h20 vCustomHotkey" i "Del Hidden", "✕")
         gear.OnEvent("Click", ObjBindMethod(GuiManager, "_OnCustomGearClick", i))
         del.OnEvent("Click", ObjBindMethod(GuiManager, "_OnCustomDelClick", i))
-        row := {Label: label, Edit: edit, Gear: gear, Del: del}
-        this.CustomRows.Push(row)
-        this.CustomKeyControls.Push(label)
-        this.CustomKeyControls.Push(edit)
-        this.CustomKeyControls.Push(gear)
-        this.CustomKeyControls.Push(del)
+        ; 行控件不入 CustomKeyControls——_ShowControls 会把组内控件全量置可见，切页时出现"行闪烁"；
+        ; 行显隐仅由 _RefreshCustomHotkeyRows 按条目数控制。
+        this.CustomRows.Push({Label: label, Edit: edit, Gear: gear, Del: del})
     }
 
     ; 从 Config 工作副本刷新全部自定义行（显隐、名称标签、绑定值、新增按钮可用态）
@@ -1579,6 +1589,14 @@ class GuiManager {
                 try ctrl.Visible := false
             }
         }
+        for row in this.CustomRows {
+            if (IsObject(row)) {
+                try row.Label.Visible := false
+                try row.Edit.Visible := false
+                try row.Gear.Visible := false
+                try row.Del.Visible := false
+            }
+        }
         for ctrl in this.OtherSettingsControls {
             if (IsObject(ctrl)) {
                 try ctrl.Visible := false
@@ -2009,7 +2027,8 @@ class GuiManager {
         this._SetTabFontOnce("keyBind", tabName = "keyBind" ? "c1994d2" : "cDefault")
         this._SetTabFontOnce("quick", tabName = "quick" ? "c1994d2" : "cDefault")
         this._SetTabFontOnce("strongHoldProtocol", isStrongHold ? "c1994d2" : "cDefault")
-        this._SetTabFontOnce("other", isOther ? "c1994d2" : "cDefault")
+        this._SetTabFontOnce("other", tabName = "other" ? "c1994d2" : "cDefault")
+        this._SetTabFontOnce("customKeys", tabName = "customKeys" ? "c1994d2" : "cDefault")
 
         ; 计算目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页。
         ; 先算后比，仅当实际变化时才赋值，避免相同值触发重绘闪烁。
