@@ -132,6 +132,10 @@ class CustomScriptEngine {
         if entry.type = "combat" && !GuardInLevel("CustomScript:" id, ThisHotkey)
             return
         this.Execute(entry.steps)
+        ; 与标准动作一致：等待物理键松开，按住不重复触发（执行期间同键重入已被 MaxThreadsPerHotkey=1 屏蔽；
+        ; 守卫拦截路径提前 return，与常规作战动作同语义——透传后无需等待）
+        if !InStr(ThisHotkey, "Wheel")
+            PureKeyWait(ThisHotkey)
     }
 
     ; 执行预编译步骤。Thread "NoTimers" 挡定时器轮询抖动、放行其他热键；
