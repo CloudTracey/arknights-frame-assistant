@@ -390,7 +390,7 @@ class HotkeyService {
             ", 明细: " this._BuildDetailForActiveTab(tabName) ", 自定义: " this._BuildCustomDetailList())
     }
 
-    ; 内部：从存储文件读取自定义按键并构建注册信息（慢路径：含文件 IO 与脚本编译，重建热键前调用）
+    ; 内部：从存储文件读取自定义按键并构建注册信息（慢路径：含文件 IO 与功能校验，重建热键前调用）
     static _BuildCustomProfiles() {
         CustomScriptEngine.Reload()
         this.CustomProfiles := Map()
@@ -400,7 +400,7 @@ class HotkeyService {
                 ? HotkeySchema.CustomTypeProfiles[entry.Type]
                 : HotkeySchema.CustomTypeProfiles["global"]
             if entry.Key = "" || !CustomScriptEngine.IsRegistered(id) {
-                Logger.Info("Hotkey", "跳过自定义按键注册：" id "（未绑定或指令非法）")
+                Logger.Info("Hotkey", "跳过自定义按键注册：" id "（未绑定或参数非法）")
                 continue
             }
             profile := {Fn: CustomScriptEngine.RunById.Bind(CustomScriptEngine, id)}

@@ -1,6 +1,5 @@
 ; == 自定义按键存储（CustomHotkeys.json 唯一 owner） ==
 ; 独立于 Settings.ini 的用户数据文件：UTF-8 JSON，固定写入格式 + 严格读取 + 损坏备份兜底。
-; 设计见 docs/plan/custom_hotkeys_design.md 第 5.1 节：
 ;   1. 写定式：键序固定（key/name/func/arg/type）、紧凑单行，字符串只转义 \ " 与 \r\n\t；
 ;   2. 字符集白名单（名称禁引号/反斜杠/控制字符，坐标文本天然不含），读取器可用严格正则完整解析；
 ;   3. 任何不一致 → 备份 .bak + Warn + 空列表（绝不抛异常、绝不崩溃）；

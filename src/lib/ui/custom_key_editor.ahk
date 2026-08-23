@@ -1,9 +1,8 @@
 ; == 自定义按键编辑窗口（含坐标拾取） ==
 ; 独立顶层 Gui（非 MainGui）——KeyBinder.WM_LBUTTONDOWN 的父窗口检查据此自动豁免按键录制。
-; 设计见 docs/plan/custom_hotkeys_design.md 第 8 节：
-;   - 单编辑窗口：再次打开直接切换目标行（未保存修改丢弃，D10）；
+;   - 单编辑窗口：再次打开直接切换目标行（未保存修改丢弃）；
 ;   - 字段：命名 / 按键类型 / 按键功能（目前仅「单击」）/ 坐标（(x, y) 单值）；
-;   - 拾取：光标在游戏客户区内按左键，把比例坐标**整体覆盖**进坐标框（点击被吞，D12）；
+;   - 拾取：光标在游戏客户区内按左键，把比例坐标**整体覆盖**进坐标框（点击被吞）；
 ;   - 保存时校验命名（50 字符 + 字符集白名单）与「功能 + 坐标」，非法拒绝并弹窗。
 
 class CustomKeyEditor {
@@ -14,16 +13,16 @@ class CustomKeyEditor {
     static FuncDDL := ""
     static CoordEdit := ""
     static BtnCancel := ""   ; 「取消」按钮（默认焦点：误按 Enter 无副作用）
-    static PickContext := (*) => CustomKeyEditor.IsPicking()  ; 拾取 HotIf 条件对象（唯一实例，与 KeyBinder 同款箭头模式）：
+    static PickContext := (*) => CustomKeyEditor.IsPicking()  ; 拾取 HotIf 条件对象（唯一实例）：
                                                               ; AHK 按条件对象区分热键变体，注册/注销必须用同一对象
     static PollFn := ""        ; _PickPoll 定时器函数对象（唯一实例）：
-                               ; AHK v2 的 SetTimer 按函数对象身份匹配，取消定时器必须用启动时的同一对象，
-                               ; 每次新建对象会导致取消失效、定时器永不停歇地刷日志
+                               ; AHK 的 SetTimer 按函数对象身份匹配，取消必须用启动时的同一对象，
+                               ; 每次新建对象会导致取消失效、定时器永不停歇
     static PickingActive := false  ; 拾取会话是否激活（用于日志：无会话时 Close 不记"结束"）
 
     ; 打开（或切换目标到）指定行；index 越界时忽略
     static Open(index) {
-        ; 单实例：已打开则先以取消语义关闭（未保存修改丢弃，D10）
+        ; 单实例：已打开则先以取消语义关闭（未保存修改丢弃）
         this.Close()
         entries := Config.AllCustomHotkeys
         if index < 1 || index > entries.Length {
@@ -94,7 +93,7 @@ class CustomKeyEditor {
         try this.BtnCancel.Focus()
     }
 
-    ; 关闭（取消语义，不写回）；被 GuiManager 在增删行/重置/Rebuild 前调用（D11）
+    ; 关闭（取消语义，不写回）；被 GuiManager 在增删行/重置/Rebuild 前调用
     static Close() {
         this._StopPicking()
         if this.GuiObj != "" {
@@ -141,7 +140,7 @@ class CustomKeyEditor {
 
     ; ── 保存/取消/删除 ──
     static _OnSave() {
-        ; ① 命名校验：长度 + 字符集白名单（D14，保证存储文件严格读取无歧义）
+        ; ① 命名校验：长度 + 字符集白名单（与存储文件的严格读取约束一致）
         name := Trim(this.NameEdit.Value)
         if StrLen(name) > 50 {
             MessageBox.Error(I18n.T("按键名称不能超过 50 个字符"), I18n.T("提示"))
@@ -190,12 +189,12 @@ class CustomKeyEditor {
     }
 
     ; ── 坐标拾取会话（编辑窗口打开期间有效） ──
-    ; 触发键为 LButton（无 ~：条件命中时吞掉该次点击，D12）；条件未命中（游戏外/编辑窗口内/游戏标题栏）时点击正常透传。
+    ; 触发键为 LButton（无 ~：条件命中时吞掉该次点击）；条件未命中（游戏外/编辑窗口内/游戏标题栏）时点击正常透传。
     ; 条件对象必须为唯一实例（箭头函数静态属性），注册/注销按同一对象匹配变体。
     static _StartPicking() {
         if this.PollFn = ""
             this.PollFn := ObjBindMethod(CustomKeyEditor, "_PickPoll")
-        SetTimer this.PollFn, 8   ; 约 120 次/秒：轮询仅做轻量 Win32 读取且只在光标位于游戏客户区时刷新 ToolTip，CPU 开销可忽略
+        SetTimer this.PollFn, 8   ; 轮询仅轻量 Win32 读取，CPU 开销可忽略
         HotIf(this.PickContext)
         Hotkey("LButton", ObjBindMethod(CustomKeyEditor, "_OnPickKey"), "On")
         HotIf
@@ -219,7 +218,7 @@ class CustomKeyEditor {
 
     ; HotIf 条件：编辑窗口存在 且 光标在游戏**客户区内**（不要求游戏前台——游戏未聚焦时第一次点击即可拾取）。
     ; 拾取只对游戏 client 区域生效：游戏外、编辑窗口内、游戏标题栏（客户区 y<0）的左键一律正常透传（不吞）。
-    ; 该条件只对 LButton 按压求值，不属于"游戏热键判定热路径预算"约束对象（那是 HotkeyContext 的专属约束）。
+    ; 该条件只对 LButton 按压求值，不在"游戏热键判定热路径预算"约束内。
     static IsPicking() {
         try {
             if this.GuiObj = "" || !WinExist("ahk_id " this.GuiObj.Hwnd)

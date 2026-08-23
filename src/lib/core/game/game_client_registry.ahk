@@ -78,8 +78,7 @@ class GameClientRegistry {
 
     ; 刷新客户端列表与前台客户端。由 GameMonitor 400ms 定时器调用。
     ; 重入保护：AHK 单线程下新线程可打断正在执行的 Refresh（三入口交错），
-    ; 内层刷新中途替换 Clients/ClientList 会使外层比较读到不一致状态
-    ; （历史报错：_ClientsChanged 读到缺 hwnd 的旧条目、ClientList := [] 触发 Invalid memory read/write）。
+    ; 中途替换 Clients/ClientList 会让外层读到旧条目（缺 hwnd）或触发 Invalid memory read/write。
     static Refresh() {
         if (this._RefreshInProgress)
             return

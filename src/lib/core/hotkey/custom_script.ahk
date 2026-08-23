@@ -2,8 +2,7 @@
 ; 每条自定义按键 = 一个「按键功能」+ 一个参数文本。目前仅 "click"（单击）：
 ;   arg 为 "(x, y)" 格式的 0-1 比例坐标（最多 4 位小数），执行时按当前游戏窗口尺寸换算像素后
 ;   以 HotkeyActions._ClickButton 同款方式（MouseMove + Send LButton Down/Up + 光标还原）单击。
-; 设计见 docs/plan/custom_hotkeys_design.md：
-;   - 功能注册表（Builtins）供未来扩展：新增功能 = 注册表加一行 + 语法节加一条；
+;   - 功能注册表（Builtins）供未来扩展：新增功能 = 注册表加一行 + Validate/执行路径相应扩展；
 ;   - 校验只在保存/Reload 慢路径发生，触发时零解析、零 IO（O(1) 缓存查表）；
 ;   - 执行整体 Thread "NoTimers"，每次点击后立即还原光标 + finally 无条件归位（操作完成后鼠标回归原位）。
 

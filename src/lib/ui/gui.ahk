@@ -863,8 +863,8 @@ class GuiManager {
         gear := this.MainGui.Add("Button", "x" (colX + 301) " y" (rowY - 2) " w20 h20 vCustomHotkey" i "Gear Hidden", Chr(0xE713))
         gear.SetFont("s11 c1994d2", "Segoe MDL2 Assets")
         gear.OnEvent("Click", ObjBindMethod(GuiManager, "_OnCustomGearClick", i))
-        ; 行控件不入 CustomKeyControls——_ShowControls 会把组内控件全量置可见，切页时出现"行闪烁"；
-        ; 行显隐仅由 _RefreshCustomHotkeyRows 按条目数控制。
+        ; 行控件不进 _ShowControls 组：行显隐仅由 _RefreshCustomHotkeyRows 按条目数控制，
+        ; 进组会被全量置可见，切页时行会闪一下。
         this.CustomRows.Push({Label: label, Edit: edit, Gear: gear})
     }
 
@@ -911,7 +911,7 @@ class GuiManager {
             MessageBox.Info(I18n.T("最多可添加 {1} 个自定义按键", Constants.CustomHotkeyMax), I18n.T("提示"))
             return
         }
-        CustomKeyEditor.Close()   ; D11：行集合变化前先关编辑窗口
+        CustomKeyEditor.Close()   ; 行集合变化前先关编辑窗口
         Config.AddCustomHotkey()
         this._RefreshCustomHotkeyRows()
         this.TrackCustomHotkeysChange()
@@ -1176,7 +1176,7 @@ class GuiManager {
     ; 处理按键已重置
     static _OnSettingsReset() {
         ; 重置只持久化热键相关项；非热键未保存修改应继续保持“已修改”状态。
-        ; 自定义按键不受重置影响（访谈决策：重置不动自定义按键），行刷新保持原状。
+        ; 自定义按键不随重置清除，行刷新保持原状。
         this._UpdateHotkeyControlsFromConfig()
         this._UpdateCustomControlsFromConfig()
         this._RefreshCustomHotkeyRows()
@@ -1816,8 +1816,7 @@ class GuiManager {
 
         try this.MainGui["DefaultStrongHoldProtocol"].Enabled := this.IsTabVisible("strongHoldProtocol")
         this.TabIndicator.GetPos(&indicatorX, &indicatorY, &indicatorW, &indicatorH)
-        ; 指示线无条件重设宽度并重绘——此前"宽度未变则跳过"在标签数变化/字体重建场景下
-        ; 可能留下零宽或未重绘的指示线（纯净配置首点卫戍协议时指示条消失）。
+        ; 指示线无条件重设宽度并重绘：按"宽度未变则跳过"会在标签数变化时留下零宽指示线
         this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
         this.TabIndicator.Redraw()
     }
@@ -2243,7 +2242,7 @@ class GuiManager {
     ; 重建设置窗口（语言切换等场景）。当前实现保证可重建主窗口；
     ; 控件数组原地清空以保持 OtherCategories 引用有效。
     static Rebuild() {
-        CustomKeyEditor.Close()   ; D11：主窗口重建（切换语言）前先关闭编辑窗口
+        CustomKeyEditor.Close()   ; 主窗口重建（切换语言）前先关闭编辑窗口
         if (this.MainGui = "") {
             this.Init()
             return
