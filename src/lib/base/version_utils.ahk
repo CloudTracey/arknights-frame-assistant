@@ -26,6 +26,32 @@ class VersionUtils {
         return result
     }
 
+    ; 从 JSON 源码提取字符串值（valueStartPos 为值起始引号的位置，返回原始转义内容，未反转义）。
+    ; 替代 ((?:[^"\\]|\\.)*) 类正则：长 body 会触发 PCRE2 match limit（PCRE execution error，-8），
+    ; 线性扫描逐字符处理 \" 转义，无回溯、不依赖正则，任意长度稳定。
+    static ExtractJsonStringValue(json, valueStartPos) {
+        value := ""
+        pos := valueStartPos + 1
+        q := Chr(34)
+        total := StrLen(json)
+        Loop {
+            if (pos > total)
+                return ""  ; JSON 损坏：未找到结束引号
+            ch := SubStr(json, pos, 1)
+            if (ch = q)
+                return value
+            if (ch = "\") {
+                if (pos + 1 > total)
+                    return ""  ; JSON 损坏：转义符后无字符
+                value .= ch SubStr(json, pos + 1, 1)
+                pos += 2
+            } else {
+                value .= ch
+                pos += 1
+            }
+        }
+    }
+
     ; 解析 GitHub Releases JSON 数组，提取所有发布版本
     static ParseReleasesArray(json) {
         releases := []
@@ -64,12 +90,13 @@ class VersionUtils {
             if (RegExMatch(searchStr, '"name"\s*:\s*"AFA\.exe".*?"digest"\s*:\s*"sha256:([0-9a-fA-F]{64})"', &digestMatch))
                 expectedHash := digestMatch[1]
 
-            ; 提取 body（Release 正文，Markdown 格式）
+            ; 提取 body（Release 正文，Markdown 格式；长正文用线性扫描，避免 PCRE match limit）
             body := ""
             q := Chr(34)
-            bodyPattern := q "body" q "\s*:\s*" q "((?:[^" q "\\]|\\.)*)" q
-            if (RegExMatch(searchStr, bodyPattern, &bodyMatch)) {
-                body := this.UnescapeJsonString(bodyMatch[1])
+            bodyHeadPattern := q "body" q "\s*:\s*" q
+            if (RegExMatch(searchStr, bodyHeadPattern, &bodyHeadMatch)) {
+                bodyStartQuote := bodyHeadMatch.Pos[0] + StrLen(bodyHeadMatch[0]) - 1
+                body := this.UnescapeJsonString(this.ExtractJsonStringValue(searchStr, bodyStartQuote))
             }
 
             ; 提取发布日期（优先 published_at，回退 date）
