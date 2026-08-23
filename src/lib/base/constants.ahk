@@ -2,7 +2,7 @@
 ; 全局常量定义；热键元数据由 base/hotkey_schema.ahk 单一来源生成。
 
 class Constants {
-    static DefaultTabOrder := "keyBind,quick,strongHoldProtocol,other"
+    static DefaultTabOrder := "keyBind,quick,strongHoldProtocol,customKeys,other"
 
     ; 延迟常量
     static Delay30 := 34      ; 30帧
@@ -71,4 +71,13 @@ class Constants {
         "FrameSkip166msDelay", "前进166ms延迟",
         "HoverOperate", "游戏窗口未激活时允许鼠标悬停在窗口上触发热键"
     )
+
+    ; 自定义按键：单条数量上限（GUI 预建行数）与类型选项（类型码 + 显示名键，供下拉框与校验共享）
+    static CustomHotkeyMax := 16
+    static CustomHotkeyTypeOptions := [
+        {code: "global", nameKey: "全局按键"},
+        {code: "combat", nameKey: "常规作战类"},
+        {code: "quick", nameKey: "快捷操作类"},
+        {code: "strongHold", nameKey: "卫戍协议类"}
+    ]
 }
