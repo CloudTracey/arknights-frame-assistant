@@ -12,9 +12,8 @@ class CustomKeyEditor {
     static NameEdit := ""
     static TypeDDL := ""
     static ScriptEdit := ""
-    static PickContext := "" ; 拾取 HotIf 条件函数对象（唯一实例）：
-                             ; AHK 按条件对象区分热键变体，注册与注销必须用同一对象，
-                             ; 每次 ObjBindMethod 都是新对象会导致注销打不中、热键残留全局生效
+    static PickContext := (*) => CustomKeyEditor.IsPicking()  ; 拾取 HotIf 条件对象（唯一实例，与 KeyBinder 同款箭头模式）：
+                                                              ; AHK 按条件对象区分热键变体，注册/注销必须用同一对象
 
     ; 打开（或切换目标到）指定行；index 越界时忽略
     static Open(index) {
@@ -145,22 +144,19 @@ class CustomKeyEditor {
     }
 
     ; ── 坐标拾取会话（编辑窗口打开期间有效） ──
+    ; 触发键暂用键盘 0（诊断期替代 LButton；条件命中时吞键、未命中透传，输入 0 不受影响）
     static _StartPicking() {
-        if this.PickContext = ""
-            this.PickContext := ObjBindMethod(CustomKeyEditor, "IsPicking")
         SetTimer ObjBindMethod(CustomKeyEditor, "_PickPoll"), 50
         HotIf(this.PickContext)
-        Hotkey("LButton", ObjBindMethod(CustomKeyEditor, "_OnPickLButton"), "On")  ; 无 ~：条件命中时吞掉该次点击（D12）
+        Hotkey("0", ObjBindMethod(CustomKeyEditor, "_OnPickKey"), "On")
         HotIf
     }
 
     static _StopPicking() {
         SetTimer ObjBindMethod(CustomKeyEditor, "_PickPoll"), 0
         ToolTip  ; 清除拾取提示
-        if this.PickContext = ""
-            this.PickContext := ObjBindMethod(CustomKeyEditor, "IsPicking")
         HotIf(this.PickContext)
-        try Hotkey("LButton", "Off")
+        try Hotkey("0", "Off")
         HotIf
     }
 
@@ -195,20 +191,24 @@ class CustomKeyEditor {
         ; ToolTip X/Y 默认相对活动窗口客户区（=游戏），直接落在光标旁
     }
 
-    ; 游戏前台且光标在客户区内时按下左键：把比例坐标插入指令 Edit 光标处，激活编辑窗口（拾取自终止）
-    static _OnPickLButton(*) {
+    ; 游戏前台且光标在客户区内时按下拾取键：把比例坐标插入指令 Edit 光标处，激活编辑窗口（拾取自终止）
+    static _OnPickKey(*) {
         ; 双重守卫：即使热键被异常触发，条件不满足时立即返回（不执行任何拾取逻辑）
         if !this.IsPicking()
             return
-        ToolTip
-        MouseGetPos(&mx, &my)
-        if !SafeWinGetClientPos(&ww, &wh)
-            return
-        fx := Round(mx / ww, 4)
-        fy := Round(my / wh, 4)
-        EditPaste("(" fx ", " fy ")", this.ScriptEdit)   ; 光标处插入 (x, y)（D3：纯坐标文本，用户自行补全 tap）
-        WinActivate("ahk_id " this.GuiObj.Hwnd)
-        this.ScriptEdit.Focus()
+        try {
+            ToolTip
+            MouseGetPos(&mx, &my)
+            if !SafeWinGetClientPos(&ww, &wh)
+                return
+            fx := Round(mx / ww, 4)
+            fy := Round(my / wh, 4)
+            EditPaste("(" fx ", " fy ")", this.ScriptEdit)   ; 光标处插入 (x, y)（D3：纯坐标文本，用户自行补全 tap）
+            WinActivate("ahk_id " this.GuiObj.Hwnd)
+            this.ScriptEdit.Focus()
+        } catch Error as e {
+            Logger.Error("CustomKeyEditor", "坐标拾取失败：" e.Message)
+        }
     }
 }
 
