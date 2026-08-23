@@ -228,14 +228,12 @@ class SettingsService {
             return false
         }
 
-        ; 校验自定义按键指令（编辑窗口保存时已校验过，此处为防线兜底）
+        ; 校验自定义按键功能与参数（编辑窗口保存时已校验过，此处为防线兜底）
         for i, entry in Config.AllCustomHotkeys {
-            if Trim(entry.Script) = ""
-                continue
-            result := CustomScriptEngine.Validate(entry.Script)
+            result := CustomScriptEngine.Validate(entry.Func, entry.Arg)
             if (!result.success) {
                 name := entry.Name != "" ? entry.Name : I18n.T("自定义按键 {1}", i)
-                Logger.Warn("Settings", "保存中止：自定义按键「" name "」指令语法错误：" result.message)
+                Logger.Warn("Settings", "保存中止：自定义按键「" name "」功能参数非法：" result.message)
                 MessageBox.Error(I18n.T("自定义按键「{1}」：`n{2}", name, result.message), I18n.T("自定义指令语法错误"))
                 return false
             }
