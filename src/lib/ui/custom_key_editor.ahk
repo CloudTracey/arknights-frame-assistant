@@ -54,7 +54,6 @@ class CustomKeyEditor {
             typeLabels.Push(I18n.T(opt.nameKey))
         this.TypeDDL := this.GuiObj.Add("DropDownList", "x+10 yp-4 w160 vCustomKeyType", typeLabels)
         this.TypeDDL.Value := this._TypeToIndex(entry.Type)
-        this.GuiObj.Add("Text", "xs y+8 c9c9c9c", I18n.T("此设置影响按键生效的范围"))
 
         ; 按键功能（目前仅「单击」；未来功能在此扩展）
         this.GuiObj.Add("Text", "xs y+12", I18n.T("按键功能"))
