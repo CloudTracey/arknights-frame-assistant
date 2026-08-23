@@ -545,6 +545,18 @@ class HotkeyActions {
             return
         PureKeyWait(ThisHotkey)
     }
+    ; 卫戍协议撤退
+    static ActionStrongHoldProtocolRetreat(ThisHotkey){
+        try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+        Logger.Debug("HotkeyActions", "ActionStrongHoldProtocolRetreat 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+        GameKeys.Tap("retreatChar")
+        if InStr(ThisHotkey, "Wheel") {
+            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+            return
+        }
+        PureKeyWait(ThisHotkey)
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+    }
     ; 出售/销毁
     static ActionSell(ThisHotkey) {
         Logger.Debug("HotkeyActions", "ActionSell 执行，key=" KeyForward.PureKeyName(ThisHotkey))
@@ -560,6 +572,29 @@ class HotkeyActions {
         if InStr(ThisHotkey, "Wheel")
             return
         PureKeyWait(ThisHotkey)
+    }
+    ; 卫戍协议一键撤退
+    static ActionStrongHoldProtocolOneClickRetreat(ThisHotkey) {
+        try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
+        if !IsMouseInClient() {
+            Logger.Debug("HotkeyActions", "ActionStrongHoldProtocolOneClickRetreat 跳过：鼠标不在客户端")
+            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+            return
+        }
+        Logger.Debug("HotkeyActions", "ActionStrongHoldProtocolOneClickRetreat 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+        ; NoTimers 挡定时器轮询的时序干扰，允许其他热键中断（Critical 会连热键一起挡）
+        Thread "NoTimers"
+        Send "{LButton Down}"
+        Send "{LButton Up}"
+        USleep(TimingService.GetClickDelay())
+        GameKeys.Tap("retreatChar")
+        Thread "NoTimers", false
+        if InStr(ThisHotkey, "Wheel") {
+            try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
+            return
+        }
+        PureKeyWait(ThisHotkey)
+        try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
     }
     ; 一键出售/销毁
     static ActionOneClickSell(ThisHotkey) {

@@ -31,6 +31,7 @@
 #Include ../../src/lib/base/tray.ahk
 #Include ../../src/lib/base/version_utils.ahk
 #Include ../../src/lib/base/touch_injection.ahk
+#Include ../../src/lib/base/custom_hotkey_store.ahk
 #Include ../../src/lib/core/game/game_client_registry.ahk
 #Include ../../src/lib/core/diagnostics/log_exporter.ahk
 #Include ../../src/lib/core/launch/app_context.ahk
@@ -38,6 +39,7 @@
 #Include ../../src/lib/core/hotkey/timing_service.ahk
 #Include ../../src/lib/core/hotkey/game_keys.ahk
 #Include ../../src/lib/core/hotkey/hotkey_actions.ahk
+#Include ../../src/lib/core/hotkey/custom_script.ahk
 #Include ../../src/lib/core/monitor/level_detector.ahk
 #Include ../../src/lib/ui/key_bind.ahk
 #Include ../../src/lib/core/hotkey/hotkey_service.ahk
@@ -54,6 +56,7 @@
 #Include ../../src/lib/ui/changelog_ui.ahk
 #Include ../../src/lib/core/changelog/changelog_checker.ahk
 #Include ../../src/lib/ui/gui.ahk
+#Include ../../src/lib/ui/custom_key_editor.ahk
 #Include ../../src/lib/core/monitor/game_monitor.ahk
 
 ; 骨架断言：关键类/函数应已定义（类名在 AHK v2 中可作为值访问）
@@ -64,6 +67,8 @@ if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyService)
 if !IsSet(GameMonitor) || !IsSet(VersionUtils) || !IsSet(KeyFormat) || !IsSet(HotkeyActions)
     ExitApp 1
 if !IsSet(SettingsService) || !IsSet(HotkeyConflictValidator)
+    ExitApp 1
+if !IsSet(CustomHotkeyStore) || !IsSet(CustomScriptEngine) || !IsSet(CustomKeyEditor)
     ExitApp 1
 if !IsSet(ReleaseRepository) || !IsSet(GitHubTokenService) || !IsSet(ChangelogChecker)
     ExitApp 1

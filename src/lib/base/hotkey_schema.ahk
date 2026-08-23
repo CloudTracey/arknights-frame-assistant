@@ -82,4 +82,15 @@ class HotkeySchema {
         }
         return ""
     }
+
+    ; 自定义按键"类型"的行为元数据（仅此一处定义）：生效组与是否受关卡守卫。
+    ; 生效组语义：all=任何标签页下都注册；combatQuick=常规/快捷标签下注册；
+    ; strongHoldProtocol=卫戍协议标签下注册。动态条目的 id/名称/绑定/脚本是配置数据（Config 持有），
+    ; 因此自定义按键不进入 Items（有意豁免：条目数量运行时可变）。
+    static CustomTypeProfiles := Map(
+        "global",     {Group: "all",                Guarded: false},
+        "combat",     {Group: "combatQuick",        Guarded: true},
+        "quick",      {Group: "combatQuick",        Guarded: false},
+        "strongHold", {Group: "strongHoldProtocol", Guarded: false}
+    )
 }
