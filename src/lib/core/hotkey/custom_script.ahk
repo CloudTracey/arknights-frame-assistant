@@ -50,6 +50,10 @@ class CustomScriptEngine {
 
     ; 内部：编译单行。返回 {success, step?|errorLine, message}
     static _CompileLine(line, lineNo) {
+        ; 全角符号先行提示：全角空格（U+3000）与全角 ASCII 区段（，（）等，U+FF01-FF5E）
+        ; 部分用户分不清全角/半角，给专用提示而非笼统的"无法识别"。
+        if RegExMatch(line, "[\x{3000}\x{FF01}-\x{FF5E}]")
+            return {success: false, errorLine: lineNo, message: I18n.T("第 {1} 行：{2}", lineNo, I18n.T("包含全角字符，请使用半角符号：{1}", line))}
         if !RegExMatch(line, "i)^(tap|usleep)\s*\(\s*(\d+(?:\.\d+)?)\s*(?:,\s*(\d+(?:\.\d+)?)\s*)?\)$", &m)
             return {success: false, errorLine: lineNo, message: I18n.T("第 {1} 行：{2}", lineNo, I18n.T("无法识别的指令：{1}", line))}
         funcName := StrLower(m[1])
