@@ -409,7 +409,6 @@ class LocaleEnUS {
         "编辑按键", "Edit Key",
         "按键命名", "Name",
         "按键类型", "Key Type",
-        "此设置影响按键生效的范围", "This setting controls where the key is active",
         "指令", "Script",
         "帮助", "Help",
         "保存", "Save",
