@@ -118,7 +118,7 @@ class SettingsService {
 
     ; 重置按键为默认值
     static Reset() {
-        result := MessageBox.Confirm(I18n.T("  确定重置*所有*按键为默认设置吗 ？"), I18n.T("重置按键设置"))
+        result := MessageBox.Confirm(I18n.T("  确定重置*所有*非自定义按键为默认设置吗 ？"), I18n.T("重置按键设置"))
         if (result != "Yes")
             return
         EventBus.Publish("HotkeyOff")        ; Legacy
@@ -228,10 +228,29 @@ class SettingsService {
             return false
         }
 
+        ; 校验自定义按键功能与参数（编辑窗口保存时已校验过，此处为防线兜底）
+        for i, entry in Config.AllCustomHotkeys {
+            result := CustomScriptEngine.Validate(entry.Func, entry.Arg)
+            if (!result.success) {
+                name := entry.Name != "" ? entry.Name : I18n.T("自定义按键 {1}", i)
+                Logger.Warn("Settings", "保存中止：自定义按键「" name "」功能参数非法：" result.message)
+                MessageBox.Error(I18n.T("自定义按键「{1}」：`n{2}", name, result.message), I18n.T("自定义按键参数错误"))
+                return false
+            }
+        }
+
         ; 保存到 INI（全量保存 Config 工作副本；单键场景请走 UpdatePersistedValue）
         saveResult := Config.SaveAllToIni()
         if (!saveResult.success) {
             MessageBox.Error(saveResult.message, I18n.T("设置保存失败"))
+            return false
+        }
+
+        ; 落盘自定义按键（独立文件；Settings.ini 成功后才写入，任一步失败都中止保存）
+        customSaveResult := CustomHotkeyStore.Save(Config.AllCustomHotkeys)
+        if (!customSaveResult.success) {
+            Logger.Warn("Settings", "保存中止：自定义按键文件写入失败：" customSaveResult.message)
+            MessageBox.Error(I18n.T("配置文件写入失败：{1}", customSaveResult.message), I18n.T("设置保存失败"))
             return false
         }
         return true

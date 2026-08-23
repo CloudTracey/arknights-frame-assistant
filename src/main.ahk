@@ -28,6 +28,7 @@
 #Include ./lib/base/tray.ahk
 #Include ./lib/base/version_utils.ahk
 #Include ./lib/base/touch_injection.ahk
+#Include ./lib/base/custom_hotkey_store.ahk
 #Include ./lib/core/game/game_client_registry.ahk
 #Include ./lib/core/diagnostics/log_exporter.ahk
 #Include ./lib/core/launch/app_context.ahk
@@ -35,6 +36,7 @@
 #Include ./lib/core/hotkey/timing_service.ahk
 #Include ./lib/core/hotkey/game_keys.ahk
 #Include ./lib/core/hotkey/hotkey_actions.ahk
+#Include ./lib/core/hotkey/custom_script.ahk
 #Include ./lib/core/monitor/level_detector.ahk
 #Include ./lib/ui/key_bind.ahk
 #Include ./lib/core/hotkey/hotkey_service.ahk
@@ -51,6 +53,7 @@
 #Include ./lib/ui/changelog_ui.ahk
 #Include ./lib/core/changelog/changelog_checker.ahk
 #Include ./lib/ui/gui.ahk
+#Include ./lib/ui/custom_key_editor.ahk
 #Include ./lib/core/monitor/game_monitor.ahk
 
 HandleAfaExit(exitReason, exitCode) {
