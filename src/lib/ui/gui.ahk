@@ -869,11 +869,14 @@ class GuiManager {
     }
 
     ; 从 Config 工作副本刷新全部自定义行（显隐、名称标签、绑定值、新增按钮可用态）
+    ; 显隐必须受"当前标签页"门控：本方法挂在 _UpdateTabUI 末尾对每个标签页都会执行，
+    ; 若无条件置可见，切到其他页面时行会在 _HideAllControls 之后被立即重新显示（控件串页）。
     static _RefreshCustomHotkeyRows() {
         entries := Config.AllCustomHotkeys
         count := entries.Length
+        showRows := this.CurrentTab = "customKeys"
         for i, row in this.CustomRows {
-            visible := i <= count
+            visible := showRows && i <= count
             try row.Label.Visible := visible
             try row.Edit.Visible := visible
             try row.Gear.Visible := visible
