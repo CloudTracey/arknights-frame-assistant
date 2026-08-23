@@ -928,7 +928,7 @@ class GuiManager {
     static _CloneCustomHotkeys(entries) {
         result := []
         for entry in entries
-            result.Push({Key: entry.Key, Name: entry.Name, Script: entry.Script, Type: entry.Type})
+            result.Push({Key: entry.Key, Name: entry.Name, Func: entry.Func, Arg: entry.Arg, Type: entry.Type})
         return result
     }
 
@@ -939,7 +939,8 @@ class GuiManager {
         loop a.Length {
             if a[A_Index].Key != b[A_Index].Key
                 || a[A_Index].Name != b[A_Index].Name
-                || a[A_Index].Script != b[A_Index].Script
+                || a[A_Index].Func != b[A_Index].Func
+                || a[A_Index].Arg != b[A_Index].Arg
                 || a[A_Index].Type != b[A_Index].Type
                 return false
         }
