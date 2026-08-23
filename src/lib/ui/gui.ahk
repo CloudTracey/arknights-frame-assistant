@@ -418,7 +418,7 @@ class GuiManager {
         btnAddCustom := this.MainGui.Add("Button", "x" this.GuiXMargin " y40 w110 h24 vBtnAddCustom", I18n.T("新增按键"))
         btnAddCustom.OnEvent("Click", (*) => this._OnAddCustomHotkey())
         this.CustomKeyControls.Push(btnAddCustom)
-        hintCustom1 := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", I18n.T("点击齿轮编辑名称、类型与指令"))
+        hintCustom1 := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", I18n.T("点击齿轮编辑按键"))
         this.CustomKeyControls.Push(hintCustom1)
 
         this.MainGui.Add("GroupBox", "x0 y70 w" this.ColWidth " h0 Section vCustomLeftGroup", "")

@@ -156,7 +156,7 @@ class CustomKeyEditor {
         arg := Trim(this.CoordEdit.Value)
         result := CustomScriptEngine.Validate(funcCode, arg)
         if (!result.success) {
-            MessageBox.Error(result.message, I18n.T("自定义指令语法错误"))
+            MessageBox.Error(result.message, I18n.T("自定义按键参数错误"))
             return
         }
         ; ③ 写工作副本 → 刷新行标签 → 脏值 → 冲突刷新（类型变化影响冲突组）→ 关闭
