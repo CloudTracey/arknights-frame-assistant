@@ -138,8 +138,9 @@ class CustomScriptEngine {
         BlockInput "MouseMove"
         MouseMove x, y
         Send "{LButton Down}"
-        USleep(TimingService.GetClickDelay())
+        MouseMove x, y
         Send "{LButton Up}"
+        USleep(40)
         MouseMove ctx.origX, ctx.origY
         BlockInput "MouseMoveOff"
     }
