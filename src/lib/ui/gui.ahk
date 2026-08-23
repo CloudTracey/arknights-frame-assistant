@@ -1632,7 +1632,9 @@ class GuiManager {
         }
     }
 
-    ; 按 id 数组构建标签顺序：按给定顺序去重取已有项，再追加未出现的项（未来新增标签自动落尾）。
+    ; 按 id 数组构建标签顺序：按给定顺序去重取已有项，再追加未出现的项。
+    ; 追加规则："other"（其他设置）恒置尾；其余未出现的新标签（如老配置升级后新增的 customKeys）
+    ; 插到 "other" 之前——保证管理型入口「其他设置」永远在最后一位。
     static _BuildOrderedTabsFromIds(idList) {
         tabById := Map()
         for tabItem in this.TabItems
@@ -1648,7 +1650,23 @@ class GuiManager {
             }
         }
         for tabItem in this.TabItems {
-            if !addedIds.Has(tabItem.Id)
+            if addedIds.Has(tabItem.Id)
+                continue
+            addedIds[tabItem.Id] := true
+            if tabItem.Id = "other" {
+                orderedTabs.Push(tabItem)
+                continue
+            }
+            otherIndex := 0
+            for i, t in orderedTabs {
+                if t.Id = "other" {
+                    otherIndex := i
+                    break
+                }
+            }
+            if otherIndex > 0
+                orderedTabs.InsertAt(otherIndex, tabItem)
+            else
                 orderedTabs.Push(tabItem)
         }
         return orderedTabs
