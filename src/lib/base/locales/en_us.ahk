@@ -151,6 +151,7 @@ class LocaleEnUS {
         "更新公告", "Changelog",
         "GitHub仓库", "GitHub Repository",
         "反馈与建议", "Feedback & Suggestions",
+        "加入交流QQ群", "Join Our QQ Group",
         "我的B站主页", "My Bilibili Page",
         "图标画师", "Icon Artist",
         "打开设置界面", "Open Settings",

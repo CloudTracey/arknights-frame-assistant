@@ -790,6 +790,10 @@ class GuiManager {
         aboutFeedback.OnEvent("Click", (*) => Run("https://github.com/CloudTracey/arknights-frame-assistant/issues"))
         this.AboutControls.Push(aboutFeedback)
 
+        aboutQQGroup := this.MainGui.Add("Text", "xs y+8 w530 Center", I18n.T("加入交流QQ群"))
+        aboutQQGroup.OnEvent("Click", (*) => Run("https://qm.qq.com/q/4jHEExKym4"))
+        this.AboutControls.Push(aboutQQGroup)
+
         aboutBilibili := this.MainGui.Add("Text", "xs y+8 w530 Center", I18n.T("我的B站主页"))
         aboutBilibili.OnEvent("Click", (*) => Run("https://space.bilibili.com/34961731"))
         this.AboutControls.Push(aboutBilibili)
