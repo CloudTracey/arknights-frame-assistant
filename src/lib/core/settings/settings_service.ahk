@@ -118,7 +118,7 @@ class SettingsService {
 
     ; 重置按键为默认值
     static Reset() {
-        result := MessageBox.Confirm(I18n.T("  确定重置*所有*按键为默认设置吗 ？"), I18n.T("重置按键设置"))
+        result := MessageBox.Confirm(I18n.T("  确定重置*所有*非自定义按键为默认设置吗 ？"), I18n.T("重置按键设置"))
         if (result != "Yes")
             return
         EventBus.Publish("HotkeyOff")        ; Legacy
