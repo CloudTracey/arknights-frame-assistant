@@ -68,6 +68,8 @@ class KeyBinder {
                 KeyBinder.ControlObj.Value := ""
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, "")
+                else if RegExMatch(KeyBinder.ControlObj.Name, "^CustomHotkey(\d+)Key$", &cmKey)
+                    Config.SetCustomHotkeyField(Integer(cmKey[1]), "Key", "")
                 else
                     Config.SetHotkey(KeyBinder.ControlObj.Name, "")
                 KeyBinder.NotifyBindingChanged(KeyBinder.ControlObj.Name)
@@ -80,6 +82,8 @@ class KeyBinder {
                 KeyBinder.ControlObj.Value := virtualNewkey ; 让GUI显示人能读的东西
                 if(KeyBinder.ControlObj.Name == "SwitchHotkey")
                     Config.SetCustom(KeyBinder.ControlObj.Name, realNewkey)
+                else if RegExMatch(KeyBinder.ControlObj.Name, "^CustomHotkey(\d+)Key$", &cmKey)
+                    Config.SetCustomHotkeyField(Integer(cmKey[1]), "Key", realNewkey)
                 else
                     Config.SetHotkey(KeyBinder.ControlObj.Name, realNewkey) ; 把人不能读也不该读的东西丢给内存
                 KeyBinder.NotifyBindingChanged(KeyBinder.ControlObj.Name)
