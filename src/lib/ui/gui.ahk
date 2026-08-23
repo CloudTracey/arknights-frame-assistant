@@ -916,6 +916,7 @@ class GuiManager {
         this._RefreshCustomHotkeyRows()
         this.TrackCustomHotkeysChange()
         this.RefreshHotkeyConflicts()
+        Logger.Info("Gui", "新增自定义按键，总数=" Config.CustomHotkeyCount())
     }
 
     ; 点击某行的齿轮（单编辑窗口：未保存修改丢弃，直接切换目标行；删除功能在编辑窗口内）
@@ -1796,8 +1797,10 @@ class GuiManager {
 
         try this.MainGui["DefaultStrongHoldProtocol"].Enabled := this.IsTabVisible("strongHoldProtocol")
         this.TabIndicator.GetPos(&indicatorX, &indicatorY, &indicatorW, &indicatorH)
-        if (indicatorW != tabWidth)
-            this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
+        ; 指示线无条件重设宽度并重绘——此前"宽度未变则跳过"在标签数变化/字体重建场景下
+        ; 可能留下零宽或未重绘的指示线（纯净配置首点卫戍协议时指示条消失）。
+        this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
+        this.TabIndicator.Redraw()
     }
 
     ; 解析回退标签：优先功能标签（排除"其他设置"），仅剩"其他设置"时返回它。
@@ -2070,7 +2073,7 @@ class GuiManager {
             this.TxtOther.GetPos(&x)
             this.TabIndicator.Move(x, 23)
         }
-    }
+        this.TabIndicator.Redraw()
 
     static _UpdateTabUI(tabName) {
         ; 首先隐藏所有标签页的控件

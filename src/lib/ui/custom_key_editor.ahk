@@ -62,7 +62,18 @@ class CustomKeyEditor {
 
         this._StartPicking()
         this.GuiObj.Show()
-        this.ScriptEdit.Focus()
+        this._ActivateAndFocus()
+        Logger.Info("CustomKeyEditor", "打开编辑窗口：行=" index)
+    }
+
+    ; 激活编辑窗口并聚焦指令框——消除 Show 后窗口尚未激活导致的"首次键盘输入被吞"竞态
+    static _ActivateAndFocus() {
+        try {
+            WinActivate("ahk_id " this.GuiObj.Hwnd)
+            WinWaitActive("ahk_id " this.GuiObj.Hwnd, , 0.5)
+        } catch {
+        }
+        try this.ScriptEdit.Focus()
     }
 
     ; 关闭（取消语义，不写回）；被 GuiManager 在增删行/重置/Rebuild 前调用（D11）
@@ -121,6 +132,7 @@ class CustomKeyEditor {
         GuiManager.RefreshCustomRow(this.RowIndex)
         GuiManager.TrackCustomHotkeysChange()
         GuiManager.RefreshHotkeyConflicts()
+        Logger.Info("CustomKeyEditor", "保存编辑窗口：行=" this.RowIndex ", 类型=" typeCode)
         this.Close()
     }
 
@@ -137,6 +149,7 @@ class CustomKeyEditor {
         GuiManager.RefreshCustomHotkeyRows()
         GuiManager.TrackCustomHotkeysChange()
         GuiManager.RefreshHotkeyConflicts()
+        Logger.Info("CustomKeyEditor", "删除自定义按键：行=" this.RowIndex)
         this.Close()
     }
 
@@ -152,6 +165,7 @@ class CustomKeyEditor {
         HotIf(this.PickContext)
         Hotkey("LButton", ObjBindMethod(CustomKeyEditor, "_OnPickKey"), "On")
         HotIf
+        Logger.Debug("CustomKeyEditor", "坐标拾取会话开始")
     }
 
     static _StopPicking() {
@@ -160,6 +174,7 @@ class CustomKeyEditor {
         HotIf(this.PickContext)
         try Hotkey("LButton", "Off")
         HotIf
+        Logger.Debug("CustomKeyEditor", "坐标拾取会话结束")
     }
 
     ; HotIf 条件：编辑窗口存在 且 游戏窗口为前台 且 光标在游戏客户区内——
@@ -214,6 +229,7 @@ class CustomKeyEditor {
             fx := Round(mx / ww, 4)
             fy := Round(my / wh, 4)
             EditPaste("(" fx ", " fy ")", this.ScriptEdit)   ; 光标处插入 (x, y)（D3：纯坐标文本，用户自行补全 tap）
+            Logger.Info("CustomKeyEditor", "拾取坐标：(" fx ", " fy ")")
             WinActivate("ahk_id " this.GuiObj.Hwnd)
             this.ScriptEdit.Focus()
         } catch Error as e {
