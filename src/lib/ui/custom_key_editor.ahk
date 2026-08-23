@@ -12,6 +12,9 @@ class CustomKeyEditor {
     static NameEdit := ""
     static TypeDDL := ""
     static ScriptEdit := ""
+    static PickContext := "" ; 拾取 HotIf 条件函数对象（唯一实例）：
+                             ; AHK 按条件对象区分热键变体，注册与注销必须用同一对象，
+                             ; 每次 ObjBindMethod 都是新对象会导致注销打不中、热键残留全局生效
 
     ; 打开（或切换目标到）指定行；index 越界时忽略
     static Open(index) {
@@ -143,25 +146,32 @@ class CustomKeyEditor {
 
     ; ── 坐标拾取会话（编辑窗口打开期间有效） ──
     static _StartPicking() {
+        if this.PickContext = ""
+            this.PickContext := ObjBindMethod(CustomKeyEditor, "IsPicking")
         SetTimer ObjBindMethod(CustomKeyEditor, "_PickPoll"), 50
-        HotIf(ObjBindMethod(CustomKeyEditor, "IsPicking"))
-        Hotkey("LButton", ObjBindMethod(CustomKeyEditor, "_OnPickLButton"), "On")  ; 无 ~：命中时吞掉该次点击（D12）
+        HotIf(this.PickContext)
+        Hotkey("LButton", ObjBindMethod(CustomKeyEditor, "_OnPickLButton"), "On")  ; 无 ~：条件命中时吞掉该次点击（D12）
         HotIf
     }
 
     static _StopPicking() {
         SetTimer ObjBindMethod(CustomKeyEditor, "_PickPoll"), 0
         ToolTip  ; 清除拾取提示
-        HotIf(ObjBindMethod(CustomKeyEditor, "IsPicking"))
+        if this.PickContext = ""
+            this.PickContext := ObjBindMethod(CustomKeyEditor, "IsPicking")
+        HotIf(this.PickContext)
         try Hotkey("LButton", "Off")
         HotIf
     }
 
-    ; HotIf 条件：编辑窗口存在 且 游戏窗口为前台。
+    ; HotIf 条件：编辑窗口存在 且 游戏窗口为前台 且 光标在游戏客户区内——
+    ; 拾取只对游戏 client 区域生效，游戏外的左键一律正常透传（不吞）。
     ; 短路求值：编辑器未开时零 Win32 调用；该条件只对 LButton 按压求值，
     ; 不属于"游戏热键判定热路径预算"约束对象（那是 HotkeyContext 的专属约束）。
     static IsPicking() {
-        return this.GuiObj != "" && WinExist("ahk_id " this.GuiObj.Hwnd) && WinActive(GameTarget.WinTitle())
+        if this.GuiObj = "" || !WinExist("ahk_id " this.GuiObj.Hwnd)
+            return false
+        return WinActive(GameTarget.WinTitle()) && IsMouseInClient()
     }
 
     ; 50ms 慢路径定时器：游戏前台时在光标旁显示"即将插入的比例坐标"
@@ -185,8 +195,11 @@ class CustomKeyEditor {
         ; ToolTip X/Y 默认相对活动窗口客户区（=游戏），直接落在光标旁
     }
 
-    ; 游戏前台时按下左键：把比例坐标插入指令 Edit 光标处，激活编辑窗口（拾取自终止）
+    ; 游戏前台且光标在客户区内时按下左键：把比例坐标插入指令 Edit 光标处，激活编辑窗口（拾取自终止）
     static _OnPickLButton(*) {
+        ; 双重守卫：即使热键被异常触发，条件不满足时立即返回（不执行任何拾取逻辑）
+        if !this.IsPicking()
+            return
         ToolTip
         MouseGetPos(&mx, &my)
         if !SafeWinGetClientPos(&ww, &wh)
