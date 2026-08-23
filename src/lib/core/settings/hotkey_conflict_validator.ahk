@@ -81,8 +81,9 @@ class HotkeyConflictValidator {
 
         if usedKeys.Has(normalizedKey) {
             firstControl := usedKeys[normalizedKey]
-            ; 去重：同一对控件可能在多个冲突组各命中一次，只记录第一次
-            pairKey := (firstControl <= controlName)
+            ; 去重：同一对控件可能在多个冲突组各命中一次，只记录第一次。
+            ; 注意 AHK v2 的 <= 是数值比较，对字符串会抛"Expected a Number but got a String"，必须用 StrCompare。
+            pairKey := (StrCompare(firstControl, controlName) <= 0)
                 ? firstControl "|" controlName
                 : controlName "|" firstControl
             if seen.Has(pairKey)
