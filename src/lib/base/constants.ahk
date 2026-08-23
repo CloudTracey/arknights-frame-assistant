@@ -80,4 +80,8 @@ class Constants {
         {code: "quick", nameKey: "快捷操作类"},
         {code: "strongHold", nameKey: "卫戍协议类"}
     ]
+    ; 自定义按键功能选项（功能码 + 显示名键）：目前仅"单击"（click），未来功能在此扩展
+    static CustomHotkeyFuncOptions := [
+        {code: "click", nameKey: "单击"}
+    ]
 }
