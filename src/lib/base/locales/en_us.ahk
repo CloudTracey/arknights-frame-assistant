@@ -1,6 +1,7 @@
 class LocaleEnUS {
     static Data := Map(
         "国服", "CN Server",
+        "哔哩哔哩服", "Bilibili Server",
         "日服", "JP Server",
         "韩服", "KR Server",
         "国际服", "International Server",
@@ -94,6 +95,7 @@ class LocaleEnUS {
         "GitHub Token", "GitHub Token",
         "游戏路径", "Game Path",
         "国服游戏路径", "CN Game Path",
+        "哔哩哔哩服游戏路径", "Bilibili Game Path",
         "日服游戏路径", "JP Game Path",
         "韩服游戏路径", "KR Game Path",
         "国际服游戏路径", "International Game Path",
