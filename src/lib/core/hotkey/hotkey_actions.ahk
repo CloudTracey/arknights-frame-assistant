@@ -34,7 +34,10 @@ class KeyForward {
     ; 透传原热键给游戏（守卫拦截时调用，只拦 AFA 功能不吞原键）
     ; - 带 ~ 前缀的热键按键本就透传，无需补发，避免重复输入
     ; - 按下型热键：按键被 AFA 吞掉，补发 key down 并记录标志；key up 由 Up 变体热键回调（ActionUpForward）补发，事件驱动无阻塞
-    ; - Up 型热键（松开暂停）：按下时 down 未被吞（游戏已收到），松开时只补发 key up
+    ; - Up 型热键（松开暂停）：非拦截键带 ~ 前缀，down 未被吞；被拦截键会被 AHK 整键接管（Hotkeys.htm：
+    ;   "An Up hotkey without a normal/down counterpart hotkey will completely take over that key"）——
+    ;   **down 也被吞**，且 Up 型热键没有 Down 热键给透传机会，故此处须补发完整按下（down→delay→up），
+    ;   否则关卡外该键输入整次丢失（如"松开时暂停"绑定 Space 后无法输入空格）
     ; - 滚轮等无 down/up 状态的事件：直接发送完整事件（同 action 尾部 Wheel 处理）
     ; - {Blind}：默认 Send 会临时改写 CapsLock（SetStoreCapsLockMode 默认开启）并释放-重注入物理按住的修饰键，
     ;   透传的注入事件会被按“小写/无修饰”翻译——大写锁定开启或按住 Shift 时游戏收不到物理状态对应的字符；
@@ -54,6 +57,10 @@ class KeyForward {
             return
         }
         if isUp {
+            ; InterceptedKeys 记录"down 已补发"：常规 Down 型热键的 down 已由主热键透传，只补发 up；
+            ; 无记录说明 down 从未到达游戏（AHK 对无 ~ 的 Up 热键整键接管吞掉了 down）——补发完整按下。
+            if !this.InterceptedKeys.Has(pureKey)
+                Send "{Blind}{" pureKey " Down}"
             Send "{Blind}{" pureKey " Up}"
             return
         }
