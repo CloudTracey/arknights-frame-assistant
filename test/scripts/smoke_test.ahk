@@ -56,6 +56,7 @@
 #Include ../../src/lib/core/launch/game_launcher.ahk
 #Include ../../src/lib/ui/changelog_ui.ahk
 #Include ../../src/lib/core/changelog/changelog_checker.ahk
+#Include ../../src/lib/ui/status_bar.ahk
 #Include ../../src/lib/ui/gui.ahk
 #Include ../../src/lib/ui/custom_key_editor.ahk
 #Include ../../src/lib/core/monitor/game_monitor.ahk
@@ -64,6 +65,8 @@
 if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema) || !IsSet(I18n)
     ExitApp 1
 if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyService)
+    ExitApp 1
+if !IsSet(StatusBarHints)
     ExitApp 1
 if !IsSet(GameMonitor) || !IsSet(VersionUtils) || !IsSet(KeyFormat) || !IsSet(HotkeyActions)
     ExitApp 1
