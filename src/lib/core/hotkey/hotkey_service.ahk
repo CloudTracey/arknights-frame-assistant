@@ -272,6 +272,7 @@ class HotkeyService {
         KeyForward.DownHandled.Clear()  ; 重建前清空运行时标记（保留 CaseSense）
         KeyForward.SuppressUp.Clear()
         KeyForward.InterceptedKeys.Clear()
+        GameKeys.InjectedPressKeys.Clear()
         HotIf(HotkeyContext)
         pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in Constants.KeyNames {
@@ -302,6 +303,7 @@ class HotkeyService {
         KeyForward.DownHandled.Clear()
         KeyForward.SuppressUp.Clear()
         KeyForward.InterceptedKeys.Clear()
+        GameKeys.InjectedPressKeys.Clear()
         HotIf
         if !silent
             Logger.Info("Hotkey", "热键已禁用")

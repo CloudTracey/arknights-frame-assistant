@@ -36,6 +36,9 @@ class KeyForward {
     ; - 按下型热键：按键被 AFA 吞掉，补发 key down 并记录标志；key up 由 Up 变体热键回调（ActionUpForward）补发，事件驱动无阻塞
     ; - Up 型热键（松开暂停）：按下时 down 未被吞（游戏已收到），松开时只补发 key up
     ; - 滚轮等无 down/up 状态的事件：直接发送完整事件（同 action 尾部 Wheel 处理）
+    ; - {Blind}：默认 Send 会临时改写 CapsLock（SetStoreCapsLockMode 默认开启）并释放-重注入物理按住的修饰键，
+    ;   透传的注入事件会被按“小写/无修饰”翻译——大写锁定开启或按住 Shift 时游戏收不到物理状态对应的字符；
+    ;   Blind 保持两者状态不变，注入即物理状态的忠实镜像（与直接按键产生的输入完全一致）
     static ForwardOriginalKey(ThisHotkey) {
         if (ThisHotkey == "")
             return
@@ -47,11 +50,11 @@ class KeyForward {
             return
         ; 滚轮：无 down/up 状态，直接发送完整事件
         if InStr(pureKey, "Wheel") {
-            Send "{" pureKey "}"
+            Send "{Blind}{" pureKey "}"
             return
         }
         if isUp {
-            Send "{" pureKey " Up}"
+            Send "{Blind}{" pureKey " Up}"
             return
         }
         ; 长按自动重复期间只保留一组逻辑 Down/Up。
@@ -59,7 +62,7 @@ class KeyForward {
             return
         this.InterceptedKeys[pureKey] := true
         try {
-            Send "{" pureKey " Down}"
+            Send "{Blind}{" pureKey " Down}"
             Logger.Debug("KeyForward", "透传 Down：key=" pureKey)
         } catch Error as e {
             this.InterceptedKeys.Delete(pureKey)
@@ -71,7 +74,10 @@ class KeyForward {
     ; 原因：AHK Send 对物理按住的修饰键会做“释放-重注入”（Send.htm：默认 Send 等价 {Blind}{Ctrl up}x{Ctrl down}），
     ; 而被拦截（无 ~）的修饰键物理 up 也被吞；若只在 ForwardOriginalKey 置位时才补发 up，
     ; 关卡内路径（动作正常执行、未走透传）会漏掉 Up，导致修饰键在 OS 层卡住（如 GameSpeed=<SHIFT）。
-    ; 补发对未按下的键是无害 no-op，故无条件补发（不再依赖 InterceptedKeys 标志）。
+    ; 补发对未按下的键是无害 no-op，故无条件补发（不再依赖 InterceptedKeys 标志）；
+    ; 唯一抑制条件：该键处于“注入按下未完成”窗口（GameKeys.InjectedPressKeys）——注入动作自管完整按下
+    ; （注入 down→up）时，物理松开的补发 up 若与注入 down 落在同一画面帧，游戏的帧开头轮询只读到 up，
+    ; 注入的按下整次丢失（见 AGENTS.md“帧开头轮询”知识点）。{Blind} 理由同 ForwardOriginalKey。
     static ActionUpForward(ThisHotkey) {
         pureKey := this.PureKeyName(ThisHotkey)
         if (pureKey == "")
@@ -79,9 +85,16 @@ class KeyForward {
         ; 防递归：Send 补发的 up 会被钩子重新捕获触发本变体，补发期间同名键直接返回（键级作用域，不挡其它键）
         if KeyForward.SuppressUp.Has(pureKey)
             return
+        ; 注入按下未完成（注入 down 已发、注入 up 未发）：抑制补发。物理 up 仍被本热键（无 ~）吞掉不会漏到游戏，
+        ; 游戏收到的是注入动作自管的完整按下；注入 up 由 GameKeys.SendUp 先清标记再发送，故注入 up 自身触发本回调
+        ; （SendEvent 降级路径）时标记已清除，仍会补发，不会在游戏内卡键。
+        if GameKeys.IsInjectedPressPending(pureKey) {
+            Logger.Debug("KeyForward", "抑制透传 Up：key=" pureKey "（注入按下未完成，避免同帧补发吞掉注入按下）")
+            return
+        }
         KeyForward.SuppressUp[pureKey] := true
         try {
-            Send "{" pureKey " Up}"
+            Send "{Blind}{" pureKey " Up}"
             ; 关卡内路径未走 ForwardOriginalKey，flag 不存在；Delete 对不存在的键会抛 UnsetItemError，需先检查
             if (this.InterceptedKeys.Has(pureKey))
                 this.InterceptedKeys.Delete(pureKey)
@@ -106,8 +119,11 @@ class HotkeyActions {
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
         Logger.Debug("HotkeyActions", "ActionPressPause 执行，key=" KeyForward.PureKeyName(ThisHotkey))
         Thread "NoTimers"
+        ; ESC 同帧竞态防护：ESC 也在拦截正则内（守卫热键绑定 ESC 时），物理松开的补发 up 与注入 down 同帧会丢失按下
+        GameKeys.MarkInjectedPress("Escape")
         Send "{ESC Down}"
         USleep(50)
+        GameKeys.UnmarkInjectedPress("Escape")
         Send "{ESC Up}"
         Thread "NoTimers", false
         if InStr(ThisHotkey, "Wheel") {
@@ -165,10 +181,13 @@ class HotkeyActions {
         Logger.Debug("HotkeyActions", actionName " 执行，key=" KeyForward.PureKeyName(ThisHotkey))
         delay := Integer(Config.ReadCustomFromIni(delayConfigKey))
         Critical
+        ; ESC 同帧竞态防护：ESC 也在拦截正则内（守卫热键绑定 ESC 时），物理松开的补发 up 与注入 down 同帧会丢失按下
+        GameKeys.MarkInjectedPress("Escape")
         Send "{ESC Down}"
         USleep(delay)
         GameKeys.SendDown("pauseBattle")
         USleep(50)
+        GameKeys.UnmarkInjectedPress("Escape")
         Send "{ESC Up}"
         GameKeys.SendUp("pauseBattle")
         Critical "Off"
@@ -449,15 +468,19 @@ class HotkeyActions {
     ; 返回上级菜单
     static ActionBack(ThisHotkey) {
         Logger.Debug("HotkeyActions", "ActionBack 执行，key=" KeyForward.PureKeyName(ThisHotkey))
+        ; ESC 同帧竞态防护：ESC 也在拦截正则内（守卫热键绑定 ESC 时），物理松开的补发 up 与注入 down 同帧会丢失按下
+        GameKeys.MarkInjectedPress("Escape")
         Send "{ESC Down}"
         ; 勾选"使用“返回上级菜单”放弃行动"时，ESC 后补发 battleLeftPopup（还原旧版放弃行动行为）
         if (Config.ReadImportantFromIni("BackCeaseOperations") = "1") {
             GameKeys.SendDown("battleLeftPopup")
             USleep(50)
+            GameKeys.UnmarkInjectedPress("Escape")
             Send "{ESC Up}"
             GameKeys.SendUp("battleLeftPopup")
         } else {
             USleep(50)
+            GameKeys.UnmarkInjectedPress("Escape")
             Send "{ESC Up}"
         }
         if InStr(ThisHotkey, "Wheel")
@@ -755,6 +778,7 @@ HotkeyActionsStart() {
     KeyForward.InterceptedKeys.CaseSense := false
     KeyForward.DownHandled.CaseSense := false
     KeyForward.SuppressUp.CaseSense := false
+    GameKeys.InjectedPressKeys.CaseSense := false
     TouchInjector.Init(3, 1)
 
     ; #289：Client 模式下 MouseGetPos 相对“当前活动窗口”，启动时可能是托盘菜单/资源管理器。
