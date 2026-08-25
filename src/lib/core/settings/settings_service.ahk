@@ -193,7 +193,7 @@ class SettingsService {
 
         ; 验证游戏路径（旧 GamePath + 按区服路径）
         pathsToValidate := [Config.GetImportant("GamePath")]
-        for serverId in ["CN", "JP", "KR", "EN"] {
+        for serverId in ServerProfile.Ids() {
             key := "GamePath" serverId
             value := Config.GetImportant(key)
             if (value != "")
