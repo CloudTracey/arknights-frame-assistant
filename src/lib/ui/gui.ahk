@@ -152,7 +152,9 @@ class GuiManager {
         A_TrayMenu.Delete
         A_TrayMenu.Add(I18n.T("打开设置界面"), (*) => this.Show())
         A_TrayMenu.Add(I18n.T("启用/禁用热键"), (*) => EventBus.Publish("HotkeyToggleRequested"))
-        A_TrayMenu.Add(I18n.T("重启小助手"), (*) => Reload())
+        ; 重启前先让出单例互斥体：Reload 的新进程会在旧进程退出前启动，
+        ; 若不释放会被单例识别误判为重复启动而弹窗退出
+        A_TrayMenu.Add(I18n.T("重启小助手"), (*) => (SingleInstance.Release(), Reload()))
         A_TrayMenu.Add(I18n.T("退出"), (*) => ExitApp())
         A_TrayMenu.Default := I18n.T("打开设置界面")
 
