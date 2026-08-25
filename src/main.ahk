@@ -1,11 +1,12 @@
 #Requires AutoHotkey v2.0
-#SingleInstance Ignore
+#SingleInstance Off
 #Warn All, Off
 
 ; 所有模块只定义、零顶层副作用；启动由下方 App.Bootstrap() 显式执行。
 #Include ./lib/base/logger.ahk
 #Include ./lib/base/version.ahk
 #Include ./lib/base/message_box.ahk
+#Include ./lib/base/single_instance.ahk
 #Include ./lib/base/token_protector.ahk
 #Include ./lib/base/hotkey_schema.ahk
 #Include ./lib/base/constants.ahk
@@ -96,10 +97,27 @@ class App {
 
         startedByGameAutoStart := HasLaunchArgument("--game-autostart")
 
+        ; ---- 单例识别（命名互斥体）----
+        if (!SingleInstance.Acquire()) {
+            ; 随游戏自动启动触发（--game-autostart）：旧实例正在运行并已接管游戏监控，本次静默退出。
+            ; （与旧版 #SingleInstance Ignore 行为一致：任务触发的新实例不打扰已运行实例）
+            if (HasLaunchArgument("--game-autostart")) {
+                OutputDebug("[AFA] 单例冲突：--game-autostart 触发时已有实例在运行，静默退出")
+                ExitApp
+            }
+            ; 手动重复启动：提示弹窗后退出。
+            ; 弹窗早于 SettingsService.Initialize()（用户配置尚未加载），先按用户配置语言初始化 i18n。
+            I18n.Init(Config.ReadImportantFromIni("Language"))
+            MessageBox.Info(I18n.T("已有一个AFA实例正在运行，请关闭旧实例再尝试启动新实例"), I18n.T("AFA已在运行"))
+            ExitApp
+        }
+
         ; ---- 提权 ----
         if not A_IsAdmin {
             try
             {
+                ; 让位互斥体：提权重启的新进程会重新 Acquire()，避免其启动时被误判为重复实例
+                SingleInstance.Release()
                 launchContextArgs := startedByGameAutoStart ? " --game-autostart" : ""
                 if A_IsCompiled
                     Run '*RunAs "' A_ScriptFullPath '" /restart' launchContextArgs

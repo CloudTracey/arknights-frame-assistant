@@ -152,7 +152,9 @@ class GuiManager {
         A_TrayMenu.Delete
         A_TrayMenu.Add(I18n.T("打开设置界面"), (*) => this.Show())
         A_TrayMenu.Add(I18n.T("启用/禁用热键"), (*) => EventBus.Publish("HotkeyToggleRequested"))
-        A_TrayMenu.Add(I18n.T("重启小助手"), (*) => Reload())
+        ; 重启前先让出单例互斥体：Reload 的新进程会在旧进程退出前启动，
+        ; 若不释放会被单例识别误判为重复启动而弹窗退出
+        A_TrayMenu.Add(I18n.T("重启小助手"), (*) => (SingleInstance.Release(), Reload()))
         A_TrayMenu.Add(I18n.T("退出"), (*) => ExitApp())
         A_TrayMenu.Default := I18n.T("打开设置界面")
 
@@ -382,8 +384,10 @@ class GuiManager {
 
         ; -- 卫戍协议 --
         ; 卫戍协议 - 左列（由 Schema 顺序生成，前半列）
+        ; 用 Floor 而非 Ceil 切分：项数为奇数时右列比左列多一行，空白占位/提示语锚定最后创建的控件
+        ; （右列末行 = 全局最低点），若左列多一行则提示语会与左列末行重叠；偶数项时两者结果相同。
         strongHoldItems := this._GetSchemaItems("strongHold")
-        strongHoldHalf := Ceil(strongHoldItems.Length / 2)
+        strongHoldHalf := Floor(strongHoldItems.Length / 2)
         bindColX := 0
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vStrongHoldProtocolLeftGroup", "")
         this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolLeftGroup"])
@@ -1219,7 +1223,7 @@ class GuiManager {
     static _BuildServerPathsText() {
         text := I18n.T("已识别区服路径：")
         found := false
-        for serverId in ["CN", "JP", "KR", "EN"] {
+        for serverId in ServerProfile.Ids() {
             path := Config.GetImportant("GamePath" serverId)
             if (path != "") {
                 text .= "`n" serverId ": " path

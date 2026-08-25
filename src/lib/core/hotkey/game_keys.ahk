@@ -52,28 +52,72 @@ class GameKeys {
         return ""
     }
 
-    ; 发送按键按下
+    ; ── 注入按下状态标记（与 KeyForward 透传协作） ──
+    ; 记录“该键的注入 key down 已发送、对应注入 key up 尚未发送”（值 = 发送时刻 A_TickCount）。
+    ; 用途：物理松开触发 Up 变体回调（KeyForward.ActionUpForward）时据此抑制补发——
+    ; 游戏每帧开头才轮询一次按键状态，若补发 up 与注入 down 落在同一画面帧内，下一帧轮询读到的是 up，
+    ; 该次注入的按下会被整次丢失（场景：游戏内技能键=AFA 一键技能键，同帧注入 down 与物理松开补发 up 碰撞）。
+    ; 仅当动作自管该键的完整按下（注入 down→up）时标记才生效；未注入的键（如 SwitchView 场景）无标记，
+    ; Up 变体照常补发，不影响失焦/拖出卡键修复。
+    static InjectedPressKeys := Map()
+
+    ; 内部：规范键名（与 KeyForward.PureKeyName 同语义：StrLower(GetKeyName(...))），保证与回调侧 pureKey 对表一致
+    static _NormalizeKey(key) {
+        if (key == "")
+            return ""
+        return StrLower(GetKeyName(key))
+    }
+
+    ; 标记该键的注入按下开始（SendDown 以及动作中直接 Send 注入键的场景共用）
+    static MarkInjectedPress(key) {
+        normalized := this._NormalizeKey(key)
+        if (normalized != "")
+            this.InjectedPressKeys[normalized] := A_TickCount
+    }
+
+    ; 标记该键的注入按下已结束（SendUp 发送前调用）
+    ; 顺序必须为“先清标记再发送”：注入 up 自身若被钩子捕获触发 Up 变体（SendEvent 降级路径），
+    ; 此时标记已清除故仍会补发，否则该注入 up 被吞且被抑制 → 游戏内该键卡在按下状态。
+    static UnmarkInjectedPress(key) {
+        normalized := this._NormalizeKey(key)
+        if (normalized != "" && this.InjectedPressKeys.Has(normalized))
+            this.InjectedPressKeys.Delete(normalized)
+    }
+
+    ; 查询：该键是否处于“注入按下未完成”窗口内（键名须已规范化）。
+    ; TTL 1 秒：注入 down→up 间隔正常情况下为数帧+50ms（帧时长与帧率设置绑定且掉帧会变长，仍远小于 1 秒），
+    ; 动作异常中断（Send 抛错未走到 SendUp）留下的陈旧标记自动过期，避免误抑制后续透传导致卡键。
+    static IsInjectedPressPending(pureKey) {
+        if (!this.InjectedPressKeys.Has(pureKey))
+            return false
+        return A_TickCount - this.InjectedPressKeys[pureKey] <= 1000
+    }
+
+    ; 发送按键按下（注入一律用 {Blind}：默认 Send 会为小写字母临时改写 CapsLock（SetStoreCapsLockMode
+    ; 默认开启）并释放-重注入物理按住的修饰键，导致大写锁定/按住 Shift 时注入的事件按“小写/无修饰”翻译，
+    ; 与用户物理状态不符；Blind 保持 CapsLock 与修饰键当前状态不变，注入即物理状态的忠实镜像）
     static SendDown(gameFunc) {
         key := this.Get(gameFunc)
-        if (key != "")
-            Send "{" key " Down}"
+        if (key != "") {
+            this.MarkInjectedPress(key)
+            Send "{Blind}{" key " Down}"
+        }
     }
 
-    ; 发送按键释放
+    ; 发送按键释放（先清注入标记再发送，理由见 UnmarkInjectedPress 注释）
     static SendUp(gameFunc) {
         key := this.Get(gameFunc)
-        if (key != "")
-            Send "{" key " Up}"
+        if (key != "") {
+            this.UnmarkInjectedPress(key)
+            Send "{Blind}{" key " Up}"
+        }
     }
 
-    ; 发送完整点击（Down → 延迟 → Up），仅用于单键场景
+    ; 发送完整点击（Down → 延迟 → Up），仅用于单键场景；复用 SendDown/SendUp 以保证注入标记与 {Blind} 语义一致
     static Tap(gameFunc, delay := 50) {
-        key := this.Get(gameFunc)
-        if (key != "") {
-            Send "{" key " Down}"
-            USleep(delay)
-            Send "{" key " Up}"
-        }
+        this.SendDown(gameFunc)
+        USleep(delay)
+        this.SendUp(gameFunc)
     }
 
     ; 返回拦截正则字符串，供 hotkey_service.ahk 使用。

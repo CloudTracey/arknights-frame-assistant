@@ -1,6 +1,7 @@
 class LocaleEnUS {
     static Data := Map(
         "国服", "CN Server",
+        "哔哩哔哩服", "Bilibili Server",
         "日服", "JP Server",
         "韩服", "KR Server",
         "国际服", "International Server",
@@ -94,6 +95,7 @@ class LocaleEnUS {
         "GitHub Token", "GitHub Token",
         "游戏路径", "Game Path",
         "国服游戏路径", "CN Game Path",
+        "哔哩哔哩服游戏路径", "Bilibili Game Path",
         "日服游戏路径", "JP Game Path",
         "韩服游戏路径", "KR Game Path",
         "国际服游戏路径", "International Game Path",
@@ -427,5 +429,7 @@ class LocaleEnUS {
         "click 坐标需为 0-1 之间、最多 4 位小数", "click coordinates must be within 0-1 with at most 4 decimal places",
         "无法识别的功能：{1}", "Unrecognized function: {1}",
         "自定义按键「{1}」：`n{2}", "Custom key \`"{1}\`":`n{2}",
+        "已有一个AFA实例正在运行，请关闭旧实例再尝试启动新实例", "An AFA instance is already running. Please close the existing instance and try again.",
+        "AFA已在运行", "AFA is already running",
     )
 }

@@ -27,6 +27,7 @@ class Config {
         "GitHubToken", "",
         "GamePath", "",
         "GamePathCN", "",
+        "GamePathBILI", "",
         "GamePathJP", "",
         "GamePathKR", "",
         "GamePathEN", "",
@@ -447,7 +448,7 @@ class Config {
         }
     }
 
-    ; 将旧版单一 GamePath 静默迁移到按区服路径（GamePathCN/JP/KR/EN）。
+    ; 将旧版单一 GamePath 静默迁移到按区服路径（GamePathCN/BILI/JP/KR/EN）。
     ; GamePath 保留为默认启动路径镜像，不删除。
     static MigrateGamePaths() {
         if this.IniFile = ""

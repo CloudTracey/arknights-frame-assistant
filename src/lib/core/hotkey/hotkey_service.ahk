@@ -206,7 +206,8 @@ class HotkeyService {
         "StrongHoldProtocolRetreat", HotkeyActions.ActionStrongHoldProtocolRetreat.Bind(HotkeyActions),
         "StrongHoldProtocolOneClickRetreat", HotkeyActions.ActionStrongHoldProtocolOneClickRetreat.Bind(HotkeyActions),
         "OneClickSell", HotkeyActions.ActionOneClickSell.Bind(HotkeyActions),
-        "OneClickPurchase", HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions)
+        "OneClickPurchase", HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions),
+        "StrongHoldProtocolBack", HotkeyActions.ActionBack.Bind(HotkeyActions)
     )
 
     ; 热键回调映射表（由 HotkeySchema.Items + ActionBindings 自动生成）
@@ -272,6 +273,7 @@ class HotkeyService {
         KeyForward.DownHandled.Clear()  ; 重建前清空运行时标记（保留 CaseSense）
         KeyForward.SuppressUp.Clear()
         KeyForward.InterceptedKeys.Clear()
+        GameKeys.InjectedPressKeys.Clear()
         HotIf(HotkeyContext)
         pattern := GameKeys.GetInterceptPattern()
         for keyVar, _ in Constants.KeyNames {
@@ -302,6 +304,7 @@ class HotkeyService {
         KeyForward.DownHandled.Clear()
         KeyForward.SuppressUp.Clear()
         KeyForward.InterceptedKeys.Clear()
+        GameKeys.InjectedPressKeys.Clear()
         HotIf
         if !silent
             Logger.Info("Hotkey", "热键已禁用")
