@@ -1,5 +1,5 @@
 #Requires AutoHotkey v2.0
-#SingleInstance Ignore
+#SingleInstance Off
 #Warn All, Off
 
 ; 所有模块只定义、零顶层副作用；启动由下方 App.Bootstrap() 显式执行。
@@ -72,6 +72,9 @@ HasLaunchArgument(argument) {
 }
 
 class App {
+    ; 单例互斥体句柄：进程存活期间需持有引用，保证互斥体一直存在（进程退出时由 OS 自动释放，无需手动关闭）
+    static SingletonMutex := 0
+
     static Bootstrap() {
         ; ---- 环境初始化 ----
         ListLines False
@@ -95,6 +98,16 @@ class App {
         OnExit HandleAfaExit
 
         startedByGameAutoStart := HasLaunchArgument("--game-autostart")
+
+        ; ---- 单例识别（命名互斥体）----
+        ; CreateMutexW 返回 NULL（如跨完整性级别被拒）或 GetLastError=183（ERROR_ALREADY_EXISTS）
+        ; 都视为已有实例。与可执行文件名无关：编译版（AFA.exe）/ 未编译版（AutoHotkey*.exe）行为一致。
+        App.SingletonMutex := DllCall("CreateMutexW", "Ptr", 0, "Int", 0
+            , "WStr", "ArknightsFrameAssistant-Singleton", "Ptr")
+        if (!App.SingletonMutex || DllCall("GetLastError") = 183) {
+            MsgBox "已有一个AFA实例正在运行，请关闭旧实例再尝试启动新实例", "AFA已在运行"
+            ExitApp
+        }
 
         ; ---- 提权 ----
         if not A_IsAdmin {
