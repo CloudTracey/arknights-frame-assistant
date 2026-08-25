@@ -9,6 +9,7 @@
 #Include ../../src/lib/base/logger.ahk
 #Include ../../src/lib/base/version.ahk
 #Include ../../src/lib/base/message_box.ahk
+#Include ../../src/lib/base/single_instance.ahk
 #Include ../../src/lib/base/token_protector.ahk
 #Include ../../src/lib/base/hotkey_schema.ahk
 #Include ../../src/lib/base/constants.ahk
