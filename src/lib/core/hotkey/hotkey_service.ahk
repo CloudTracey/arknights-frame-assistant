@@ -206,7 +206,8 @@ class HotkeyService {
         "StrongHoldProtocolRetreat", HotkeyActions.ActionStrongHoldProtocolRetreat.Bind(HotkeyActions),
         "StrongHoldProtocolOneClickRetreat", HotkeyActions.ActionStrongHoldProtocolOneClickRetreat.Bind(HotkeyActions),
         "OneClickSell", HotkeyActions.ActionOneClickSell.Bind(HotkeyActions),
-        "OneClickPurchase", HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions)
+        "OneClickPurchase", HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions),
+        "StrongHoldProtocolBack", HotkeyActions.ActionBack.Bind(HotkeyActions)
     )
 
     ; 热键回调映射表（由 HotkeySchema.Items + ActionBindings 自动生成）
