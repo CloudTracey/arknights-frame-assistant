@@ -105,7 +105,9 @@ class App {
         App.SingletonMutex := DllCall("CreateMutexW", "Ptr", 0, "Int", 0
             , "WStr", "ArknightsFrameAssistant-Singleton", "Ptr")
         if (!App.SingletonMutex || DllCall("GetLastError") = 183) {
-            MsgBox "已有一个AFA实例正在运行，请关闭旧实例再尝试启动新实例", "AFA已在运行"
+            ; 弹窗早于 SettingsService.Initialize()（用户配置尚未加载），先按用户配置语言初始化 i18n。
+            I18n.Init(Config.ReadImportantFromIni("Language"))
+            MessageBox.Info(I18n.T("已有一个AFA实例正在运行，请关闭旧实例再尝试启动新实例"), I18n.T("AFA已在运行"))
             ExitApp
         }
 
