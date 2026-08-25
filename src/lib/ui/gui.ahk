@@ -1219,7 +1219,7 @@ class GuiManager {
     static _BuildServerPathsText() {
         text := I18n.T("已识别区服路径：")
         found := false
-        for serverId in ["CN", "JP", "KR", "EN"] {
+        for serverId in ServerProfile.Ids() {
             path := Config.GetImportant("GamePath" serverId)
             if (path != "") {
                 text .= "`n" serverId ": " path
