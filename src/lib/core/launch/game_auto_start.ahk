@@ -77,12 +77,12 @@ class GameAutoStartManager {
         return this.Disable()
     }
 
-    ; 获取当前配置的全部游戏路径（GamePath + GamePathCN/JP/KR/EN），用于随游戏自启
+    ; 获取当前配置的全部游戏路径（GamePath + 各区服 GamePath*），用于随游戏自启
     static GetConfiguredGamePaths() {
         result := []
         seen := Map()
         candidates := [Config.GetImportant("GamePath")]
-        for serverId in ["CN", "JP", "KR", "EN"]
+        for serverId in ServerProfile.Ids()
             candidates.Push(Config.GetImportant("GamePath" serverId))
         for path in candidates {
             if (path = "")

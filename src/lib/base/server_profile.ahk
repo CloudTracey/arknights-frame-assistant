@@ -9,9 +9,14 @@ class ServerProfile {
     static ExeName := "Arknights.exe"
 
     ; 内置区服元数据表。
-    ; DirectoryHint 仅用于 app.info 缺失时的宽松回退。
+    ; DirectoryHint 用于目录特征识别（也是 CN/BILI 区分的唯一手段）与无进程时按特征扫描。
+    ; ScanPaths（可选）表示 <安装父目录>\<该路径> 形态的可执行文件候选路径，
+    ; 默认为 <DirectoryHint>\Arknights.exe；BILI（哔哩哔哩渠道客户端）布局特殊，需要覆盖。
+    ; BILI 与 CN 共享 company/product（HyperGryph\Arknights），因而注册表根与
+    ; 游戏内按键设置完全相同（两者互通），仅安装目录特征不同。
     static Profiles := Map(
         "CN", {Id: "CN", DisplayNameKey: "国服", Company: "HyperGryph", Product: "Arknights", DirectoryHint: "Arknights Game", Locale: "zh-CN"},
+        "BILI", {Id: "BILI", DisplayNameKey: "哔哩哔哩服", Company: "HyperGryph", Product: "Arknights", DirectoryHint: "Arknights bilibili", Locale: "zh-CN", ScanPaths: ["Arknights bilibili\games\Arknights\Arknights.exe"]},
         "JP", {Id: "JP", DisplayNameKey: "日服", Company: "Yostar", Product: "Arknights_JP", DirectoryHint: "Arknights_JP", Locale: "ja-JP"},
         "KR", {Id: "KR", DisplayNameKey: "韩服", Company: "Yostar", Product: "Arknights_KR", DirectoryHint: "Arknights_KR", Locale: "ko-KR"},
         "EN", {Id: "EN", DisplayNameKey: "国际服", Company: "Yostar", Product: "Arknights_EN", DirectoryHint: "Arknights_EN", Locale: "en-US"}
@@ -34,7 +39,12 @@ class ServerProfile {
 
     ; 从可执行文件完整路径推断区服。
     ; 返回对象：{serverId, company, product, registryRoot, source}
-    ; 权威来源是 <exeDir>\Arknights_Data\app.info；失败后依次走目录特征。
+    ; 识别顺序：
+    ;  1. 安装目录特征（权威）：CN 与 BILI 共享 company/product，app.info 完全相同，
+    ;     只有目录特征能区分渠道；其余区服的目录特征与 app.info 结果一致，先查不影响结论。
+    ;  2. app.info（兜底）：目录被移动/重命名后仍可识别；命中 CN 的 app.info 与 BILI 语义等价
+    ;     （共享注册表根与按键设置）。
+    ;  3. 注册表存在性：某服注册表根下存在 KEYBOARD_SETTING_V* 时优先。
     static FromExePath(exePath) {
         if (exePath = "")
             return this._Unknown("", "")
@@ -43,7 +53,20 @@ class ServerProfile {
         if (StrLower(fileName) != "arknights.exe")
             exeDir := exePath  ; 调用方可能直接传入游戏目录
 
-        ; 1. app.info 权威识别
+        ; 1. 安装目录特征（BILI 与 CN 共用 app.info，必须先于 app.info 判定）
+        for serverId, profile in this.Profiles {
+            if (profile.DirectoryHint != "" && InStr(exeDir, profile.DirectoryHint, false)) {
+                return {
+                    serverId: serverId,
+                    company: profile.Company,
+                    product: profile.Product,
+                    registryRoot: "HKCU\Software\" profile.Company "\" profile.Product,
+                    source: "directory_hint"
+                }
+            }
+        }
+
+        ; 2. app.info 权威识别（目录被移动/重命名后的兜底）
         appInfo := this._ReadAppInfo(exeDir)
         if (appInfo.company != "" && appInfo.product != "") {
             for serverId, profile in this.Profiles {
@@ -65,19 +88,6 @@ class ServerProfile {
                 product: appInfo.product,
                 registryRoot: "HKCU\Software\" appInfo.company "\" appInfo.product,
                 source: "app_info_unknown"
-            }
-        }
-
-        ; 2. 目录特征回退
-        for serverId, profile in this.Profiles {
-            if (profile.DirectoryHint != "" && InStr(exeDir, profile.DirectoryHint, false)) {
-                return {
-                    serverId: serverId,
-                    company: profile.Company,
-                    product: profile.Product,
-                    registryRoot: "HKCU\Software\" profile.Company "\" profile.Product,
-                    source: "directory_hint"
-                }
             }
         }
 
@@ -121,7 +131,8 @@ class ServerProfile {
     }
 
     ; 在不启动游戏的情况下，按已知目录特征扫描常见位置，返回 serverId → exePath。
-    ; 目录特征：CN=Arknights Game，JP/KR/EN=Arknights_JP|KR|EN。
+    ; 目录特征：CN=Arknights Game，BILI=Arknights bilibili（games\Arknights 子目录布局），
+    ; JP/KR/EN=Arknights_JP|KR|EN。
     static FindInstalledPaths() {
         result := Map()
         for serverId in this.Ids() {
@@ -154,21 +165,30 @@ class ServerProfile {
                 return legacy
         }
 
+        ; 可执行文件相对安装父目录的候选路径。
+        ; 默认 "<DirectoryHint>\Arknights.exe"；BILI 渠道布局为
+        ; <Arknights bilibili>\games\Arknights\Arknights.exe，由 ScanPaths 覆盖。
+        scanPaths := profile.HasOwnProp("ScanPaths") ? profile.ScanPaths : [dirName "\Arknights.exe"]
+
         for drive in this._FixedDriveLetters() {
             root := drive ":\"
             ; 直接位于盘符根目录，例如 E:\Arknights Game\Arknights.exe
-            candidate := root dirName "\Arknights.exe"
-            if FileExist(candidate)
-                return candidate
+            for scanPath in scanPaths {
+                candidate := root scanPath
+                if FileExist(candidate)
+                    return candidate
+            }
 
             ; 常见启动器/安装目录
             for parent in ["YostarGames", "Hypergryph Launcher"] {
-                candidate := root parent "\" dirName "\Arknights.exe"
-                if FileExist(candidate)
-                    return candidate
-                candidate := root parent "\games\" dirName "\Arknights.exe"
-                if FileExist(candidate)
-                    return candidate
+                for scanPath in scanPaths {
+                    candidate := root parent "\" scanPath
+                    if FileExist(candidate)
+                        return candidate
+                    candidate := root parent "\games\" scanPath
+                    if FileExist(candidate)
+                        return candidate
+                }
             }
         }
         return ""
