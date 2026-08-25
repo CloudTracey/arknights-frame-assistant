@@ -93,6 +93,7 @@ Welcome to **Arknights Frame Assistant** (AFA), a small Windows utility for impr
 | One-click Retreat | Select and retreat the unit under the mouse cursor |
 | One-click Sell/Destroy | Select and sell/destroy the unit under the cursor |
 | One-click Purchase | Double-click to purchase the unit under the cursor |
+| Back to Previous Menu | Return to the previous menu |
 
 > **Note:** Stronghold Protocol is mutually exclusive with Combat and Quick Actions. Their hotkeys are disabled while the Stronghold Protocol page is active.
 
@@ -131,6 +132,7 @@ Supported default bindings:
 | Refresh | D | Left Click | None |
 | Retreat Unit | Q | One-click Retreat | None |
 | One-click Sell/Destroy | None | One-click Purchase | None |
+| Back to Previous Menu | None | | |
 
 - Most keyboard keys are supported.
 - Mouse buttons other than left click are supported, including the wheel and side buttons.

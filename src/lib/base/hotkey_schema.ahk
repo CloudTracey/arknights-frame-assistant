@@ -43,7 +43,8 @@ class HotkeySchema {
         {id: "StrongHoldProtocolRetreat", nameKey: "单位撤退", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "StrongHoldProtocolOneClickRetreat", nameKey: "一键撤退", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "OneClickSell", nameKey: "一键出售/销毁", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
-        {id: "OneClickPurchase", nameKey: "一键购买", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false}
+        {id: "OneClickPurchase", nameKey: "一键购买", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
+        {id: "StrongHoldProtocolBack", nameKey: "返回上级菜单", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false}
     ]
 
     ; 获取热键的 id -> nameKey 映射（等价 Constants.KeyNames）

@@ -384,8 +384,10 @@ class GuiManager {
 
         ; -- 卫戍协议 --
         ; 卫戍协议 - 左列（由 Schema 顺序生成，前半列）
+        ; 用 Floor 而非 Ceil 切分：项数为奇数时右列比左列多一行，空白占位/提示语锚定最后创建的控件
+        ; （右列末行 = 全局最低点），若左列多一行则提示语会与左列末行重叠；偶数项时两者结果相同。
         strongHoldItems := this._GetSchemaItems("strongHold")
-        strongHoldHalf := Ceil(strongHoldItems.Length / 2)
+        strongHoldHalf := Floor(strongHoldItems.Length / 2)
         bindColX := 0
         this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vStrongHoldProtocolLeftGroup", "")
         this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolLeftGroup"])
