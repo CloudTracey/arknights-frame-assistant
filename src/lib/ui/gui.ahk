@@ -617,18 +617,18 @@ class GuiManager {
 
         ; 识别游戏路径
         this.BtnCheckGamePath := this.MainGui.Add("Button", "xs y+12 w" Max(this.BtnW, Metrics.TextWidth(I18n.T("识别游戏路径")) + 14) " h24", I18n.T("识别游戏路径"))
-        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", I18n.T("可同时识别所有区服的路径"))
+        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", I18n.T("可同时识别所有区服的路径，若识别不到可以先启动游戏再识别"))
         this.BtnCheckGamePath.OnEvent("Click", (*) => EventBus.Publish("CheckGamePathClick"))
-        StatusBarHints.Register(this.BtnCheckGamePath, "自动识别未填写区服的游戏安装路径")
+        StatusBarHints.Register(this.BtnCheckGamePath, "自动识别本机的游戏安装路径")
         this.LaunchControls.Push(this.BtnCheckGamePath)
         this.LaunchControls.Push(hintGamePath)
 
         ; 游戏路径
-        txtGamePath := this.MainGui.Add("Text", "xs y+10 h24", I18n.T(" 游戏路径: "))
-        editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w462 h20 vGamePath -Multi +0x1", Config.GetImportant(
+        txtGamePath := this.MainGui.Add("Text", "xs y+10 h24", I18n.T(" 随AFA启动游戏路径: "))
+        editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w403 h20 vGamePath -Multi +0x1", Config.GetImportant(
             "GamePath"))
         editGamePath.OnEvent("Change", (*) => this.TrackChange("GamePath"))
-        StatusBarHints.Register(editGamePath, "游戏安装路径：可手动输入，或点击「识别游戏路径」自动填入")
+        StatusBarHints.Register(editGamePath, "随AFA启动的游戏路径，可手动输入，或点击「识别游戏路径」自动填入")
         this.LaunchControls.Push(txtGamePath)
         this.LaunchControls.Push(editGamePath)
 
