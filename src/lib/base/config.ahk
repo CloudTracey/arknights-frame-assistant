@@ -450,14 +450,24 @@ class Config {
 
     ; 将旧版单一 GamePath 静默迁移到按区服路径（GamePathCN/BILI/JP/KR/EN）。
     ; GamePath 保留为默认启动路径镜像，不删除。
+    ; 同时自愈误识别残留：区服键保存的路径经识别为其它已知区服时，迁移到正确键并清空原键。
     static MigrateGamePaths() {
         if this.IniFile = ""
             this.InitPath()
         if !FileExist(this.IniFile)
             return
 
+        ; 自愈误识别残留（先于旧版 GamePath 迁移执行）
+        for serverId in ServerProfile.Ids() {
+            this._ReconcileMisidentifiedPath(serverId)
+        }
+
         legacy := IniRead(this.IniFile, "Main", "GamePath", "")
         if (legacy = "")
+            return
+        ; 旧版路径迁移守卫：不存在的路径不做区服推断/搬运（保存时已有严格校验兜底），
+        ; 避免把坏路径复制到 GamePath<Id> 扩散
+        if !FileExist(legacy)
             return
 
         info := ServerProfile.FromExePath(legacy)
@@ -484,6 +494,33 @@ class Config {
             } catch Error as e {
                 Logger.Warn("Config", "写入 PreferredServer 失败：" e.Message)
             }
+        }
+    }
+
+    ; 校验单个区服键保存的路径与识别结果是否一致；不一致时迁移到正确键并清空原键。
+    ; 仅处理真实存在且能识别为其它已知区服的路径。
+    static _ReconcileMisidentifiedPath(serverId) {
+        key := "GamePath" serverId
+        path := IniRead(this.IniFile, "Main", key, "")
+        if (path = "" || !FileExist(path))
+            return
+        info := ServerProfile.FromExePath(path)
+        if (info.serverId = "" || info.serverId = "Unknown" || info.serverId = serverId)
+            return
+
+        correctKey := "GamePath" info.serverId
+        try {
+            if (IniRead(this.IniFile, "Main", correctKey, "") = "") {
+                IniWrite(path, this.IniFile, "Main", correctKey)
+                if (this._ImportantSettings.Has(correctKey))
+                    this._ImportantSettings[correctKey] := path
+            }
+            IniDelete(this.IniFile, "Main", key)
+            if (this._ImportantSettings.Has(key))
+                this._ImportantSettings[key] := ""
+            Logger.Info("Config", "误识别路径已迁移：" key " -> " correctKey "（路径：" path "）")
+        } catch Error as e {
+            Logger.Warn("Config", "迁移误识别路径失败（" key "）：" e.Message)
         }
     }
 
