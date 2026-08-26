@@ -8,19 +8,23 @@ class ServerProfile {
     ; 所有区服客户端可执行文件名相同（事实基线）
     static ExeName := "Arknights.exe"
 
-    ; 内置区服元数据表。
-    ; DirectoryHint 用于目录特征识别（也是 CN/BILI 区分的唯一手段）与无进程时按特征扫描。
-    ; ScanPaths（可选）表示 <安装父目录>\<该路径> 形态的可执行文件候选路径，
-    ; 默认为 <DirectoryHint>\Arknights.exe；BILI（哔哩哔哩渠道客户端）布局特殊，需要覆盖。
-    ; BILI 与 CN 共享 company/product（HyperGryph\Arknights），因而注册表根与
-    ; 游戏内按键设置完全相同（两者互通），仅安装目录特征不同。
+    ; 内置区服元数据表（仅用于按 id 查找，不要用它推导枚举顺序）。
+    ; AHK v2 Map 的 for 枚举顺序是哈希序而非插入序（实测 BILI/CN/EN/JP/KR 乱序），
+    ; 因此所有需要顺序的遍历必须走 Order（CN 优先：CN 与 BILI 共享 company/product，
+    ; 兜底匹配时默认展示为官服）。
+    ; DirectoryHint 用于目录特征识别；ScanPaths 用于无进程时按特征扫描（相对安装父目录）。
     static Profiles := Map(
-        "CN", {Id: "CN", DisplayNameKey: "国服", Company: "HyperGryph", Product: "Arknights", DirectoryHint: "Arknights Game", Locale: "zh-CN"},
+        "CN", {Id: "CN", DisplayNameKey: "国服", Company: "HyperGryph", Product: "Arknights", DirectoryHint: "Arknights Game", Locale: "zh-CN", ScanPaths: ["Arknights Game\Arknights.exe", "games\Arknights\Arknights.exe"]},
         "BILI", {Id: "BILI", DisplayNameKey: "哔哩哔哩服", Company: "HyperGryph", Product: "Arknights", DirectoryHint: "Arknights bilibili", Locale: "zh-CN", ScanPaths: ["Arknights bilibili\games\Arknights\Arknights.exe"]},
         "JP", {Id: "JP", DisplayNameKey: "日服", Company: "Yostar", Product: "Arknights_JP", DirectoryHint: "Arknights_JP", Locale: "ja-JP"},
         "KR", {Id: "KR", DisplayNameKey: "韩服", Company: "Yostar", Product: "Arknights_KR", DirectoryHint: "Arknights_KR", Locale: "ko-KR"},
         "EN", {Id: "EN", DisplayNameKey: "国际服", Company: "Yostar", Product: "Arknights_EN", DirectoryHint: "Arknights_EN", Locale: "en-US"}
     )
+
+    ; 区服优先级/枚举序（新增区服必须同步登记到此处与 Profiles）。
+    ; CN 优先于 BILI：两者共享 company/product 与注册表根，兜底时默认展示为官服；
+    ; BILI 安装目录必然含 "Arknights bilibili"，由目录特征先行命中，不冲突。
+    static Order := ["CN", "BILI", "JP", "KR", "EN"]
 
     ; 按 serverId 获取元数据；不存在返回 ""
     static Get(serverId) {
@@ -29,10 +33,11 @@ class ServerProfile {
         return ""
     }
 
-    ; 已知区服 id 列表（保持表顺序）
+    ; 已知区服 id 列表（显式顺序；不要用 for 迭代 Profiles Map 推导顺序——
+    ; AHK v2 Map 枚举顺序是哈希序而非插入序，见 Order 注释）
     static Ids() {
         result := []
-        for id, _ in this.Profiles
+        for id in this.Order
             result.Push(id)
         return result
     }
@@ -53,8 +58,9 @@ class ServerProfile {
         if (StrLower(fileName) != "arknights.exe")
             exeDir := exePath  ; 调用方可能直接传入游戏目录
 
-        ; 1. 安装目录特征（BILI 与 CN 共用 app.info，必须先于 app.info 判定）
-        for serverId, profile in this.Profiles {
+        ; 1. 安装目录特征（BILI 与 CN 共用 app.info，目录特征先行；按 Order 显式顺序遍历）
+        for serverId in this.Order {
+            profile := this.Get(serverId)
             if (profile.DirectoryHint != "" && InStr(exeDir, profile.DirectoryHint, false)) {
                 return {
                     serverId: serverId,
@@ -66,10 +72,11 @@ class ServerProfile {
             }
         }
 
-        ; 2. app.info 权威识别（目录被移动/重命名后的兜底）
+        ; 2. app.info 权威识别（目录被移动/重命名后的兜底；按 Order 显式顺序匹配）
         appInfo := this._ReadAppInfo(exeDir)
         if (appInfo.company != "" && appInfo.product != "") {
-            for serverId, profile in this.Profiles {
+            for serverId in this.Order {
+                profile := this.Get(serverId)
                 if (StrLower(profile.Company) = StrLower(appInfo.company)
                     && StrLower(profile.Product) = StrLower(appInfo.product)) {
                     return {
@@ -91,9 +98,10 @@ class ServerProfile {
             }
         }
 
-        ; 3. 注册表存在性：某服注册表根下有 KEYBOARD_SETTING_V* 时优先
-        for serverId, profile in this.Profiles {
+        ; 3. 注册表存在性：某服注册表根下有 KEYBOARD_SETTING_V* 时优先（同样按 Order；与 CN 同根时 CN 优先）
+        for serverId in this.Order {
             if (this._RegistryHasKeyboardSetting(serverId)) {
+                profile := this.Get(serverId)
                 return {
                     serverId: serverId,
                     company: profile.Company,
@@ -131,8 +139,8 @@ class ServerProfile {
     }
 
     ; 在不启动游戏的情况下，按已知目录特征扫描常见位置，返回 serverId → exePath。
-    ; 目录特征：CN=Arknights Game，BILI=Arknights bilibili（games\Arknights 子目录布局），
-    ; JP/KR/EN=Arknights_JP|KR|EN。
+    ; 目录特征：CN=Arknights Game / games\Arknights（Hypergryph Launcher 布局），
+    ; BILI=Arknights bilibili（games\Arknights 子目录布局），JP/KR/EN=Arknights_JP|KR|EN。
     static FindInstalledPaths() {
         result := Map()
         for serverId in this.Ids() {
