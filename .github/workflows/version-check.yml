@@ -1,0 +1,42 @@
+name: version-check
+
+# 在 PR 合入发布分支（main/alpha/beta）前，检查版本号是否与已有 Release 重复，
+# 避免忘记提升版本号导致发布重复版本。
+on:
+  pull_request:
+    branches: [main, alpha, beta]
+
+permissions:
+  contents: read
+
+jobs:
+  version-bump-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Fetch existing versions from Releases and tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/releases \
+            --paginate \
+            --jq '.[].tag_name' \
+            > /tmp/existing_versions.txt
+          gh api repos/${{ github.repository }}/tags \
+            --paginate \
+            --jq '.[].name' \
+            >> /tmp/existing_versions.txt
+          echo "已收集版本号数量: $(sort -u /tmp/existing_versions.txt | wc -l)"
+
+      - name: Check current version is not a duplicate
+        run: |
+          python3 .github/scripts/check_version_bump.py \
+            --version-file src/lib/base/version.ahk \
+            --existing-versions /tmp/existing_versions.txt

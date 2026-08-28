@@ -75,11 +75,13 @@ class I18n {
         if !this._Locales.Has(localeId)
             return ""
         cls := this._Locales[localeId]
-        ; 资源表按 Data → Data2 顺序查找（Data2 存放超出 AHK 单条静态声明上限的键）
+        ; 资源表按 Data → Data2 → Data3 顺序查找（Data2/Data3 存放超出 AHK 单条静态声明上限的键）
         if cls.HasOwnProp("Data") && cls.Data.Has(key)
             return cls.Data[key]
         if cls.HasOwnProp("Data2") && cls.Data2.Has(key)
             return cls.Data2[key]
+        if cls.HasOwnProp("Data3") && cls.Data3.Has(key)
+            return cls.Data3[key]
         return ""
     }
 

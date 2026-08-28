@@ -137,13 +137,14 @@ class LevelDetector {
     ; 匹配单个对象：在区域内 PixelSearch 检测任一目标颜色（任一命中即算对象命中）
     ; 区域用相对比例定位（LX/RX = ww 比例，UY/DY = wh 比例），不依赖模板尺寸
     ; 低分辨率（长或宽任一 < 1600×900）时关卡内文本容差放宽到 20（低分辨率下文本更模糊，需更大容差）
+    ; 走 SafePixelSearch：窗口/桌面不可用（区域在可见桌面外、副屏断开等）时按未命中处理，不抛 OSError
     static _MatchObject(obj, ww, wh) {
         LX := ww * obj.LX, RX := ww * obj.RX, UY := wh * obj.UY, DY := wh * obj.DY
         for color in obj.Colors {
             v := color.V
             if (obj.Name = "TextInLevel" && (ww < 1600 || wh < 900))
                 v := Max(v, 20)
-            if PixelSearch(&FoundX, &FoundY, LX, UY, RX, DY, color.C, v)
+            if SafePixelSearch(&FoundX, &FoundY, LX, UY, RX, DY, color.C, v)
                 return true
         }
         return false

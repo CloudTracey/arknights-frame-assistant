@@ -193,7 +193,7 @@ class SettingsService {
 
         ; 验证游戏路径（旧 GamePath + 按区服路径）
         pathsToValidate := [Config.GetImportant("GamePath")]
-        for serverId in ["CN", "JP", "KR", "EN"] {
+        for serverId in ServerProfile.Ids() {
             key := "GamePath" serverId
             value := Config.GetImportant(key)
             if (value != "")
@@ -203,23 +203,19 @@ class SettingsService {
             if (gamePath = "")
                 continue
             if !FileExist(gamePath) {
-                result := MessageBox.Confirm(I18n.T("游戏路径不存在：`n{1}`n`n是否仍要保存？", gamePath), I18n.T("路径不存在"))
-                if (result = "No") {
-                    Logger.Warn("Settings", "保存中止：游戏路径不存在")
-                    return false
-                }
-                continue
+                ; 严格拒绝：不存在的路径不落盘（需修正后再次保存）
+                MessageBox.Error(I18n.T("游戏路径不存在：`n{1}`n`n请修正路径后再保存。", gamePath), I18n.T("路径不存在"))
+                Logger.Warn("Settings", "保存中止：游戏路径不存在：" gamePath)
+                return false
             }
             info := ServerProfile.FromExePath(gamePath)
-            if (info.serverId = "") {
-                result := MessageBox.Confirm(I18n.T("游戏路径不正确：`n{1}`n`n目标文件不是 Arknights.exe，请确保选择正确的游戏可执行文件。`n`n是否仍要保存？", gamePath), I18n.T("路径不正确"))
-                if (result = "No") {
-                    Logger.Warn("Settings", "保存中止：无法从路径推断区服")
-                    return false
-                }
-            } else {
-                Logger.Info("Settings", "游戏路径区服识别：" info.serverId " - " gamePath)
+            if (info.serverId = "" || info.serverId = "Unknown") {
+                ; 严格拒绝：无法确认是明日方舟可执行文件时不落盘
+                MessageBox.Error(I18n.T("游戏路径不正确：`n{1}`n`n目标文件不是明日方舟可执行文件（Arknights.exe），请修正后再保存。", gamePath), I18n.T("路径不正确"))
+                Logger.Warn("Settings", "保存中止：无法从路径推断区服：" gamePath)
+                return false
             }
+            Logger.Info("Settings", "游戏路径区服识别：" info.serverId " - " gamePath)
         }
 
         ; 应用“启动游戏时自动启动小助手”设置
