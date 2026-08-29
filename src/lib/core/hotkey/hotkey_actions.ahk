@@ -65,8 +65,24 @@ class KeyForward {
         if (pureKey == "")
             return
         ; 滚轮：无 down/up 状态，直接发送完整事件
+        ; 注入改用原生 mouse_event：AHK Send 注入的滚轮事件带 KEY_IGNORE_LEVEL(0) 标记（0xFFC3D44D），
+        ; 部分用户环境的输入监听组件会对此标记做出响应（如系统提示音）；mouse_event 走同一输入队列
+        ; 但无该标记，且 {Blind} 语义天然满足（不触碰修饰键状态，不夺焦点）。
         if InStr(pureKey, "Wheel") {
-            Send "{Blind}{" pureKey "}"
+            hw := 0
+            if (pureKey = "WheelUp")
+                hw := 0x0800, delta := 120
+            else if (pureKey = "WheelDown")
+                hw := 0x0800, delta := -120
+            else if (pureKey = "WheelLeft")
+                hw := 0x1000, delta := -120  ; MOUSEEVENTF_HWHEEL，负值=向左
+            else if (pureKey = "WheelRight")
+                hw := 0x1000, delta := 120   ; MOUSEEVENTF_HWHEEL，正值=向右
+            else {
+                Logger.Warn("KeyForward", "不支持的滚轮透传键：" pureKey)
+                return
+            }
+            DllCall("user32\mouse_event", "UInt", hw, "UInt", 0, "UInt", 0, "Int", delta, "Ptr", 0)
             return
         }
         if isUp {
