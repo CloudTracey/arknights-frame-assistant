@@ -62,9 +62,9 @@ class KeyForward {
             else if (pureKey = "WheelDown")
                 hw := 0x0800, delta := -120
             else if (pureKey = "WheelLeft")
-                hw := 0x0100, delta := -120
+                hw := 0x1000, delta := -120  ; MOUSEEVENTF_HWHEEL，负值=向左
             else if (pureKey = "WheelRight")
-                hw := 0x0100, delta := 120
+                hw := 0x1000, delta := 120   ; MOUSEEVENTF_HWHEEL，正值=向右
             else {
                 Logger.Warn("KeyForward", "不支持的滚轮透传键：" pureKey)
                 return
