@@ -97,6 +97,16 @@ class LevelDetector {
 
     ; 轮询投票
     static Poll() {
+        ; ===== 隔离实验（嘟嘟声排查，临时改动：验证完成后必须移除本节，恢复正式实现）=====
+        ; 目的：验证"系统嘟嘟声"是否由守卫开启时本轮询的 333ms PixelSearch 屏幕抓取引起。
+        ; 空转后不再执行任何 PixelSearch/GDI 抓屏，但 SetTimer 仍每 333ms 触发本回调（定时器本身不抓屏）；
+        ; 注意本构建下守卫判定会停在初始 InLevel=false（常规作战热键在关卡外全被拦截），仅用于听声测试。
+        static _IsolationWarned := false
+        if (!_IsolationWarned) {
+            _IsolationWarned := true
+            Logger.Warn("LevelDetector", "隔离实验构建：Poll 空转（不做任何 PixelSearch）；若此版本下嘟嘟仍出现，则与 AFA 的屏幕抓取无关")
+        }
+        return
         this._PollCount += 1
         ; 游戏进程不存在 → 复位关卡状态
         if !GameTarget.Exists() {
