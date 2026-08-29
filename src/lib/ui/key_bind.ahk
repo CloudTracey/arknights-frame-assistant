@@ -19,6 +19,9 @@ class KeyBinder {
         this.ModifyHook.OnKeyUp := (ih, vk, sc) => this.OnKeyUp(ih, vk, sc)
         this.ModifyHook.OnEnd := (*) => this.EndChange(this.ModifyHook.EndMods . this.ReleaseKey . this.ModifyHook.EndKey)
         this.ModifyHook.Start()
+        ; 录制会话开始：注册鼠标/滚轮录制热键（仅录制期间存在；常驻会让每次物理滚轮
+        ; 波动都进入 AFA 钩子匹配，徒增输入管线开销）
+        this.StartRecordHotkeys()
     }
     ; 释放Hook
     static StopHook() {
@@ -27,6 +30,7 @@ class KeyBinder {
             this.ModifyHook.Stop()
             EventBus.Publish("KeyBindFocusCancel")
         }
+        this.StopRecordHotkeys()
     }
 
     ; 处理指定按键释放
@@ -57,6 +61,7 @@ class KeyBinder {
                 KeyBinder.ModifyHook.Stop()
             }
             KeyBinder.WaitingModify := false
+            KeyBinder.StopRecordHotkeys()  ; 录制会话结束（该路径不经过 StopHook）
             EventBus.Publish("KeyBindFocusCancel")
             return
         }
@@ -102,11 +107,25 @@ class KeyBinder {
         EventBus.Publish("HotkeyBindingsChanged")
     }
 
-    ; 启动按键绑定：注册窗口鼠标监听、设置保存前订阅与录制热键（原为文件末尾顶层副作用）
+    ; 启动按键绑定：注册窗口鼠标监听、设置保存前订阅（原为文件末尾顶层副作用）
+    ; 注意：鼠标/滚轮录制热键不在此注册——仅在录制会话（CreateHook/StopHook）期间存在，
+    ; 避免物理滚轮事件在非录制时也进入 AFA 钩子匹配，徒增输入管线开销。
     static Start() {
         OnMessage(0x0201, WM_LBUTTONDOWN)
         EventBus.Subscribe("SettingsSaveStarting", KeyBinder.HandleSettingsSaveStarting)
-        HotIf((*) => KeyBinder.WaitingModify)
+    }
+
+    ; 鼠标录制热键注册状态（录制会话外不注册，非录制期的滚轮/鼠标事件不进入 AFA 钩子匹配）
+    static _RecordHotkeysOn := false
+    ; 录制条件唯一实例——HotIf/Hotkey 的注册与注销按条件对象区分变体，
+    ; 必须用同一对象（每次新建箭头函数会导致注销不到（Hotkey 无此变体，抛 TargetError））
+    static _RecordGate := (*) => KeyBinder.WaitingModify
+
+    ; 录制会话开始：注册鼠标/滚轮/Alt 录制热键（HotIf 门控 WaitingModify，语义与原常驻注册完全一致）
+    static StartRecordHotkeys() {
+        if (this._RecordHotkeysOn)
+            return
+        HotIf(this._RecordGate)
         Hotkey("*RButton", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
         Hotkey("*MButton", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
         Hotkey("*XButton1", KeyBinder.HandleModifyMouseHotkey.Bind(KeyBinder), "On")
@@ -116,6 +135,24 @@ class KeyBinder {
         Hotkey("~LAlt", KeyBinder.HandleModifyAlt.Bind(KeyBinder), "On")
         Hotkey("~RAlt", KeyBinder.HandleModifyAlt.Bind(KeyBinder), "On")
         HotIf
+        this._RecordHotkeysOn := true
+    }
+
+    ; 录制会话结束：注销录制热键（幂等）
+    static StopRecordHotkeys() {
+        if (!this._RecordHotkeysOn)
+            return
+        HotIf(this._RecordGate)
+        Hotkey("*RButton", , "Off")
+        Hotkey("*MButton", , "Off")
+        Hotkey("*XButton1", , "Off")
+        Hotkey("*XButton2", , "Off")
+        Hotkey("*WheelUp", , "Off")
+        Hotkey("*WheelDown", , "Off")
+        Hotkey("~LAlt", , "Off")
+        Hotkey("~RAlt", , "Off")
+        HotIf
+        this._RecordHotkeysOn := false
     }
 
     ; 鼠标录制热键回调（原 #HotIf 块内的鼠标键/滚轮处理）

@@ -53,6 +53,80 @@ SafeImageSearch(&FoundX, &FoundY, LX, UY, RX, DY, ImageFile) {
     }
 }
 
+; 单次捕获目标窗口客户区位图（BGRA，每像素 4 字节，自顶向下），供内存颜色扫描。
+; 用途：替代"每拍多次独立 PixelSearch"——一次 GetDC/BitBlt/GetDIBits 完成 N 次 GDI 往返的活
+; （关卡检测每拍 16 次像素搜索 → 1 次捕获 + 内存扫描），把 333ms 轮询的"忙碌段"压缩一个数量级，
+; 降低与高频输入流同时段的线程争用与输入延迟。
+; 注意：必须从**屏幕 DC**（GetDC(NULL)）按客户区屏幕坐标抓取——DX/Unity 游戏画面不经过
+; 窗口 GDI DC（GetDC(hwnd) 会得到黑屏/旧帧），PixelSearch 的实现同样是屏幕合成路径
+; （参见 _SearchRectOffScreen 的"换算为屏幕坐标"逻辑），本函数与其语义保持一致。
+; 语义约束（调用方保证）：
+;   - 调用前已切 per-monitor DPI aware（与 SafeWinGetClientPos 同坐标系）；
+;   - 目标窗口即 GameTarget（ahk_id / ahk_exe 宽松回退），客户区坐标 (0,0) 即位图 (0,0)；
+;   - 屏幕 DC 捕获不含光标（与 Window DC 捕获一致，区域极小无影响）。
+; 失败返回 false（不抛异常）；调用方按"未命中"处理。
+SafeCaptureClientRect(&bits, &width, &height) {
+    hwnd := 0, hdc := 0, memdc := 0, bmp := 0, old := 0
+    try {
+        hwnd := WinExist(GameTarget.WinTitle())
+        if !hwnd
+            return false
+        rect := Buffer(16)
+        if !DllCall("user32\GetClientRect", "Ptr", hwnd, "Ptr", rect)
+            return false
+        w := NumGet(rect, 8, "Int")
+        h := NumGet(rect, 12, "Int")
+        if (w <= 0 || h <= 0)
+            return false
+        ; 客户区原点的屏幕坐标（POINT(0,0) → ClientToScreen）
+        pt := Buffer(8)
+        NumPut("Int", 0, pt, 0)
+        NumPut("Int", 0, pt, 4)
+        if !DllCall("user32\ClientToScreen", "Ptr", hwnd, "Ptr", pt)
+            return false
+        ox := NumGet(pt, 0, "Int")
+        oy := NumGet(pt, 4, "Int")
+        hdc := DllCall("user32\GetDC", "Ptr", 0, "Ptr")  ; 屏幕 DC（含 DX 合成画面）
+        if !hdc
+            return false
+        memdc := DllCall("gdi32\CreateCompatibleDC", "Ptr", hdc, "Ptr")
+        if !memdc
+            return false
+        bmp := DllCall("gdi32\CreateCompatibleBitmap", "Ptr", hdc, "Int", w, "Int", h, "Ptr")
+        if !bmp
+            return false
+        old := DllCall("gdi32\SelectObject", "Ptr", memdc, "Ptr", bmp, "Ptr")
+        if !DllCall("gdi32\BitBlt", "Ptr", memdc, "Int", 0, "Int", 0, "Int", w, "Int", h, "Ptr", hdc, "Int", ox, "Int", oy, "UInt", 0x00CC0020)  ; SRCCOPY
+            return false
+        ; BITMAPINFOHEADER（40 字节）：biSize/biWidth/biHeight(负=自顶向下)/biPlanes/biBitCount/biCompression
+        bmi := Buffer(40)
+        NumPut("UInt", 40, bmi, 0)
+        NumPut("UInt", w, bmi, 4)
+        NumPut("UInt", -h, bmi, 8)
+        NumPut("UShort", 1, bmi, 12)
+        NumPut("UShort", 32, bmi, 14)
+        NumPut("UInt", 0, bmi, 16)  ; BI_RGB
+        bits := Buffer(w * h * 4)
+        scan := DllCall("gdi32\GetDIBits", "Ptr", memdc, "Ptr", bmp, "UInt", 0, "UInt", h, "Ptr", bits, "Ptr", bmi, "UInt", 0)
+        if (scan != h)
+            return false
+        width := w, height := h
+        return true
+    } catch {
+        return false
+    } finally {
+        if bmp {
+            if old
+                DllCall("gdi32\SelectObject", "Ptr", memdc, "Ptr", old)
+            DllCall("gdi32\DeleteObject", "Ptr", bmp)
+        }
+        if memdc
+            DllCall("gdi32\DeleteDC", "Ptr", memdc)
+        if hdc
+            DllCall("user32\ReleaseDC", "Ptr", 0, "Ptr", hdc)
+    }
+}
+
 ; 判断搜索矩形是否完全在可见桌面（虚拟屏幕）之外。
 ; 坐标按当前 Pixel 坐标模式换算为屏幕坐标（镜像 AHK CoordToScreen：默认相对前台窗口客户区，
 ; 前台窗口不存在/最小化时不加偏移），再与虚拟屏幕边界求交。
