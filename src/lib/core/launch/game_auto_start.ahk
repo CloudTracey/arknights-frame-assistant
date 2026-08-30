@@ -4,6 +4,9 @@ class GameAutoStartManager {
     ; Windows 安全审核“进程创建”子类别 GUID
     static ProcessCreationAuditGuid := "{0CCE922B-69AE-11D9-BED3-505054503030}"
     static TaskNamePrefix := "ArknightsFrameAssistant-AutoStartWithGame-"
+    ; SYSTEM 账户 SID：启动器/游戏服务可能在系统上下文拉起游戏进程，
+    ; 4688 事件的 SubjectUserSid 会是 S-1-5-18，仅匹配用户 SID 会导致事件过滤器永不命中
+    static SystemSid := "S-1-5-18"
     static ERROR_ACCESS_DENIED := 5
     static ERROR_NOT_ALL_ASSIGNED := 1300
     static ERROR_PRIVILEGE_NOT_HELD := 1314
@@ -57,6 +60,41 @@ class GameAutoStartManager {
         if (resultSize <= 0 || resultSize >= requiredSize)
             return path
         return StrGet(pathBuffer, "UTF-16")
+    }
+
+    ; 解析 reparse point（junction/符号链接）到文件系统的最终目标路径。
+    ; 返回真实安装路径的盘符形式（win32 路径）；dwFlags=2 时返回 NT 设备路径形式
+    ; GetFullPathNameW/GetLongPathNameW 都不解析 reparse point，而 Security 4688 的
+    ; NewProcessName 记录的是内核解析后的路径。配置路径带 junction 前缀或与真实路径
+    ; 存在大小写/短名差异时，精确匹配会永远失败。失败返回 ""，由调用方回退到配置路径变体。
+    static _ResolveFinalPath(path, dwFlags := 0) {
+        if (path = "")
+            return ""
+        ; FILE_READ_ATTRIBUTES(0x80) + 共享读写删(0x7) + OPEN_EXISTING(3)
+        ; 不带 FILE_FLAG_OPEN_REPARSE_POINT：GetFinalPathNameByHandle 返回最终目标路径
+        handle := DllCall("Kernel32\CreateFileW", "WStr", path, "UInt", 0x80, "UInt", 0x7,
+            "Ptr", 0, "UInt", 3, "UInt", 0, "Ptr", 0, "Ptr")
+        if (handle = -1)
+            return ""
+        try {
+            ; dwFlags=0 => FILE_NAME_NORMALIZED | VOLUME_NAME_DOS
+            ; dwFlags=2 => FILE_NAME_NORMALIZED | VOLUME_NAME_NT
+            required := DllCall("Kernel32\GetFinalPathNameByHandleW", "Ptr", handle, "Ptr", 0, "UInt", 0, "UInt", dwFlags, "UInt")
+            if (required <= 0)
+                return ""
+            pathBuffer := Buffer((required + 1) * 2, 0)
+            resultSize := DllCall("Kernel32\GetFinalPathNameByHandleW", "Ptr", handle,
+                "Ptr", pathBuffer, "UInt", required + 1, "UInt", dwFlags, "UInt")
+            if (resultSize = 0 || resultSize > required)
+                return ""
+            resolved := StrGet(pathBuffer, "UTF-16")
+            ; 去掉 VOLUME_NAME_DOS 产生的 \\?\ 前缀（NT 形式无此前缀，不匹配则原样返回）
+            if RegExMatch(resolved, "^\\\\\?\\", &m)
+                resolved := SubStr(resolved, m.Len[0] + 1)
+            return resolved
+        } finally {
+            DllCall("Kernel32\CloseHandle", "Ptr", handle)
+        }
     }
 
     ; 根据设置应用外部自动启动状态。gamePath 可为单个路径或路径数组。
@@ -559,16 +597,38 @@ class GameAutoStartManager {
 
     ; 生成安全日志事件订阅。使用一个或多个完整路径和用户 SID，避免误触发。
     ; 多个路径在同一个 Select 内用 or 连接，保持单 trigger（Triggers.Count == 1）。
+    ; 三个加固点：
+    ;   1. 路径同时注册「配置路径」「盘符形式真实路径」「NT 设备路径」三个变体：
+    ;      GetFullPathNameW/GetLongPathNameW 不解析 reparse point（junction/符号链接），
+    ;      而 Security 4688 的 NewProcessName 记录的是内核解析后的路径；部分环境（如
+    ;      提权启动器拉起游戏）记录的是 NT 设备路径而非
+    ;      盘符路径，两种形式的精确匹配都会永久失配。
+    ;   2. SubjectUserSid 同时匹配当前用户与 SYSTEM（S-1-5-18）：Hypergryph Launcher
+    ;      可能由系统上下文服务拉起游戏进程，此时事件里的 SubjectUserSid 是 SYSTEM，
+    ;      仅匹配用户 SID 会导致事件过滤器永不命中。
     static BuildEventSubscription(gamePaths, userSid) {
         paths := this._AsPathArray(gamePaths)
         if (paths.Length = 0)
             return ""
-        escapedSid := this.EscapeXml(userSid)
+        escapedUserSid := this.EscapeXml(userSid)
+        escapedSystemSid := this.EscapeXml(this.SystemSid)
         pathConditions := []
         for gamePath in paths {
-            escapedPath := this.EscapeXml(gamePath)
-            pathConditions.Push("*[EventData[Data[@Name='NewProcessName']=" Chr(34) escapedPath Chr(34)
-                . " and Data[@Name='SubjectUserSid']=" Chr(34) escapedSid Chr(34) "]]")
+            ; 配置路径 + 盘符真实路径 + NT 设备路径三个变体（按原样去重；大小写差异保留为独立变体以覆盖事件记录差异）
+            variants := Map()
+            variants[gamePath] := true
+            canonicalPath := this._ResolveFinalPath(gamePath, 0)
+            if (canonicalPath != "" && !variants.Has(canonicalPath))
+                variants[canonicalPath] := true
+            ntPath := this._ResolveFinalPath(gamePath, 2)
+            if (ntPath != "" && !variants.Has(ntPath))
+                variants[ntPath] := true
+            for variant in variants {
+                escapedPath := this.EscapeXml(variant)
+                pathConditions.Push("*[EventData[Data[@Name='NewProcessName']=" Chr(34) escapedPath Chr(34)
+                    . " and (Data[@Name='SubjectUserSid']=" Chr(34) escapedUserSid Chr(34)
+                    . " or Data[@Name='SubjectUserSid']=" Chr(34) escapedSystemSid Chr(34) ")]]")
+            }
         }
         subscription := "<QueryList>"
         subscription .= "<Query Id='0' Path='Security'>"

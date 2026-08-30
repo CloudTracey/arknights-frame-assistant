@@ -110,12 +110,22 @@ class LevelDetector {
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
         try {
             if !SafeWinGetClientPos(&ww, &wh) {
+                ; 窗口在查询瞬间消失：显式按未命中处理（原实现继续用未初始化尺寸，属隐患）
                 this._SetInLevel(false)
+                return
+            }
+            ; 单次捕获客户区位图（一次 GDI 往返替代 16 次独立 PixelSearch，
+            ; 压缩轮询忙碌段，降低与高频输入流同时段的线程争用与输入延迟）
+            if !SafeCaptureClientRect(&bits, &cw, &ch) {
+                ; 捕获失败（窗口/桌面不可用等）：按未命中处理（与 SafePixelSearch 失败语义一致）
+                _LogSearchError("ScreenCapture", "客户区位图捕获失败")
+                this._SetInLevel(false)
+                return
             }
             hitCount := 0
             detail := ""
             for obj in this.Objects {
-                matched := this._MatchObject(obj, ww, wh)
+                matched := this._MatchObject(obj, ww, wh, cw, ch, bits)
                 if matched
                     hitCount++
                 detail .= obj.Name ": " (matched ? "✓" : "✗") "  "
@@ -134,17 +144,40 @@ class LevelDetector {
         }
     }
 
-    ; 匹配单个对象：在区域内 PixelSearch 检测任一目标颜色（任一命中即算对象命中）
-    ; 区域用相对比例定位（LX/RX = ww 比例，UY/DY = wh 比例），不依赖模板尺寸
+    ; 匹配单个对象：在捕获位图（BGRA）内扫描区域，检测任一目标颜色（任一命中即算对象命中）
+    ; 区域用相对比例定位（LX/RX = ww 比例，UY/DY = wh 比例），与 PixelSearch 客户端坐标同语义；
+    ; 容差逻辑与 PixelSearch 一致：三通道差值均 <= 容差。
     ; 低分辨率（长或宽任一 < 1600×900）时关卡内文本容差放宽到 20（低分辨率下文本更模糊，需更大容差）
-    static _MatchObject(obj, ww, wh) {
-        LX := ww * obj.LX, RX := ww * obj.RX, UY := wh * obj.UY, DY := wh * obj.DY
+    static _MatchObject(obj, ww, wh, cw, ch, bits) {
+        x1 := Max(0, Min(Round(ww * obj.LX), Round(ww * obj.RX)))
+        x2 := Min(cw - 1, Max(Round(ww * obj.LX), Round(ww * obj.RX)))
+        y1 := Max(0, Min(Round(wh * obj.UY), Round(wh * obj.DY)))
+        y2 := Min(ch - 1, Max(Round(wh * obj.UY), Round(wh * obj.DY)))
+        if (x1 > x2 || y1 > y2)
+            return false
         for color in obj.Colors {
             v := color.V
             if (obj.Name = "TextInLevel" && (ww < 1600 || wh < 900))
                 v := Max(v, 20)
-            if PixelSearch(&FoundX, &FoundY, LX, UY, RX, DY, color.C, v)
-                return true
+            cr := (color.C >> 16) & 0xFF
+            cg := (color.C >> 8) & 0xFF
+            cb := color.C & 0xFF
+            loop (y2 - y1 + 1) {
+                rowBase := ((y1 + A_Index - 1) * cw + x1) * 4
+                found := false
+                loop (x2 - x1 + 1) {
+                    i := rowBase + (A_Index - 1) * 4
+                    pB := NumGet(bits, i, "UChar")
+                    pG := NumGet(bits, i + 1, "UChar")
+                    pR := NumGet(bits, i + 2, "UChar")
+                    if (Abs(pR - cr) <= v && Abs(pG - cg) <= v && Abs(pB - cb) <= v) {
+                        found := true
+                        break
+                    }
+                }
+                if found
+                    return true
+            }
         }
         return false
     }

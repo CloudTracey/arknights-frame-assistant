@@ -9,6 +9,19 @@ class KeyForward {
     ; 若继续放行会无限循环（导致游戏外按键失灵）。仅抑制正在补发的同名键，不误挡同时松开的其它键——
     ; 全局布尔会把其它键的物理 Up 也挡掉（HotkeyContext 条件失败→被吞→卡键，见多键同松竞态）。
     static SuppressUp := Map()
+    ; 守卫拦截日志节流：滚轮等无 down/up 状态的事件每次独立滚动都走拦截路径（不写 InterceptedKeys，无按键去重），
+    ; 无极/高分辨率滚轮可达数百次/秒——若逐条 Info 落盘会形成"每档位一次文件 IO"的洪峰，
+    ; 拖慢主线程并刷爆日志轨（15MiB）。按 100ms 时间窗去重（普通键维持 InterceptedKeys 原去重语义，不在此限流）。
+    static GuardLogIntervalMs := 100
+    static _GuardLogNextTick := 0
+
+    ; 判定当前时刻是否应记录守卫拦截日志：窗口内最多一条，窗口自然滑动，无需主动清理状态
+    static ShouldLogGuard() {
+        if (A_TickCount < this._GuardLogNextTick)
+            return false
+        this._GuardLogNextTick := A_TickCount + this.GuardLogIntervalMs
+        return true
+    }
 
     ; 提取纯键名（去除 ~*$ 前缀、修饰符与 Up 后缀；保留左右修饰键信息 <SHIFT→LShift、>SHIFT→RShift）
     static PureKeyName(ThisHotkey) {
@@ -52,8 +65,24 @@ class KeyForward {
         if (pureKey == "")
             return
         ; 滚轮：无 down/up 状态，直接发送完整事件
+        ; 注入改用原生 mouse_event：AHK Send 注入的滚轮事件带 KEY_IGNORE_LEVEL(0) 标记（0xFFC3D44D），
+        ; 部分用户环境的输入监听组件会对此标记做出响应（如系统提示音）；mouse_event 走同一输入队列
+        ; 但无该标记，且 {Blind} 语义天然满足（不触碰修饰键状态，不夺焦点）。
         if InStr(pureKey, "Wheel") {
-            Send "{Blind}{" pureKey "}"
+            hw := 0
+            if (pureKey = "WheelUp")
+                hw := 0x0800, delta := 120
+            else if (pureKey = "WheelDown")
+                hw := 0x0800, delta := -120
+            else if (pureKey = "WheelLeft")
+                hw := 0x1000, delta := -120  ; MOUSEEVENTF_HWHEEL，负值=向左
+            else if (pureKey = "WheelRight")
+                hw := 0x1000, delta := 120   ; MOUSEEVENTF_HWHEEL，正值=向右
+            else {
+                Logger.Warn("KeyForward", "不支持的滚轮透传键：" pureKey)
+                return
+            }
+            DllCall("user32\mouse_event", "UInt", hw, "UInt", 0, "UInt", 0, "Int", delta, "Ptr", 0)
             return
         }
         if isUp {
@@ -690,8 +719,11 @@ GuardInLevel(actionName, ThisHotkey) {
     if LevelDetector.IsInLevel()
         return true
     ; 同一按住周期的重复 down（InterceptedKeys 已有，已补发过）不再记日志，避免切走时 key repeat 刷屏；
-    ; 滚轮不写 InterceptedKeys，每次独立滚动仍逐条记录（合理）
-    if !KeyForward.InterceptedKeys.Has(pureKey)
+    ; 滚轮不写 InterceptedKeys，每次独立滚动都走拦截路径（无极/高分辨率滚轮可达数百次/秒）——
+    ; 逐条落盘会形成每档位一次文件 IO 的洪峰，故滚轮按 100ms 时间窗节流（ShouldLogGuard），
+    ; 普通键维持 InterceptedKeys 去重语义（按住周期内一条）
+    isWheel := InStr(pureKey, "wheel")
+    if !KeyForward.InterceptedKeys.Has(pureKey) && (!isWheel || KeyForward.ShouldLogGuard())
         Logger.Info("HotkeyActions", actionName " 被关卡检测拦截（不在关卡界面）")
     KeyForward.ForwardOriginalKey(ThisHotkey)
     return false

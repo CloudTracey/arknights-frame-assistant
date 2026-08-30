@@ -204,3 +204,112 @@
 ## 描述
 
 本清单覆盖 Windows 进程创建事件、计划任务、GamePath 校验、双向自动启动兼容和原有启动行为回归。
+
+---
+
+## 追加测试：4688 事件触发过滤加固
+
+> 对应更改：[`game_auto_start.ahk`](../src/lib/core/launch/game_auto_start.ahk) 的 `BuildEventSubscription` 加固——`SubjectUserSid` 同时匹配当前用户与 SYSTEM（`S-1-5-18`，修复启动器/服务在系统上下文拉起游戏时过滤器永不命中）；每条游戏路径同时注册「配置路径」与「`GetFinalPathNameByHandleW` 解析后的真实路径」两个变体（修复 junction/符号链接/大小写/短名差异导致精确匹配永久失配）；新增 `_ResolveFinalPath` 辅助方法（`CreateFileW` + `GetFinalPathNameByHandleW`，失败回退配置路径变体）。背景：用户机器上该任务 `LastTaskResult=267011`（从未运行），开发者设备实测 4688 事件存在 S-1-5-18 上下文创建条目。
+> 本轮构建：AFA `v2.0.2-alpha.3`（`src/lib/base/version.ahk`），AutoHotkey `2.0.26`。本阶段仅执行开发端测试；「用户机器验收项」等待用户配合后执行。
+
+## 追加测试环境（本轮）
+
+| 项目 | 信息 |
+|------|------|
+| AFA 版本 | `v2.0.2-alpha.3` |
+| AutoHotkey 版本 | `2.0.26` |
+| Windows 版本 | `Windows 11 25H2（26200）` |
+| 测试日期 | `2026-08-29` |
+
+### 单元测试：`_ResolveFinalPath` 路径解析
+
+> 使用临时辅助脚本（直接调用静态方法验证，不涉及 GUI/计划任务；该脚本已于测试结束后删除，结论见下方标记）。
+
+#### 功能点：普通存在路径
+
+- [x] **操作**：`AutoHotkey.exe "test\scripts\test_game_auto_start_resolve_path.ahk"` 运行脚本，查看同目录 `test_game_auto_start_resolve_path.result`
+- [x] **预期**：存在「普通存在路径」用例输出 `[通过]`，退出码 0
+
+#### 功能点：junction 解析（核心用例，复现用户场景）
+
+- [x] **前置**：管理员执行 `mklink /J E:\AFA-test-junction E:\AFA`
+- [x] **操作**：运行脚本并传入 junction 形式路径参数（见脚本头部注释，如 `E:\AFA-test-junction\test\scripts\test_game_auto_start_resolve_path.ahk`）
+- [x] **预期**：「junction 路径」用例 `[通过]`；`.result` 中 `解析=` 指向真实 `E:\AFA\...` 且**不包含** `AFA-test-junction`
+
+#### 功能点：中文路径
+
+- [x] **操作**：传入任一含中文的真实路径（如 `E:\转移软件\Hypergryph Launcher\games\Arknights Game\Arknights.exe` 或本机其他中文路径）
+- [x] **预期**：「中文路径」用例 `[通过]`，解析结果非空且文件存在
+
+#### 功能点：非法输入
+
+- [x] **操作**：脚本自动执行「不存在的路径」与「空字符串」两个用例（无需人工操作）
+- [x] **预期**：两个用例均 `[通过]`（返回空串），脚本不抛异常
+
+### 集成测试：任务订阅与端到端（需先构建包含本次修复的新 EXE）
+
+#### 流程：订阅重写与内容验证
+
+> 涉及模块：`game_auto_start.ahk`、`main.ahk`
+
+- [x] **前置**：新 EXE 已构建；当前计划任务由旧逻辑创建（或任意状态）
+- [x] **操作**：手动启动新 EXE → 查看日志 `计划任务已创建或更新：...`
+- [x] **预期**：`Export-ScheduledTask` 的 `<Subscription>` 中**每个路径条件**均含 `or Data[@Name='SubjectUserSid']="S-1-5-18"`；每个游戏路径注册**三个变体**（配置路径 / 盘符形式真实路径 / `\Device\HarddiskVolumeN\...` NT 设备路径，去重后为 2~3 个；无 junction 时亦含 NT 变体）
+- [x] **操作**：再次启动新 EXE
+- [x] **预期**：日志 `计划任务已匹配，跳过重写`（稳定状态不重写）
+
+> 实测记录（2026-08-30）：订阅含 CN/BILI/JP 三路径 ×（盘符 + `\Device\HarddiskVolume6\...`）且每条件均含用户 SID or S-1-5-18；第二次启动 `计划任务已匹配，跳过重写`。
+
+#### 流程：启动器启动游戏端到端（SYSTEM SID 场景）
+
+> 涉及模块：`game_auto_start.ahk`、任务计划程序、Security 4688
+
+- [x] **前置**：AFA 已完全退出（托盘无图标）；上一流程任务已重写
+- [x] **操作**：通过 Hypergryph Launcher 平时的方式启动游戏
+- [x] **预期**：AFA 自动启动且只有一个实例；`Get-ScheduledTaskInfo` 的 `LastTaskResult=0`；TaskScheduler/Operational 出现 108→100→129→200→201
+
+> 实测记录（2026-08-30）：108→100→129→200 完整触发，`LastTaskResult=267009`（SCHED_S_TASK_RUNNING，任务实例运行中 = AFA 常驻，非错误；AFA 退出后才会落 201/102）。
+
+#### 流程：junction 配置路径端到端（复现用户场景）
+
+- [ ] **前置**：`E:\AFA-test-junction` 已建立并指向游戏所在父目录（如 `mklink /J E:\AFA-test-junction E:\Hypergryph Launcher`）
+- [ ] **操作**：设置中将游戏路径改为 `E:\AFA-test-junction\games\Arknights Game\Arknights.exe` 并保存（区服识别应为 CN）→ 查看日志与任务订阅 → 完全退出 AFA → 启动游戏
+- [ ] **预期**：任务订阅同时含 `E:\AFA-test-junction\...`（配置路径）与 `E:\Hypergryph Launcher\...`（真实路径）两个变体；游戏启动后 AFA 自动拉起
+- [ ] **操作**：恢复原来的游戏路径并保存（清理 junction 配置）
+
+> **跳过（2026-08-30）**：junction 解析逻辑已由单元测试五用例覆盖（含中文 junction），且真实根因为 NT 设备路径形式（已在端到端流程验证）；开发机无该场景，端到端无附加信息。
+
+##### 异常路径
+
+- [x] **异常**：AFA 运行中启动游戏 → **预期**：不产生第二个 AFA 实例（任务触发后单例静默退出，无弹窗）
+- [x] **异常**：`_ResolveFinalPath` 失败（如传不存在的路径）→ **预期**：订阅仍按配置路径变体生成，不报错
+
+> 实测记录（2026-08-30）：AFA 运行中再次触发，进程数保持 1、无弹窗；非法路径返回空串由单元测试覆盖，订阅生成路径均存在。
+
+### 回归测试（本轮）
+
+- [x] 验证「随 AFA 启动自动启动游戏」（`AutoRunGame`）不受影响
+- [x] 验证「随游戏进程关闭自动退出」（`AutoExit`）不受影响
+- [x] 验证关闭「随游戏自动启动」后计划任务被删除，且后续启动游戏不再拉起 AFA
+- [x] 验证多区服路径（如已配置 BILI/JP 路径）仍能生成合法订阅且任务可注册
+
+### 用户机器验收项（待用户配合，本轮跳过）
+
+- [ ] 用户机器：运行 **v3 构建**（含 NT 变体）的新 AFA 一次 → 日志出现 `计划任务已创建或更新`，`Export-ScheduledTask` 确认原任务订阅含 `\Device\HarddiskVolume7\...` 变体
+- [ ] 用户机器：删除自建修复任务 `ArknightsFrameAssistant-AutoStartWithGame-Fix`（v3 已覆盖，双任务冗余）
+- [ ] 用户机器：完全退出 AFA → 启动器启动游戏 → AFA 自动拉起且仅一个实例；`Get-ScheduledTaskInfo` 的 `LastTaskResult=0`
+- [ ] 用户机器：若仍不拉起 → 运行取证命令（`Get-ScheduledTaskInfo`、`Export-ScheduledTask` 订阅、TaskScheduler/Operational 108~201）并反馈
+
+### 测试结果（本轮）
+
+- [x] 全部通过（开发端）
+- [ ] 存在问题（详见下方问题反馈）
+
+### 本轮问题反馈
+
+- [x] 无问题
+  * 说明：单元测试第一轮出现的两次「失败/编译错误」均为测试环节干扰（中文 junction 未建成、脚本文件版本不同步），已排除，非产品缺陷；`_ResolveFinalPath` 五用例（普通/junction/中文/不存在/空串）全部通过。
+  * 补充（2026-08-29）：用户侧 AI 分析指出其 4688 `NewProcessName` 为 NT 设备路径形式（`\Device\HarddiskVolume7\...`，提权启动器拉起），据此已为过滤器增加 `VOLUME_NAME_NT` 路径变体（`_ResolveFinalPath(…, 2)`），订阅现注册配置/盘符/NT 三个变体 + 用户与 SYSTEM 双 SID。
+  * 用户侧证实（2026-08-30）：用户自行构造「盘符 or NT 设备路径 + 用户 SID」过滤器查询 Security 日志，`FILTER TEST MATCHES=5`——**NT 设备路径形式实锤**，且事件 `SubjectUserSid` 即用户 SID（S-1-5-18 兜底保留无害）。v3 修复与用户自建任务结构一致；此前"仍失败"应为未含 NT 变体的 v2 构建。用户自建修复任务 `ArknightsFrameAssistant-AutoStartWithGame-Fix` 应于 v3 验证通过后删除，避免双任务冗余触发。
+  * 最终澄清（2026-08-30）：用户后期多次"仍失败"的根因为**分发错误**——发用户的下载链接实际指向未修复的 `v2.0.2-alpha.1`（邮件只改了显示文本）。代码修复（v3）本身正确；后续交付需核对 exe 内嵌版本号/哈希，避免重蹈。
+
