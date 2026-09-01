@@ -1,6 +1,14 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Off
 #Warn All, Off
+; 键盘钩子存活护栏（#340）：AFA 全部热键都注册在 HotIf 回调下，每次按键都要由主线程求值，
+; 求值期间钩子回调一直阻塞。系统对低级钩子有独立超时（LowLevelHooksTimeout，未配置时默认 300ms），
+; 累计超时 11 次就会静默摘除钩子——表现为"所有快捷键突然失效，必须重启或重新注册才恢复"。
+; AHK 默认的 #HotIfTimeout 是 1000ms，比系统红线宽 3 倍多，等于放任每次主线程卡顿都记一次超时。
+; 这里压到 100ms：拦截键有主热键与 Up 两个变体，文档说超时可能按变体分别计算，
+; 2×100=200ms 仍安全在 300ms 以内（若取 150 则 2×150 正好顶到红线）。
+; 代价：主线程卡顿期间该次按键判定为 false（这种时候热键本就无法正常工作），换取钩子永不被摘除。
+#HotIfTimeout 100
 
 ; 所有模块只定义、零顶层副作用；启动由下方 App.Bootstrap() 显式执行。
 #Include ./lib/base/logger.ahk
