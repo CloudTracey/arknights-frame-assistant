@@ -140,7 +140,10 @@ class KeyForward {
         } catch Error as e {
             Logger.Exception("KeyForward", e, "透传 Up 失败：key=" pureKey)
         } finally {
-            KeyForward.SuppressUp.Delete(pureKey)
+            ; Delete 对不存在的键会抛 UnsetItemError（AGENTS.md 已记录该陷阱）——
+            ; 交错补发时本键可能已被另一线程清除，finally 内抛异常会掩盖 try 内的真实错误。
+            if (KeyForward.SuppressUp.Has(pureKey))
+                KeyForward.SuppressUp.Delete(pureKey)
         }
     }
 }
