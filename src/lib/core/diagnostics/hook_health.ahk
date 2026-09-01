@@ -1,31 +1,35 @@
-; == 键盘钩子健康探针（诊断用） ==
-; 目的：区分"所有热键突然失效"的三种可能，仅观测不干预。
-;   H1 系统静默移除低级键盘钩子（LowLevelHooksTimeout 累计超时 11 次，见 ahk_docs/lib/_HotIfTimeout.htm）
-;      —— 现象：物理按键仍在（GetAsyncKeyState 可见），但热键回调完全不再发生。
-;   H2 动作线程泄漏撞满 #MaxThreads（默认 10）—— 现象：_Depth / _InFlight 持续不归零。
-;   H3 HotkeyContext 判定持续为 false —— 现象：钩子活着、线程也没堆积，但回调不发生。
+; == 键盘钩子存活探针与自愈 ==
+; 背景（#340，已由 afa-20260901-225024 日志实证）：AFA 全部热键注册在 HotIf 回调下，
+; 每次按键都要主线程求值，求值期间钩子回调阻塞。主线程若超过系统低级钩子超时
+; （LowLevelHooksTimeout，未配置时默认 300ms）无法响应，系统累计 11 次后即静默摘除键盘钩子，
+; 表现为「所有快捷键突然失效，必须重启或重新注册热键才恢复」，且 AHK 自身无从感知。
 ;
-; 核心手法：用**不依赖钩子**的 GetAsyncKeyState 采样已注册热键键位的物理按下沿，
+; 观测手法：用**不依赖钩子**的 GetAsyncKeyState 采样已注册热键键位的物理按下沿，
 ; 与**依赖钩子**的热键回调计数（NoteFire）对照。观测到物理按下却在宽限期内没有任何热键回调
-; ⇒ 记一次 miss；连续多次 ⇒ 判定"疑似钩子失效"并落一份完整状态快照。
+; ⇒ 记一次未命中；连续多次 ⇒ 判定钩子失效，落一份完整状态快照并按需自愈。
 ;
-; 约束：本类只做观测与日志，默认不做任何恢复动作（AutoRecover 置 true 才会调用
-; InstallKeybdHook(true, true) —— 文档明确其可让被系统停用的钩子重新工作）。
+; 判读要点（实证）：快照里的 idle/idleKbd/idlePhys 三值恒等，说明 A_TimeIdleKeyboard 与
+; A_TimeIdlePhysical 已退化为 A_TimeIdle（文档：钩子未安装时二者等价于 A_TimeIdle），
+; 即钩子确已不再被调用；三值有差异则说明钩子仍在正常区分键盘与鼠标输入。
+; 注意单看 idleKbd 数值大小无法判定——纯键盘输入时两种情况都接近 0，必须看三值是否恒等。
 class HookHealth {
     ; ---- 可调参数 ----
     static PollIntervalMs := 100      ; 物理按键采样间隔
-    static ReportIntervalMs := 5000   ; 状态快照上报间隔（内容无变化时不落盘）
+    static ReportIntervalMs := 5000   ; 异常期状态快照上报间隔
+    static HeartbeatMs := 60000       ; 正常期心跳快照间隔（保留基线，便于事后比对三值是否恒等）
     static PressGraceMs := 800        ; 物理按下后等待热键回调的宽限（日志实测按住时长 85~590ms）
-    static MissThreshold := 3         ; 连续多少次 miss 判定为疑似钩子失效
+    static MissThreshold := 3         ; 连续多少次未命中判定为钩子失效
     static WatchRefreshMs := 5000     ; 监视键位表刷新间隔（纯内存，无 IO）
-    static AutoRecover := false       ; 诊断版默认关闭：先取证，不要让自动恢复掩盖现场
+    static RecoverCooldownMs := 5000  ; 两次自愈之间的最小间隔，避免异常持续时反复重装钩子
+    static AutoRecover := true        ; 已确认故障模式为钩子被系统摘除，默认开启自愈
 
     ; ---- 运行时状态 ----
     static _Timer := ""
     static _WatchKeys := Map()        ; vk -> pureKey
     static _PrevDown := Map()         ; vk -> true/false
-    static _Pending := Map()          ; vk -> {tick, fire}
+    static _Pending := Map()          ; vk -> {tick, fire, key, idleKbd}
     static _FireCount := 0            ; 热键回调累计次数（由 NoteFire 递增）
+    static _LastFireSeen := 0         ; 上一拍看到的回调计数，用于直接识别"回调恢复"
     static _MissStreak := 0
     static _MissTotal := 0
     static _Depth := 0                ; 当前在执行的动作线程数
@@ -34,7 +38,8 @@ class HookHealth {
     static _Seq := 0
     static _NextReportTick := 0
     static _NextWatchTick := 0
-    static _LastSnapshot := ""
+    static _LastRecoverTick := 0
+    static _RecoverCount := 0
     static _Suspected := false
     static _Started := false
 
@@ -81,10 +86,17 @@ class HookHealth {
             this._NextWatchTick := now + this.WatchRefreshMs
             this._RefreshWatchKeys()
         }
+        ; 回调计数增长即证明热键已能正常触发。直接在此判定恢复，不依赖建档：
+        ; 旧实现只在"建档的按下被消费"时才判恢复，而恢复后的按键往往因动作正在执行
+        ; 而不满足建档条件，导致恢复时刻从未被记录（首版探针实测缺陷）。
+        if (this._FireCount != this._LastFireSeen) {
+            this._LastFireSeen := this._FireCount
+            this._NoteHit()
+        }
         this._SamplePhysicalKeys(now)
         this._ResolvePending(now)
         if (now >= this._NextReportTick) {
-            this._NextReportTick := now + this.ReportIntervalMs
+            this._NextReportTick := now + (this._Suspected ? this.ReportIntervalMs : this.HeartbeatMs)
             this._Report()
         }
     }
@@ -101,21 +113,19 @@ class HookHealth {
             ; 新的物理按下沿：只在"本应触发热键"的条件下建档，避免误报
             if (!this._ShouldArm(pureKey))
                 continue
-            ; idleKbd = A_TimeIdleKeyboard，由**键盘钩子**维护（ahk_docs/Variables.htm）。
-            ; 与 GetAsyncKeyState 观测到的这次物理按下对照，可直接区分故障层级：
-            ;   idleKbd ≈ 0（≤ 采样间隔）→ 钩子看见了这次按键，问题在判定层/线程层（H2/H3）
-            ;   idleKbd 远大于采样间隔      → 钩子根本没看见这次按键 = 钩子已被系统摘除（H1）
+            ; 记录按下瞬间的 idleKbd 备查。注意：钩子未安装时 A_TimeIdleKeyboard 会退化为 A_TimeIdle，
+            ; 纯键盘输入下两种情况数值都接近 0，故**不能单看此值判定钩子存活**，
+            ; 真正的判据是快照里 idle/idleKbd/idlePhys 三值是否恒等。
             this._Pending[vk] := {tick: now, fire: this._FireCount, key: pureKey, idleKbd: A_TimeIdleKeyboard}
         }
     }
 
     ; 是否把这次物理按下计入观测：
     ; - 游戏必须是前台（HotkeyContext 的键盘键放行前提）
-    ; - 当前没有动作在跑（KeyWait 期间的同键重复按下本就被 MaxThreadsPerHotkey 屏蔽，非异常）
     ; - 不是 AFA 自己注入的按键（注入按下窗口 / Up 补发抑制窗口）
+    ; 注意不再因"有动作正在执行"而拒绝建档：动作执行期间其它热键本就应当能触发，
+    ; 拒绝建档会连恢复判定一起挡掉；动作期间的误判改在结算时排除（见 _ResolvePending）。
     static _ShouldArm(pureKey) {
-        if (this._Depth > 0)
-            return false
         if (!GameTarget.IsForegroundCached())
             return false
         if (GameKeys.IsInjectedPressPending(pureKey))
@@ -139,10 +149,13 @@ class HookHealth {
             if (now - info.tick < this.PressGraceMs)
                 continue
             settled.Push(vk)
+            ; 结算时仍有动作在执行：同键重入被 MaxThreadsPerHotkey 正常屏蔽，不算异常
+            if (this._Depth > 0)
+                continue
             this._MissTotal++
             this._MissStreak++
             Logger.Warn("HookHealth", "物理按下未触发热键：key=" info.key
-                . "，按下瞬间 idleKbd=" info.idleKbd "ms（≈0 表示钩子仍看得见按键，很大表示钩子已失效）"
+                . "，按下瞬间 idleKbd=" info.idleKbd "ms"
                 . "，连续未命中=" this._MissStreak "，累计=" this._MissTotal)
             if (this._MissStreak >= this.MissThreshold)
                 this._OnSuspected()
@@ -153,43 +166,50 @@ class HookHealth {
         }
     }
 
-    ; 物理按下被热键回调消费：清零连击计数；若此前已判定疑似失效，则记录"恢复时刻"
-    ; ——用户"切换标签页"后热键复活的准确时间点会落在这一条上，可与重建热键日志对照。
+    ; 热键回调恢复：清零连击计数；若此前已判定失效，记录恢复时刻，
+    ; 便于与「热键已重建」日志或自愈记录对照，确认恢复由谁触发。
     static _NoteHit() {
         this._MissStreak := 0
         if (!this._Suspected)
             return
         this._Suspected := false
-        Logger.Warn("HookHealth", "热键回调已恢复（疑似钩子失效状态解除） | " this._Snapshot())
+        this._NextReportTick := 0
+        Logger.Warn("HookHealth", "热键回调已恢复 | " this._Snapshot())
     }
 
-    ; 连续未命中达阈值：落一份完整现场快照
+    ; 连续未命中达阈值：落一份完整现场快照，并按需自愈
     static _OnSuspected() {
         firstHit := !this._Suspected
         this._Suspected := true
-        Logger.Warn("HookHealth", "疑似键盘钩子失效（连续 " this._MissStreak " 次物理按下无热键回调） | " this._Snapshot())
+        Logger.Warn("HookHealth", "键盘钩子疑似失效（连续 " this._MissStreak " 次物理按下无热键回调） | " this._Snapshot())
         if (firstHit)
-            Logger.Warn("HookHealth", "判读指引：钩子已死=按键历史停更且本条持续出现；线程泄漏=depth/inflight 不归零；判定层为假=depth 归零且残留表为空")
-        if (this.AutoRecover) {
-            ; ahk_docs/lib/InstallKeybdHook.htm：Force=true 会卸载并重装钩子，
-            ; "If the system has stopped calling the hook due to an unresponsive program, reinstalling the hook might get it working again."
+            Logger.Warn("HookHealth", "判读指引：三值 idle/idleKbd/idlePhys 恒等=钩子已被系统摘除；depth/inflight 不归零=动作线程泄漏；三值有差异且残留表非空=状态残留")
+        if (!this.AutoRecover)
+            return
+        if (this._LastRecoverTick != 0 && A_TickCount - this._LastRecoverTick < this.RecoverCooldownMs)
+            return
+        this._LastRecoverTick := A_TickCount
+        this._RecoverCount++
+        ; ahk_docs/lib/InstallKeybdHook.htm：Force=true 会卸载并重装钩子，
+        ; "If the system has stopped calling the hook due to an unresponsive program, reinstalling the hook might get it working again."
+        try {
             InstallKeybdHook(true, true)
-            Logger.Warn("HookHealth", "已执行 InstallKeybdHook(true, true) 重装键盘钩子")
-            this._MissStreak := 0
+            Logger.Warn("HookHealth", "已重装键盘钩子（第 " this._RecoverCount " 次自愈），热键应即刻恢复")
+        } catch Error as e {
+            Logger.Exception("HookHealth", e, "重装键盘钩子失败")
         }
+        this._MissStreak := 0
     }
 
     ; ---- 周期快照 ----
+    ; 正常期按心跳节奏留基线（三值是否恒等是事后判读的关键依据），
+    ; 异常期与有动作在飞/状态表非空时提高到 ReportIntervalMs，保证现场完整。
     static _Report() {
-        snapshot := this._Snapshot()
-        ; 无异常且内容无变化时不落盘，避免刷爆日志轨
-        if (!this._Suspected && this._Depth = 0 && snapshot == this._LastSnapshot)
+        if (this._Suspected) {
+            Logger.Warn("HookHealth", "现场快照 | " this._Snapshot())
             return
-        this._LastSnapshot := snapshot
-        if (this._Suspected)
-            Logger.Warn("HookHealth", "现场快照 | " snapshot)
-        else
-            Logger.Debug("HookHealth", "快照 | " snapshot)
+        }
+        Logger.Debug("HookHealth", "心跳 | " this._Snapshot())
     }
 
     static _Snapshot() {
