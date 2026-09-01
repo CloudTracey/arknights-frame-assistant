@@ -4,6 +4,17 @@ class GameMonitor {
     ; SetTimer 需要缓存同一 bound 回调对象，才能正确启停/调速
     static _CheckTimer := ""
     static _TimeoutTimer := ""
+    static _PauseWaitTimer := ""
+    static _PauseWaitTickTimer := ""
+
+    ; 自动暂停「等待倍速按钮」阶段参数（#340）：
+    ; 该阶段原为 while(true) 忙等——无 Sleep、无超时，只有找到按钮或游戏进程消失才退出。
+    ; 实测单次可占用主线程 86 秒、单场会话累计 206 秒，期间 HotIf 求值全部排队，
+    ; 系统据此累计低级钩子超时并最终静默摘除钩子（表现为所有热键失效）。
+    ; 改为定时器状态机：每拍只做一次小区域 PixelSearch，其余时间让出主线程。
+    static PauseWaitIntervalMs := 30    ; 轮询间隔，兼顾暂停延迟与主线程占用（原忙等≈100% 占用）
+    static PauseWaitTimeoutMs := 8000   ; 硬超时，与黑屏识别超时同量级，超时放弃本次自动暂停
+    static _PauseWaitDeadline := 0
 
     ; 私有状态
     static _GameHasStarted := false
@@ -133,7 +144,10 @@ class GameMonitor {
                             Logger.Info("GameMonitor", "识别到白色 Loading，准备自动暂停")
                             this._ReadyForPause := true
                             this._ScheduleTimeout(0)
-                            SetTimer GameMonitor.ActionBeginPause.Bind(GameMonitor), -2000
+                            ; 缓存同一 bound 对象（本文件既定约定），否则每次新建对象会让 SetTimer 无法取消
+                            if (this._PauseWaitTimer = "")
+                                this._PauseWaitTimer := GameMonitor.ActionBeginPause.Bind(GameMonitor)
+                            SetTimer this._PauseWaitTimer, -2000
                         }
                     }
                 } finally {
@@ -144,70 +158,100 @@ class GameMonitor {
         }
     }
 
-    ; 自动开局暂停（从 hotkey_actions 迁入；内部写私有状态）
+    ; 自动开局暂停：进入「等待倍速按钮」阶段（由 Loading 识别命中后延迟 2 秒调度）
     ; 像素/图像搜索全部走 Safe* 包装：窗口/桌面不可用时按未命中处理，不抛 OSError
     static ActionBeginPause() {
+        Logger.Info("GameMonitor", "自动暂停：等待倍速按钮")
+        this._PauseWaitDeadline := A_TickCount + this.PauseWaitTimeoutMs
+        this._PauseWaitTick()
+    }
+
+    ; 「等待倍速按钮」单拍：命中则暂停并收尾，未命中则重新排程下一拍。
+    ; 每拍只做一次小区域 PixelSearch 后立即返回，主线程在拍间完全空闲——
+    ; 这正是替换掉原 while(true) 忙等的关键（忙等期间 HotIf 求值排队会导致系统摘除键盘钩子）。
+    static _PauseWaitTick() {
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
         try {
+            ; 游戏窗口消失 → 结束等待，避免 Safe 包装按未命中处理造成无限轮询
+            if !GameTarget.Exists() {
+                Logger.Warn("GameMonitor", "自动暂停：等待倍速按钮期间游戏窗口已不存在")
+                this._ResetPauseWait()
+                return
+            }
+            ; 游戏已不在前台：与 CheckGameStatus 的自动暂停前置条件保持一致。
+            ; 继续等下去只会对着遮挡窗口做像素判断，既可能误命中（凭空注入一次暂停），也白占主线程。
+            if !GameTarget.IsActive() {
+                Logger.Info("GameMonitor", "自动暂停：游戏已切出前台，放弃本次自动暂停")
+                this._ResetPauseWait()
+                return
+            }
+            if (A_TickCount > this._PauseWaitDeadline) {
+                Logger.Info("GameMonitor", "自动暂停：" (this.PauseWaitTimeoutMs // 1000) " 秒内未识别到倍速按钮，放弃本次自动暂停")
+                this._ResetPauseWait()
+                return
+            }
             PosC := SpeedButtonPositionColor()
             if !PosC {
                 Logger.Warn("GameMonitor", "自动暂停：游戏窗口不存在")
+                this._ResetPauseWait()
                 return
             }
-            Logger.Info("GameMonitor", "自动暂停：等待倍速按钮")
-            while(true) {
-                ; 等待期间游戏窗口消失 → 退出等待，避免 Safe 包装按未命中处理造成无限忙等
-                if !GameTarget.Exists() {
-                    Logger.Warn("GameMonitor", "自动暂停：等待倍速按钮期间游戏窗口已不存在")
-                    this._BlackScreenDetected := false
-                    this._ReadyForPause := false
-                    this.SetPollInterval(400)
-                    break
-                }
-                if SafePixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBCUY, PosC.PBCLX, PosC.PBCDY, 0xffffff, 10)
-                {
-                    GameKeys.SendDown("pauseBattle")
-                    USleep(50)
-                    GameKeys.SendUp("pauseBattle")
-                    Logger.Info("GameMonitor", "自动暂停：已暂停")
-                    ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
-                    isProxy := false
-                    TobC := TakeOverButtonPositions()
-                    if !TobC {
-                        Logger.Warn("GameMonitor", "自动暂停：游戏窗口不存在（代理指挥识别）")
-                        this._BlackScreenDetected := false
-                        this._ReadyForPause := false
-                        this.SetPollInterval(400)
-                        break
-                    }
-                    ; 接管代理按钮右侧边缘
-                    if SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver1Path) or SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver2Path) {
-                        isProxy := true
-                    }
-                    ; 接管代理按钮“手”图标拇指
-                    if !SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.HLX, TobC.ImageRegion.HUY, TobC.ImageRegion.HRX, TobC.ImageRegion.HDY, "*90 " FileExtractor.TakeOver3Path) {
-                        Logger.Debug("GameMonitor", "代理指挥判定：手图标识别失败")
-                        isProxy := false
-                    }
-                    if isProxy {
-                        GameKeys.SendDown("pauseBattle")
-                        USleep(50)
-                        GameKeys.SendUp("pauseBattle")
-                        Logger.Info("GameMonitor", "代理指挥，取消暂停")
-                    } else {
-                        Logger.Info("GameMonitor", "非代理指挥，保持暂停")
-                    }
-
-                    this._BlackScreenDetected := false
-                    this._ReadyForPause := false
-                    this.SetPollInterval(400)
-                    break
-                }
+            if !SafePixelSearch(&FoundX, &FoundY, PosC.PBCRX, PosC.PBCUY, PosC.PBCLX, PosC.PBCDY, 0xffffff, 10) {
+                SetTimer this._PauseWaitTimerTick(), -this.PauseWaitIntervalMs
+                return
             }
+            GameKeys.SendDown("pauseBattle")
+            USleep(50)
+            GameKeys.SendUp("pauseBattle")
+            Logger.Info("GameMonitor", "自动暂停：已暂停")
+            ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
+            isProxy := false
+            TobC := TakeOverButtonPositions()
+            if !TobC {
+                Logger.Warn("GameMonitor", "自动暂停：游戏窗口不存在（代理指挥识别）")
+                this._ResetPauseWait()
+                return
+            }
+            ; 接管代理按钮右侧边缘
+            if SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver1Path) or SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver2Path) {
+                isProxy := true
+            }
+            ; 接管代理按钮“手”图标拇指
+            if !SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.HLX, TobC.ImageRegion.HUY, TobC.ImageRegion.HRX, TobC.ImageRegion.HDY, "*90 " FileExtractor.TakeOver3Path) {
+                Logger.Debug("GameMonitor", "代理指挥判定：手图标识别失败")
+                isProxy := false
+            }
+            if isProxy {
+                GameKeys.SendDown("pauseBattle")
+                USleep(50)
+                GameKeys.SendUp("pauseBattle")
+                Logger.Info("GameMonitor", "代理指挥，取消暂停")
+            } else {
+                Logger.Info("GameMonitor", "非代理指挥，保持暂停")
+            }
+            this._ResetPauseWait()
         } finally {
             if (oldCtx)
                 DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
         }
+    }
+
+    ; 「等待倍速按钮」轮询回调（缓存同一 bound 对象，保证可被 SetTimer 取消/重排）
+    static _PauseWaitTimerTick() {
+        if (this._PauseWaitTickTimer = "")
+            this._PauseWaitTickTimer := GameMonitor._PauseWaitTick.Bind(GameMonitor)
+        return this._PauseWaitTickTimer
+    }
+
+    ; 结束等待并回到常规轮询节奏
+    static _ResetPauseWait() {
+        ; 连同尚未触发的 2 秒启动定时器一并取消，避免复位后又被一次陈旧调度重新拉起等待
+        if (this._PauseWaitTimer != "")
+            SetTimer this._PauseWaitTimer, 0
+        SetTimer this._PauseWaitTimerTick(), 0
+        this._BlackScreenDetected := false
+        this._ReadyForPause := false
+        this.SetPollInterval(400)
     }
 
     ; 获取 Loading... 颜色识别位置（三条水平扫描线）
