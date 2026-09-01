@@ -32,6 +32,7 @@
 #Include ./lib/base/custom_hotkey_store.ahk
 #Include ./lib/core/game/game_client_registry.ahk
 #Include ./lib/core/diagnostics/log_exporter.ahk
+#Include ./lib/core/diagnostics/hook_health.ahk
 #Include ./lib/core/launch/app_context.ahk
 #Include ./lib/core/launch/game_auto_start.ahk
 #Include ./lib/core/hotkey/timing_service.ahk
@@ -77,7 +78,10 @@ class App {
     static Bootstrap() {
         ; ---- 环境初始化 ----
         ListLines False
-        KeyHistory 0
+        ; 诊断构建：保留按键历史（原为 0=完全禁用）。排查"所有热键突然失效"时，
+        ; KeyHistory 窗口顶部直接给出 Keybd hook 是否仍安装、最近按键流是否停更——
+        ; 这是区分"系统已摘除钩子"与"HotIf 判定返回 false"的直接证据。
+        KeyHistory 200
         ProcessSetPriority "High"
         SendMode "Input"
         SetKeyDelay -1, -1
@@ -182,6 +186,9 @@ class App {
         GameKeys.Init()
 
         HotkeyService.HotkeyOn()
+
+        ; 诊断构建：启动键盘钩子健康探针（须在 HotkeyOn 之后，监视键位表来自已注册热键）
+        HookHealth.Start()
 
         ; 检查并显示更新公告（事件驱动）
         EventBus.Publish("ChangelogShowRequested")
