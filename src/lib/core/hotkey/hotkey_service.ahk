@@ -43,6 +43,10 @@ class HotkeyService {
     ; 热键状态
     static HotkeyState := true
 
+    ; 失焦悬停路径下等待游戏窗口激活的超时（#340）：该等待期线程不可中断，
+    ; 必须显著小于系统低级钩子超时（LowLevelHooksTimeout 默认 300ms），否则会累计钩子超时。
+    static ActivateTimeoutMs := 200
+
     ; 游戏失焦悬停操作开关（由 SettingsService 在保存/应用后刷新）
     static _HoverOperate := true
 
@@ -236,10 +240,16 @@ class HotkeyService {
                 ; 防御性检查：游戏窗口不存在则跳过（正常触发路径已由判定层保证存在，此处防异常阻塞）
                 if !GameTarget.Exists()
                     return
-                GameTarget.Activate()
-                ; 激活超时（游戏窗口异常不可激活）则跳过动作，避免按键发往非游戏窗口
-                if !GameTarget.WaitActive(500)
-                    return
+                ; #340：WinActivate/WinWaitActive 期间线程不可中断（misc/Threads.htm 明确列出），
+                ; 而此处每次热键都会执行，等待期主线程无法为钩子求值 HotIf，是钩子超时的第二大来源。
+                ; 游戏已在前台时（绝大多数触发）直接跳过激活；仅失焦悬停路径才等待，
+                ; 且超时压到 200ms，保证单次不可中断窗口不触及系统 300ms 红线。
+                if !GameTarget.IsActive() {
+                    GameTarget.Activate()
+                    ; 激活超时（游戏窗口异常不可激活）则跳过动作，避免按键发往非游戏窗口
+                    if !GameTarget.WaitActive(HotkeyService.ActivateTimeoutMs)
+                        return
+                }
                 try {
                     fn(ThisHotkey)
                 } catch Error as e {
