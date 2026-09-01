@@ -14,6 +14,10 @@ class KeyForward {
     ; 拖慢主线程并刷爆日志轨（15MiB）。按 100ms 时间窗去重（普通键维持 InterceptedKeys 原去重语义，不在此限流）。
     static GuardLogIntervalMs := 100
     static _GuardLogNextTick := 0
+    ; 诊断构建：记录每个键上一次成功补发 up 的时刻，用于识别"同键极短间隔二次补发"（防递归护栏漏拍）。
+    ; 两份故障日志的最后一条热键记录都是同键 2ms 内重复补发，故单独观测。
+    static ReentryWindowMs := 200
+    static _LastForwardTick := Map()
 
     ; 判定当前时刻是否应记录守卫拦截日志：窗口内最多一条，窗口自然滑动，无需主动清理状态
     static ShouldLogGuard() {
@@ -115,6 +119,7 @@ class KeyForward {
     ; （注入 down→up）时，物理松开的补发 up 若与注入 down 落在同一画面帧，游戏的帧开头轮询只读到 up，
     ; 注入的按下整次丢失（见 AGENTS.md“帧开头轮询”知识点）。{Blind} 理由同 ForwardOriginalKey。
     static ActionUpForward(ThisHotkey) {
+        HookHealth.NoteFire()
         pureKey := this.PureKeyName(ThisHotkey)
         if (pureKey == "")
             return
@@ -128,6 +133,16 @@ class KeyForward {
             Logger.Debug("KeyForward", "抑制透传 Up：key=" pureKey "（注入按下未完成，避免同帧补发吞掉注入按下）")
             return
         }
+        ; 诊断构建：同键在极短间隔内二次补发 = 防递归护栏漏了一拍（注入的 up 又触发了本变体）。
+        ; 两份故障日志的最后一条热键记录都是"同键 2ms 内重复补发"，故在此升级为 WARN 并带现场状态。
+        prevTick := this._LastForwardTick.Has(pureKey) ? this._LastForwardTick[pureKey] : 0
+        if (prevTick != 0 && A_TickCount - prevTick <= this.ReentryWindowMs) {
+            Logger.Warn("KeyForward", "Up 补发回环：key=" pureKey "，距上次补发 " (A_TickCount - prevTick) "ms"
+                . "，DownHandled=" (KeyForward.DownHandled.Has(pureKey) ? "1" : "0")
+                . "，Intercepted=" (this.InterceptedKeys.Has(pureKey) ? "1" : "0")
+                . "，A_ThisHotkey=" ThisHotkey)
+        }
+        this._LastForwardTick[pureKey] := A_TickCount
         KeyForward.SuppressUp[pureKey] := true
         try {
             Send "{Blind}{" pureKey " Up}"
@@ -707,7 +722,16 @@ class HotkeyActions {
 PureKeyWait(ThisHotkey) {
     if (ThisHotkey == "")
         return
-    KeyWait(KeyForward.PureKeyName(ThisHotkey))
+    pureKey := KeyForward.PureKeyName(ThisHotkey)
+    ; 诊断构建：分段等待，语义与原 KeyWait(pureKey) 完全一致（仍然无限等待物理松开），只增加观测。
+    ; KeyWait 默认等待的是**物理**释放，而物理状态由键盘钩子维护（ahk_docs/lib/KeyWait.htm）——
+    ; 钩子一旦被系统摘除，此处会永久挂起，动作线程堆满 #MaxThreads(默认 10) 后所有热键都无法启动。
+    idx := 0
+    while !KeyWait(pureKey, "T3") {
+        idx++
+        if (idx = 1 || Mod(idx, 10) = 0)
+            Logger.Warn("KeyForward", "等待物理松开已 " (idx * 3) "s：key=" pureKey "（钩子失效时此处会永久挂起并占用线程）")
+    }
 }
 ; 关卡守卫：在关卡内返回 true；拦截时透传原键并记录日志，返回 false
 ; 判定依据：LevelDetector 投票状态机维护的 LevelDetector.IsInLevel()（读内存标志，无像素检测、无 DPI 切换）
@@ -820,6 +844,7 @@ HotkeyActionsStart() {
     KeyForward.InterceptedKeys.CaseSense := false
     KeyForward.DownHandled.CaseSense := false
     KeyForward.SuppressUp.CaseSense := false
+    KeyForward._LastForwardTick.CaseSense := false
     GameKeys.InjectedPressKeys.CaseSense := false
     TouchInjector.Init(3, 1)
 
