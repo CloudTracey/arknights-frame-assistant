@@ -217,7 +217,7 @@ class SettingsService {
             Logger.Info("Settings", "游戏路径区服识别：" info.serverId " - " gamePath)
         }
 
-        ; 应用“启动游戏时自动启动小助手”设置
+        ; 应用“启动游戏时自动启动AFA”设置
         if (!this._ApplyGameAutoStart()) {
             Logger.Warn("Settings", "保存中止：随游戏自动启动设置应用失败")
             return false
