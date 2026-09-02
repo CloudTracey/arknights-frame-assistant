@@ -154,7 +154,7 @@ class GuiManager {
         A_TrayMenu.Add(I18n.T("启用/禁用热键"), (*) => EventBus.Publish("HotkeyToggleRequested"))
         ; 重启前先让出单例互斥体：Reload 的新进程会在旧进程退出前启动，
         ; 若不释放会被单例识别误判为重复启动而弹窗退出
-        A_TrayMenu.Add(I18n.T("重启小助手"), (*) => (SingleInstance.Release(), Reload()))
+        A_TrayMenu.Add(I18n.T("重启AFA"), (*) => (SingleInstance.Release(), Reload()))
         A_TrayMenu.Add(I18n.T("退出"), (*) => ExitApp())
         A_TrayMenu.Default := I18n.T("打开设置界面")
 
@@ -594,7 +594,7 @@ class GuiManager {
         this.LaunchControls.Push(checkboxAutoOpenSettings)
 
         ; 关闭窗口时退出
-        checkboxExitOnWindowClose := this.MainGui.Add("Checkbox", "xs y+10 h24 vExitOnWindowClose", I18n.T(" 点击关闭窗口按钮时退出小助手"))
+        checkboxExitOnWindowClose := this.MainGui.Add("Checkbox", "xs y+10 h24 vExitOnWindowClose", I18n.T(" 点击关闭窗口按钮时退出AFA"))
         checkboxExitOnWindowClose.OnEvent("Click", (*) => this.TrackChange("ExitOnWindowClose"))
         StatusBarHints.Register(checkboxExitOnWindowClose, "切换点击右上角 ✗ 是否直接退出AFA")
         this.MainGui["ExitOnWindowClose"].Value := Config.GetImportant("ExitOnWindowClose")
@@ -608,10 +608,10 @@ class GuiManager {
         this.MainGui["DefaultStrongHoldProtocol"].Value := Config.GetImportant("DefaultStrongHoldProtocol")
         this.LaunchControls.Push(checkboxDefaultStrongHoldProtocol)
 
-        ; 启动小助手时自动启动下方路径游戏
-        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoRunGame", I18n.T(" 启动小助手时同时启动明日方舟"))
+        ; 启动AFA时自动启动下方路径游戏
+        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoRunGame", I18n.T(" 启动AFA时同时启动明日方舟"))
         checkboxAutoRunGame.OnEvent("Click", (*) => this.TrackChange("AutoRunGame"))
-        StatusBarHints.Register(checkboxAutoRunGame, "启动小助手时自动启动下方路径的明日方舟")
+        StatusBarHints.Register(checkboxAutoRunGame, "启动AFA时自动启动下方路径的明日方舟")
         this.MainGui["AutoRunGame"].Value := Config.GetImportant("AutoRunGame")
         this.LaunchControls.Push(checkboxAutoRunGame)
 
@@ -632,10 +632,10 @@ class GuiManager {
         this.LaunchControls.Push(txtGamePath)
         this.LaunchControls.Push(editGamePath)
 
-        ; 启动游戏时自动启动小助手
-        checkboxAutoStartWithGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoStartWithGame", I18n.T(" 启动明日方舟时自动启动小助手（以下路径均可触发）"))
+        ; 启动游戏时自动启动AFA
+        checkboxAutoStartWithGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoStartWithGame", I18n.T(" 启动明日方舟时自动启动AFA（以下路径均可触发）"))
         checkboxAutoStartWithGame.OnEvent("Click", (*) => this.TrackChange("AutoStartWithGame"))
-        StatusBarHints.Register(checkboxAutoStartWithGame, "启动任意区服明日方舟时自动启动小助手（需要管理员权限的计划任务）")
+        StatusBarHints.Register(checkboxAutoStartWithGame, "启动任意区服明日方舟时自动启动AFA（需要管理员权限的计划任务）")
         this.MainGui["AutoStartWithGame"].Value := Config.GetImportant("AutoStartWithGame")
         this.LaunchControls.Push(checkboxAutoStartWithGame)
 
@@ -678,7 +678,7 @@ class GuiManager {
         ; 自动检查更新
         checkboxAutoUpdate := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoUpdate", I18n.T(" 自动检查更新"))
         checkboxAutoUpdate.OnEvent("Click", (*) => this.TrackChange("AutoUpdate"))
-        StatusBarHints.Register(checkboxAutoUpdate, "小助手启动后自动检查更新")
+        StatusBarHints.Register(checkboxAutoUpdate, "AFA启动后自动检查更新")
         this.MainGui["AutoUpdate"].Value := Config.GetImportant("AutoUpdate")
         this.UpdateControls.Push(checkboxAutoUpdate)
 

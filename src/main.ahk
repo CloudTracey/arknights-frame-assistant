@@ -203,7 +203,7 @@ class App {
                 pendingAutoStartWarning := autoStartResult.message
         }
 
-        ; 关闭功能后若有遗留事件触发，只清理任务，不启动小助手主体
+        ; 关闭功能后若有遗留事件触发，只清理任务，不启动AFA主体
         if (autoStartResult.HasProp("shouldExit") && autoStartResult.shouldExit)
             ExitApp
 
