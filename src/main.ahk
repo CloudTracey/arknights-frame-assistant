@@ -1,6 +1,14 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Off
 #Warn All, Off
+; 键盘钩子存活护栏（#340）：AFA 全部热键都注册在 HotIf 回调下，每次按键都要由主线程求值，
+; 求值期间钩子回调一直阻塞。系统对低级钩子有独立超时（LowLevelHooksTimeout，未配置时默认 300ms），
+; 累计超时 11 次就会静默摘除钩子——表现为"所有快捷键突然失效，必须重启或重新注册才恢复"。
+; AHK 默认的 #HotIfTimeout 是 1000ms，比系统红线宽 3 倍多，等于放任每次主线程卡顿都记一次超时。
+; 这里压到 100ms：拦截键有主热键与 Up 两个变体，文档说超时可能按变体分别计算，
+; 2×100=200ms 仍安全在 300ms 以内（若取 150 则 2×150 正好顶到红线）。
+; 代价：主线程卡顿期间该次按键判定为 false（这种时候热键本就无法正常工作），换取钩子永不被摘除。
+#HotIfTimeout 100
 
 ; 所有模块只定义、零顶层副作用；启动由下方 App.Bootstrap() 显式执行。
 #Include ./lib/base/logger.ahk
@@ -32,6 +40,7 @@
 #Include ./lib/base/custom_hotkey_store.ahk
 #Include ./lib/core/game/game_client_registry.ahk
 #Include ./lib/core/diagnostics/log_exporter.ahk
+#Include ./lib/core/diagnostics/hook_health.ahk
 #Include ./lib/core/launch/app_context.ahk
 #Include ./lib/core/launch/game_auto_start.ahk
 #Include ./lib/core/hotkey/timing_service.ahk
@@ -77,7 +86,10 @@ class App {
     static Bootstrap() {
         ; ---- 环境初始化 ----
         ListLines False
-        KeyHistory 0
+        ; 保留按键历史。排查"所有热键突然失效"时，
+        ; KeyHistory 窗口顶部直接给出 Keybd hook 是否仍安装、最近按键流是否停更——
+        ; 这是区分"系统已摘除钩子"与"HotIf 判定返回 false"的直接证据。
+        KeyHistory 200
         ProcessSetPriority "High"
         SendMode "Input"
         SetKeyDelay -1, -1
@@ -182,6 +194,9 @@ class App {
         GameKeys.Init()
 
         HotkeyService.HotkeyOn()
+
+        ; 启动键盘钩子健康探针（须在 HotkeyOn 之后，监视键位表来自已注册热键）
+        HookHealth.Start()
 
         ; 检查并显示更新公告（事件驱动）
         EventBus.Publish("ChangelogShowRequested")
