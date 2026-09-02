@@ -1,5 +1,5 @@
 ; == 统一日志模块 ==
-; 持久化 INFO/WARN/ERROR，并继续把所有级别输出到 DebugView。
+; 所有级别（INFO/WARN/ERROR/DEBUG）恒持久化，并同步输出到 DebugView 与实时控制台。
 ; 普通日志与关键日志分轨滚动，避免容量清理时丢失错误上下文。
 
 class Logger {
@@ -13,7 +13,6 @@ class Logger {
     static Initialized := false
     static FileAvailable := false
     static CriticalFileAvailable := false
-    static DebugEnabled := false
     static ConsoleEnabled := false
     static ConsoleColorEnabled := true
     static ConsoleTipShown := false
@@ -83,14 +82,9 @@ class Logger {
         OnError(ObjBindMethod(this, "HandleUnhandledError"))
     }
 
-    static SetDebugEnabled(enabled) {
-        this.DebugEnabled := !!enabled
-        this.Debug("Logger", "DEBUG 持久化=" (this.DebugEnabled ? "enabled" : "disabled"))
-    }
-
     ; 启用/停用实时控制台回显。
     ; enabled 为 true 时创建「AFA 调试日志」控制台窗口；进程已有控制台（如从终端启动）时 AllocConsole 返回 0，
-    ; 静默降级——ConsoleEnabled 仍置 true 但 ConsoleHandle 保持为空，_EchoToConsole 为 no-op，仅持久化 Debug，不弹窗不报错。
+    ; 静默降级——ConsoleEnabled 仍置 true 但 ConsoleHandle 保持为空，_EchoToConsole 为 no-op，仅持久化日志，不弹窗不报错。
     static SetConsoleEnabled(enabled) {
         if (enabled) {
             if (this.ConsoleEnabled)
@@ -127,8 +121,8 @@ class Logger {
                 ; 控制台启动横幅（亮蓝 0x09）+ 回放此前的最近日志（控制台打开前的内容不再被忽略）
                 this._EchoToConsole("INFO", "", 0x09)
                 this._EchoToConsole("INFO", "===== AFA 调试日志控制台已打开 =====", 0x09)
-                this._EchoToConsole("INFO", "调试模式已启用：日志实时显示并持久化到日志文件", 0x09)
-                this._EchoToConsole("INFO", "如需关闭：其他设置 → 日志，取消勾选「启用调试模式」并应用", 0x09)
+                this._EchoToConsole("INFO", "调试日志控制台已打开：日志始终完整记录到文件，此处实时显示", 0x09)
+                this._EchoToConsole("INFO", "如需关闭：其他设置 → 日志，取消勾选「显示调试日志控制台」并应用", 0x09)
                 this._EchoToConsole("INFO", "----- 以下为此前的最近日志 -----")
                 for bufferedLine in this.RecentLines {
                     lvl := this._ExtractLevelFromLine(bufferedLine)
@@ -196,7 +190,9 @@ class Logger {
     }
 
     static Debug(component, message) {
-        this._Write("DEBUG", component, message, this.DebugEnabled)
+        ; DEBUG 恒持久化：运行行为（动作执行、透传、识别明细等）对排查至关重要，
+        ; 不应依赖用户开启调试模式；「调试模式」开关仅控制实时控制台显示（See SetConsoleEnabled）。
+        this._Write("DEBUG", component, message, true)
     }
 
     static Info(component, message) {

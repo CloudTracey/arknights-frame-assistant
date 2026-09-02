@@ -37,38 +37,19 @@ ApplySystemProxy(http) {
 ; == 版本检查器 ==
 
 class VersionChecker {
-    ; 是否启用调试日志（根据版本号判断，alpha版本启用）
-    static DebugMode := false
-
     ; 初始化
     static Init() {
         configDir := A_AppData "\ArknightsFrameAssistant\PC"
         ReleaseRepository.CacheFile := configDir "\version_cache.json"
-
-        ; alpha版本启用调试模式
-        this.DebugMode := InStr(Version.Get(), "alpha") > 0
     }
 
-    ; 调试日志解锁：alpha 构建恒开，正式版随用户「调试模式」开关
-    ; 直接读 SettingsService 已同步的运行时开关，避免每次 INI 重读、并与 Logger.DebugEnabled 保持一致（无双源）
-    static IsDebugLogging() {
-        if (this.DebugMode)
-            return true
-        return Logger.DebugEnabled
-    }
-
-    ; 内部：输出调试日志
+    ; 内部：输出调试日志（DEBUG 已恒持久化，无需门控）
     static _Log(message) {
-        if (this.IsDebugLogging()) {
-            Logger.Debug("VersionChecker", message)
-        }
+        Logger.Debug("VersionChecker", message)
     }
 
     ; 内部：输出请求报文日志
     static _LogRequest(type, url, method, headers) {
-        if (!this.IsDebugLogging())
-            return
-
         this._Log("========== " type " ==========")
         this._Log("Timestamp: " this._Timestamp())
         this._Log("Method: " method)
@@ -92,9 +73,6 @@ class VersionChecker {
 
     ; 内部：输出响应报文日志
     static _LogResponse(type, statusCode, statusText, headers, body) {
-        if (!this.IsDebugLogging())
-            return
-
         this._Log("========== " type " ==========")
         this._Log("Timestamp: " this._Timestamp())
         this._Log("Status: " statusCode " " statusText)

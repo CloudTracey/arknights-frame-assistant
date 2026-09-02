@@ -59,7 +59,7 @@ class Constants {
         "AutoBeginPause", "开局自动暂停",
         "BackCeaseOperations", "使用“返回上级菜单”放弃行动",
         "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键",
-        "DebugEnabled", "调试模式",
+        "DebugEnabled", "显示调试日志控制台",
         "Language", "界面语言"
     )
 

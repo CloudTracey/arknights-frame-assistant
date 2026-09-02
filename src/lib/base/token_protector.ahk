@@ -178,6 +178,8 @@ class TokenProtector {
     }
 
     static _Failure(message) {
+        ; 记录 DPAPI 失败细节（错误码/异常），供排查「GitHub Token 存储异常」——message 不含 Token 明文。
+        Logger.Warn("TokenProtector", "Token 保护操作失败：" message)
         return {success: false, storedValue: "", plainText: "", value: "", format: "error", message: message}
     }
 

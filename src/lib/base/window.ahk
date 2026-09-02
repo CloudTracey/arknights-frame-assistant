@@ -168,7 +168,7 @@ _SearchRectOffScreen(FX1, FY1, FX2, FY2) {
 
 ; 像素/图像搜索失败日志：60 秒节流记一次 Warn。
 ; 失败场景下单次轮询最多产生十余个搜索调用（如 ExitButton 12 色 OR），
-; 若逐次记 DEBUG 会在开启 DEBUG 持久化时刷屏，故统一按 60s 节流、只记 Warn。
+; 若逐次落盘会在 DEBUG 恒持久化时刷屏，故统一按 60s 节流、只记 Warn。
 _LogSearchError(kind, message, code := "") {
     static _NextWarnTick := 0
     if (A_TickCount < _NextWarnTick)

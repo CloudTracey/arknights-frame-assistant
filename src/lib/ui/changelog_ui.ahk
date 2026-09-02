@@ -11,6 +11,7 @@ class ChangelogUI {
 
     static Show(version, body) {
         this.CurrentVersion := version
+        Logger.Info("ChangelogUI", "展示更新公告，版本=" version)
 
         this.GuiObj := Gui("+AlwaysOnTop", I18n.T("更新公告"))
         this.GuiObj.MarginX := 25
@@ -40,6 +41,7 @@ class ChangelogUI {
     }
 
     static _OnConfirm(chkBox) {
+        Logger.Info("ChangelogUI", "关闭更新公告，版本=" this.CurrentVersion "，不再提示=" (chkBox.Value ? "是" : "否"))
         if chkBox.Value {
             EventBus.Publish("ChangelogDismissRequested", {version: this.CurrentVersion})
         }

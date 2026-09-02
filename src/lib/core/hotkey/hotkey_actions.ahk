@@ -110,7 +110,6 @@ class KeyForward {
         this.InterceptedKeys[pureKey] := true
         try {
             Send "{Blind}{" pureKey " Down}"
-            Logger.Debug("KeyForward", "透传 Down：key=" pureKey)
         } catch Error as e {
             this.InterceptedKeys.Delete(pureKey)
             Logger.Exception("KeyForward", e, "透传 Down 失败：key=" pureKey)
@@ -162,7 +161,14 @@ class KeyForward {
                 this.InterceptedKeys.Delete(pureKey)
             if (KeyForward.DownHandled.Has(pureKey))
                 KeyForward.DownHandled.Delete(pureKey)
-            Logger.Debug("KeyForward", "透传 Up：key=" pureKey)
+            ; 透传日志按"按下→松开"配对合并为一条（Down 不再单独记录），
+            ; 降低 DEBUG 恒持久化后透传路径的逐键写入量；按下已由动作执行/守卫拦截日志兜底。
+            ; 按住时长来自 _LastForwardDownTick（GuardInLevel/ForwardOriginalKey 记录的真实按下时刻）。
+            downTick := this._LastForwardDownTick.Get(pureKey, 0)
+            if (downTick != 0)
+                Logger.Debug("KeyForward", "透传 key=" pureKey "（按住 " (A_TickCount - downTick) "ms）")
+            else
+                Logger.Debug("KeyForward", "透传 Up：key=" pureKey "（无配对按下记录）")
         } catch Error as e {
             Logger.Exception("KeyForward", e, "透传 Up 失败：key=" pureKey)
         } finally {

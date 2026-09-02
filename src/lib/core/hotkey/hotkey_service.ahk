@@ -238,8 +238,10 @@ class HotkeyService {
             probe := HookHealth.EnterAction(IsObject(fn) ? fn.Name : fn, KeyForward.PureKeyName(ThisHotkey))
             try {
                 ; 防御性检查：游戏窗口不存在则跳过（正常触发路径已由判定层保证存在，此处防异常阻塞）
-                if !GameTarget.Exists()
+                if !GameTarget.Exists() {
+                    Logger.Warn("Hotkey", "动作跳过：目标游戏窗口不存在（key=" KeyForward.PureKeyName(ThisHotkey) "）")
                     return
+                }
                 ; #340：WinActivate/WinWaitActive 期间线程不可中断（misc/Threads.htm 明确列出），
                 ; 而此处每次热键都会执行，等待期主线程无法为钩子求值 HotIf，是钩子超时的第二大来源。
                 ; 游戏已在前台时（绝大多数触发）直接跳过激活；仅失焦悬停路径才等待，
@@ -247,8 +249,10 @@ class HotkeyService {
                 if !GameTarget.IsActive() {
                     GameTarget.Activate()
                     ; 激活超时（游戏窗口异常不可激活）则跳过动作，避免按键发往非游戏窗口
-                    if !GameTarget.WaitActive(HotkeyService.ActivateTimeoutMs)
+                    if !GameTarget.WaitActive(HotkeyService.ActivateTimeoutMs) {
+                        Logger.Warn("Hotkey", "动作跳过：激活游戏窗口超时（key=" KeyForward.PureKeyName(ThisHotkey) "）")
                         return
+                    }
                 }
                 try {
                     fn(ThisHotkey)
