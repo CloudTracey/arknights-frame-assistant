@@ -25,9 +25,8 @@ class SettingsService {
 
     ; 内部：启动/保存/应用/重置后刷新与配置相关的运行时缓存
     static _RefreshRuntime() {
-        debugOn := Config.ReadImportantFromIni("DebugEnabled") == "1"
-        Logger.SetDebugEnabled(debugOn)
-        Logger.SetConsoleEnabled(debugOn)
+        ; DebugEnabled 现仅控制实时调试控制台（日志全级别恒持久化，不再依赖该开关）
+        Logger.SetConsoleEnabled(Config.ReadImportantFromIni("DebugEnabled") == "1")
         TimingService.Refresh()
         HotkeyService.SetHoverOperate(Config.ReadCustomFromIni("HoverOperate") == "1")
         lang := Config.ReadImportantFromIni("Language")

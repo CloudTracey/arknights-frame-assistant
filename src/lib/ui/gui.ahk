@@ -829,9 +829,9 @@ class GuiManager {
         StatusBarHints.Register(btnOpenLogDirectory, "在资源管理器中打开日志所在目录")
         this.LogControls.Push(btnOpenLogDirectory)
 
-        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 h24 vDebugEnabled", I18n.T(" 启用调试模式（实时日志窗口，日志额外记录调试信息）"))
+        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 h24 vDebugEnabled", I18n.T(" 显示调试日志控制台"))
         chkDebug.OnEvent("Click", (*) => this.TrackChange("DebugEnabled"))
-        StatusBarHints.Register(chkDebug, "打开「AFA 调试日志」窗口并记录详细调试信息")
+        StatusBarHints.Register(chkDebug, "打开「AFA 调试日志」窗口，实时查看运行日志")
         this.MainGui["DebugEnabled"].Value := Config.GetImportant("DebugEnabled")
         this.LogControls.Push(chkDebug)
 
