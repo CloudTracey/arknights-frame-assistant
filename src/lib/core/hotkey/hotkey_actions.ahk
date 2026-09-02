@@ -166,10 +166,14 @@ class KeyForward {
         } catch Error as e {
             Logger.Exception("KeyForward", e, "透传 Up 失败：key=" pureKey)
         } finally {
-            ; Delete 对不存在的键会抛 UnsetItemError（AGENTS.md 已记录该陷阱）——
-            ; 交错补发时本键可能已被另一线程清除，finally 内抛异常会掩盖 try 内的真实错误。
-            if (KeyForward.SuppressUp.Has(pureKey))
+            ; Delete 对不存在的键会抛 UnsetItemError（AGENTS.md 已记录该陷阱）。
+            ; 前置 Has 检查与 Delete 不是原子操作：若检查通过后线程被中断、
+            ; 另一线程（如 HotkeyOff 的 SuppressUp.Clear 重建）清掉该键，Delete 仍会抛错，
+            ; 在 finally 中掩盖 try 内的真实错误——故直接以 try/catch 包住删除，容忍键不存在。
+            try {
                 KeyForward.SuppressUp.Delete(pureKey)
+            } catch UnsetItemError {
+            }
         }
     }
 }
