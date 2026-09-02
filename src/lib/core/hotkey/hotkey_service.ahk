@@ -233,9 +233,9 @@ class HotkeyService {
     ; fn 是函数对象——AHK v2 中函数定义即同名只读变量（含 Func 对象），ActionCallbacks 的 Fn 存的是函数引用而非字符串，可直接调用。
     static _WrapAction(fn) {
         Wrapped(ThisHotkey) {
-            ; 诊断构建：整个热键线程（含 WinActivate 等待段）纳入在飞统计，
+            ; 整个热键线程（含 WinActivate 等待段）纳入在飞统计，
             ; 用于观测 KeyWait 线程泄漏（#MaxThreads 默认 10，堆满即所有热键无法启动）。
-            probe := HookHealth.EnterAction(IsObject(fn) ? fn.Name : fn)
+            probe := HookHealth.EnterAction(IsObject(fn) ? fn.Name : fn, KeyForward.PureKeyName(ThisHotkey))
             try {
                 ; 防御性检查：游戏窗口不存在则跳过（正常触发路径已由判定层保证存在，此处防异常阻塞）
                 if !GameTarget.Exists()

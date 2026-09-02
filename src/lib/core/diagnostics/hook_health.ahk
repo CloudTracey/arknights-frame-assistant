@@ -1,5 +1,5 @@
 ; == 键盘钩子存活探针与自愈 ==
-; 背景（#340，已由 afa-20260901-225024 日志实证）：AFA 全部热键注册在 HotIf 回调下，
+; 背景（#340）：AFA 全部热键注册在 HotIf 回调下，
 ; 每次按键都要主线程求值，求值期间钩子回调阻塞。主线程若超过系统低级钩子超时
 ; （LowLevelHooksTimeout，未配置时默认 300ms）无法响应，系统累计 11 次后即静默摘除键盘钩子，
 ; 表现为「所有快捷键突然失效，必须重启或重新注册热键才恢复」，且 AHK 自身无从感知。
@@ -8,7 +8,7 @@
 ; 与**依赖钩子**的热键回调计数（NoteFire）对照。观测到物理按下却在宽限期内没有任何热键回调
 ; ⇒ 记一次未命中；连续多次 ⇒ 判定钩子失效，落一份完整状态快照并按需自愈。
 ;
-; 判读要点（实证）：快照里的 idle/idleKbd/idlePhys 三值恒等，说明 A_TimeIdleKeyboard 与
+; 判读要点：快照里的 idle/idleKbd/idlePhys 三值恒等，说明 A_TimeIdleKeyboard 与
 ; A_TimeIdlePhysical 已退化为 A_TimeIdle（文档：钩子未安装时二者等价于 A_TimeIdle），
 ; 即钩子确已不再被调用；三值有差异则说明钩子仍在正常区分键盘与鼠标输入。
 ; 注意单看 idleKbd 数值大小无法判定——纯键盘输入时两种情况都接近 0，必须看三值是否恒等。
@@ -17,7 +17,12 @@ class HookHealth {
     static PollIntervalMs := 100      ; 物理按键采样间隔
     static ReportIntervalMs := 5000   ; 异常期状态快照上报间隔
     static HeartbeatMs := 60000       ; 正常期心跳快照间隔（保留基线，便于事后比对三值是否恒等）
-    static PressGraceMs := 800        ; 物理按下后等待热键回调的宽限（日志实测按住时长 85~590ms）
+    static PendingGraceMs := 3000     ; 物理按下后等待同键热键回调的宽限。
+                                      ; 必须覆盖"完整触发路径"：失焦悬停时的 WinActivate/WaitActive(200ms)
+                                      ; + 动作执行（过帧档最长的 166ms 一组）+ 采样间隔余量。
+                                      ; 过短会在激活路径耗时较长时把真实触发误判为未触发。
+    static MissWarnCooldownMs := 5000 ; 同键误报节流：记录"未触发"告警后，该键短时间内不再重复告警，
+                                      ; 避免按住连打时按一次刷一条
     static MissThreshold := 3         ; 连续多少次未命中判定为钩子失效
     static WatchRefreshMs := 5000     ; 监视键位表刷新间隔（纯内存，无 IO）
     static RecoverCooldownMs := 5000  ; 两次自愈之间的最小间隔，避免异常持续时反复重装钩子
@@ -27,14 +32,14 @@ class HookHealth {
     static _Timer := ""
     static _WatchKeys := Map()        ; vk -> pureKey
     static _PrevDown := Map()         ; vk -> true/false
-    static _Pending := Map()          ; vk -> {tick, fire, key, idleKbd}
-    static _FireCount := 0            ; 热键回调累计次数（由 NoteFire 递增）
-    static _LastFireSeen := 0         ; 上一拍看到的回调计数，用于直接识别"回调恢复"
+    static _Pending := Map()          ; vk -> {tick, key, idleKbd, lastWarn}
+    static _FireByKey := Map()        ; pureKey -> 该键热键回调累计次数（NoteFire 递增）
+    static _FireTotal := 0            ; 全部热键回调累计次数
     static _MissStreak := 0
     static _MissTotal := 0
     static _Depth := 0                ; 当前在执行的动作线程数
     static _MaxDepth := 0
-    static _InFlight := Map()         ; seq -> {name, tick}
+    static _InFlight := Map()         ; seq -> {name, key, tick}
     static _Seq := 0
     static _NextReportTick := 0
     static _NextWatchTick := 0
@@ -55,16 +60,30 @@ class HookHealth {
         Logger.Info("HookHealth", "钩子健康探针已启动，采样=" this.PollIntervalMs "ms，监视键位=" this._WatchKeyNames())
     }
 
-    ; 热键回调发生（任何一次进入热键线程都应调用），供物理按下沿对照
-    static NoteFire() {
-        this._FireCount++
+    ; 热键回调发生（任何一次进入热键线程都应调用），供物理按下沿对照。
+    ; pureKey 必须传入：判定是否"命中"只看**同键**的回调——不同键的回调不能算作本次按下的结果，
+    ; 否则某键按下后恰有另一键触发就会被误记为命中，同键在宽限期后才触发则会被误判为未命中。
+    static NoteFire(pureKey) {
+        if (pureKey == "")
+            return
+        this._FireTotal++
+        this._FireByKey[pureKey] := this._FireByKey.Get(pureKey, 0) + 1
+        ; 同键回调既然已经真实发生，立即结算并清掉该键挂起的按键，绝不误报为未触发
+        this._ClearPendingFor(pureKey)
+        if (this._Suspected)
+            this._NoteHit()
     }
 
-    ; 动作线程进入：返回句柄，调用方必须在 finally 里 ExitAction(句柄)
-    static EnterAction(name) {
-        this.NoteFire()
+    static FireTotal() {
+        return this._FireTotal
+    }
+
+    ; 动作线程进入：返回句柄，调用方必须在 finally 里 ExitAction(句柄)。
+    ; pureKey 供快照展示"在飞线程按的是哪个键"（观测用，不参与命中判定）。
+    static EnterAction(name, pureKey) {
+        this.NoteFire(pureKey)
         seq := ++this._Seq
-        this._InFlight[seq] := {name: name, tick: A_TickCount}
+        this._InFlight[seq] := {name: name, key: pureKey, tick: A_TickCount}
         this._Depth++
         if (this._Depth > this._MaxDepth)
             this._MaxDepth := this._Depth
@@ -79,19 +98,29 @@ class HookHealth {
             this._Depth--
     }
 
+    ; 某键发生真实回调：移除该键全部挂起观测。必要时返回是否存在待结算项，
+    ; 以便调用方在判定恢复的同时清理连击计数。
+    static _ClearPendingFor(pureKey) {
+        if (this._Pending.Count = 0)
+            return false
+        stale := []
+        for vk, info in this._Pending {
+            if (info.key = pureKey)
+                stale.Push(vk)
+        }
+        if (stale.Length = 0)
+            return false
+        for vk in stale
+            this._Pending.Delete(vk)
+        return true
+    }
+
     ; ---- 采样主循环 ----
     static _Poll() {
         now := A_TickCount
         if (now >= this._NextWatchTick) {
             this._NextWatchTick := now + this.WatchRefreshMs
             this._RefreshWatchKeys()
-        }
-        ; 回调计数增长即证明热键已能正常触发。直接在此判定恢复，不依赖建档：
-        ; 旧实现只在"建档的按下被消费"时才判恢复，而恢复后的按键往往因动作正在执行
-        ; 而不满足建档条件，导致恢复时刻从未被记录（首版探针实测缺陷）。
-        if (this._FireCount != this._LastFireSeen) {
-            this._LastFireSeen := this._FireCount
-            this._NoteHit()
         }
         this._SamplePhysicalKeys(now)
         this._ResolvePending(now)
@@ -116,15 +145,13 @@ class HookHealth {
             ; 记录按下瞬间的 idleKbd 备查。注意：钩子未安装时 A_TimeIdleKeyboard 会退化为 A_TimeIdle，
             ; 纯键盘输入下两种情况数值都接近 0，故**不能单看此值判定钩子存活**，
             ; 真正的判据是快照里 idle/idleKbd/idlePhys 三值是否恒等。
-            this._Pending[vk] := {tick: now, fire: this._FireCount, key: pureKey, idleKbd: A_TimeIdleKeyboard}
+            this._Pending[vk] := {tick: now, key: pureKey, idleKbd: A_TimeIdleKeyboard, lastWarn: 0}
         }
     }
 
     ; 是否把这次物理按下计入观测：
     ; - 游戏必须是前台（HotkeyContext 的键盘键放行前提）
     ; - 不是 AFA 自己注入的按键（注入按下窗口 / Up 补发抑制窗口）
-    ; 注意不再因"有动作正在执行"而拒绝建档：动作执行期间其它热键本就应当能触发，
-    ; 拒绝建档会连恢复判定一起挡掉；动作期间的误判改在结算时排除（见 _ResolvePending）。
     static _ShouldArm(pureKey) {
         if (!GameTarget.IsForegroundCached())
             return false
@@ -135,27 +162,33 @@ class HookHealth {
         return true
     }
 
-    ; 判定建档的物理按下是否被热键回调消费
+    ; 结算挂起的物理按下：宽限期已过且该键的回调确实没有发生才算"未触发"。
+    ; 命中判定完全按键隔离（NoteFire 里已按同键即时结算），此处只处理超时未决项。
+    ; 误报防护：只告警一次并记录告警时刻，同键在冷却窗口内不再重复刷（按住连打场景）。
     static _ResolvePending(now) {
         if (this._Pending.Count = 0)
             return
         settled := []
         for vk, info in this._Pending {
-            if (this._FireCount > info.fire) {
-                settled.Push(vk)                 ; 期间发生过热键回调 → 命中
-                this._NoteHit()
+            if (now - info.tick < this.PendingGraceMs)
+                continue
+            if (this._FireByKey.Has(info.key)) {
+                ; 该键在宽限期结束前至少触发过一次回调——此为迟到命中（如失焦悬停激活路径
+                ; 的时间消耗超过监听窗口），不记未命中，避免把"实际已触发"误报为故障。
+                settled.Push(vk)
                 continue
             }
-            if (now - info.tick < this.PressGraceMs)
-                continue
-            settled.Push(vk)
-            ; 结算时仍有动作在执行：同键重入被 MaxThreadsPerHotkey 正常屏蔽，不算异常
             if (this._Depth > 0)
-                continue
+                continue                    ; 同键重入被 MaxThreadsPerHotkey 正常屏蔽，不算异常
+            if (info.lastWarn != 0 && now - info.lastWarn < this.MissWarnCooldownMs)
+                continue                    ; 冷却期内不重复告警，但也别拖到下一次按下
+            settled.Push(vk)
+            info.lastWarn := now
             this._MissTotal++
             this._MissStreak++
             Logger.Warn("HookHealth", "物理按下未触发热键：key=" info.key
                 . "，按下瞬间 idleKbd=" info.idleKbd "ms"
+                . "，监听 " this.PendingGraceMs "ms 内无对应回调（若随后看到该键的 Action 执行日志，则本条为误报，可忽略）"
                 . "，连续未命中=" this._MissStreak "，累计=" this._MissTotal)
             if (this._MissStreak >= this.MissThreshold)
                 this._OnSuspected()
@@ -214,7 +247,7 @@ class HookHealth {
 
     static _Snapshot() {
         return "idle=" A_TimeIdle ", idleKbd=" A_TimeIdleKeyboard ", idlePhys=" A_TimeIdlePhysical
-            . ", fire=" this._FireCount ", miss=" this._MissTotal "/" this._MissStreak
+            . ", fire=" this._FireTotal ", miss=" this._MissTotal "/" this._MissStreak
             . ", depth=" this._Depth "(max " this._MaxDepth ")"
             . ", inflight=[" this._InFlightNames() "]"
             . ", SuppressUp=[" this._KeyList(KeyForward.SuppressUp) "]"
@@ -226,7 +259,7 @@ class HookHealth {
     static _InFlightNames() {
         parts := "", now := A_TickCount
         for _, info in this._InFlight
-            parts .= (parts = "" ? "" : " ") info.name "+" (now - info.tick) "ms"
+            parts .= (parts = "" ? "" : " ") info.name "/" info.key "+" (now - info.tick) "ms"
         return parts
     }
 
