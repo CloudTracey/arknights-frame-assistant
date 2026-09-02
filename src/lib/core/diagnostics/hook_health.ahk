@@ -24,6 +24,10 @@ class HookHealth {
     static MissWarnCooldownMs := 5000 ; 同键误报节流：记录"未触发"告警后，该键短时间内不再重复告警，
                                       ; 避免按住连打时按一次刷一条
     static MissThreshold := 3         ; 连续多少次未命中判定为钩子失效
+    static FireRaceWindowMs := 250    ; 按下沿与回调之间的竞态窗口：
+                                      ; 探针 100ms 轮询晚于钩子回调，按下瞬间回调可能先跑、
+                                      ; 探针后采样（档时快照已含本次回调计数），3000ms 后计数值不再
+                                      ; 增长而误判"未触发"。窗口内已回调的按下直接视为命中、不建档。
     static WatchRefreshMs := 5000     ; 监视键位表刷新间隔（纯内存，无 IO）
     static RecoverCooldownMs := 5000  ; 两次自愈之间的最小间隔，避免异常持续时反复重装钩子
     static AutoRecover := true        ; 已确认故障模式为钩子被系统摘除，默认开启自愈
@@ -35,6 +39,8 @@ class HookHealth {
     static _Pending := Map()          ; vk -> {tick, key, idleKbd, fire}
     static _FireByKey := Map()        ; pureKey -> 该键热键回调累计次数（NoteFire 递增）
     static _FireTotal := 0            ; 全部热键回调累计次数
+    static _LastFireTick := Map()     ; pureKey -> 该键最近一次回调时刻（按键隔离的命中判据，
+                                      ; 兼作按下沿竞态窗口判定）
     static _LastWarnTick := Map()     ; pureKey -> 该键最近一次"未触发告警"时刻（键级持久冷却，见 _ResolvePending）
     static _MissStreak := 0
     static _MissTotal := 0
@@ -69,6 +75,7 @@ class HookHealth {
             return
         this._FireTotal++
         this._FireByKey[pureKey] := this._FireByKey.Get(pureKey, 0) + 1
+        this._LastFireTick[pureKey] := A_TickCount
         ; 同键回调既然已经真实发生，立即结算并清掉该键挂起的按键，绝不误报为未触发
         this._ClearPendingFor(pureKey)
         if (this._Suspected)
@@ -143,6 +150,15 @@ class HookHealth {
             ; 新的物理按下沿：只在"本应触发热键"的条件下建档，避免误报
             if (!this._ShouldArm(pureKey))
                 continue
+            ; 按下-回调竞态窗口：探针 100ms 轮询必然晚于钩子回调。若本键刚发生过回调
+            ; （距现在 < FireRaceWindowMs），说明本次按下的回调已先于采样执行——
+            ; 此时快照计数已含本次回调，再建档会在宽限期后误判"未触发"——直接视为命中、不建档。
+            ; 钩子真正失效时 _LastFireTick 不会再有更新（历史时刻远早于按下沿，
+            ; 且按下后不会新增），本次按下正常建档、宽限后正常报 WARN，检测能力不受影响；
+            ; ~ 透传键（无 Up 变体、松开无回调）正是靠本逻辑消除误报。
+            lastFire := this._LastFireTick.Get(pureKey, 0)
+            if (lastFire != 0 && now - lastFire < this.FireRaceWindowMs)
+                continue
             ; 记录按下瞬间的 idleKbd 备查。注意：钩子未安装时 A_TimeIdleKeyboard 会退化为 A_TimeIdle，
             ; 纯键盘输入下两种情况数值都接近 0，故**不能单看此值判定钩子存活**，
             ; 真正的判据是快照里 idle/idleKbd/idlePhys 三值是否恒等。
@@ -194,7 +210,7 @@ class HookHealth {
             this._MissStreak++
             Logger.Warn("HookHealth", "物理按下未触发热键：key=" info.key
                 . "，按下瞬间 idleKbd=" info.idleKbd "ms"
-                . "，监听 " this.PendingGraceMs "ms 内无对应回调（若随后看到该键的 Action 执行日志，则本条为误报，可忽略）"
+                . "，监听 " this.PendingGraceMs "ms 内无对应回调"
                 . "，连续未命中=" this._MissStreak "，累计=" this._MissTotal)
             if (this._MissStreak >= this.MissThreshold)
                 this._OnSuspected()
