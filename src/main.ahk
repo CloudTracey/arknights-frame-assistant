@@ -86,7 +86,7 @@ class App {
     static Bootstrap() {
         ; ---- 环境初始化 ----
         ListLines False
-        ; 诊断构建：保留按键历史（原为 0=完全禁用）。排查"所有热键突然失效"时，
+        ; 保留按键历史。排查"所有热键突然失效"时，
         ; KeyHistory 窗口顶部直接给出 Keybd hook 是否仍安装、最近按键流是否停更——
         ; 这是区分"系统已摘除钩子"与"HotIf 判定返回 false"的直接证据。
         KeyHistory 200
@@ -195,7 +195,7 @@ class App {
 
         HotkeyService.HotkeyOn()
 
-        ; 诊断构建：启动键盘钩子健康探针（须在 HotkeyOn 之后，监视键位表来自已注册热键）
+        ; 启动键盘钩子健康探针（须在 HotkeyOn 之后，监视键位表来自已注册热键）
         HookHealth.Start()
 
         ; 检查并显示更新公告（事件驱动）
