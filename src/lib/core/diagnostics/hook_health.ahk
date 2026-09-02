@@ -41,6 +41,9 @@ class HookHealth {
     static _FireTotal := 0            ; 全部热键回调累计次数
     static _LastFireTick := Map()     ; pureKey -> 该键最近一次回调时刻（按键隔离的命中判据，
                                       ; 兼作按下沿竞态窗口判定）
+    static _LastPressEdge := Map()    ; pureKey -> 该键最近一次**按下沿被采样到**的时刻。
+                                      ; 竞态判定用它区分"回调属于本次按下还是上一次按下"——
+                                      ; 快速连按（<250ms）时上一次的回调不应抑制本次建档
     static _LastWarnTick := Map()     ; pureKey -> 该键最近一次"未触发告警"时刻（键级持久冷却，见 _ResolvePending）
     static _MissStreak := 0
     static _MissTotal := 0
@@ -153,11 +156,18 @@ class HookHealth {
             ; 按下-回调竞态窗口：探针 100ms 轮询必然晚于钩子回调。若本键刚发生过回调
             ; （距现在 < FireRaceWindowMs），说明本次按下的回调已先于采样执行——
             ; 此时快照计数已含本次回调，再建档会在宽限期后误判"未触发"——直接视为命中、不建档。
-            ; 钩子真正失效时 _LastFireTick 不会再有更新（历史时刻远早于按下沿，
-            ; 且按下后不会新增），本次按下正常建档、宽限后正常报 WARN，检测能力不受影响；
+            ; 判定必须双重限定，缺一不可：
+            ;   (a) 回调时刻晚于**上一次**按下沿（_LastPressEdge）——否则它属于上一次按下，
+            ;       快速连按时会把这个"上一次的回调"误当成"本次按下的证据"，
+            ;       钩子在 250ms 内失效时本次按下将被漏检（审查 PR #351 指出的正确缺陷）；
+            ;   (b) now - 回调 < 竞态窗口——正常一次按键按-回调间隔在 100ms 采样内。
+            ; 钩子真正失效时 _LastFireTick 冻结在失效前（不会晚于本次按下沿），
+            ; 本次按下正常建档、宽限后正常报 WARN，检测能力不受影响；
             ; ~ 透传键（无 Up 变体、松开无回调）正是靠本逻辑消除误报。
+            prevEdge := this._LastPressEdge.Get(pureKey, 0)
+            this._LastPressEdge[pureKey] := now
             lastFire := this._LastFireTick.Get(pureKey, 0)
-            if (lastFire != 0 && now - lastFire < this.FireRaceWindowMs)
+            if (lastFire != 0 && lastFire > prevEdge && now - lastFire < this.FireRaceWindowMs)
                 continue
             ; 记录按下瞬间的 idleKbd 备查。注意：钩子未安装时 A_TimeIdleKeyboard 会退化为 A_TimeIdle，
             ; 纯键盘输入下两种情况数值都接近 0，故**不能单看此值判定钩子存活**，
