@@ -120,6 +120,8 @@ class LogExporter {
         for serverId in ServerProfile.Ids()
             lines.Push("RegistryRoot" serverId "=" ServerProfile.RegistryRoot(serverId))
         lines.Push("GeneratedAt=" FormatTime(, "yyyy-MM-dd HH:mm:ss.") A_MSec)
+        ; 日志全级别恒持久化；此键只表示用户是否打开过实时调试控制台
+        lines.Push("DebugConsoleEnabled=" (Config.GetImportant("DebugEnabled") = "1" ? "true" : "false"))
         lines.Push("LogDirectoryAvailable=" (Logger.FileAvailable ? "true" : "false"))
         if !IsObject(retention)
             retention := Logger.GetRetentionSummary()

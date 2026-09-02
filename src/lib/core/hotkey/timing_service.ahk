@@ -29,6 +29,8 @@ class TimingService {
 
     ; 根据当前配置刷新延迟缓存（由 SettingsService 在配置变更后调用）
     static Refresh() {
+        oldDelay := this._CurrentDelay
+        oldClickDelay := this._ClickDelay
         frame := Config.GetImportant("Frame")
         if (frame == "30") {
             this._CurrentDelay := Constants.Delay30
@@ -48,5 +50,8 @@ class TimingService {
             this._CurrentDelay := Constants.Delay240
         }
         this._ClickDelay := Config.ReadCustomFromIni("ClickDelay")
+        if (oldDelay != this._CurrentDelay || oldClickDelay != this._ClickDelay)
+            Logger.Info("Timing", "时序缓存刷新：帧率=" frame "，CurrentDelay " oldDelay "→" this._CurrentDelay
+                . "，ClickDelay " oldClickDelay "→" this._ClickDelay)
     }
 }

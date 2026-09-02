@@ -6,6 +6,8 @@ class AppContext {
 
     static SetStartedByGameAutoStart(value) {
         this._StartedByGameAutoStart := value
+        if (value)
+            Logger.Info("AppContext", "本次启动来源：随游戏自动启动（--game-autostart）")
     }
 
     static GetStartedByGameAutoStart() {
