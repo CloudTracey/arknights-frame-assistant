@@ -32,9 +32,10 @@ class HookHealth {
     static _Timer := ""
     static _WatchKeys := Map()        ; vk -> pureKey
     static _PrevDown := Map()         ; vk -> true/false
-    static _Pending := Map()          ; vk -> {tick, key, idleKbd, lastWarn}
+    static _Pending := Map()          ; vk -> {tick, key, idleKbd, fire}
     static _FireByKey := Map()        ; pureKey -> 该键热键回调累计次数（NoteFire 递增）
     static _FireTotal := 0            ; 全部热键回调累计次数
+    static _LastWarnTick := Map()     ; pureKey -> 该键最近一次"未触发告警"时刻（键级持久冷却，见 _ResolvePending）
     static _MissStreak := 0
     static _MissTotal := 0
     static _Depth := 0                ; 当前在执行的动作线程数
@@ -145,7 +146,9 @@ class HookHealth {
             ; 记录按下瞬间的 idleKbd 备查。注意：钩子未安装时 A_TimeIdleKeyboard 会退化为 A_TimeIdle，
             ; 纯键盘输入下两种情况数值都接近 0，故**不能单看此值判定钩子存活**，
             ; 真正的判据是快照里 idle/idleKbd/idlePhys 三值是否恒等。
-            this._Pending[vk] := {tick: now, key: pureKey, idleKbd: A_TimeIdleKeyboard, lastWarn: 0}
+            ; fire：本次**按下时刻**该键的累计回调计数快照。结算时与之比较（而非用 Has 判断"曾触发"）——
+            ; Has 会因该键历史上触发过而永远为真，导致钩子真失效后每次按下都被误判为命中、永不计 miss。
+            this._Pending[vk] := {tick: now, key: pureKey, idleKbd: A_TimeIdleKeyboard, fire: this._FireByKey.Get(pureKey, 0)}
         }
     }
 
@@ -164,7 +167,8 @@ class HookHealth {
 
     ; 结算挂起的物理按下：宽限期已过且该键的回调确实没有发生才算"未触发"。
     ; 命中判定完全按键隔离（NoteFire 里已按同键即时结算），此处只处理超时未决项。
-    ; 误报防护：只告警一次并记录告警时刻，同键在冷却窗口内不再重复刷（按住连打场景）。
+    ; 误报防护：告警冷却状态保存在键级持久表 _LastWarnTick（不随 _Pending 短生命周期销毁），
+    ; 同键在冷却窗口内不再重复告警，避免按住连打时按一次刷一条。
     static _ResolvePending(now) {
         if (this._Pending.Count = 0)
             return
@@ -172,18 +176,20 @@ class HookHealth {
         for vk, info in this._Pending {
             if (now - info.tick < this.PendingGraceMs)
                 continue
-            if (this._FireByKey.Has(info.key)) {
-                ; 该键在宽限期结束前至少触发过一次回调——此为迟到命中（如失焦悬停激活路径
-                ; 的时间消耗超过监听窗口），不记未命中，避免把"实际已触发"误报为故障。
+            ; 与按下时刻的快照相比仍有新回调 = 宽限期内确实发生过该键回调（迟到命中，
+            ; 如失焦悬停激活路径的时间消耗超过监听窗口）——不记未命中，避免误报。
+            ; 用计数差而非 Has：Has 只表示"该键历史上触发过"，钩子失效后不再成立将永远漏检。
+            if (this._FireByKey.Get(info.key, 0) > info.fire) {
                 settled.Push(vk)
                 continue
             }
             if (this._Depth > 0)
                 continue                    ; 同键重入被 MaxThreadsPerHotkey 正常屏蔽，不算异常
-            if (info.lastWarn != 0 && now - info.lastWarn < this.MissWarnCooldownMs)
-                continue                    ; 冷却期内不重复告警，但也别拖到下一次按下
+            lastWarn := this._LastWarnTick.Get(info.key, 0)
+            if (lastWarn != 0 && now - lastWarn < this.MissWarnCooldownMs)
+                continue                    ; 冷却期内不重复告警
             settled.Push(vk)
-            info.lastWarn := now
+            this._LastWarnTick[info.key] := now
             this._MissTotal++
             this._MissStreak++
             Logger.Warn("HookHealth", "物理按下未触发热键：key=" info.key
