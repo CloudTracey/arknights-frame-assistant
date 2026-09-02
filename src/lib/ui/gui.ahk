@@ -616,16 +616,31 @@ class GuiManager {
         this.LaunchControls.Push(checkboxAutoRunGame)
 
         ; 识别游戏路径
-        this.BtnCheckGamePath := this.MainGui.Add("Button", "xs y+12 w" Max(this.BtnW, Metrics.TextWidth(I18n.T("识别游戏路径")) + 14) " h24", I18n.T("识别游戏路径"))
-        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", I18n.T("可同时识别所有区服的路径，若识别不到可以先启动游戏再识别"))
+        btnCheckGamePathW := Max(this.BtnW, Metrics.TextWidth(I18n.T("识别游戏路径")) + 14)
+        this.BtnCheckGamePath := this.MainGui.Add("Button", "xs y+12 w" btnCheckGamePathW " h24", I18n.T("识别游戏路径"))
+        ; 提示文本右缘固定在内容区右缘（x690），宽度不随语言文本变化（超宽裁剪，各语言文案长度需人工验证）
+        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 w" (530 - btnCheckGamePathW - 15) " h20 c9c9c9c", I18n.T("可同时识别所有区服的路径，若识别不到可以先启动游戏再识别"))
         this.BtnCheckGamePath.OnEvent("Click", (*) => EventBus.Publish("CheckGamePathClick"))
         StatusBarHints.Register(this.BtnCheckGamePath, "自动识别本机的游戏安装路径")
         this.LaunchControls.Push(this.BtnCheckGamePath)
         this.LaunchControls.Push(hintGamePath)
 
-        ; 游戏路径
-        txtGamePath := this.MainGui.Add("Text", "xs y+10 h24", I18n.T(" 随AFA启动游戏路径: "))
-        editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w403 h20 vGamePath -Multi +0x1", Config.GetImportant(
+        ; 游戏路径：标签右缘以中文基准宽度锚定（右对齐），编辑框固定在基准右缘 +10——
+        ; 标签宽出向左延伸、上限 zhW+29（不越过 x131 分隔线）。保证中文布局原点不动，
+        ; 且各语言标签/编辑框列位置一致，语言文本长度差异不再撑大窗口
+        probeZhGui := Gui()
+        probeZhGui.SetFont("s9", Metrics.FontFor("zh-Hans"))
+        probeZh := probeZhGui.Add("Text", , " 随AFA启动游戏路径: ")
+        probeZh.GetPos(, , &gamePathLabelZhW)
+        probeZhGui.Destroy()
+        probeGui := Gui()
+        probeGui.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
+        probe := probeGui.Add("Text", , I18n.T(" 随AFA启动游戏路径: "))
+        probe.GetPos(, , &gamePathLabelW)
+        probeGui.Destroy()
+        gamePathLabelW := Min(Max(gamePathLabelW, gamePathLabelZhW), gamePathLabelZhW + 29)
+        txtGamePath := this.MainGui.Add("Text", "x" (160 + gamePathLabelZhW - gamePathLabelW) " y+10 w" gamePathLabelW " Right h24", I18n.T(" 随AFA启动游戏路径: "))
+        editGamePath := this.MainGui.Add("Edit", "x" (170 + gamePathLabelZhW) " yp-2 w403 h20 vGamePath -Multi +0x1", Config.GetImportant(
             "GamePath"))
         editGamePath.OnEvent("Change", (*) => this.TrackChange("GamePath"))
         StatusBarHints.Register(editGamePath, "随AFA启动的游戏路径，可手动输入，或点击「识别游戏路径」自动填入")
