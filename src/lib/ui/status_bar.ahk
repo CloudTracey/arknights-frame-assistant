@@ -28,11 +28,12 @@ class StatusBarHints {
     static _CurrentKey := ""
     static _CurrentArgs := []
     static _CurrentText := ""
-    ; 轮播文案（中文原文，显示时经 I18n.T；文案定稿见 docs/status_bar_texts_review.md）
+    ; 轮播文案（中文原文，显示时经 I18n.T）
     static _TipItems := [
         "悬停到任意控件即可查看功能说明",
         "修改设置后记得保存或应用哦",
-        "遇到问题可在「日志」页导出日志压缩包，然后到GitHub Issues或者加入QQ群反馈"
+        "遇到问题可在「日志」页导出日志压缩包，然后到GitHub Issues或者加入QQ群反馈",
+        "使用满意的话欢迎上GitHub给AFA点个Star，非常感谢~"
     ]
     static _LastTip := ""
     ; 定时器回调必须是单一函数对象（SetTimer 启停按对象身份匹配）
