@@ -13,16 +13,24 @@ class GameTarget {
 
     ; ── 绑定 / 解绑 ──
 
-    ; 绑定当前目标客户端实例（A3 前台仲裁调用）
+    ; 绑定当前目标客户端实例（A3 前台仲裁调用）。
+    ; 幂等：400ms 前台轮询会对同一客户端反复调用本方法，状态未变化时静默返回，
+    ; 仅真实绑定变化时记录日志，避免逐轮询刷屏。
     static Bind(hwnd, pid, exePath, serverId) {
+        if (this._Hwnd = hwnd && this._Pid = pid && this._ExePath = exePath && this._ServerId = serverId)
+            return
+        Logger.Debug("GameTarget", "绑定目标窗口 hwnd=" hwnd " pid=" pid " serverId=" serverId " exe=" exePath)
         this._Hwnd := hwnd
         this._Pid := pid
         this._ExePath := exePath
         this._ServerId := serverId
     }
 
-    ; 解绑；此后 WinTitle/Exists/IsActive/Activate 回到 ahk_exe 宽松回退
+    ; 解绑；此后 WinTitle/Exists/IsActive/Activate 回到 ahk_exe 宽松回退。
+    ; 幂等：前台轮询在无客户端时会反复调用（空解绑），仅在真实解绑（持有绑定）时记录日志。
     static Unbind() {
+        if (this._Hwnd != 0)
+            Logger.Debug("GameTarget", "解绑目标窗口 hwnd=" this._Hwnd " pid=" this._Pid " serverId=" this._ServerId)
         this._Hwnd := 0
         this._Pid := 0
         this._ExePath := ""

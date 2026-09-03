@@ -14,6 +14,15 @@ class KeyForward {
     ; 拖慢主线程并刷爆日志轨（15MiB）。按 100ms 时间窗去重（普通键维持 InterceptedKeys 原去重语义，不在此限流）。
     static GuardLogIntervalMs := 100
     static _GuardLogNextTick := 0
+    ; 记录每个键上一次成功补发 up 的时刻，用于识别"同一按住周期内出现极短间隔二次补发"。
+    ; 判定窗口必须显著窄于正常快速连击的间隔（通常在 100ms 以上），
+    ; 且以"期间是否再次发生真实按下"区分先后两个按住周期——
+    ; 否则正常连击会被误判为防递归护栏漏拍（日志误报、刷爆 critical 轨）。
+    static ReentryWindowMs := 50
+    static _LastForwardTick := Map()
+    ; 每个键最近一次"真实按下"的时刻（GuardInLevel / ForwardOriginalKey 记录）：
+    ; 回环判定要求两次补发之间没有新按下，否则就是两个正常按住周期，不算异常
+    static _LastForwardDownTick := Map()
 
     ; 判定当前时刻是否应记录守卫拦截日志：窗口内最多一条，窗口自然滑动，无需主动清理状态
     static ShouldLogGuard() {
@@ -96,10 +105,11 @@ class KeyForward {
         ; 长按自动重复期间只保留一组逻辑 Down/Up。
         if this.InterceptedKeys.Has(pureKey)
             return
+        ; 记录真实按下时刻（回环判定的周期分隔依据，见 ActionUpForward）
+        this._LastForwardDownTick[pureKey] := A_TickCount
         this.InterceptedKeys[pureKey] := true
         try {
             Send "{Blind}{" pureKey " Down}"
-            Logger.Debug("KeyForward", "透传 Down：key=" pureKey)
         } catch Error as e {
             this.InterceptedKeys.Delete(pureKey)
             Logger.Exception("KeyForward", e, "透传 Down 失败：key=" pureKey)
@@ -116,6 +126,7 @@ class KeyForward {
     ; 注入的按下整次丢失（见 AGENTS.md“帧开头轮询”知识点）。{Blind} 理由同 ForwardOriginalKey。
     static ActionUpForward(ThisHotkey) {
         pureKey := this.PureKeyName(ThisHotkey)
+        HookHealth.NoteFire(pureKey)
         if (pureKey == "")
             return
         ; 防递归：Send 补发的 up 会被钩子重新捕获触发本变体，补发期间同名键直接返回（键级作用域，不挡其它键）
@@ -128,6 +139,20 @@ class KeyForward {
             Logger.Debug("KeyForward", "抑制透传 Up：key=" pureKey "（注入按下未完成，避免同帧补发吞掉注入按下）")
             return
         }
+        ; 同一按住周期内的极短间隔二次补发 = 防递归护栏可能漏了一拍（注入的 up 又触发了本变体）。
+        ; 注意"期间是否又发生了一次真实按下"：若在两次补发之间有新的 down 事件（GuardInLevel/ForwardOriginalKey
+        ; 会记录 _LastForwardDownTick），则它们是两个正常按住周期——快速连击即属此类，不判回环。
+        ; 仅当窗口内无新 down 的连续补发才判疑似异常，日志级别用 DEBUG（不进 critical 轨）。
+        prevTick := this._LastForwardTick.Has(pureKey) ? this._LastForwardTick[pureKey] : 0
+        if (prevTick != 0 && A_TickCount - prevTick <= this.ReentryWindowMs && this._LastForwardDownTick.Has(pureKey)) {
+            if (this._LastForwardDownTick[pureKey] < prevTick) {
+                Logger.Debug("KeyForward", "Up 补发疑似回环：key=" pureKey "，距上次补发 " (A_TickCount - prevTick) "ms"
+                    . "，DownHandled=" (KeyForward.DownHandled.Has(pureKey) ? "1" : "0")
+                    . "，Intercepted=" (this.InterceptedKeys.Has(pureKey) ? "1" : "0")
+                    . "，A_ThisHotkey=" ThisHotkey)
+            }
+        }
+        this._LastForwardTick[pureKey] := A_TickCount
         KeyForward.SuppressUp[pureKey] := true
         try {
             Send "{Blind}{" pureKey " Up}"
@@ -136,11 +161,25 @@ class KeyForward {
                 this.InterceptedKeys.Delete(pureKey)
             if (KeyForward.DownHandled.Has(pureKey))
                 KeyForward.DownHandled.Delete(pureKey)
-            Logger.Debug("KeyForward", "透传 Up：key=" pureKey)
+            ; 透传日志按"按下→松开"配对合并为一条（Down 不再单独记录），
+            ; 降低 DEBUG 恒持久化后透传路径的逐键写入量；按下已由动作执行/守卫拦截日志兜底。
+            ; 按住时长来自 _LastForwardDownTick（GuardInLevel/ForwardOriginalKey 记录的真实按下时刻）。
+            downTick := this._LastForwardDownTick.Get(pureKey, 0)
+            if (downTick != 0)
+                Logger.Debug("KeyForward", "透传 key=" pureKey "（按住 " (A_TickCount - downTick) "ms）")
+            else
+                Logger.Debug("KeyForward", "透传 Up：key=" pureKey "（无配对按下记录）")
         } catch Error as e {
             Logger.Exception("KeyForward", e, "透传 Up 失败：key=" pureKey)
         } finally {
-            KeyForward.SuppressUp.Delete(pureKey)
+            ; Delete 对不存在的键会抛 UnsetItemError（AGENTS.md 已记录该陷阱）。
+            ; 前置 Has 检查与 Delete 不是原子操作：若检查通过后线程被中断、
+            ; 另一线程（如 HotkeyOff 的 SuppressUp.Clear 重建）清掉该键，Delete 仍会抛错，
+            ; 在 finally 中掩盖 try 内的真实错误——故直接以 try/catch 包住删除，容忍键不存在。
+            try {
+                KeyForward.SuppressUp.Delete(pureKey)
+            } catch UnsetItemError {
+            }
         }
     }
 }
@@ -704,7 +743,18 @@ class HotkeyActions {
 PureKeyWait(ThisHotkey) {
     if (ThisHotkey == "")
         return
-    KeyWait(KeyForward.PureKeyName(ThisHotkey))
+    pureKey := KeyForward.PureKeyName(ThisHotkey)
+    ; 分段等待，语义与原 KeyWait(pureKey) 完全一致（仍然无限等待物理松开），只增加观测。
+    ; KeyWait 默认等待的是**物理**释放，而物理状态由键盘钩子维护（ahk_docs/lib/KeyWait.htm）——
+    ; 钩子一旦被系统摘除，此处会永久挂起，动作线程堆满 #MaxThreads(默认 10) 后所有热键都无法启动。
+    ; 注意"按住超过 3 秒"（按下暂停/按住瞄准等）是正常操作，非异常——观测用 DEBUG，
+    ; 只有持续按住才逐步升级采样，避免正常长按把 WARN 轨（5 MiB critical）刷爆。
+    idx := 0
+    while !KeyWait(pureKey, "T3") {
+        idx++
+        if (idx = 1 || Mod(idx, 10) = 0)
+            Logger.Debug("KeyForward", "等待物理松开已 " (idx * 3) "s：key=" pureKey "（长按属正常操作；若钩子失效此处会永久挂起并占用线程）")
+    }
 }
 ; 关卡守卫：在关卡内返回 true；拦截时透传原键并记录日志，返回 false
 ; 判定依据：LevelDetector 投票状态机维护的 LevelDetector.IsInLevel()（读内存标志，无像素检测、无 DPI 切换）
@@ -714,8 +764,11 @@ GuardInLevel(actionName, ThisHotkey) {
     pureKey := KeyForward.PureKeyName(ThisHotkey)
     ; 主热键（down）触发即记录该键已被 AFA 处理，Up 变体据此决定补发 up；Up 变体（含 OnUp 型）不记录；
     ; PureKeyName 为空时不记录，避免 DownHandled 出现 "" 键干扰后续逻辑
-    if !RegExMatch(ThisHotkey, " Up$") && pureKey != ""
+    if !RegExMatch(ThisHotkey, " Up$") && pureKey != "" {
         KeyForward.DownHandled[pureKey] := true
+        ; 新的真实按下：标记"上一次补发到此为止"，避免把下一个按住周期的补发误判成回环
+        KeyForward._LastForwardDownTick[pureKey] := A_TickCount
+    }
     if LevelDetector.IsInLevel()
         return true
     ; 同一按住周期的重复 down（InterceptedKeys 已有，已补发过）不再记日志，避免切走时 key repeat 刷屏；
@@ -817,6 +870,8 @@ HotkeyActionsStart() {
     KeyForward.InterceptedKeys.CaseSense := false
     KeyForward.DownHandled.CaseSense := false
     KeyForward.SuppressUp.CaseSense := false
+    KeyForward._LastForwardTick.CaseSense := false
+    KeyForward._LastForwardDownTick.CaseSense := false
     GameKeys.InjectedPressKeys.CaseSense := false
     TouchInjector.Init(3, 1)
 

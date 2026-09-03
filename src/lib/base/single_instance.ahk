@@ -23,8 +23,11 @@ class SingleInstance {
     }
 
     ; 释放互斥体句柄（幂等）。调用后本进程不再持有单例，供重启/提权重启前让位。
+    ; 注：Bootstrap 的 Acquire 早于 Logger.Init（此时无文件可写，冲突提示走 OutputDebug），
+    ; 故只在 Release（托盘重启路径）记录——提权路径调用时若 Logger 仍未初始化则安全降级到 DebugView。
     static Release() {
         if (this.Handle != 0) {
+            Logger.Info("SingleInstance", "释放单例互斥体，句柄=" this.Handle)
             DllCall("CloseHandle", "Ptr", this.Handle)
             this.Handle := 0
         }

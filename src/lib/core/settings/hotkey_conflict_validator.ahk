@@ -51,6 +51,18 @@ class HotkeyConflictValidator {
             seen
         )
 
+        ; 有冲突时落 Info 级完整列表（无冲突不记录，避免每次绑定变更刷日志）。
+        ; 用 Info 而非 Warn：改键途中的临时冲突是预期内场景（GUI 已标红提示），
+        ; 不应进入关键日志轨（critical-*.log 5MiB 留给真正的错误/警告）；
+        ; 若保存阶段因此中止，SettingsService 会另行记录 Warn。
+        ; 冲突记录使用控件名（内部标识而非显示名），与 GUI 标红控件一一对应，便于定位「保存中止」原因。
+        if (conflicts.Length > 0) {
+            summary := ""
+            for conflict in conflicts
+                summary .= (summary = "" ? "" : "; ") conflict.FirstControl "=" conflict.Key " ↔ " conflict.SecondControl
+            Logger.Info("Hotkeys", "检测到热键冲突 " conflicts.Length " 处：" summary)
+        }
+
         return {
             HasConflicts: conflicts.Length > 0,
             Items: conflicts,

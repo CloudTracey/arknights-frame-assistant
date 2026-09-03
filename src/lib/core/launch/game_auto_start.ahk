@@ -1,4 +1,4 @@
-; == 随游戏自动启动小助手 ==
+; == 随游戏自动启动AFA ==
 
 class GameAutoStartManager {
     ; Windows 安全审核“进程创建”子类别 GUID
@@ -436,8 +436,8 @@ class GameAutoStartManager {
         paths := this._AsPathArray(gamePaths)
         taskDefinition := service.NewTask(0)
 
-        taskDefinition.RegistrationInfo.Author := "Arknights Frame Assistant"
-        taskDefinition.RegistrationInfo.Description := I18n.T("检测明日方舟启动并自动启动 Arknights Frame Assistant")
+        taskDefinition.RegistrationInfo.Author := "AFA"
+        taskDefinition.RegistrationInfo.Description := I18n.T("检测明日方舟启动并自动启动 AFA")
 
         settings := taskDefinition.Settings
         settings.Enabled := true

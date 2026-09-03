@@ -33,7 +33,7 @@ class Constants {
     static ImportantNames := Map(
         "AutoExit", "自动退出",
         "AutoOpenSettings", "自动打开设置界面",
-        "ExitOnWindowClose", "关闭窗口时退出小助手",
+        "ExitOnWindowClose", "关闭窗口时退出AFA",
         "Frame", "游戏内帧率设置（兼容旧版）",
         "Frame155", "游戏内帧率设置",
         "AutoUpdate", "自动检查更新",
@@ -50,8 +50,8 @@ class Constants {
         "GamePathEN", "国际服游戏路径",
         "PreferredServer", "首选区服",
         "LastActiveServer", "上次识别区服",
-        "AutoRunGame", "随小助手自动启动明日方舟",
-        "AutoStartWithGame", "随明日方舟自动启动小助手",
+        "AutoRunGame", "随AFA自动启动明日方舟",
+        "AutoStartWithGame", "随明日方舟自动启动AFA",
         "DismissedChangelogVersion", "已忽略公告版本",
         "DefaultStrongHoldProtocol", "默认启动卫戍协议方案",
         "TabOrder", "标签页顺序",
@@ -59,7 +59,7 @@ class Constants {
         "AutoBeginPause", "开局自动暂停",
         "BackCeaseOperations", "使用“返回上级菜单”放弃行动",
         "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键",
-        "DebugEnabled", "调试模式",
+        "DebugEnabled", "显示调试日志控制台",
         "Language", "界面语言"
     )
 

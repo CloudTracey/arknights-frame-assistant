@@ -154,7 +154,7 @@ class GuiManager {
         A_TrayMenu.Add(I18n.T("启用/禁用热键"), (*) => EventBus.Publish("HotkeyToggleRequested"))
         ; 重启前先让出单例互斥体：Reload 的新进程会在旧进程退出前启动，
         ; 若不释放会被单例识别误判为重复启动而弹窗退出
-        A_TrayMenu.Add(I18n.T("重启小助手"), (*) => (SingleInstance.Release(), Reload()))
+        A_TrayMenu.Add(I18n.T("重启AFA"), (*) => (SingleInstance.Release(), Reload()))
         A_TrayMenu.Add(I18n.T("退出"), (*) => ExitApp())
         A_TrayMenu.Default := I18n.T("打开设置界面")
 
@@ -594,7 +594,7 @@ class GuiManager {
         this.LaunchControls.Push(checkboxAutoOpenSettings)
 
         ; 关闭窗口时退出
-        checkboxExitOnWindowClose := this.MainGui.Add("Checkbox", "xs y+10 h24 vExitOnWindowClose", I18n.T(" 点击关闭窗口按钮时退出小助手"))
+        checkboxExitOnWindowClose := this.MainGui.Add("Checkbox", "xs y+10 h24 vExitOnWindowClose", I18n.T(" 点击关闭窗口按钮时退出AFA"))
         checkboxExitOnWindowClose.OnEvent("Click", (*) => this.TrackChange("ExitOnWindowClose"))
         StatusBarHints.Register(checkboxExitOnWindowClose, "切换点击右上角 ✗ 是否直接退出AFA")
         this.MainGui["ExitOnWindowClose"].Value := Config.GetImportant("ExitOnWindowClose")
@@ -608,34 +608,49 @@ class GuiManager {
         this.MainGui["DefaultStrongHoldProtocol"].Value := Config.GetImportant("DefaultStrongHoldProtocol")
         this.LaunchControls.Push(checkboxDefaultStrongHoldProtocol)
 
-        ; 启动小助手时自动启动下方路径游戏
-        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoRunGame", I18n.T(" 启动小助手时同时启动明日方舟"))
+        ; 启动AFA时自动启动下方路径游戏
+        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoRunGame", I18n.T(" 启动AFA时同时启动明日方舟"))
         checkboxAutoRunGame.OnEvent("Click", (*) => this.TrackChange("AutoRunGame"))
-        StatusBarHints.Register(checkboxAutoRunGame, "启动小助手时自动启动下方路径的明日方舟")
+        StatusBarHints.Register(checkboxAutoRunGame, "启动AFA时自动启动下方路径的明日方舟")
         this.MainGui["AutoRunGame"].Value := Config.GetImportant("AutoRunGame")
         this.LaunchControls.Push(checkboxAutoRunGame)
 
         ; 识别游戏路径
-        this.BtnCheckGamePath := this.MainGui.Add("Button", "xs y+12 w" Max(this.BtnW, Metrics.TextWidth(I18n.T("识别游戏路径")) + 14) " h24", I18n.T("识别游戏路径"))
-        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 h20 c9c9c9c", I18n.T("可同时识别所有区服的路径，若识别不到可以先启动游戏再识别"))
+        btnCheckGamePathW := Max(this.BtnW, Metrics.TextWidth(I18n.T("识别游戏路径")) + 14)
+        this.BtnCheckGamePath := this.MainGui.Add("Button", "xs y+12 w" btnCheckGamePathW " h24", I18n.T("识别游戏路径"))
+        ; 提示文本右缘固定在内容区右缘（x690），宽度不随语言文本变化（超宽裁剪，各语言文案长度需人工验证）
+        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 w" (530 - btnCheckGamePathW - 15) " h20 c9c9c9c", I18n.T("可同时识别所有区服的路径，若识别不到可以先启动游戏再识别"))
         this.BtnCheckGamePath.OnEvent("Click", (*) => EventBus.Publish("CheckGamePathClick"))
         StatusBarHints.Register(this.BtnCheckGamePath, "自动识别本机的游戏安装路径")
         this.LaunchControls.Push(this.BtnCheckGamePath)
         this.LaunchControls.Push(hintGamePath)
 
-        ; 游戏路径
-        txtGamePath := this.MainGui.Add("Text", "xs y+10 h24", I18n.T(" 随AFA启动游戏路径: "))
-        editGamePath := this.MainGui.Add("Edit", "x+10 yp-2 w403 h20 vGamePath -Multi +0x1", Config.GetImportant(
+        ; 游戏路径：标签右缘以中文基准宽度锚定（右对齐），编辑框固定在基准右缘 +10——
+        ; 标签宽出向左延伸、上限 zhW+29（不越过 x131 分隔线）。保证中文布局原点不动，
+        ; 且各语言标签/编辑框列位置一致，语言文本长度差异不再撑大窗口
+        probeZhGui := Gui()
+        probeZhGui.SetFont("s9", Metrics.FontFor("zh-Hans"))
+        probeZh := probeZhGui.Add("Text", , " 随AFA启动游戏路径: ")
+        probeZh.GetPos(, , &gamePathLabelZhW)
+        probeZhGui.Destroy()
+        probeGui := Gui()
+        probeGui.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
+        probe := probeGui.Add("Text", , I18n.T(" 随AFA启动游戏路径: "))
+        probe.GetPos(, , &gamePathLabelW)
+        probeGui.Destroy()
+        gamePathLabelW := Min(Max(gamePathLabelW, gamePathLabelZhW), gamePathLabelZhW + 29)
+        txtGamePath := this.MainGui.Add("Text", "x" (160 + gamePathLabelZhW - gamePathLabelW) " y+10 w" gamePathLabelW " Right h24", I18n.T(" 随AFA启动游戏路径: "))
+        editGamePath := this.MainGui.Add("Edit", "x" (170 + gamePathLabelZhW) " yp-2 w403 h20 vGamePath -Multi +0x1", Config.GetImportant(
             "GamePath"))
         editGamePath.OnEvent("Change", (*) => this.TrackChange("GamePath"))
         StatusBarHints.Register(editGamePath, "随AFA启动的游戏路径，可手动输入，或点击「识别游戏路径」自动填入")
         this.LaunchControls.Push(txtGamePath)
         this.LaunchControls.Push(editGamePath)
 
-        ; 启动游戏时自动启动小助手
-        checkboxAutoStartWithGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoStartWithGame", I18n.T(" 启动明日方舟时自动启动小助手（以下路径均可触发）"))
+        ; 启动游戏时自动启动AFA
+        checkboxAutoStartWithGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoStartWithGame", I18n.T(" 启动明日方舟时自动启动AFA（以下路径均可触发）"))
         checkboxAutoStartWithGame.OnEvent("Click", (*) => this.TrackChange("AutoStartWithGame"))
-        StatusBarHints.Register(checkboxAutoStartWithGame, "启动任意区服明日方舟时自动启动小助手（需要管理员权限的计划任务）")
+        StatusBarHints.Register(checkboxAutoStartWithGame, "启动任意区服明日方舟时自动启动AFA（需要管理员权限的计划任务）")
         this.MainGui["AutoStartWithGame"].Value := Config.GetImportant("AutoStartWithGame")
         this.LaunchControls.Push(checkboxAutoStartWithGame)
 
@@ -678,7 +693,7 @@ class GuiManager {
         ; 自动检查更新
         checkboxAutoUpdate := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoUpdate", I18n.T(" 自动检查更新"))
         checkboxAutoUpdate.OnEvent("Click", (*) => this.TrackChange("AutoUpdate"))
-        StatusBarHints.Register(checkboxAutoUpdate, "小助手启动后自动检查更新")
+        StatusBarHints.Register(checkboxAutoUpdate, "AFA启动后自动检查更新")
         this.MainGui["AutoUpdate"].Value := Config.GetImportant("AutoUpdate")
         this.UpdateControls.Push(checkboxAutoUpdate)
 
@@ -829,9 +844,9 @@ class GuiManager {
         StatusBarHints.Register(btnOpenLogDirectory, "在资源管理器中打开日志所在目录")
         this.LogControls.Push(btnOpenLogDirectory)
 
-        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 h24 vDebugEnabled", I18n.T(" 启用调试模式（实时日志窗口，日志额外记录调试信息）"))
+        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 h24 vDebugEnabled", I18n.T(" 显示调试日志控制台"))
         chkDebug.OnEvent("Click", (*) => this.TrackChange("DebugEnabled"))
-        StatusBarHints.Register(chkDebug, "打开「AFA 调试日志」窗口并记录详细调试信息")
+        StatusBarHints.Register(chkDebug, "打开「AFA 调试日志」窗口，实时查看运行日志")
         this.MainGui["DebugEnabled"].Value := Config.GetImportant("DebugEnabled")
         this.LogControls.Push(chkDebug)
 

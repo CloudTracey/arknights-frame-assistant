@@ -1,6 +1,14 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Off
 #Warn All, Off
+; 键盘钩子存活护栏（#340）：AFA 全部热键都注册在 HotIf 回调下，每次按键都要由主线程求值，
+; 求值期间钩子回调一直阻塞。系统对低级钩子有独立超时（LowLevelHooksTimeout，未配置时默认 300ms），
+; 累计超时 11 次就会静默摘除钩子——表现为"所有快捷键突然失效，必须重启或重新注册才恢复"。
+; AHK 默认的 #HotIfTimeout 是 1000ms，比系统红线宽 3 倍多，等于放任每次主线程卡顿都记一次超时。
+; 这里压到 100ms：拦截键有主热键与 Up 两个变体，文档说超时可能按变体分别计算，
+; 2×100=200ms 仍安全在 300ms 以内（若取 150 则 2×150 正好顶到红线）。
+; 代价：主线程卡顿期间该次按键判定为 false（这种时候热键本就无法正常工作），换取钩子永不被摘除。
+#HotIfTimeout 100
 
 ; 所有模块只定义、零顶层副作用；启动由下方 App.Bootstrap() 显式执行。
 #Include ./lib/base/logger.ahk
@@ -32,6 +40,7 @@
 #Include ./lib/base/custom_hotkey_store.ahk
 #Include ./lib/core/game/game_client_registry.ahk
 #Include ./lib/core/diagnostics/log_exporter.ahk
+#Include ./lib/core/diagnostics/hook_health.ahk
 #Include ./lib/core/launch/app_context.ahk
 #Include ./lib/core/launch/game_auto_start.ahk
 #Include ./lib/core/hotkey/timing_service.ahk
@@ -73,11 +82,29 @@ HasLaunchArgument(argument) {
     return false
 }
 
+; 启动分步计时：在每段开始前标记下一段名称，段切换时输出上一段的耗时。
+; 若某步骤卡住，日志中缺失对应的「启动步骤 xxx 完成」行即为卡住位置（排查启动缓慢/卡死）。
+; name 为空字符串时仅输出上一段，不开启新段（用于收尾）。
+StartupMark(name) {
+    static lastStep := ""
+    static lastTick := 0
+    if (lastStep != "") {
+        Logger.Info("Startup", "启动步骤 " lastStep " 完成，耗时 " (A_TickCount - lastTick) "ms")
+        if (name = "")
+            return
+    }
+    lastStep := name
+    lastTick := A_TickCount
+}
+
 class App {
     static Bootstrap() {
         ; ---- 环境初始化 ----
         ListLines False
-        KeyHistory 0
+        ; 保留按键历史。排查"所有热键突然失效"时，
+        ; KeyHistory 窗口顶部直接给出 Keybd hook 是否仍安装、最近按键流是否停更——
+        ; 这是区分"系统已摘除钩子"与"HotIf 判定返回 false"的直接证据。
+        KeyHistory 200
         ProcessSetPriority "High"
         SendMode "Input"
         SetKeyDelay -1, -1
@@ -129,10 +156,13 @@ class App {
         }
 
         ; ---- 管理员进程日志 ----
+        StartupMark("日志初始化")
         Logger.Init()
         Logger.Info("Startup", "管理员进程启动，脚本=" A_ScriptName)
+        Logger.Info("Startup", "单例互斥体已获取，句柄=" SingleInstance.Handle)
 
         ; ---- 初始化各模块 ----
+        StartupMark("模块初始化")
         Config.InitPath()
         GameClientRegistry.Init()
         LogExporter.Init()
@@ -149,6 +179,7 @@ class App {
         GameLauncher.Init()
 
         ; ---- 加载设置 ----
+        StartupMark("设置加载")
         SettingsService.Initialize()
         Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
         Logger.RegisterSecret(A_ScriptFullPath)
@@ -157,11 +188,12 @@ class App {
         ; 上一会话异常退出（Logger.PreviousAbnormalFile 在 Logger.Init 已识别）时提示用户。
         ; 放在 I18n.Init 之后，保证提示使用用户选择的界面语言。
         if (Logger.PreviousAbnormalFile != "") {
-            Logger.Info("Startup", "检测到上一会话异常退出，提示用户开启调试模式并导出诊断包")
-            MessageBox.Info(I18n.T("检测到上次运行崩溃。`n建议在设置中开启「调试模式」记录日志，并用「生成日志压缩包」导出诊断包反馈给开发者。"), "AFA")
+            Logger.Info("Startup", "检测到上一会话异常退出，提示用户导出诊断包")
+            MessageBox.Info(I18n.T("检测到上次异常退出（可能被任务管理器强杀或系统直接关机），如非手动强杀则可能是意外崩溃。`n日志已自动完整记录，请用「生成日志压缩包」导出诊断包反馈给开发者。"), "AFA")
         }
 
         ; 写入启动来源状态，并校准随游戏自动启动的 Windows 审核和计划任务
+        StartupMark("随游戏自动启动校准")
         AppContext.SetStartedByGameAutoStart(startedByGameAutoStart)
         autoStartResult := GameAutoStartManager.Reconcile()
         if (!autoStartResult.success) {
@@ -171,19 +203,26 @@ class App {
                 pendingAutoStartWarning := autoStartResult.message
         }
 
-        ; 关闭功能后若有遗留事件触发，只清理任务，不启动小助手主体
+        ; 关闭功能后若有遗留事件触发，只清理任务，不启动AFA主体
         if (autoStartResult.HasProp("shouldExit") && autoStartResult.shouldExit)
             ExitApp
 
         ; 确保嵌入文件已提取到 AppData
+        StartupMark("资源提取")
         FileExtractor.EnsureExtracted()
 
         ; 初始化游戏按键识别（必须在 HotkeyOn 之前）
+        StartupMark("游戏按键识别")
         GameKeys.Init()
 
+        StartupMark("热键注册")
         HotkeyService.HotkeyOn()
 
+        ; 启动键盘钩子健康探针（须在 HotkeyOn 之后，监视键位表来自已注册热键）
+        HookHealth.Start()
+
         ; 检查并显示更新公告（事件驱动）
+        StartupMark("GUI 初始化")
         EventBus.Publish("ChangelogShowRequested")
 
         ; 初始化 GUI（含 Alt+F4 退出热键注册）
@@ -201,6 +240,7 @@ class App {
             MessageBox.Warning(tokenStorageWarning, I18n.T("GitHub Token 存储提示"))
 
         ; 触发应用启动事件（触发自动更新检查和游戏自动启动）
+        StartupMark("启动收尾")
         EventBus.Publish("AppStartCompleted")
 
         ; 启动游戏监控定时器
@@ -213,6 +253,10 @@ class App {
         EventBus.Publish("GuiUpdateHotkeyControls")    ; Legacy
         EventBus.Publish("GuiUpdateImportantControls") ; Legacy
         EventBus.Publish("GuiUpdateCustomControls")    ; Legacy
+
+        ; 收尾：输出最后一段耗时（name 为空）
+        StartupMark("")
+        Logger.Info("Startup", "启动流程完成")
     }
 }
 

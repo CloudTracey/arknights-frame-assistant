@@ -92,7 +92,7 @@ class CustomScriptEngine {
         entry := this._Runtime[id]
         if !entry.valid || entry.steps.Length = 0
             return
-        ; 触发/执行日志：Debug 级（仅调试模式持久化，避免热路径常态写文件）；
+        ; 触发/执行日志：Debug 级（DEBUG 已恒持久化；用 Debug 而非 Info 保持关键日志轨安静）；
         ; 关卡外拦截与透传由 GuardInLevel 以 Info 输出（actionName=CustomScript:{id}）。
         Logger.Debug("CustomScript", "触发自定义功能：" id "，步骤数=" entry.steps.Length)
         if entry.type = "combat" && !GuardInLevel("CustomScript:" id, ThisHotkey)
