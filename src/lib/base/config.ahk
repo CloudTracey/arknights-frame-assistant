@@ -76,6 +76,12 @@ class Config {
         return value
     }
 
+    ; 该键的取值是否为 AHK 热键串（需做大小写规范化）：
+    ; [Hotkeys] 全部键 + [Custom] SwitchHotkey，其余键值原样透传。
+    static _IsHotkeyValuedKey(key) {
+        return this._DefaultHotkeys.Has(key) || key = "SwitchHotkey"
+    }
+
     ; 获取按键设置（从内存工作副本，供 GUI 和冲突检测使用）
     static GetHotkey(key) {
         if !this._IsLoaded
@@ -155,12 +161,12 @@ class Config {
             this.InitPath()
         defaultVal := this._DefaultCustom.Has(key) ? this._DefaultCustom[key] : ""
         value := IniRead(this.IniFile, "Custom", key, defaultVal)
-        return key = "SwitchHotkey" ? this._NormalizeHotkeyValue(value) : value
+        return this._IsHotkeyValuedKey(key) ? this._NormalizeHotkeyValue(value) : value
     }
 
     ; 设置自定义设置（仅写内存工作副本）
     static SetCustom(key, value) {
-        this._CustomSettings[key] := key = "SwitchHotkey" ? this._NormalizeHotkeyValue(value) : value
+        this._CustomSettings[key] := this._IsHotkeyValuedKey(key) ? this._NormalizeHotkeyValue(value) : value
     }
 
     ; ── 自定义按键（独立存储文件 CustomHotkeys.json；工作副本模式与三组设置一致） ──
@@ -380,44 +386,36 @@ class Config {
 
         sentinel := "__AFA_MISSING_HOTKEY__"
         changes := []
+        changedKeys := ""
         for keyVar, _ in this._DefaultHotkeys {
             value := IniRead(this.IniFile, "Hotkeys", keyVar, sentinel)
             normalized := this._NormalizeHotkeyValue(value)
-            if (value != sentinel && !(value == normalized))
-                changes.Push({Section: "Hotkeys", Key: keyVar, Value: normalized})
+            if (value != sentinel && !(value == normalized)) {
+                changes.Push({Section: this._SectionForKey(keyVar), Key: keyVar, Value: normalized})
+                changedKeys .= (changedKeys = "" ? "" : ", ") keyVar
+            }
         }
-        switchValue := IniRead(this.IniFile, "Custom", "SwitchHotkey", sentinel)
+        switchKey := "SwitchHotkey"
+        switchSection := this._SectionForKey(switchKey)
+        switchValue := IniRead(this.IniFile, switchSection, switchKey, sentinel)
         normalizedSwitch := this._NormalizeHotkeyValue(switchValue)
-        if (switchValue != sentinel && !(switchValue == normalizedSwitch))
-            changes.Push({Section: "Custom", Key: "SwitchHotkey", Value: normalizedSwitch})
+        if (switchValue != sentinel && !(switchValue == normalizedSwitch)) {
+            changes.Push({Section: switchSection, Key: switchKey, Value: normalizedSwitch})
+            changedKeys .= (changedKeys = "" ? "" : ", ") switchKey
+        }
 
         if changes.Length = 0
             return true
 
-        targetIniFile := this.IniFile
-        tempIniFile := targetIniFile ".tmp-" A_TickCount "-" Random(1000, 9999)
-        changedKeys := ""
         Critical "On"
         try {
-            FileCopy(targetIniFile, tempIniFile, true)
-            ; FileCopy 会继承源文件的只读属性；先让临时副本可写，目标文件仍保持原属性。
-            FileSetAttrib("-R", tempIniFile)
-            for change in changes {
-                IniWrite(change.Value, tempIniFile, change.Section, change.Key)
-                changedKeys .= (changedKeys = "" ? "" : ", ") change.Key
-            }
-            this._CommitIniTemp(tempIniFile, targetIniFile)
-            tempIniFile := ""
+            this._WriteIniEntriesAtomic(this.IniFile, changes)
             Logger.Info("Config", "热键大小写已规范化，数量=" changes.Length "，键：" changedKeys)
             return true
         } catch Error as e {
             Logger.Warn("Config", "热键大小写规范化写入失败，运行时仍使用小写值：" e.Message)
             return false
         } finally {
-            if tempIniFile != "" && FileExist(tempIniFile) {
-                try FileSetAttrib("-R", tempIniFile)
-                try FileDelete(tempIniFile)
-            }
             Critical "Off"
         }
     }
@@ -451,7 +449,7 @@ class Config {
         ; 加载自定义设置
         for keyVar, defaultVal in this._DefaultCustom {
             value := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
-            this._CustomSettings[keyVar] := keyVar = "SwitchHotkey" ? this._NormalizeHotkeyValue(value) : value
+            this._CustomSettings[keyVar] := this._IsHotkeyValuedKey(keyVar) ? this._NormalizeHotkeyValue(value) : value
         }
 
         ; 如果配置文件不存在，创建并写入默认值；已存在则回填新增的默认键（老用户升级自动补齐，如 HoverOperate）
@@ -748,20 +746,13 @@ class Config {
         }
     }
 
-    ; 单键原子写入：仅修改目标键所在 section，保留其他键。
-    ; 供 SettingsService.UpdatePersistedValue 调用，是业务层单键配置变更的底层持久化。
-    static _PersistSingleValue(key, value) {
-        if this.IniFile = ""
-            this.InitPath()
-
-        if (this._DefaultHotkeys.Has(key) || key = "SwitchHotkey")
-            value := this._NormalizeHotkeyValue(value)
-
-        targetIniFile := this.IniFile
+    ; 原子写入/删除若干键到目标 INI：先写同目录临时副本，成功后 _CommitIniTemp 替换正式文件，
+    ; 任何异常直接抛出并清理临时文件（调用方负责 Critical 与日志）。
+    ; entries: Array<{Section, Key, Value}>；元素缺 Value 时删除该键。
+    static _WriteIniEntriesAtomic(targetIniFile, entries) {
         tempIniFile := ""
-        Critical "On"
         try {
-            ; 先在同目录临时文件中完成写入，成功后再替换正式配置。
+            ; 先在同目录临时文件中完成全部写入，成功后再替换正式配置。
             tempIniFile := targetIniFile ".tmp-" A_TickCount "-" Random(1000, 9999)
             if FileExist(targetIniFile)
                 FileCopy(targetIniFile, tempIniFile, true)
@@ -769,39 +760,61 @@ class Config {
                 tempHandle := FileOpen(tempIniFile, "w")
                 tempHandle.Close()
             }
-            this.IniFile := tempIniFile
+            ; FileCopy 会继承源文件的只读属性；先让临时副本可写，目标文件仍保持原属性。
+            FileSetAttrib("-R", tempIniFile)
+            for entry in entries {
+                if entry.Has("Value")
+                    IniWrite(entry.Value, tempIniFile, entry.Section, entry.Key)
+                else
+                    try IniDelete(tempIniFile, entry.Section, entry.Key)
+            }
+            this._CommitIniTemp(tempIniFile, targetIniFile)
+            tempIniFile := ""
+        } finally {
+            if tempIniFile != "" && FileExist(tempIniFile) {
+                try FileSetAttrib("-R", tempIniFile)
+                try FileDelete(tempIniFile)
+            }
+        }
+    }
 
+    ; 单键原子写入：仅修改目标键所在 section，保留其他键。
+    ; 供 SettingsService.UpdatePersistedValue 调用，是业务层单键配置变更的底层持久化。
+    static _PersistSingleValue(key, value) {
+        if this.IniFile = ""
+            this.InitPath()
+
+        if this._IsHotkeyValuedKey(key)
+            value := this._NormalizeHotkeyValue(value)
+
+        Critical "On"
+        try {
+            entries := []
             if (key = "Frame") {
                 ; Frame 双写兼容：Frame155 存文本值，Frame 存旧版索引
-                IniWrite(value, this.IniFile, "Main", "Frame155")
                 frameIndex := Constants.FrameTextToOldIndex.Has(value) ? Constants.FrameTextToOldIndex[value] : "3"
-                IniWrite(frameIndex, this.IniFile, "Main", "Frame")
+                entries.Push({Section: "Main", Key: "Frame155", Value: value})
+                entries.Push({Section: "Main", Key: "Frame", Value: frameIndex})
             } else if (key = "GitHubToken") {
                 tokenStorage := this.PrepareGitHubTokenForStorage(value)
                 if !tokenStorage.success
                     return tokenStorage
                 if (tokenStorage.storedValue != "")
-                    IniWrite(tokenStorage.storedValue, this.IniFile, "Main", this.GITHUB_TOKEN_PROTECTED_KEY)
+                    entries.Push({Section: "Main", Key: this.GITHUB_TOKEN_PROTECTED_KEY, Value: tokenStorage.storedValue})
                 else
-                    try IniDelete(this.IniFile, "Main", this.GITHUB_TOKEN_PROTECTED_KEY)
+                    entries.Push({Section: "Main", Key: this.GITHUB_TOKEN_PROTECTED_KEY}) ; 缺 Value = 删除该键
             } else {
                 section := this._SectionForKey(key)
                 if (section = "")
                     throw Error("未知配置键：" key)
-                IniWrite(value, this.IniFile, section, key)
+                entries.Push({Section: section, Key: key, Value: value})
             }
-
-            this.IniFile := targetIniFile
-            this._CommitIniTemp(tempIniFile, targetIniFile)
-            tempIniFile := ""
+            this._WriteIniEntriesAtomic(this.IniFile, entries)
             return {success: true, message: ""}
         } catch Error as e {
             Logger.Error("Config", "单键配置写入失败：" e.Message)
             return {success: false, message: I18n.T("配置文件写入失败：{1}", e.Message)}
         } finally {
-            this.IniFile := targetIniFile
-            if (tempIniFile != "" && FileExist(tempIniFile))
-                try FileDelete(tempIniFile)
             Critical "Off"
         }
     }
