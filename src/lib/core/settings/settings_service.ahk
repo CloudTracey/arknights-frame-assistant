@@ -17,6 +17,7 @@ class SettingsService {
     static Initialize() {
         Config.MigrateFrameRate()
         Config.MigrateGitHubToken()
+        Config.MigrateHotkeyCase()
         Config.LoadFromIni()
         Config.MigrateGamePaths()
         I18n.Init(Config.ReadImportantFromIni("Language"))
