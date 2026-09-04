@@ -68,6 +68,14 @@ class Config {
         this.IniFile := configDir "\Settings.ini"
     }
 
+    ; 仅规范化单个 ASCII 大写字母主键：A -> a、<^A -> <^a。
+    ; 命名键（Space/CapsLock/XButton1/F1 等）保持既有规范拼写。
+    static _NormalizeHotkeyValue(value) {
+        if RegExMatch(value, "^([~*$!^+#&<>()]*)([A-Z])$", &match)
+            return match[1] StrLower(match[2])
+        return value
+    }
+
     ; 获取按键设置（从内存工作副本，供 GUI 和冲突检测使用）
     static GetHotkey(key) {
         if !this._IsLoaded
@@ -80,12 +88,12 @@ class Config {
         if this.IniFile = ""
             this.InitPath()
         defaultVal := this._DefaultHotkeys.Has(key) ? this._DefaultHotkeys[key] : ""
-        return IniRead(this.IniFile, "Hotkeys", key, defaultVal)
+        return this._NormalizeHotkeyValue(IniRead(this.IniFile, "Hotkeys", key, defaultVal))
     }
 
     ; 设置按键（仅写内存工作副本）
     static SetHotkey(key, value) {
-        this._HotkeySettings[key] := value
+        this._HotkeySettings[key] := this._NormalizeHotkeyValue(value)
     }
 
     ; 获取重要设置（从内存工作副本，供 GUI 使用）
@@ -146,12 +154,13 @@ class Config {
         if this.IniFile = ""
             this.InitPath()
         defaultVal := this._DefaultCustom.Has(key) ? this._DefaultCustom[key] : ""
-        return IniRead(this.IniFile, "Custom", key, defaultVal)
+        value := IniRead(this.IniFile, "Custom", key, defaultVal)
+        return key = "SwitchHotkey" ? this._NormalizeHotkeyValue(value) : value
     }
 
     ; 设置自定义设置（仅写内存工作副本）
     static SetCustom(key, value) {
-        this._CustomSettings[key] := value
+        this._CustomSettings[key] := key = "SwitchHotkey" ? this._NormalizeHotkeyValue(value) : value
     }
 
     ; ── 自定义按键（独立存储文件 CustomHotkeys.json；工作副本模式与三组设置一致） ──
@@ -361,6 +370,58 @@ class Config {
         }
     }
 
+    ; 将 Settings.ini 中误写为大写的字母主键原子修复为小写。
+    ; 只处理已存在的 [Hotkeys] 键与 [Custom] SwitchHotkey，不触碰独立的 CustomHotkeys.json。
+    static _MigrateHotkeyCase() {
+        if this.IniFile = ""
+            this.InitPath()
+        if !FileExist(this.IniFile)
+            return true
+
+        sentinel := "__AFA_MISSING_HOTKEY__"
+        changes := []
+        for keyVar, _ in this._DefaultHotkeys {
+            value := IniRead(this.IniFile, "Hotkeys", keyVar, sentinel)
+            normalized := this._NormalizeHotkeyValue(value)
+            if (value != sentinel && !(value == normalized))
+                changes.Push({Section: "Hotkeys", Key: keyVar, Value: normalized})
+        }
+        switchValue := IniRead(this.IniFile, "Custom", "SwitchHotkey", sentinel)
+        normalizedSwitch := this._NormalizeHotkeyValue(switchValue)
+        if (switchValue != sentinel && !(switchValue == normalizedSwitch))
+            changes.Push({Section: "Custom", Key: "SwitchHotkey", Value: normalizedSwitch})
+
+        if changes.Length = 0
+            return true
+
+        targetIniFile := this.IniFile
+        tempIniFile := targetIniFile ".tmp-" A_TickCount "-" Random(1000, 9999)
+        changedKeys := ""
+        Critical "On"
+        try {
+            FileCopy(targetIniFile, tempIniFile, true)
+            ; FileCopy 会继承源文件的只读属性；先让临时副本可写，目标文件仍保持原属性。
+            FileSetAttrib("-R", tempIniFile)
+            for change in changes {
+                IniWrite(change.Value, tempIniFile, change.Section, change.Key)
+                changedKeys .= (changedKeys = "" ? "" : ", ") change.Key
+            }
+            this._CommitIniTemp(tempIniFile, targetIniFile)
+            tempIniFile := ""
+            Logger.Info("Config", "热键大小写已规范化，数量=" changes.Length "，键：" changedKeys)
+            return true
+        } catch Error as e {
+            Logger.Warn("Config", "热键大小写规范化写入失败，运行时仍使用小写值：" e.Message)
+            return false
+        } finally {
+            if tempIniFile != "" && FileExist(tempIniFile) {
+                try FileSetAttrib("-R", tempIniFile)
+                try FileDelete(tempIniFile)
+            }
+            Critical "Off"
+        }
+    }
+
     ; 从配置文件加载
     static LoadFromIni() {
         if this.IniFile = ""
@@ -368,10 +429,13 @@ class Config {
 
         ; 检查配置文件是否存在
         fileExists := FileExist(this.IniFile)
+        if fileExists
+            this._MigrateHotkeyCase()
 
         ; 加载按键设置
         for keyVar, defaultVal in this._DefaultHotkeys {
-            this._HotkeySettings[keyVar] := IniRead(this.IniFile, "Hotkeys", keyVar, defaultVal)
+            value := IniRead(this.IniFile, "Hotkeys", keyVar, defaultVal)
+            this._HotkeySettings[keyVar] := this._NormalizeHotkeyValue(value)
         }
 
         ; 加载重要设置
@@ -386,7 +450,8 @@ class Config {
 
         ; 加载自定义设置
         for keyVar, defaultVal in this._DefaultCustom {
-            this._CustomSettings[keyVar] := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
+            value := IniRead(this.IniFile, "Custom", keyVar, defaultVal)
+            this._CustomSettings[keyVar] := keyVar = "SwitchHotkey" ? this._NormalizeHotkeyValue(value) : value
         }
 
         ; 如果配置文件不存在，创建并写入默认值；已存在则回填新增的默认键（老用户升级自动补齐，如 HoverOperate）
@@ -688,6 +753,9 @@ class Config {
     static _PersistSingleValue(key, value) {
         if this.IniFile = ""
             this.InitPath()
+
+        if (this._DefaultHotkeys.Has(key) || key = "SwitchHotkey")
+            value := this._NormalizeHotkeyValue(value)
 
         targetIniFile := this.IniFile
         tempIniFile := ""
