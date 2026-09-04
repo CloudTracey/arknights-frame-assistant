@@ -378,7 +378,8 @@ class Config {
 
     ; 将 Settings.ini 中误写为大写的字母主键原子修复为小写。
     ; 只处理已存在的 [Hotkeys] 键与 [Custom] SwitchHotkey，不触碰独立的 CustomHotkeys.json。
-    static _MigrateHotkeyCase() {
+    ; 与兄弟迁移（MigrateFrameRate/MigrateGitHubToken/MigrateGamePaths）一致，由启动时调用。
+    static MigrateHotkeyCase() {
         if this.IniFile = ""
             this.InitPath()
         if !FileExist(this.IniFile)
@@ -427,8 +428,6 @@ class Config {
 
         ; 检查配置文件是否存在
         fileExists := FileExist(this.IniFile)
-        if fileExists
-            this._MigrateHotkeyCase()
 
         ; 加载按键设置
         for keyVar, defaultVal in this._DefaultHotkeys {
