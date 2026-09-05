@@ -80,10 +80,14 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 ### 主题维护
 
 - `src/lib/base/theme.ahk` 是配色与窗口资源的唯一 owner；控件经 `Theme.Add` / `Theme.SetFont` 使用语义色，窗口经 `Theme.Destroy` 注销，避免硬编码颜色或遗留句柄。颜色变化只重绘，不重建窗口或改变热键组。
-- `[Main] ThemeMode=auto|light|dark` 默认 auto；`SettingsService.Initialize()` 仅在缺键时原子补回 auto。已有非法值按 auto 读取，正常保存时规范化；INI 行位置不固定，节名必须是 Main。
-- `Theme.Preview` 仅更新显示；保存成功与取消经 `Theme.Confirm` 同步。预览优先于已保存模式；按键重置及切页不结束预览。主题最后落盘，避免自定义按键文件保存失败时提前提交主题。
+- `[Main] ThemeMode=auto|light|dark|custom` 默认 auto；`SettingsService.Initialize()` 仅在缺键时原子补回 auto。已有非法值按 auto 读取，正常保存时规范化；INI 行位置不固定，节名必须是 Main。
+- `Theme.Preview` 仅更新显示；保存成功与取消经 `Theme.Confirm` 同步。预览优先于已保存模式；按键重置及切页不结束预览。整组外观最后原子落盘，避免自定义按键文件保存失败时提前提交主题。
 - 系统跟随读取应用模式 `AppsUseLightTheme`，系统通知用一次性计时器合并，高对比度优先。Edit 仅接管深色非客户区边框，保留原生光标、选区与滚动；浅色和高对比度交还原生绘制。
 - 普通对象属性检测使用 `HasOwnProp`，Map 键检测才用 `Has`；原子 INI entries 是普通对象。主题修改运行 `python -X utf8 tools/test_theme_contract.py` 并参考 `test/finished_test_dark_mode.md`；源码契约通过不等同于 GUI 验收。
+
+- 自定义外观数据由 `base/appearance.ahk` 规范化；`ThemeWindow/ThemeSurface/ThemeText/ThemeAccent/ThemeImage/ThemeImageFit/ThemeImageOpacity` 与 ThemeMode 一起保存。预览快照与 Config 工作副本分离，编辑器取消和主窗口取消分别恢复各自快照。
+- 图片只在主设置窗口的 custom 模式显示；`base/background_image.ahk` 持有 GDI+ DLL/token、窗口位图及对齐画刷，绘制回调不做 IO/解码。`ui/theme_editor.ahk` 固定内置配色；原生取色对话框属于系统 UI。图片副本仅由 SettingsService 编排保存，失败清理只作用于新建托管副本。
+- 自定义主题检查：`python -X utf8 tools/test_custom_theme_contract.py`；独立 AHK 用例 `test/scripts/custom_theme_test.ahk` 只写指定测试目录。完整应用验收见 `test/finished_test_custom_theme.md`，不沿用深色模式旧清单的通过状态。
 
 ### 关键设计
 
