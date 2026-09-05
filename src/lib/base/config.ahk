@@ -762,7 +762,7 @@ class Config {
             ; FileCopy 会继承源文件的只读属性；先让临时副本可写，目标文件仍保持原属性。
             FileSetAttrib("-R", tempIniFile)
             for entry in entries {
-                if entry.Has("Value")
+                if entry.HasOwnProp("Value")
                     IniWrite(entry.Value, tempIniFile, entry.Section, entry.Key)
                 else
                     try IniDelete(tempIniFile, entry.Section, entry.Key)
