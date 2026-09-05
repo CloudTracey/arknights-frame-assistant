@@ -246,3 +246,15 @@ The icon was created by **[文件名错误EXE](https://www.mihuashi.com/profiles
 
 - Artist: https://www.mihuashi.com/profiles/8282001?role=painter
 - Copyright remains with the original creator.
+
+## Interface theme
+
+Choose **Follow system**, **Light**, **Dark**, or **Custom** under **Other → Display → Interface theme**. The default follows the Windows app theme and updates automatically without restarting.
+
+Selections preview immediately. Save or Apply to keep the choice; Cancel restores the saved theme. Settings, key editing, announcements and update dialogs share the theme. System file pickers, tray menus and the debug console retain their existing appearance. Windows high-contrast colors take priority when enabled.
+
+Choose **Custom → Edit custom theme** to edit the window, control, text and accent colors using a color picker or `#RRGGBB`. One custom preset is stored. Resetting to light or dark colors keeps the image; low text contrast is indicated but does not block saving.
+
+Local PNG, JPG/JPEG and BMP backgrounds are supported (up to 20 MiB and 16 million pixels). Choose Fill and crop or Fit entire image, and image opacity from 0–100% (default 20%). Images appear only in the main settings window in Custom mode. Controls keep solid surfaces and other dialogs have no background image. Saving copies the image to `%AppData%\ArknightsFrameAssistant\PC\backgrounds`; moving the original does not affect it. A missing managed image falls back to a solid background.
+
+The editor uses built-in system colors. Done editing accepts the preview without writing settings; use Save or Apply in the main window. Cancel in the editor restores its opening snapshot; Cancel in the main window restores saved settings. Other theme modes hide the image without removing the preset.

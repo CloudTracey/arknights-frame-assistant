@@ -67,7 +67,7 @@ class MessageBox {
     ; 关闭当前对话框
     static Close() {
         if (this.CurrentDialog != "") {
-            try this.CurrentDialog.Destroy()
+            try Theme.Destroy(this.CurrentDialog)
             this.CurrentDialog := ""
         }
     }
@@ -77,7 +77,7 @@ class MessageBox {
         Logger.Debug("MessageBox", "弹窗 title=" title " message=" message)
         ; 如果已有对话框存在，先关闭
         if (this.CurrentDialog != "") {
-            try this.CurrentDialog.Destroy()
+            try Theme.Destroy(this.CurrentDialog)
         }
 
         ; 解析选项
@@ -86,8 +86,8 @@ class MessageBox {
         ; 创建GUI
         dialog := Gui(, title != "" ? title : I18n.T("提示"))
         dialog.Opt("+AlwaysOnTop -MinimizeBox +Owner")
-        dialog.BackColor := "FFFFFF"
-        dialog.SetFont("s10", Metrics.FontFor(I18n.GetCurrent()))
+        Theme.Attach(dialog)
+        Theme.SetFont(dialog, "s10", Metrics.FontFor(I18n.GetCurrent()))
         hWnd := dialog.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
 
@@ -97,8 +97,8 @@ class MessageBox {
         textW := this.DefaultWidth - textX - 30
 
         ; 添加消息文本
-        dialog.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
-        textCtrl := dialog.Add("Text", "x" textX " y" textY " w" textW, this._WrapMessage(message))
+        Theme.SetFont(dialog, "s9", Metrics.FontFor(I18n.GetCurrent()))
+        textCtrl := Theme.Add(dialog, "Text", "x" textX " y" textY " w" textW, this._WrapMessage(message))
         textCtrl.Opt("Center")
         textCtrl.GetPos(, , , &textH)
 
@@ -197,32 +197,32 @@ class MessageBox {
         switch btnType {
             case this.BTN_OK:
                 btnX := (this.DefaultWidth - btnW) / 2
-                buttons.OK := dialog.Add("Button", "x" btnX " y" btnY " w" btnW " h" btnH " Default", I18n.T("确定"))
+                buttons.OK := Theme.Add(dialog, "Button", "x" btnX " y" btnY " w" btnW " h" btnH " Default", I18n.T("确定"))
                 buttons.DefaultBtn := buttons.OK
 
             case this.BTN_OK_CANCEL:
                 spacing := 20
                 totalW := btnW * 2 + spacing
                 startX := (this.DefaultWidth - totalW) / 2
-                buttons.OK := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("确定"))
-                buttons.Cancel := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("取消"))
+                buttons.OK := Theme.Add(dialog, "Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("确定"))
+                buttons.Cancel := Theme.Add(dialog, "Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("取消"))
                 buttons.DefaultBtn := buttons.OK
 
             case this.BTN_YES_NO:
                 spacing := 20
                 totalW := btnW * 2 + spacing
                 startX := (this.DefaultWidth - totalW) / 2
-                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("是(&Y)"))
-                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("否(&N)"))
+                buttons.Yes := Theme.Add(dialog, "Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("是(&Y)"))
+                buttons.No := Theme.Add(dialog, "Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("否(&N)"))
                 buttons.DefaultBtn := buttons.Yes
 
             case this.BTN_YES_NO_CANCEL:
                 spacing := 15
                 totalW := btnW * 3 + spacing * 2
                 startX := (this.DefaultWidth - totalW) / 2
-                buttons.Yes := dialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("是(&Y)"))
-                buttons.No := dialog.Add("Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("否(&N)"))
-                buttons.Cancel := dialog.Add("Button", "x" (startX + (btnW + spacing) * 2) " y" btnY " w" btnW " h" btnH, I18n.T("取消"))
+                buttons.Yes := Theme.Add(dialog, "Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("是(&Y)"))
+                buttons.No := Theme.Add(dialog, "Button", "x" (startX + btnW + spacing) " y" btnY " w" btnW " h" btnH, I18n.T("否(&N)"))
+                buttons.Cancel := Theme.Add(dialog, "Button", "x" (startX + (btnW + spacing) * 2) " y" btnY " w" btnW " h" btnH, I18n.T("取消"))
                 buttons.DefaultBtn := buttons.Yes
         }
 
@@ -261,7 +261,7 @@ class MessageBox {
         callback := dialog.Callback
 
         ; 销毁对话框
-        try dialog.Destroy()
+        try Theme.Destroy(dialog)
         if (this.CurrentDialog = dialog) {
             this.CurrentDialog := ""
         }

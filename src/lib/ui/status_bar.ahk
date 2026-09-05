@@ -59,8 +59,8 @@ class StatusBarHints {
         this._CurrentText := ""
         this._LastTip := ""
         ; 主题色指示块（左下角）+ 说明文本（紧随其右，黑色）
-        this.SepLine := mainGui.Add("Text", "x0 y+-6 w28 h13 Background1994d2")
-        this.TextCtrl := mainGui.Add("Text", "x+4 yp-2 w660 cDefault", "")
+        this.SepLine := Theme.Add(mainGui, "Text", "x0 y+-6 w28 h13 BackgroundAccent")
+        this.TextCtrl := Theme.Add(mainGui, "Text", "x+4 yp-2 w660 cText", "")
         if !this._MsgRegistered {
             this._MsgRegistered := true
             OnMessage(0x0200, ObjBindMethod(this, "OnMouseMove"))

@@ -19,6 +19,9 @@
 #Include ./lib/base/hotkey_schema.ahk
 #Include ./lib/base/constants.ahk
 #Include ./lib/base/config.ahk
+#Include ./lib/base/appearance.ahk
+#Include ./lib/base/background_image.ahk
+#Include ./lib/base/theme.ahk
 #Include ./lib/base/eventbus.ahk
 #Include ./lib/base/i18n.ahk
 #Include ./lib/base/changelog_format.ahk
@@ -63,6 +66,7 @@
 #Include ./lib/ui/changelog_ui.ahk
 #Include ./lib/core/changelog/changelog_checker.ahk
 #Include ./lib/ui/status_bar.ahk
+#Include ./lib/ui/theme_editor.ahk
 #Include ./lib/ui/gui.ahk
 #Include ./lib/ui/custom_key_editor.ahk
 #Include ./lib/core/monitor/game_monitor.ahk

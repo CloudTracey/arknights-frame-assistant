@@ -36,42 +36,42 @@ class CustomKeyEditor {
         this.GuiObj.MarginX := 20
         this.GuiObj.MarginY := 20
         ; 样式对齐主设置窗口：白底 + 亮色标题栏（DWM 属性与 GuiManager.Init 一致）
-        this.GuiObj.BackColor := "FFFFFF"
+        Theme.Attach(this.GuiObj)
         hWnd := this.GuiObj.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 20, "int*", false, "int", 4)
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 35, "uint*", 0x00FFFFFF, "int", 4)
-        this.GuiObj.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
+        Theme.SetFont(this.GuiObj, "s9", Metrics.FontFor(I18n.GetCurrent()))
 
         ; 按键命名
-        this.GuiObj.Add("Text", "xm y10 Section", I18n.T("按键命名"))
-        this.NameEdit := this.GuiObj.Add("Edit", "x+10 yp-4 w330 vCustomKeyName", entry.Name)
+        Theme.Add(this.GuiObj, "Text", "xm y10 Section", I18n.T("按键命名"))
+        this.NameEdit := Theme.Add(this.GuiObj, "Edit", "x+10 yp-4 w330 vCustomKeyName", entry.Name)
 
         ; 按键类型
-        this.GuiObj.Add("Text", "xs y+12", I18n.T("按键类型"))
+        Theme.Add(this.GuiObj, "Text", "xs y+12", I18n.T("按键类型"))
         typeLabels := []
         for opt in Constants.CustomHotkeyTypeOptions
             typeLabels.Push(I18n.T(opt.nameKey))
-        this.TypeDDL := this.GuiObj.Add("DropDownList", "x+10 yp-4 w160 vCustomKeyType", typeLabels)
+        this.TypeDDL := Theme.Add(this.GuiObj, "DropDownList", "x+10 yp-4 w160 vCustomKeyType", typeLabels)
         this.TypeDDL.Value := this._TypeToIndex(entry.Type)
 
         ; 按键功能（目前仅「单击」；未来功能在此扩展）
-        this.GuiObj.Add("Text", "xs y+12", I18n.T("按键功能"))
+        Theme.Add(this.GuiObj, "Text", "xs y+12", I18n.T("按键功能"))
         funcLabels := []
         for opt in Constants.CustomHotkeyFuncOptions
             funcLabels.Push(I18n.T(opt.nameKey))
-        this.FuncDDL := this.GuiObj.Add("DropDownList", "x+10 yp-4 w160 vCustomKeyFunc", funcLabels)
+        this.FuncDDL := Theme.Add(this.GuiObj, "DropDownList", "x+10 yp-4 w160 vCustomKeyFunc", funcLabels)
         this.FuncDDL.Value := this._FuncToIndex(entry.Func)
 
         ; 坐标（单值：只接受 (x, y) 格式；游戏内左键拾取会整体覆盖）
-        this.GuiObj.Add("Text", "xs y+12", I18n.T("坐标（点击游戏窗口即可直接获取）"))
-        this.CoordEdit := this.GuiObj.Add("Edit", "xs y+6 w140 vCustomKeyCoord", entry.Arg)
+        Theme.Add(this.GuiObj, "Text", "xs y+12", I18n.T("坐标（点击游戏窗口即可直接获取）"))
+        this.CoordEdit := Theme.Add(this.GuiObj, "Edit", "xs y+6 w140 vCustomKeyCoord", entry.Arg)
 
         ; 底部按钮：删除 / 保存 / 取消（对齐上方 Edit 左右边缘：删除 x20、取消右缘 x440）
-        btnDelete := this.GuiObj.Add("Button", "x20 y+14 w80 h28", I18n.T("删除"))
+        btnDelete := Theme.Add(this.GuiObj, "Button", "x20 y+14 w80 h28", I18n.T("删除"))
         btnDelete.OnEvent("Click", (*) => this._OnDelete())
-        btnSave := this.GuiObj.Add("Button", "x270 yp w80 h28 Default", I18n.T("保存"))
+        btnSave := Theme.Add(this.GuiObj, "Button", "x270 yp w80 h28 Default", I18n.T("保存"))
         btnSave.OnEvent("Click", (*) => this._OnSave())
-        btnCancel := this.GuiObj.Add("Button", "x360 yp w80 h28", I18n.T("取消"))
+        btnCancel := Theme.Add(this.GuiObj, "Button", "x360 yp w80 h28", I18n.T("取消"))
         btnCancel.OnEvent("Click", (*) => this._OnCancel())
         this.BtnCancel := btnCancel
         this.GuiObj.OnEvent("Close", (*) => this._OnCancel())
@@ -99,7 +99,7 @@ class CustomKeyEditor {
         if this.GuiObj != "" {
             gui := this.GuiObj
             this.GuiObj := ""   ; 先置空再销毁：防止 8ms 拾取轮询/条件回调在销毁瞬间访问已销毁 Gui 的 Hwnd（"Gui has no window"）
-            try gui.Destroy()
+            try Theme.Destroy(gui)
         }
         this.RowIndex := 0
         this.NameEdit := ""

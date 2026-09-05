@@ -40,6 +40,8 @@
 │   ├── main.ahk                  # 主入口文件（仅加载定义，App.Bootstrap() 启动）
 │   └── lib/                      # 按四层架构组织
 │       ├── base/                 # 基础层：不依赖 core/ui
+│       │   ├── appearance.ahk    # 自定义外观数据与配色运算
+│       │   ├── background_image.ahk # 静态背景图片与资源管理
 │       │   ├── config.ahk        # 配置管理（Config 类）
 │       │   ├── constants.ahk     # 全局常量
 │       │   ├── eventbus.ahk      # 事件总线（模块间解耦通信）
@@ -48,6 +50,7 @@
 │       │   ├── key_format.ahk    # 热键键值格式化工具
 │       │   ├── logger.ahk        # 双轨日志系统
 │       │   ├── message_box.ahk   # 自定义消息框
+│       │   ├── theme.ahk         # 主题状态、配色与原生控件绘制
 │       │   ├── timing.ahk        # 高精度延迟工具
 │       │   ├── token_protector.ahk # GitHub Token DPAPI 加密保护
 │       │   ├── touch_injection.ahk # Touch Injection 模拟点击
@@ -86,6 +89,7 @@
 │           ├── changelog_ui.ahk  # 更新公告 UI
 │           ├── gui.ahk           # 设置窗口 GUI
 │           ├── key_bind.ahk      # 按键绑定（InputHook 捕获按键）
+│           ├── theme_editor.ahk # 自定义主题编辑器
 │           └── updater_ui.ahk    # 更新 UI（对话框）
 ├── .github/                      # GitHub 配置
 │   ├── CODEOWNERS                # 代码所有者
@@ -265,7 +269,17 @@ git checkout -b feature/your-feature-name
 
 ## 测试流程
 
-本项目暂时**没有自动化测试框架**，所有测试均为**手工验证**。
+运行时与 GUI 功能以**手工验证**为主。仓库同时包含 Python 静态门禁与源码契约检查，可在项目根目录运行：
+
+```powershell
+python -X utf8 tools/layer_check.py --baseline KNOWN_VIOLATIONS
+python -X utf8 tools/event_contract_check.py
+python -X utf8 tools/i18n_check.py
+python -X utf8 tools/test_theme_contract.py
+python -X utf8 tools/test_custom_theme_contract.py
+```
+
+静态检查不启动 AFA，也不证明原生控件绘制正确。AHK 独立测试位于 `test/scripts/`，执行结果与手工结果分别记录。主题验收分别见 [深色模式清单](test/finished_test_dark_mode.md) 与 [自定义主题清单](test/finished_test_custom_theme.md)。
 
 ### 测试清单创建
 

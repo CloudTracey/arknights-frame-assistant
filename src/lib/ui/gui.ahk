@@ -10,6 +10,9 @@ class GuiManager {
     static ServerPathsText := ""
     static RunningClientsText := ""
     ; 语言代码顺序与下拉框显示顺序一致
+    static ThemeModes := ["auto", "light", "dark", "custom"]
+    static _InitialAppearance := ""
+    static ThemeEditButton := ""
     static LanguageCodes := ["auto", "zh-Hans", "zh-Hant", "ja-JP", "ko-KR", "en-US"]
     ; 下拉框显示名固定使用各语言自己的写法，不随当前界面语言变化
     static LanguageDisplayNames := Map(
@@ -109,7 +112,7 @@ class GuiManager {
     static GuiImportantKeys := ["Frame", "AutoExit", "AutoOpenSettings", "ExitOnWindowClose",
         "DefaultStrongHoldProtocol", "TabOrder", "HiddenTabs", "AutoRunGame", "AutoStartWithGame", "GamePath",
         "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause",
-        "BackCeaseOperations", "InLevelGuard", "DebugEnabled", "Language"]
+        "BackCeaseOperations", "InLevelGuard", "DebugEnabled", "Language", "ThemeMode"]
 
     ; 初始化GUI（单例模式）
     static Init() {
@@ -121,12 +124,9 @@ class GuiManager {
         this.MainGui := Gui(, this.WindowName)
         this.MainGui.MarginX := 0
         this.MainGui.Opt("+MinimizeBox")
-        this.MainGui.BackColor := "FFFFFF"
-        WinSetTransColor("ffa8a8", this.MainGui)
-        this.MainGui.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
+        Theme.Attach(this.MainGui, false, true)
+        Theme.SetFont(this.MainGui, "s9", Metrics.FontFor(I18n.GetCurrent()))
         hWnd := this.MainGui.Hwnd
-        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 20, "int*", false, "int", 4)
-        try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 35, "uint*", 0x00FFFFFF, "int", 4)
         this.MainGui.OnEvent("Close", (*) => this._HandleWindowClose())
 
         ; 创建控件
@@ -181,8 +181,8 @@ class GuiManager {
         bindLabelW := this._ComputeBindLabelWidth()
         AddBindRow(LabelText, KeyVar, colX, descKey, argsProvider := "") {
             controls := []
-            txt := this.MainGui.Add("Text", "x" (colX + 135 - bindLabelW) " y+16 w" bindLabelW " Right +0x200", LabelText)
-            edit := this.MainGui.Add("Edit", "x" (colX + 155) " yp-4 w140 Center -TabStop Uppercase v" KeyVar, Config.GetHotkey(KeyVar))
+            txt := Theme.Add(this.MainGui, "Text", "x" (colX + 135 - bindLabelW) " y+16 w" bindLabelW " Right +0x200", LabelText)
+            edit := Theme.Add(this.MainGui, "Edit", "x" (colX + 155) " yp-4 w140 Center -TabStop Uppercase v" KeyVar, Config.GetHotkey(KeyVar))
             ; 悬停说明登记（标签与输入框共用同一说明；argsProvider 提供 {1} 占位符实时参数）
             StatusBarHints.Register(txt, descKey, argsProvider)
             StatusBarHints.Register(edit, descKey, argsProvider)
@@ -192,17 +192,17 @@ class GuiManager {
         }
 
         ; 让text控件假装自己是tab控件
-        this.MainGui.SetFont("s9")
-        this.TxtKeybind := this.MainGui.Add("Text", "x0 y5 h20 w" this.TabWidth " Center Section c1994d2", I18n.T("常规作战"))
-        this.TabKeybind := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
-        this.TxtQuick := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("快捷操作"))
-        this.TabQuick := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
-        this.TxtStrongHoldProtocol := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("卫戍协议"))
-        this.TabStrongHoldProtocol := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
-        this.TxtOther := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("其他设置"))
-        this.TabOther := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
-        this.TxtCustomKeys := this.MainGui.Add("Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("自定义按键"))
-        this.TabCustomKeys := this.MainGui.Add("Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        Theme.SetFont(this.MainGui, "s9")
+        this.TxtKeybind := Theme.Add(this.MainGui, "Text", "x0 y5 h20 w" this.TabWidth " Center Section cAccent", I18n.T("常规作战"))
+        this.TabKeybind := Theme.Add(this.MainGui, "Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtQuick := Theme.Add(this.MainGui, "Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("快捷操作"))
+        this.TabQuick := Theme.Add(this.MainGui, "Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtStrongHoldProtocol := Theme.Add(this.MainGui, "Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("卫戍协议"))
+        this.TabStrongHoldProtocol := Theme.Add(this.MainGui, "Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtOther := Theme.Add(this.MainGui, "Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("其他设置"))
+        this.TabOther := Theme.Add(this.MainGui, "Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
+        this.TxtCustomKeys := Theme.Add(this.MainGui, "Text", "ys h20 w" this.TabWidth " Center Section", I18n.T("自定义按键"))
+        this.TabCustomKeys := Theme.Add(this.MainGui, "Text", "xs y0 h25 w" this.TabWidth " Center BackgroundTrans")
         ; 为标签添加点击事件
         this.TabKeybind.OnEvent("Click", (*) => this.SwitchTab("keyBind"))
         this.TabQuick.OnEvent("Click", (*) => this.SwitchTab("quick"))
@@ -264,8 +264,8 @@ class GuiManager {
             }
         ]
 
-        this.TabIndicator := this.MainGui.Add("Text", "x0 y23 w" this.TabWidth " h2 Background1994d2") ; 选中指示线（绝对 x0，避免 Section 锚到第 5 个标签 x720 处溢出）
-        this.MainGui.Add("Text", "x0 y25 w" this.GuiWidth " h1 Backgroundd0d0d0") ; 分割线
+        this.TabIndicator := Theme.Add(this.MainGui, "Text", "x0 y23 w" this.TabWidth " h2 BackgroundAccent") ; 选中指示线（绝对 x0，避免 Section 锚到第 5 个标签 x720 处溢出）
+        Theme.Add(this.MainGui, "Text", "x0 y25 w" this.GuiWidth " h1 BackgroundBorder") ; 分割线
         ; 标签数 ≠ 4 时（新增/隐藏标签），创建期立即按实际可见数等分布局，
         ; 避免首显前窗口宽度按 TabWidth(180) × 标签数计算导致顶部溢出/整窗变宽。
         this.LayoutTopTabs()
@@ -275,13 +275,13 @@ class GuiManager {
         combatItems := this._GetSchemaItems("combat")
         combatHalf := Ceil(combatItems.Length / 2)
         bindColX := 0
-        this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vKeybindLeftGroup", "")
+        Theme.Add(this.MainGui, "GroupBox", "x0 y35 w" this.ColWidth " h0 Section vKeybindLeftGroup", "")
         this.KeybindControls.Push(this.MainGui["KeybindLeftGroup"])
 
         for i, item in combatItems {
             if (i = combatHalf + 1) {
                 ; 常规作战 - 右列
-                this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vKeybindRightGroup", "")
+                Theme.Add(this.MainGui, "GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vKeybindRightGroup", "")
                 this.KeybindControls.Push(this.MainGui["KeybindRightGroup"])
                 bindColX := this.ColWidth
             }
@@ -299,32 +299,32 @@ class GuiManager {
                 this.FrameSkipLabels[item.id] := row[1]
         }
         ; 空白占位
-        placeholderKeybind := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
+        placeholderKeybind := Theme.Add(this.MainGui, "Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.KeybindControls.Push(placeholderKeybind)
 
         ; 常规作战提示语
-        this.MainGui.SetFont("s9 c1994d2")
-        hintKeybind1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center",
+        Theme.SetFont(this.MainGui, "s9 cAccent")
+        hintKeybind1 := Theme.Add(this.MainGui, "Text", "x0 yp+40 w" this.GuiWidth " Center",
             I18n.T("点击输入框修改按键，使用【BACKSPACE/DELETE】清除按键"))
-        this.MainGui.SetFont("s9 c1994d2 bold")
-        hintKeybind2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", I18n.T("为避免冲突，切换到此页面时“卫戍协议”按键将被禁用"))
-        this.MainGui.SetFont("s9 cDefault Norm")
+        Theme.SetFont(this.MainGui, "s9 cAccent bold")
+        hintKeybind2 := Theme.Add(this.MainGui, "Text", "x0 y+8 w" this.GuiWidth " Center", I18n.T("为避免冲突，切换到此页面时“卫戍协议”按键将被禁用"))
+        Theme.SetFont(this.MainGui, "s9 cText Norm")
         this.KeybindControls.Push(hintKeybind1)
         this.KeybindControls.Push(hintKeybind2)
         this.StrongHoldConflictHints.Push(hintKeybind2)
 
         ; 分割线
-        sepKeybind := this.MainGui.Add("Text", "x" this.GuiXMargin " y+15 w" this.GuiWidth - 60 " h1 Backgroundd0d0d0") ; 分割线
+        sepKeybind := Theme.Add(this.MainGui, "Text", "x" this.GuiXMargin " y+15 w" this.GuiWidth - 60 " h1 BackgroundBorder") ; 分割线
         this.NotOtherControls.Push(sepKeybind)
 
         ; 游戏内帧率设置。列栅格：下拉框与按键 Edit 列对齐（x155 w140）。
         ; 文本标签用真实宽度探测（自动尺寸 → 重定宽），右缘固定 135，保证 en/ko 等长文案不换行；
         ; 中文保持 x45 w90 不变（Max(90, 实测宽)）。
-        txtFrame := this.MainGui.Add("Text", "x0 y+20 Right", I18n.T("游戏内帧率"))
+        txtFrame := Theme.Add(this.MainGui, "Text", "x0 y+20 Right", I18n.T("游戏内帧率"))
         txtFrame.GetPos(&frameX, &frameY, &frameW)
         frameW := Max(90, frameW + 2)  ; +2px 安全余量；中文仍为 x45 w90 不变
         txtFrame.Move(Max(0, 135 - frameW), frameY, frameW)
-        this.GuiFrame := this.MainGui.Add("DropDownList", "x155 y+-18 w140 vFrame", Constants.FrameOptions)
+        this.GuiFrame := Theme.Add(this.MainGui, "DropDownList", "x155 y+-18 w140 vFrame", Constants.FrameOptions)
         this.GuiFrame.OnEvent("Change", (*) => this.TrackChange("Frame"))
         StatusBarHints.Register(this.GuiFrame, "游戏内的帧率")
         frameText := Config.GetImportant("Frame")
@@ -336,19 +336,19 @@ class GuiManager {
         ; 列栅格：C 输入框与右侧按键 Edit 列对齐（x515 w140），复选框贴其左侧（右缘 500），
         ; 复选框文案向右延伸时自动左移，任何语言都不会越窗。
         autoBeginW := Metrics.TextWidth(I18n.T(" 切换开局自动暂停"))
-        checkboxAutoBeginPause := this.MainGui.Add("Checkbox", "x" (500 - autoBeginW - 20) " yp-2 h24 vAutoBeginPause", I18n.T(" 切换开局自动暂停"))
+        checkboxAutoBeginPause := Theme.Add(this.MainGui, "Checkbox", "x" (500 - autoBeginW - 20) " yp-2 h24 vAutoBeginPause", I18n.T(" 切换开局自动暂停"))
         checkboxAutoBeginPause.OnEvent("Click", (*) => this.TrackChange("AutoBeginPause"))
         StatusBarHints.Register(checkboxAutoBeginPause, "进入关卡时自动按下暂停")
         this.MainGui["AutoBeginPause"].Value := Config.GetImportant("AutoBeginPause")
         checkboxAutoBeginPause.GetPos(&cbPauseX, &cbPauseY)   ; 记录位置供快捷操作页复用
         this.KeybindControls.Push(checkboxAutoBeginPause)
-        editAutoBeginPauseSwitch := this.MainGui.Add("Edit", "x515 yp w140 Center -TabStop Uppercase v" "AutoBeginPauseSwitch",
+        editAutoBeginPauseSwitch := Theme.Add(this.MainGui, "Edit", "x515 yp w140 Center -TabStop Uppercase v" "AutoBeginPauseSwitch",
             Config.GetHotkey("AutoBeginPauseSwitch"))
         StatusBarHints.Register(editAutoBeginPauseSwitch, "按下后切换开局自动暂停的启用/禁用")
         this.KeybindControls.Push(editAutoBeginPauseSwitch)
 
         ; 使用"返回上级菜单"放弃行动（仅"快捷操作"页显示，复用自动暂停开关同一位置）
-        checkboxBackCease := this.MainGui.Add("Checkbox", "x" cbPauseX " y" cbPauseY " vBackCeaseOperations", I18n.T(" 使用“返回上级菜单”放弃行动"))
+        checkboxBackCease := Theme.Add(this.MainGui, "Checkbox", "x" cbPauseX " y" cbPauseY " vBackCeaseOperations", I18n.T(" 使用“返回上级菜单”放弃行动"))
         checkboxBackCease.OnEvent("Click", (*) => this.TrackChange("BackCeaseOperations"))
         StatusBarHints.Register(checkboxBackCease, "使“返回上级菜单”按下ESC的同时按下“放弃行动”键")
         this.MainGui["BackCeaseOperations"].Value := Config.GetImportant("BackCeaseOperations")
@@ -356,7 +356,7 @@ class GuiManager {
 
         ; 仅在常规作战场景启用常规作战热键（控制 GuardInLevel 关卡检测守卫，仅"常规作战"页显示）。
         ; 左缘与"切换开局暂停"复选框对齐（同类控件）；用实测宽度钳制，文案过长时自动左移不越窗。
-        checkboxCombatGuard := this.MainGui.Add("Checkbox", "x0 y+12 h24 vInLevelGuard", I18n.T(" 仅在关卡内启用常规作战热键（实验性）"))
+        checkboxCombatGuard := Theme.Add(this.MainGui, "Checkbox", "x0 y+12 h24 vInLevelGuard", I18n.T(" 仅在关卡内启用常规作战热键（实验性）"))
         checkboxCombatGuard.GetPos(&cbGX, &cbGY, &cbGW)
         checkboxCombatGuard.Move(Min(cbPauseX, 708 - cbGW), cbGY, cbGW)
         checkboxCombatGuard.OnEvent("Click", (*) => this.TrackChange("InLevelGuard"))
@@ -365,13 +365,13 @@ class GuiManager {
         this.KeybindControls.Push(checkboxCombatGuard)
 
         ; 帧数设置提示语
-        this.MainGui.SetFont("s9 c1994d2")
-        hintFrame1 := this.MainGui.Add("Text", "x0 y+15 w" this.GuiWidth " Center",
+        Theme.SetFont(this.MainGui, "s9 cAccent")
+        hintFrame1 := Theme.Add(this.MainGui, "Text", "x0 y+15 w" this.GuiWidth " Center",
             I18n.T("若开启了游戏内的“垂直同步”，请确保上方“游戏内帧率”设置与你的屏幕刷新率保持一致"))
         this.NotOtherControls.Push(hintFrame1)
-        hintFrame2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center",
+        hintFrame2 := Theme.Add(this.MainGui, "Text", "x0 y+8 w" this.GuiWidth " Center",
             I18n.T("若关闭了游戏的“垂直同步”，请确保上方“游戏内帧率”设置与游戏内保持一致"))
-        this.MainGui.SetFont("s9 cDefault")
+        Theme.SetFont(this.MainGui, "s9 cText")
         this.NotOtherControls.Push(hintFrame2)
 
         ; 记录所有标签页底部基准 Y（取"常规作战"帧率提示的底部）
@@ -383,29 +383,29 @@ class GuiManager {
         quickItems := this._GetSchemaItems("quick")
         quickHalf := Ceil(quickItems.Length / 2)
         bindColX := 0
-        this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
+        Theme.Add(this.MainGui, "GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
         this.QuickControls.Push(this.MainGui["QuickLeftGroup"])
 
         for i, item in quickItems {
             if (i = quickHalf + 1) {
                 ; 快捷操作 - 右列
-                this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vQuickRightGroup", "")
+                Theme.Add(this.MainGui, "GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vQuickRightGroup", "")
                 this.QuickControls.Push(this.MainGui["QuickRightGroup"])
                 bindColX := this.ColWidth
             }
             this.QuickControls.Push(AddBindRow(I18n.T(item.nameKey), item.id, bindColX, item.descKey)*)
         }
         ; 空白占位
-        placeholderQuick := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
+        placeholderQuick := Theme.Add(this.MainGui, "Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.QuickControls.Push(placeholderQuick)
 
         ; 快捷操作提示语
-        this.MainGui.SetFont("s9 c1994d2")
-        hintQuick1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center",
+        Theme.SetFont(this.MainGui, "s9 cAccent")
+        hintQuick1 := Theme.Add(this.MainGui, "Text", "x0 yp+40 w" this.GuiWidth " Center",
             I18n.T("点击输入框修改按键，使用【BACKSPACE/DELETE】清除按键"))
-        this.MainGui.SetFont("s9 c1994d2 bold")
-        hintQuick3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center", I18n.T("为避免冲突，切换到此页面时“卫戍协议”按键将被禁用"))
-        this.MainGui.SetFont("s9 cDefault Norm")
+        Theme.SetFont(this.MainGui, "s9 cAccent bold")
+        hintQuick3 := Theme.Add(this.MainGui, "Text", "x0 y+8 w" this.GuiWidth " Center", I18n.T("为避免冲突，切换到此页面时“卫戍协议”按键将被禁用"))
+        Theme.SetFont(this.MainGui, "s9 cText Norm")
         this.QuickControls.Push(hintQuick1)
         this.QuickControls.Push(hintQuick3)
         this.StrongHoldConflictHints.Push(hintQuick3)
@@ -417,13 +417,13 @@ class GuiManager {
         strongHoldItems := this._GetSchemaItems("strongHold")
         strongHoldHalf := Floor(strongHoldItems.Length / 2)
         bindColX := 0
-        this.MainGui.Add("GroupBox", "x0 y35 w" this.ColWidth " h0 Section vStrongHoldProtocolLeftGroup", "")
+        Theme.Add(this.MainGui, "GroupBox", "x0 y35 w" this.ColWidth " h0 Section vStrongHoldProtocolLeftGroup", "")
         this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolLeftGroup"])
 
         for i, item in strongHoldItems {
             if (i = strongHoldHalf + 1) {
                 ; 卫戍协议 - 右列
-                this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vStrongHoldProtocolRightGroup",
+                Theme.Add(this.MainGui, "GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vStrongHoldProtocolRightGroup",
                     "")
                 this.StrongHoldProtocolControls.Push(this.MainGui["StrongHoldProtocolRightGroup"])
                 bindColX := this.ColWidth
@@ -431,31 +431,31 @@ class GuiManager {
             this.StrongHoldProtocolControls.Push(AddBindRow(I18n.T(item.nameKey), item.id, bindColX, item.descKey)*)
         }
         ; 空白占位
-        placeholderStrongHoldProtocol := this.MainGui.Add("Text", "xs+45 y+-10 w90 h0 Right +0x200")
+        placeholderStrongHoldProtocol := Theme.Add(this.MainGui, "Text", "xs+45 y+-10 w90 h0 Right +0x200")
         this.StrongHoldProtocolControls.Push(placeholderStrongHoldProtocol)
 
         ; 卫戍协议提示语
-        this.MainGui.SetFont("s9 c1994d2")
-        hintStrongHoldProtocol1 := this.MainGui.Add("Text", "x0 yp+40 w" this.GuiWidth " Center",
+        Theme.SetFont(this.MainGui, "s9 cAccent")
+        hintStrongHoldProtocol1 := Theme.Add(this.MainGui, "Text", "x0 yp+40 w" this.GuiWidth " Center",
             I18n.T("点击输入框修改按键，使用【BACKSPACE/DELETE】清除按键"))
-        this.MainGui.SetFont("s9 c1994d2 bold")
-        hintStrongHoldProtocol2 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center",
+        Theme.SetFont(this.MainGui, "s9 cAccent bold")
+        hintStrongHoldProtocol2 := Theme.Add(this.MainGui, "Text", "x0 y+8 w" this.GuiWidth " Center",
             I18n.T("为避免冲突，切换到此页面时“常规作战”、“快捷操作”按键将被禁用"))
-        this.MainGui.SetFont("s9 cDefault Norm")
+        Theme.SetFont(this.MainGui, "s9 cText Norm")
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol1)
         this.StrongHoldProtocolControls.Push(hintStrongHoldProtocol2)
 
         ; -- 自定义按键 --
         ; 布局对齐"常规作战"页：顶部新增按钮 + 内联提示 + 两列 GroupBox（每列 6 行）+ 底部两行居中提示
-        btnAddCustom := this.MainGui.Add("Button", "x" this.GuiXMargin " y40 w110 h24 vBtnAddCustom", I18n.T("新增按键"))
+        btnAddCustom := Theme.Add(this.MainGui, "Button", "x" this.GuiXMargin " y40 w110 h24 vBtnAddCustom", I18n.T("新增按键"))
         btnAddCustom.OnEvent("Click", (*) => this._OnAddCustomHotkey())
         StatusBarHints.Register(btnAddCustom, "新增自定义按键，点击齿轮编辑名称、类型、功能与坐标")
         this.CustomKeyControls.Push(btnAddCustom)
         ; 灰色提示已由状态栏悬停说明替代，不再单独展示
 
-        this.MainGui.Add("GroupBox", "x0 y70 w" this.ColWidth " h0 Section vCustomLeftGroup", "")
+        Theme.Add(this.MainGui, "GroupBox", "x0 y70 w" this.ColWidth " h0 Section vCustomLeftGroup", "")
         this.CustomKeyControls.Push(this.MainGui["CustomLeftGroup"])
-        this.MainGui.Add("GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vCustomRightGroup", "")
+        Theme.Add(this.MainGui, "GroupBox", "x" this.ColWidth " ys w" this.ColWidth " h0 Section vCustomRightGroup", "")
         this.CustomKeyControls.Push(this.MainGui["CustomRightGroup"])
 
         ; 12 行预建（两列 × 6 行，显隐 + 重写值实现增删；AHK 控件无法运行时创建/销毁）
@@ -463,24 +463,24 @@ class GuiManager {
             this._CreateCustomHotkeyRow(A_Index)
 
         ; 自定义按键提示语（两行居中，参照常规作战页提示风格）
-        this.MainGui.SetFont("s9 c1994d2")
-        hintCustom2 := this.MainGui.Add("Text", "x0 y+20 w" this.GuiWidth " Center",
+        Theme.SetFont(this.MainGui, "s9 cAccent")
+        hintCustom2 := Theme.Add(this.MainGui, "Text", "x0 y+20 w" this.GuiWidth " Center",
             I18n.T("按键类型决定生效范围：全局按键始终生效；常规作战类仅在作战关卡内生效；"))
         this.CustomKeyControls.Push(hintCustom2)
-        hintCustom3 := this.MainGui.Add("Text", "x0 y+8 w" this.GuiWidth " Center",
+        hintCustom3 := Theme.Add(this.MainGui, "Text", "x0 y+8 w" this.GuiWidth " Center",
             I18n.T("快捷操作类在未启用卫戍协议方案时全局生效；卫戍协议类仅在启用卫戍协议方案时生效"))
         this.CustomKeyControls.Push(hintCustom3)
-        this.MainGui.SetFont("s9 cDefault")
+        Theme.SetFont(this.MainGui, "s9 cText")
 
         ; -- 其他设置 --
         ; 导航区域右侧分割线——高度跟随内容到底部按钮上方
         dividerHeight := this._BottomBaseY + 20 - 38
-        this.OtherSettingsControls.Push(this.MainGui.Add("Text", "x130 y38 w1 h" dividerHeight " Backgroundd0d0d0"))
+        this.OtherSettingsControls.Push(Theme.Add(this.MainGui, "Text", "x130 y38 w1 h" dividerHeight " BackgroundBorder"))
 
         ; 其他设置 - 左侧导航
         ; 导航项"通用"（默认选中态：蓝色文字，置首位）
-        this.MainGui.SetFont("s9 c1994d2")
-        navGeneral := this.MainGui.Add("Text", "x0 y40 w130 Center Section", I18n.T("通用"))
+        Theme.SetFont(this.MainGui, "s9 cAccent")
+        navGeneral := Theme.Add(this.MainGui, "Text", "x0 y40 w130 Center Section", I18n.T("通用"))
         navGeneral.OnEvent("Click", (*) => this._SwitchOtherCategory("General"))
         StatusBarHints.Register(navGeneral, "切换到「通用」设置分类")
         this.NavItems.Push(navGeneral)
@@ -488,76 +488,76 @@ class GuiManager {
 
         ; 竖线指示器——跟随导航项高度
         this.NavIndicators := []
-        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2"))
+        this.NavIndicators.Push(Theme.Add(this.MainGui, "Text", "xp yp w3 hp BackgroundAccent"))
         this.OtherSettingsControls.Push(this.NavIndicators[1])
 
         ; 恢复默认字体
-        this.MainGui.SetFont("s9 cDefault norm")
+        Theme.SetFont(this.MainGui, "s9 cText norm")
 
         ; 导航项"显示"（未选中态）
-        navDisplay := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("显示"))
+        navDisplay := Theme.Add(this.MainGui, "Text", "xs y+m w130 Center", I18n.T("显示"))
         navDisplay.OnEvent("Click", (*) => this._SwitchOtherCategory("Display"))
         StatusBarHints.Register(navDisplay, "切换到「显示」设置分类")
         this.NavItems.Push(navDisplay)
         this.OtherSettingsControls.Push(navDisplay)
-        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.NavIndicators.Push(Theme.Add(this.MainGui, "Text", "xp yp w3 hp BackgroundAccent Hidden"))
         this.OtherSettingsControls.Push(this.NavIndicators[2])
 
         ; 导航项"启动与退出"（未选中态）
-        navLaunch := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("启动与退出"))
+        navLaunch := Theme.Add(this.MainGui, "Text", "xs y+m w130 Center", I18n.T("启动与退出"))
         navLaunch.OnEvent("Click", (*) => this._SwitchOtherCategory("Launch"))
         StatusBarHints.Register(navLaunch, "切换到「启动与退出」设置分类")
         this.NavItems.Push(navLaunch)
         this.OtherSettingsControls.Push(navLaunch)
-        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.NavIndicators.Push(Theme.Add(this.MainGui, "Text", "xp yp w3 hp BackgroundAccent Hidden"))
         this.OtherSettingsControls.Push(this.NavIndicators[3])
 
         ; 导航项"更新"（未选中态）
-        navUpdate := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("更新"))
+        navUpdate := Theme.Add(this.MainGui, "Text", "xs y+m w130 Center", I18n.T("更新"))
         navUpdate.OnEvent("Click", (*) => this._SwitchOtherCategory("Update"))
         StatusBarHints.Register(navUpdate, "切换到「更新」设置分类")
         this.NavItems.Push(navUpdate)
         this.OtherSettingsControls.Push(navUpdate)
-        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.NavIndicators.Push(Theme.Add(this.MainGui, "Text", "xp yp w3 hp BackgroundAccent Hidden"))
         this.OtherSettingsControls.Push(this.NavIndicators[4])
 
         ; 导航项"自定义"（未选中态）
-        navCustom := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("自定义"))
+        navCustom := Theme.Add(this.MainGui, "Text", "xs y+m w130 Center", I18n.T("自定义"))
         navCustom.OnEvent("Click", (*) => this._SwitchOtherCategory("Custom"))
         StatusBarHints.Register(navCustom, "切换到「自定义」设置分类")
         this.NavItems.Push(navCustom)
         this.OtherSettingsControls.Push(navCustom)
-        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.NavIndicators.Push(Theme.Add(this.MainGui, "Text", "xp yp w3 hp BackgroundAccent Hidden"))
         this.OtherSettingsControls.Push(this.NavIndicators[5])
 
         ; 导航项"日志"（未选中态）
-        navLog := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("日志"))
+        navLog := Theme.Add(this.MainGui, "Text", "xs y+m w130 Center", I18n.T("日志"))
         navLog.OnEvent("Click", (*) => this._SwitchOtherCategory("Log"))
         StatusBarHints.Register(navLog, "切换到「日志」设置分类")
         this.NavItems.Push(navLog)
         this.OtherSettingsControls.Push(navLog)
-        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.NavIndicators.Push(Theme.Add(this.MainGui, "Text", "xp yp w3 hp BackgroundAccent Hidden"))
         this.OtherSettingsControls.Push(this.NavIndicators[6])
 
         ; 导航项"关于"（未选中态）
-        navAbout := this.MainGui.Add("Text", "xs y+m w130 Center", I18n.T("关于"))
+        navAbout := Theme.Add(this.MainGui, "Text", "xs y+m w130 Center", I18n.T("关于"))
         navAbout.OnEvent("Click", (*) => this._SwitchOtherCategory("About"))
         StatusBarHints.Register(navAbout, "切换到「关于」设置分类")
         this.NavItems.Push(navAbout)
         this.OtherSettingsControls.Push(navAbout)
-        this.NavIndicators.Push(this.MainGui.Add("Text", "xp yp w3 hp Background1994d2 Hidden"))
+        this.NavIndicators.Push(Theme.Add(this.MainGui, "Text", "xp yp w3 hp BackgroundAccent Hidden"))
         this.OtherSettingsControls.Push(this.NavIndicators[7])
 
         ; 其他设置 - 右侧内容区
         ; 分类"通用"（置首位）
-        sepGeneral := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
-        sepGeneralTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", I18n.T("  通用设置  "))
+        sepGeneral := Theme.Add(this.MainGui, "Text", "x160 y48 w530 h1 BackgroundBorder Center Section")
+        sepGeneralTxt := Theme.Add(this.MainGui, "Text", "xs+40 y+-9 Center cMuted", I18n.T("  通用设置  "))
         this.GeneralControls.Push(sepGeneral)
         this.GeneralControls.Push(sepGeneralTxt)
 
         ; 界面语言
-        txtLanguage := this.MainGui.Add("Text", "xs y+16", I18n.T("界面语言"))
-        ddLanguage := this.MainGui.Add("DropDownList", "x+10 yp-3 w140 vLanguage", this._BuildLanguageLabels())
+        txtLanguage := Theme.Add(this.MainGui, "Text", "xs y+16", I18n.T("界面语言"))
+        ddLanguage := Theme.Add(this.MainGui, "DropDownList", "x+10 yp-3 w140 vLanguage", this._BuildLanguageLabels())
         ddLanguage.OnEvent("Change", (*) => this.TrackChange("Language"))
         StatusBarHints.Register(ddLanguage, "修改AFA的界面语言")
         this.MainGui["Language"].Value := this._LanguageToIndex(Config.GetImportant("Language"))
@@ -565,43 +565,62 @@ class GuiManager {
         this.GeneralControls.Push(ddLanguage)
 
         ; 分类"显示"
-        sepDisplay := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
-        sepDisplayTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", I18n.T("  显示设置  "))
+        sepDisplay := Theme.Add(this.MainGui, "Text", "x160 y48 w530 h1 BackgroundBorder Center Section")
+        sepDisplayTxt := Theme.Add(this.MainGui, "Text", "xs+40 y+-9 Center cMuted", I18n.T("  显示设置  "))
         this.DisplayControls.Push(sepDisplay)
         this.DisplayControls.Push(sepDisplayTxt)
         ; 标签管理器迁入“显示”分类后，标题重新锚定到本分类内容区顶部
         sepDisplay.GetPos(, &displayTopY)
-        this.TabManagerTitleY := displayTopY + 18
+        txtTheme := Theme.Add(this.MainGui, "Text", "x160 y" (displayTopY + 22), I18n.T("界面主题"))
+        themeLabels := [I18n.T("跟随系统"), I18n.T("浅色"), I18n.T("深色"), I18n.T("自定义主题")]
+        themeWidth := 160
+        for label in themeLabels
+            themeWidth := Max(themeWidth, Metrics.TextWidth(label) + 36)
+        ddTheme := Theme.Add(this.MainGui, "DropDownList", "x+12 yp-3 w" themeWidth " vThemeMode", themeLabels)
+        ddTheme.Value := this._ThemeToIndex(Config.GetImportant("ThemeMode"))
+        ddTheme.OnEvent("Change", (*) => this.TrackChange("ThemeMode"))
+        StatusBarHints.Register(ddTheme, "立即预览主题，保存或应用后记住，取消后恢复")
+        ddTheme.GetPos(&themeX, &themeY, &themeW, &themeH)
+        themeButtonY := themeY + (themeH - 28) // 2
+        this.ThemeEditButton := Theme.Add(this.MainGui, "Button", "x" (themeX + themeW + 12) " y" themeButtonY
+            " w" Max(200, Metrics.TextWidth(I18n.T("编辑自定义主题")) + 24) " h28 Hidden", I18n.T("编辑自定义主题"))
+        this.ThemeEditButton.OnEvent("Click", (*) => ThemeEditor.Open())
+        this.DisplayControls.Push(this.ThemeEditButton)
+        themeHint := Theme.Add(this.MainGui, "Text", "x160 y" (Max(themeY + themeH, themeButtonY + 28) + 10)
+            " w530 cSecondary", I18n.T("跟随系统时，界面会随 Windows 应用主题自动切换"))
+        this.DisplayControls.Push(txtTheme, ddTheme, themeHint)
+        themeHint.GetPos(, &themeHintY, , &themeHintH)
+        this.TabManagerTitleY := themeHintY + themeHintH + 16
 
         ; 分类"启动与退出"
-        sepLaunch := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
-        sepLaunchTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", I18n.T("  启动与退出设置  "))
+        sepLaunch := Theme.Add(this.MainGui, "Text", "x160 y48 w530 h1 BackgroundBorder Center Section")
+        sepLaunchTxt := Theme.Add(this.MainGui, "Text", "xs+40 y+-9 Center cMuted", I18n.T("  启动与退出设置  "))
         this.LaunchControls.Push(sepLaunch)
         this.LaunchControls.Push(sepLaunchTxt)
 
         ; 自动关闭
-        checkboxAutoExit := this.MainGui.Add("Checkbox", "xs y+12 h24 vAutoExit", I18n.T(" 随游戏进程关闭自动退出（强烈建议开启）"))
+        checkboxAutoExit := Theme.Add(this.MainGui, "Checkbox", "xs y+12 h24 vAutoExit", I18n.T(" 随游戏进程关闭自动退出（强烈建议开启）"))
         checkboxAutoExit.OnEvent("Click", (*) => this.TrackChange("AutoExit"))
         StatusBarHints.Register(checkboxAutoExit, "切换是否在所有游戏进程退出时自动关闭AFA")
         this.MainGui["AutoExit"].Value := Config.GetImportant("AutoExit")
         this.LaunchControls.Push(checkboxAutoExit)
 
         ; 自动打开设置
-        checkboxAutoOpenSettings := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoOpenSettings", I18n.T(" 启动时打开设置窗口"))
+        checkboxAutoOpenSettings := Theme.Add(this.MainGui, "Checkbox", "xs y+10 h24 vAutoOpenSettings", I18n.T(" 启动时打开设置窗口"))
         checkboxAutoOpenSettings.OnEvent("Click", (*) => this.TrackChange("AutoOpenSettings"))
         StatusBarHints.Register(checkboxAutoOpenSettings, "切换启动AFA后是否打开设置窗口")
         this.MainGui["AutoOpenSettings"].Value := Config.GetImportant("AutoOpenSettings")
         this.LaunchControls.Push(checkboxAutoOpenSettings)
 
         ; 关闭窗口时退出
-        checkboxExitOnWindowClose := this.MainGui.Add("Checkbox", "xs y+10 h24 vExitOnWindowClose", I18n.T(" 点击关闭窗口按钮时退出AFA"))
+        checkboxExitOnWindowClose := Theme.Add(this.MainGui, "Checkbox", "xs y+10 h24 vExitOnWindowClose", I18n.T(" 点击关闭窗口按钮时退出AFA"))
         checkboxExitOnWindowClose.OnEvent("Click", (*) => this.TrackChange("ExitOnWindowClose"))
         StatusBarHints.Register(checkboxExitOnWindowClose, "切换点击右上角 ✗ 是否直接退出AFA")
         this.MainGui["ExitOnWindowClose"].Value := Config.GetImportant("ExitOnWindowClose")
         this.LaunchControls.Push(checkboxExitOnWindowClose)
 
         ; 默认启动卫戍协议方案
-        checkboxDefaultStrongHoldProtocol := this.MainGui.Add("Checkbox", "xs y+10 h24 vDefaultStrongHoldProtocol",
+        checkboxDefaultStrongHoldProtocol := Theme.Add(this.MainGui, "Checkbox", "xs y+10 h24 vDefaultStrongHoldProtocol",
             I18n.T(" 默认启动卫戍协议方案"))
         checkboxDefaultStrongHoldProtocol.OnEvent("Click", (*) => this.TrackChange("DefaultStrongHoldProtocol"))
         StatusBarHints.Register(checkboxDefaultStrongHoldProtocol, "切换启动AFA后是否直接切换到「卫戍协议」方案")
@@ -609,7 +628,7 @@ class GuiManager {
         this.LaunchControls.Push(checkboxDefaultStrongHoldProtocol)
 
         ; 启动AFA时自动启动下方路径游戏
-        checkboxAutoRunGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoRunGame", I18n.T(" 启动AFA时同时启动明日方舟"))
+        checkboxAutoRunGame := Theme.Add(this.MainGui, "Checkbox", "xs y+10 h24 vAutoRunGame", I18n.T(" 启动AFA时同时启动明日方舟"))
         checkboxAutoRunGame.OnEvent("Click", (*) => this.TrackChange("AutoRunGame"))
         StatusBarHints.Register(checkboxAutoRunGame, "启动AFA时自动启动下方路径的明日方舟")
         this.MainGui["AutoRunGame"].Value := Config.GetImportant("AutoRunGame")
@@ -617,9 +636,9 @@ class GuiManager {
 
         ; 识别游戏路径
         btnCheckGamePathW := Max(this.BtnW, Metrics.TextWidth(I18n.T("识别游戏路径")) + 14)
-        this.BtnCheckGamePath := this.MainGui.Add("Button", "xs y+12 w" btnCheckGamePathW " h24", I18n.T("识别游戏路径"))
+        this.BtnCheckGamePath := Theme.Add(this.MainGui, "Button", "xs y+12 w" btnCheckGamePathW " h24", I18n.T("识别游戏路径"))
         ; 提示文本右缘固定在内容区右缘（x690），宽度不随语言文本变化（超宽裁剪，各语言文案长度需人工验证）
-        hintGamePath := this.MainGui.Add("Text", "x+15 yp+4 w" (530 - btnCheckGamePathW - 15) " h20 c9c9c9c", I18n.T("可同时识别所有区服的路径，若识别不到可以先启动游戏再识别"))
+        hintGamePath := Theme.Add(this.MainGui, "Text", "x+15 yp+4 w" (530 - btnCheckGamePathW - 15) " h20 cHint", I18n.T("可同时识别所有区服的路径，若识别不到可以先启动游戏再识别"))
         this.BtnCheckGamePath.OnEvent("Click", (*) => EventBus.Publish("CheckGamePathClick"))
         StatusBarHints.Register(this.BtnCheckGamePath, "自动识别本机的游戏安装路径")
         this.LaunchControls.Push(this.BtnCheckGamePath)
@@ -629,18 +648,18 @@ class GuiManager {
         ; 标签宽出向左延伸、上限 zhW+29（不越过 x131 分隔线）。保证中文布局原点不动，
         ; 且各语言标签/编辑框列位置一致，语言文本长度差异不再撑大窗口
         probeZhGui := Gui()
-        probeZhGui.SetFont("s9", Metrics.FontFor("zh-Hans"))
-        probeZh := probeZhGui.Add("Text", , " 随AFA启动游戏路径: ")
+        Theme.SetFont(probeZhGui, "s9", Metrics.FontFor("zh-Hans"))
+        probeZh := Theme.Add(probeZhGui, "Text", , " 随AFA启动游戏路径: ")
         probeZh.GetPos(, , &gamePathLabelZhW)
-        probeZhGui.Destroy()
+        Theme.Destroy(probeZhGui)
         probeGui := Gui()
-        probeGui.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
-        probe := probeGui.Add("Text", , I18n.T(" 随AFA启动游戏路径: "))
+        Theme.SetFont(probeGui, "s9", Metrics.FontFor(I18n.GetCurrent()))
+        probe := Theme.Add(probeGui, "Text", , I18n.T(" 随AFA启动游戏路径: "))
         probe.GetPos(, , &gamePathLabelW)
-        probeGui.Destroy()
+        Theme.Destroy(probeGui)
         gamePathLabelW := Min(Max(gamePathLabelW, gamePathLabelZhW), gamePathLabelZhW + 29)
-        txtGamePath := this.MainGui.Add("Text", "x" (160 + gamePathLabelZhW - gamePathLabelW) " y+10 w" gamePathLabelW " Right h24", I18n.T(" 随AFA启动游戏路径: "))
-        editGamePath := this.MainGui.Add("Edit", "x" (170 + gamePathLabelZhW) " yp-2 w403 h20 vGamePath -Multi +0x1", Config.GetImportant(
+        txtGamePath := Theme.Add(this.MainGui, "Text", "x" (160 + gamePathLabelZhW - gamePathLabelW) " y+10 w" gamePathLabelW " Right h24", I18n.T(" 随AFA启动游戏路径: "))
+        editGamePath := Theme.Add(this.MainGui, "Edit", "x" (170 + gamePathLabelZhW) " yp-2 w403 h20 vGamePath -Multi +0x1", Config.GetImportant(
             "GamePath"))
         editGamePath.OnEvent("Change", (*) => this.TrackChange("GamePath"))
         StatusBarHints.Register(editGamePath, "随AFA启动的游戏路径，可手动输入，或点击「识别游戏路径」自动填入")
@@ -648,31 +667,31 @@ class GuiManager {
         this.LaunchControls.Push(editGamePath)
 
         ; 启动游戏时自动启动AFA
-        checkboxAutoStartWithGame := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoStartWithGame", I18n.T(" 启动明日方舟时自动启动AFA（以下路径均可触发）"))
+        checkboxAutoStartWithGame := Theme.Add(this.MainGui, "Checkbox", "xs y+10 h24 vAutoStartWithGame", I18n.T(" 启动明日方舟时自动启动AFA（以下路径均可触发）"))
         checkboxAutoStartWithGame.OnEvent("Click", (*) => this.TrackChange("AutoStartWithGame"))
         StatusBarHints.Register(checkboxAutoStartWithGame, "启动任意区服明日方舟时自动启动AFA（需要管理员权限的计划任务）")
         this.MainGui["AutoStartWithGame"].Value := Config.GetImportant("AutoStartWithGame")
         this.LaunchControls.Push(checkboxAutoStartWithGame)
 
         ; 已识别区服路径总览（只读 Edit，便于用户选择复制到上方 GamePath 输入框）
-        this.ServerPathsText := this.MainGui.Add("Edit", "xs y+6 w530 r4 ReadOnly vServerPathsText", this._BuildServerPathsText())
+        this.ServerPathsText := Theme.Add(this.MainGui, "Edit", "xs y+6 w530 r4 ReadOnly vServerPathsText", this._BuildServerPathsText())
         StatusBarHints.Register(this.ServerPathsText, "已识别的各区服安装路径（只读，可选中复制到上方输入框）")
         this.LaunchControls.Push(this.ServerPathsText)
 
         ; 当前运行客户端总览（只读 Edit）
-        this.RunningClientsText := this.MainGui.Add("Edit", "xs y+6 w530 r3 ReadOnly vRunningClientsText", this._BuildRunningClientsText())
+        this.RunningClientsText := Theme.Add(this.MainGui, "Edit", "xs y+6 w530 r3 ReadOnly vRunningClientsText", this._BuildRunningClientsText())
         StatusBarHints.Register(this.RunningClientsText, "当前运行的区服客户端与 PID（只读）")
         this.LaunchControls.Push(this.RunningClientsText)
 
         ; 分类"更新"
-        sepUpdate := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
-        sepUpdateTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", I18n.T("  更新设置  "))
+        sepUpdate := Theme.Add(this.MainGui, "Text", "x160 y48 w530 h1 BackgroundBorder Center Section")
+        sepUpdateTxt := Theme.Add(this.MainGui, "Text", "xs+40 y+-9 Center cMuted", I18n.T("  更新设置  "))
         this.UpdateControls.Push(sepUpdate)
         this.UpdateControls.Push(sepUpdateTxt)
 
         ; 更新渠道
-        txtUpdateChannel := this.MainGui.Add("Text", "xs y+10", I18n.T("更新渠道"))
-        dropdownUpdateChannel := this.MainGui.Add("DropDownList", "x+10 yp-2 w120 vUpdateChannel AltSubmit", [I18n.T("正式版"), I18n.T("测试版")])
+        txtUpdateChannel := Theme.Add(this.MainGui, "Text", "xs y+10", I18n.T("更新渠道"))
+        dropdownUpdateChannel := Theme.Add(this.MainGui, "DropDownList", "x+10 yp-2 w120 vUpdateChannel AltSubmit", [I18n.T("正式版"), I18n.T("测试版")])
         dropdownUpdateChannel.OnEvent("Change", (*) => this.TrackChange("UpdateChannel"))
         StatusBarHints.Register(dropdownUpdateChannel, "正式版较稳定，可能有少量BUG；测试版新功能更多，BUG可能也更多")
         dropdownUpdateChannel.Value := Config.GetImportant("UpdateChannel")
@@ -680,8 +699,8 @@ class GuiManager {
         this.UpdateControls.Push(dropdownUpdateChannel)
 
         ; 更新源
-        txtUpdateSource := this.MainGui.Add("Text", "xs y+10", I18n.T("更新源"))
-        dropdownUpdateSource := this.MainGui.Add("DropDownList", "x+10 yp-2 w120 vUpdateSource AltSubmit", [I18n.T("国内源"), I18n.T("GitHub")])
+        txtUpdateSource := Theme.Add(this.MainGui, "Text", "xs y+10", I18n.T("更新源"))
+        dropdownUpdateSource := Theme.Add(this.MainGui, "DropDownList", "x+10 yp-2 w120 vUpdateSource AltSubmit", [I18n.T("国内源"), I18n.T("GitHub")])
         dropdownUpdateSource.OnEvent("Change", (*) => this.TrackChange("UpdateSource"))
         StatusBarHints.Register(dropdownUpdateSource, "国内建议选择国内源；海外建议使用GitHub")
         ; 选择国内源时自动灰掉 GitHub Token 行
@@ -691,72 +710,72 @@ class GuiManager {
         this.UpdateControls.Push(dropdownUpdateSource)
 
         ; 自动检查更新
-        checkboxAutoUpdate := this.MainGui.Add("Checkbox", "xs y+10 h24 vAutoUpdate", I18n.T(" 自动检查更新"))
+        checkboxAutoUpdate := Theme.Add(this.MainGui, "Checkbox", "xs y+10 h24 vAutoUpdate", I18n.T(" 自动检查更新"))
         checkboxAutoUpdate.OnEvent("Click", (*) => this.TrackChange("AutoUpdate"))
         StatusBarHints.Register(checkboxAutoUpdate, "AFA启动后自动检查更新")
         this.MainGui["AutoUpdate"].Value := Config.GetImportant("AutoUpdate")
         this.UpdateControls.Push(checkboxAutoUpdate)
 
         ; 手动检查更新
-        this.BtnCheckUpdate := this.MainGui.Add("Button", "xs y+10 w" Max(this.BtnW, Metrics.TextWidth(I18n.T("手动检查更新")) + 14) " h24", I18n.T("手动检查更新"))
+        this.BtnCheckUpdate := Theme.Add(this.MainGui, "Button", "xs y+10 w" Max(this.BtnW, Metrics.TextWidth(I18n.T("手动检查更新")) + 14) " h24", I18n.T("手动检查更新"))
         this.BtnCheckUpdate.OnEvent("Click", (*) => this.OnManualCheckClick())
         StatusBarHints.Register(this.BtnCheckUpdate, "立即检查一次更新")
-        this.BtnManualDownload := this.MainGui.Add("Button", "x+10 yp w" Max(this.BtnW, Metrics.TextWidth(I18n.T("手动下载更新")) + 14) " h24", I18n.T("手动下载更新"))
+        this.BtnManualDownload := Theme.Add(this.MainGui, "Button", "x+10 yp w" Max(this.BtnW, Metrics.TextWidth(I18n.T("手动下载更新")) + 14) " h24", I18n.T("手动下载更新"))
         this.BtnManualDownload.OnEvent("Click", (*) => UpdateUI.RequestManualDownload())
         StatusBarHints.Register(this.BtnManualDownload, "打开下载链接页面")
         this.UpdateControls.Push(this.BtnCheckUpdate)
         this.UpdateControls.Push(this.BtnManualDownload)
 
         ; github token
-        checkboxUseGitHubToken := this.MainGui.Add("Checkbox", "xs y+10 h24 vUseGitHubToken", I18n.T(" 使用GitHub Token: "))
+        checkboxUseGitHubToken := Theme.Add(this.MainGui, "Checkbox", "xs y+10 h24 vUseGitHubToken", I18n.T(" 使用GitHub Token: "))
         checkboxUseGitHubToken.OnEvent("Click", (*) => this.TrackChange("UseGitHubToken"))
         StatusBarHints.Register(checkboxUseGitHubToken, "使用 GitHub Token，仅在使用 GitHub 源且 API 配额超限时填入并开启")
         this.MainGui["UseGitHubToken"].Value := Config.GetImportant("UseGitHubToken")
         checkboxUseGitHubToken.OnEvent("Click", (*) => this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value
         ))
-        editGithubToken := this.MainGui.Add("Edit", "x+10 yp+2 w382 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant(
+        editGithubToken := Theme.Add(this.MainGui, "Edit", "x+10 yp+2 w382 h20 vGitHubToken Password -Multi +0x1", Config.GetImportant(
             "GitHubToken"))
         editGithubToken.OnEvent("Change", (*) => this.TrackChange("GitHubToken"))
         StatusBarHints.Register(editGithubToken, "使用 GitHub Token，仅在使用 GitHub 源且 API 配额超限时填入并开启")
         this.SetEditDisabled(editGithubToken, checkboxUseGitHubToken.Value)
-        this.HintGithubToken := this.MainGui.Add("Text", "xs y+6 c9c9c9c", I18n.T("只要没有提示API配额超限，就不需要使用GitHub Token"))
+        this.HintGithubToken := Theme.Add(this.MainGui, "Text", "xs y+6 cHint", I18n.T("只要没有提示API配额超限，就不需要使用GitHub Token"))
         this.UpdateControls.Push(checkboxUseGitHubToken)
         this.UpdateControls.Push(editGithubToken)
         this.UpdateControls.Push(this.HintGithubToken)
 
         ; 标签页设置（Hidden 表单变量，供标签管理器读写；置于布局链之前避免破坏"自定义"左列 y 定位）
-        this.MainGui.Add("Edit", "Hidden vTabOrder", Config.GetImportant("TabOrder"))
-        this.MainGui.Add("Edit", "Hidden vHiddenTabs", Config.GetImportant("HiddenTabs"))
+        Theme.Add(this.MainGui, "Edit", "Hidden vTabOrder", Config.GetImportant("TabOrder"))
+        Theme.Add(this.MainGui, "Edit", "Hidden vHiddenTabs", Config.GetImportant("HiddenTabs"))
 
         ; 分类"自定义"
-        sepCustom := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
-        sepCustomTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", I18n.T("  自定义设置  "))
+        sepCustom := Theme.Add(this.MainGui, "Text", "x160 y48 w530 h1 BackgroundBorder Center Section")
+        sepCustomTxt := Theme.Add(this.MainGui, "Text", "xs+40 y+-9 Center cMuted", I18n.T("  自定义设置  "))
         this.CustomControls.Push(sepCustom)
         this.CustomControls.Push(sepCustomTxt)
 
         ; 点击延迟设置
-        txtClickDelay := this.MainGui.Add("Text", "xs y+10 Section", I18n.T("点击延迟"))
-        this.ClickDelay := this.MainGui.Add("Edit", "x+15 y+-18 w120 h21 vClickDelay Number", Config.GetCustom(
+        txtClickDelay := Theme.Add(this.MainGui, "Text", "xs y+10 Section", I18n.T("点击延迟"))
+        this.ClickDelay := Theme.Add(this.MainGui, "Edit", "x+15 y+-18 w120 h21 vClickDelay Number", Config.GetCustom(
             "ClickDelay"))
         this.ClickDelay.OnEvent("Change", (*) => this.TrackChange("ClickDelay"))
         StatusBarHints.Register(this.ClickDelay, "从选中到按下【技能】【撤退】的间隔（毫秒），太短会点击失灵")
-        updownClickDelay := this.MainGui.Add("UpDown", , Config.GetCustom("ClickDelay"))
+        updownClickDelay := Theme.Add(this.MainGui, "UpDown", , Config.GetCustom("ClickDelay"))
         this.CustomControls.Push(txtClickDelay)
         this.CustomControls.Push(this.ClickDelay)
         this.CustomControls.Push(updownClickDelay)
         ; 灰色提示已由状态栏悬停说明替代，不再单独展示
 
         ; 启用/禁用热键快捷键
-        txtSwitchHotkey := this.MainGui.Add("Text", "xs y+16 Right +0x200", I18n.T("启用/禁用热键快捷键"))
-        this.SwitchHotkey := this.MainGui.Add("Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom(
+        txtSwitchHotkey := Theme.Add(this.MainGui, "Text", "xs y+16 Right +0x200", I18n.T("启用/禁用热键快捷键"))
+        this.SwitchHotkey := Theme.Add(this.MainGui, "Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vSwitchHotkey", Config.GetCustom(
             "SwitchHotkey"))
         StatusBarHints.Register(this.SwitchHotkey, "「启用/禁用热键」的快捷键：点击输入框修改，BACKSPACE/DELETE 清除")
         this.CustomControls.Push(txtSwitchHotkey)
         this.CustomControls.Push(this.SwitchHotkey)
 
         ; 过帧档位1延迟
-        txtFrameSkip1 := this.MainGui.Add("Text", "xs y+16 Section", I18n.T("过帧档位1"))
-        editFrameSkip1 := this.MainGui.Add("Edit", "x+15 yp-2 w120 h21 vFrameSkip16msDelay Number", Config.GetCustom(
+        txtFrameSkip1 := Theme.Add(this.MainGui, "Text", "xs y+16 Section", I18n.T("过帧档位1"))
+        editFrameSkip1 := Theme.Add(this.MainGui, "Edit", "x+15 yp-2 w120 h21 vFrameSkip16msDelay Number", Config.GetCustom(
             "FrameSkip16msDelay"))
         editFrameSkip1.OnEvent("Change", (*) => this.TrackChange("FrameSkip16msDelay"))
         StatusBarHints.Register(editFrameSkip1, "前进设定的等待时长（毫秒）")
@@ -764,8 +783,8 @@ class GuiManager {
         this.CustomControls.Push(editFrameSkip1)
 
         ; 过帧档位2延迟
-        txtFrameSkip2 := this.MainGui.Add("Text", "xs y+10", I18n.T("过帧档位2"))
-        editFrameSkip2 := this.MainGui.Add("Edit", "x+15 yp-2 w120 h21 vFrameSkip33msDelay Number", Config.GetCustom(
+        txtFrameSkip2 := Theme.Add(this.MainGui, "Text", "xs y+10", I18n.T("过帧档位2"))
+        editFrameSkip2 := Theme.Add(this.MainGui, "Edit", "x+15 yp-2 w120 h21 vFrameSkip33msDelay Number", Config.GetCustom(
             "FrameSkip33msDelay"))
         editFrameSkip2.OnEvent("Change", (*) => this.TrackChange("FrameSkip33msDelay"))
         StatusBarHints.Register(editFrameSkip2, "前进设定的等待时长（毫秒）")
@@ -773,8 +792,8 @@ class GuiManager {
         this.CustomControls.Push(editFrameSkip2)
 
         ; 过帧档位3延迟
-        txtFrameSkip3 := this.MainGui.Add("Text", "xs y+10", I18n.T("过帧档位3"))
-        editFrameSkip3 := this.MainGui.Add("Edit", "x+15 yp-2 w120 h21 vFrameSkip166msDelay Number", Config.GetCustom(
+        txtFrameSkip3 := Theme.Add(this.MainGui, "Text", "xs y+10", I18n.T("过帧档位3"))
+        editFrameSkip3 := Theme.Add(this.MainGui, "Edit", "x+15 yp-2 w120 h21 vFrameSkip166msDelay Number", Config.GetCustom(
             "FrameSkip166msDelay"))
         editFrameSkip3.OnEvent("Change", (*) => this.TrackChange("FrameSkip166msDelay"))
         StatusBarHints.Register(editFrameSkip3, "前进设定的等待时长（毫秒）")
@@ -782,17 +801,17 @@ class GuiManager {
         this.CustomControls.Push(editFrameSkip3)
 
         ; 失焦悬停操作热键开关（#213 功能开关，默认开启；保存/应用后生效）。整行通栏，宽度按语言自适应不换行。
-        checkboxHoverOperate := this.MainGui.Add("Checkbox", "xs y+14 w" Max(290, Metrics.TextWidth(I18n.T("游戏窗口未激活时允许鼠标悬停在窗口上触发热键")) + 24) " h24 vHoverOperate", I18n.T("游戏窗口未激活时允许鼠标悬停在窗口上触发热键"))
+        checkboxHoverOperate := Theme.Add(this.MainGui, "Checkbox", "xs y+14 w" Max(290, Metrics.TextWidth(I18n.T("游戏窗口未激活时允许鼠标悬停在窗口上触发热键")) + 24) " h24 vHoverOperate", I18n.T("游戏窗口未激活时允许鼠标悬停在窗口上触发热键"))
         checkboxHoverOperate.OnEvent("Click", (*) => this.TrackChange("HoverOperate"))
         StatusBarHints.Register(checkboxHoverOperate, "游戏窗口未激活时，鼠标悬停在窗口上也能触发热键（键盘键需动作层激活游戏）")
         this.MainGui["HoverOperate"].Value := Config.GetCustom("HoverOperate")
         this.CustomControls.Push(checkboxHoverOperate)
 
         ; 标签页可见性与顺序（右列标题动态对齐左列第一项）
-        tabManagerTitle := this.MainGui.Add("Text", "x" this.TabManagerX " y" this.TabManagerTitleY " w" this.TabManagerRowWidth
-            " h20 c333333", I18n.T("顶部标签页"))
-        tabManagerTitle.SetFont("bold")
-        tabManagerHint := this.MainGui.Add("Text", "xp y" (this.TabManagerTitleY + 20) " w258 c8a8a8a", I18n.T("拖拽调整顺序，点击眼睛切换显示/隐藏"))
+        tabManagerTitle := Theme.Add(this.MainGui, "Text", "x" this.TabManagerX " y" this.TabManagerTitleY " w" this.TabManagerRowWidth
+            " h20 cHeading", I18n.T("顶部标签页"))
+        Theme.SetFont(tabManagerTitle, "bold")
+        tabManagerHint := Theme.Add(this.MainGui, "Text", "xp y" (this.TabManagerTitleY + 20) " w258 cCaption", I18n.T("拖拽调整顺序，点击眼睛切换显示/隐藏"))
         ; 首行 y 跟随提示实际高度（不固定 h，长文案换行时自动增高，行首下移避免重叠）
         tabManagerHint.GetPos(, , , &tabHintH)
         this.TabManagerRowStartY := this.TabManagerTitleY + 20 + tabHintH + 7
@@ -800,19 +819,19 @@ class GuiManager {
         this.DisplayControls.Push(tabManagerHint)
         for index, tabItem in this.TabItems {
             rowY := this.TabManagerRowStartY + (index - 1) * this.TabManagerRowHeight
-            tabItem.RowBackground := this.MainGui.Add("Text", "x" this.TabManagerX " y" rowY
-                " w" this.TabManagerRowWidth " h26 BackgroundF5F7FA +0x100")
+            tabItem.RowBackground := Theme.Add(this.MainGui, "Text", "x" this.TabManagerX " y" rowY
+                " w" this.TabManagerRowWidth " h26 BackgroundRow +0x100")
             ; 高亮层：与背景层同位置叠放，通过 Visible 切换（AHK 对 Text 控件运行时改背景色不可靠，故用双控件）
-            tabItem.RowHighlight := this.MainGui.Add("Text", "x" this.TabManagerX " y" rowY
-                " w" this.TabManagerRowWidth " h26 BackgroundEAF2FB +0x100")
+            tabItem.RowHighlight := Theme.Add(this.MainGui, "Text", "x" this.TabManagerX " y" rowY
+                " w" this.TabManagerRowWidth " h26 BackgroundSelected +0x100")
             tabItem.RowHighlight.Visible := false
-            tabItem.DragControl := this.MainGui.Add("Text", "x" (this.TabManagerX + 9) " y" (rowY + 4)
-                " w24 h18 Center cA8ADB5 +0x100", "⋮⋮")
-            tabItem.ManagerLabel := this.MainGui.Add("Text", "x" (this.TabManagerX + 40) " y" (rowY + 4)
+            tabItem.DragControl := Theme.Add(this.MainGui, "Text", "x" (this.TabManagerX + 9) " y" (rowY + 4)
+                " w24 h18 Center cGrip +0x100", "⋮⋮")
+            tabItem.ManagerLabel := Theme.Add(this.MainGui, "Text", "x" (this.TabManagerX + 40) " y" (rowY + 4)
                 " w150 h18 +0x100", tabItem.Label)
-            tabItem.EyeControl := this.MainGui.Add("Text", "x" (this.TabManagerX + 201) " y" (rowY + 4)
+            tabItem.EyeControl := Theme.Add(this.MainGui, "Text", "x" (this.TabManagerX + 201) " y" (rowY + 4)
                 " w24 h18 Center +0x100", Chr(0xE890))
-            tabItem.EyeControl.SetFont("s11 c1994d2", "Segoe MDL2 Assets")
+            Theme.SetFont(tabItem.EyeControl, "s11 cAccent", "Segoe MDL2 Assets")
             ; 悬停说明：行区域（含拖拽手柄/高亮层）与眼睛图标分开说明
             StatusBarHints.Register(tabItem.RowBackground, "拖拽调整顶部标签页的显示顺序")
             StatusBarHints.Register(tabItem.RowHighlight, "拖拽调整顶部标签页的显示顺序")
@@ -827,24 +846,24 @@ class GuiManager {
         }
 
         ; 分类"日志"
-        sepLog := this.MainGui.Add("Text", "x160 y48 w530 h1 Backgroundd0d0d0 Center Section")
-        sepLogTxt := this.MainGui.Add("Text", "xs+40 y+-9 Center ca0a0a0", I18n.T("  日志设置  "))
+        sepLog := Theme.Add(this.MainGui, "Text", "x160 y48 w530 h1 BackgroundBorder Center Section")
+        sepLogTxt := Theme.Add(this.MainGui, "Text", "xs+40 y+-9 Center cMuted", I18n.T("  日志设置  "))
         this.LogControls.Push(sepLog)
         this.LogControls.Push(sepLogTxt)
 
         logButtonX := 160 + (530 - 160) // 2
         logButtonW := Max(160, Metrics.TextWidth(I18n.T("生成日志压缩包")) + 14, Metrics.TextWidth(I18n.T("打开日志文件夹")) + 14)
-        btnCreateLogArchive := this.MainGui.Add("Button", "x" logButtonX " y+16 w" logButtonW " h28", I18n.T("生成日志压缩包"))
+        btnCreateLogArchive := Theme.Add(this.MainGui, "Button", "x" logButtonX " y+16 w" logButtonW " h28", I18n.T("生成日志压缩包"))
         btnCreateLogArchive.OnEvent("Click", (*) => LogExporter.CreateArchiveInteractive())
         StatusBarHints.Register(btnCreateLogArchive, "将日志、脱敏后的设置与诊断信息打包为 ZIP 供反馈使用")
         this.LogControls.Push(btnCreateLogArchive)
 
-        btnOpenLogDirectory := this.MainGui.Add("Button", "x" logButtonX " y+8 w" logButtonW " h28", I18n.T("打开日志文件夹"))
+        btnOpenLogDirectory := Theme.Add(this.MainGui, "Button", "x" logButtonX " y+8 w" logButtonW " h28", I18n.T("打开日志文件夹"))
         btnOpenLogDirectory.OnEvent("Click", (*) => LogExporter.OpenLogDirectory())
         StatusBarHints.Register(btnOpenLogDirectory, "在资源管理器中打开日志所在目录")
         this.LogControls.Push(btnOpenLogDirectory)
 
-        chkDebug := this.MainGui.Add("Checkbox", "xs y+16 h24 vDebugEnabled", I18n.T(" 显示调试日志控制台"))
+        chkDebug := Theme.Add(this.MainGui, "Checkbox", "xs y+16 h24 vDebugEnabled", I18n.T(" 显示调试日志控制台"))
         chkDebug.OnEvent("Click", (*) => this.TrackChange("DebugEnabled"))
         StatusBarHints.Register(chkDebug, "打开「AFA 调试日志」窗口，实时查看运行日志")
         this.MainGui["DebugEnabled"].Value := Config.GetImportant("DebugEnabled")
@@ -853,55 +872,55 @@ class GuiManager {
         ; 分类"关于"
         logoPath := FileExtractor.LogoPath
 
-        this.MainGui.Add("Text", "x160 y48 w0 h0 Section")
+        Theme.Add(this.MainGui, "Text", "x160 y48 w0 h0 Section")
         logoSize := 192
         logoX := 160 + (530 - logoSize) / 2
-        aboutLogo := this.MainGui.Add("Picture", "x" logoX " y48 w" logoSize " h" logoSize, logoPath)
+        aboutLogo := Theme.Add(this.MainGui, "Picture", "x" logoX " y48 w" logoSize " h" logoSize, logoPath)
         this.AboutControls.Push(aboutLogo)
 
-        this.MainGui.SetFont("s12 bold", Metrics.FontFor(I18n.GetCurrent()))
-        aboutVersion := this.MainGui.Add("Text", "xs y+10 w530 Center", Version.Get())
-        this.MainGui.SetFont("s9 c0645AD underline", Metrics.FontFor(I18n.GetCurrent()))
+        Theme.SetFont(this.MainGui, "s12 bold", Metrics.FontFor(I18n.GetCurrent()))
+        aboutVersion := Theme.Add(this.MainGui, "Text", "xs y+10 w530 Center", Version.Get())
+        Theme.SetFont(this.MainGui, "s9 cLink underline", Metrics.FontFor(I18n.GetCurrent()))
         this.AboutControls.Push(aboutVersion)
 
-        aboutChangelog := this.MainGui.Add("Text", "xs y+15 w530 Center", I18n.T("更新公告"))
+        aboutChangelog := Theme.Add(this.MainGui, "Text", "xs y+15 w530 Center", I18n.T("更新公告"))
         aboutChangelog.OnEvent("Click", (*) => this._ShowChangelog())
         StatusBarHints.Register(aboutChangelog, "查看更新公告（历史版本发布内容）")
         this.AboutControls.Push(aboutChangelog)
 
-        aboutRepo := this.MainGui.Add("Text", "xs y+8 w530 Center", I18n.T("GitHub仓库"))
+        aboutRepo := Theme.Add(this.MainGui, "Text", "xs y+8 w530 Center", I18n.T("GitHub仓库"))
         aboutRepo.OnEvent("Click", (*) => Run("https://github.com/CloudTracey/arknights-frame-assistant"))
         StatusBarHints.Register(aboutRepo, "在浏览器中打开 GitHub 仓库")
         this.AboutControls.Push(aboutRepo)
 
-        aboutFeedback := this.MainGui.Add("Text", "xs y+8 w530 Center", I18n.T("反馈与建议"))
+        aboutFeedback := Theme.Add(this.MainGui, "Text", "xs y+8 w530 Center", I18n.T("反馈与建议"))
         aboutFeedback.OnEvent("Click", (*) => Run("https://github.com/CloudTracey/arknights-frame-assistant/issues"))
         StatusBarHints.Register(aboutFeedback, "在 GitHub 提交问题与建议（建议附带日志压缩包）")
         this.AboutControls.Push(aboutFeedback)
 
-        aboutQQGroup := this.MainGui.Add("Text", "xs y+8 w530 Center", I18n.T("加入交流QQ群"))
+        aboutQQGroup := Theme.Add(this.MainGui, "Text", "xs y+8 w530 Center", I18n.T("加入交流QQ群"))
         aboutQQGroup.OnEvent("Click", (*) => Run("https://qm.qq.com/q/4jHEExKym4"))
         StatusBarHints.Register(aboutQQGroup, "加入官方交流 QQ 群")
         this.AboutControls.Push(aboutQQGroup)
 
-        aboutBilibili := this.MainGui.Add("Text", "xs y+8 w530 Center", I18n.T("我的B站主页"))
+        aboutBilibili := Theme.Add(this.MainGui, "Text", "xs y+8 w530 Center", I18n.T("我的B站主页"))
         aboutBilibili.OnEvent("Click", (*) => Run("https://space.bilibili.com/34961731"))
         StatusBarHints.Register(aboutBilibili, "打开我的 B 站主页")
         this.AboutControls.Push(aboutBilibili)
 
-        aboutArtist := this.MainGui.Add("Text", "xs y+8 w530 Center", I18n.T("图标画师"))
+        aboutArtist := Theme.Add(this.MainGui, "Text", "xs y+8 w530 Center", I18n.T("图标画师"))
         aboutArtist.OnEvent("Click", (*) => Run("https://www.mihuashi.com/profiles/8282001?role=painter"))
         StatusBarHints.Register(aboutArtist, "打开图标画师的主页")
         this.AboutControls.Push(aboutArtist)
 
-        this.MainGui.SetFont("s9 cDefault norm", Metrics.FontFor(I18n.GetCurrent()))
+        Theme.SetFont(this.MainGui, "s9 cText norm", Metrics.FontFor(I18n.GetCurrent()))
 
         ; 隐藏非默认分类的控件
         this._HideOtherCategories()
         this._ShowControls(this.LaunchControls)  ; 默认显示"启动与退出"
 
         ; 底部按钮区域锚点，"常规作战"帧率提示底部 + 20px 间距
-        this.MainGui.Add("Text", "xm y" this._BottomBaseY + 20 " w0 h0 Section")
+        Theme.Add(this.MainGui, "Text", "xm y" this._BottomBaseY + 20 " w0 h0 Section")
 
         ; -- 底部按钮 --
         BtnMargin := 15
@@ -910,28 +929,28 @@ class GuiManager {
         BtnX_Apply := this.GuiWidth - (this.BtnW * 2) - BtnMargin * 1 - BtnX_DefaultHotkeys
         BtnX_Cancel := this.GuiWidth - this.BtnW - BtnX_DefaultHotkeys
 
-        this.BtnDefaultHotkeys := this.MainGui.Add("Button", "x" BtnX_DefaultHotkeys " ys+15 w" this.BtnW " h32",
+        this.BtnDefaultHotkeys := Theme.Add(this.MainGui, "Button", "x" BtnX_DefaultHotkeys " ys+15 w" this.BtnW " h32",
             I18n.T("重置按键")) ; 仅在按键相关标签下显示
         this.BtnDefaultHotkeys.OnEvent("Click", (*) => EventBus.Publish("SettingsResetRequested"))
         StatusBarHints.Register(this.BtnDefaultHotkeys, "恢复除自定义按键外的全部按键设置为默认值")
         this.NotOtherControls.Push(this.BtnDefaultHotkeys)
 
-        this.BtnSave := this.MainGui.Add("Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default Disabled", I18n.T("保存并关闭"))
+        this.BtnSave := Theme.Add(this.MainGui, "Button", "x" BtnX_Save " yp w" this.BtnW " h32 Default Disabled", I18n.T("保存并关闭"))
         this.BtnSave.OnEvent("Click", (*) => EventBus.Publish("SettingsSaveRequested"))
         StatusBarHints.Register(this.BtnSave, "保存全部修改并关闭设置窗口")
-        this.BtnApply := this.MainGui.Add("Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default Disabled", I18n.T("应用设置"))
+        this.BtnApply := Theme.Add(this.MainGui, "Button", "x" BtnX_Apply " yp w" this.BtnW " h32 Default Disabled", I18n.T("应用设置"))
         this.BtnApply.OnEvent("Click", (*) => EventBus.Publish("SettingsApplyRequested"))
         StatusBarHints.Register(this.BtnApply, "保存全部修改并立即生效（窗口不关闭）")
-        this.BtnCancel := this.MainGui.Add("Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", I18n.T("取消"))
+        this.BtnCancel := Theme.Add(this.MainGui, "Button", "x" BtnX_Cancel " yp w" this.BtnW " h32", I18n.T("取消"))
         this.BtnCancel.OnEvent("Click", (*) => EventBus.Publish("SettingsCancelRequested"))
         StatusBarHints.Register(this.BtnCancel, "放弃本次未保存的修改并关闭窗口")
         ; 底部提示宽度按当前语言最长文案动态计算，且避免与左侧"重置按键"按钮重叠
         hintUnsavedW := Max(Metrics.TextWidth(I18n.T("存在按键冲突")), Metrics.TextWidth(I18n.T("修改尚未保存或应用")), Metrics.TextWidth(I18n.T("修改尚未保存或应用！"))) + 10
-        this.HintUnsaved := this.MainGui.Add("Text", "x" (BtnX_Save - hintUnsavedW - 10) " yp+8 w" hintUnsavedW " h24 Right cFF0000 Hidden",
+        this.HintUnsaved := Theme.Add(this.MainGui, "Text", "x" (BtnX_Save - hintUnsavedW - 10) " yp+8 w" hintUnsavedW " h24 Right cUnsaved Hidden",
         I18n.T("修改尚未保存或应用！"))
 
         ; 空白占位
-        this.MainGui.Add("Text", "xm y+15 w1 h1")
+        Theme.Add(this.MainGui, "Text", "xm y+15 w1 h1")
 
         ; 底部状态栏（悬停说明 + 空闲轮播）：须在全部控件之后创建，保证位于窗口最底
         StatusBarHints.Init(this.MainGui)
@@ -961,10 +980,10 @@ class GuiManager {
         half := Constants.CustomHotkeyMax / 2
         colX := (i <= half) ? 0 : this.ColWidth
         rowY := this.CustomHotkeyRowStartY + Mod(i - 1, half) * this.CustomHotkeyRowHeight
-        label := this.MainGui.Add("Text", "x" colX " y" rowY " w135 Right +0x200 Hidden", "")
-        edit := this.MainGui.Add("Edit", "x" (colX + 155) " y" (rowY - 4) " w140 Center -TabStop Uppercase vCustomHotkey" i "Key Hidden", "")
-        gear := this.MainGui.Add("Button", "x" (colX + 301) " y" (rowY - 2) " w20 h20 vCustomHotkey" i "Gear Hidden", Chr(0xE713))
-        gear.SetFont("s11 c1994d2", "Segoe MDL2 Assets")
+        label := Theme.Add(this.MainGui, "Text", "x" colX " y" rowY " w135 Right +0x200 Hidden", "")
+        edit := Theme.Add(this.MainGui, "Edit", "x" (colX + 155) " y" (rowY - 4) " w140 Center -TabStop Uppercase vCustomHotkey" i "Key Hidden", "")
+        gear := Theme.Add(this.MainGui, "Button", "x" (colX + 301) " y" (rowY - 2) " w20 h20 vCustomHotkey" i "Gear Hidden", Chr(0xE713))
+        Theme.SetFont(gear, "s11 cAccent", "Segoe MDL2 Assets")
         gear.OnEvent("Click", ObjBindMethod(GuiManager, "_OnCustomGearClick", i))
         ; 行控件与既有行共用说明（行 Label 显示自定义名称，说明指向编辑入口）
         StatusBarHints.Register(label, "自定义按键名称：点击齿轮可编辑")
@@ -1074,6 +1093,7 @@ class GuiManager {
 
     ; 内部：更新其他控件值（从配置）
     static _UpdateImportantControlsFromConfig() {
+        this._UpdateThemeEditButtonVisibility()
         tabSettingsChanged := false
         try {
             tabSettingsChanged := (
@@ -1085,6 +1105,8 @@ class GuiManager {
             try {
                 if (key = "Frame") {
                     this.MainGui[key].Value := this._FrameTextToIndex(Config.GetImportant("Frame"))
+                } else if (key = "ThemeMode") {
+                    this.MainGui[key].Value := this._ThemeToIndex(Config.GetImportant("ThemeMode"))
                 } else if (key = "Language") {
                     this.MainGui[key].Value := this._LanguageToIndex(Config.GetImportant("Language"))
                 } else {
@@ -1114,14 +1136,14 @@ class GuiManager {
     static _ComputeBindLabelWidth() {
         maxW := 0
         probeGui := Gui()
-        probeGui.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
+        Theme.SetFont(probeGui, "s9", Metrics.FontFor(I18n.GetCurrent()))
         for item in HotkeySchema.Items {
-            probe := probeGui.Add("Text", , I18n.T(item.nameKey))
+            probe := Theme.Add(probeGui, "Text", , I18n.T(item.nameKey))
             probe.GetPos(, , &pw)
             if (pw > maxW)
                 maxW := pw
         }
-        probeGui.Destroy()
+        Theme.Destroy(probeGui)
         return Min(Max(maxW + 6, 120), 135)
     }
 
@@ -1309,6 +1331,11 @@ class GuiManager {
                 this.MainGui["AutoBeginPause"].Value := (data.value = "1" || data.value = 1) ? 1 : 0
                 return
             }
+            if (data.key = "ThemeMode") {
+                this.MainGui["ThemeMode"].Value := this._ThemeToIndex(data.value)
+                this._UpdateThemeEditButtonVisibility()
+                return
+            }
             if (data.key = "Language") {
                 this.MainGui["Language"].Value := this._LanguageToIndex(data.value)
                 return
@@ -1418,11 +1445,15 @@ class GuiManager {
 
     ; 显示GUI窗口
     static Show() {
+        Theme.Refresh()
         this.MainGui.Show()
         StatusBarHints.ShowGreetingOnce()  ; 首次打开窗口显示时段问候语（进程内仅一次）
-        this.CaptureInitialSnapshot()
+        ; 从托盘再次打开正在编辑的窗口时，保留主题预览与现有脏状态。
+        if !this.IsModified {
+            this.CaptureInitialSnapshot()
+            this.SetIsModifiedFalse()
+        }
         this.RefreshHotkeyConflicts()
-        this.SetIsModifiedFalse()  ; 确保按钮为禁用状态
         this.BtnSave.Focus()
         if (IsSet(WatchActiveWindow)) {
             SetTimer WatchActiveWindow, 50
@@ -1541,13 +1572,13 @@ class GuiManager {
         ; 仅恢复不再冲突的控件颜色
         for controlName, _ in this._PrevConflictedControls {
             if !newConflicted.Has(controlName)
-                try this.MainGui[controlName].SetFont("cDefault")
+                try Theme.SetFont(this.MainGui[controlName], "cText")
         }
 
         ; 仅标红新增的冲突控件
         for controlName, _ in newConflicted {
             if !this._PrevConflictedControls.Has(controlName)
-                try this.MainGui[controlName].SetFont("cD93025")
+                try Theme.SetFont(this.MainGui[controlName], "cError")
         }
 
         this._PrevConflictedControls := newConflicted
@@ -1557,6 +1588,7 @@ class GuiManager {
 
     ; 捕获初始值快照（从当前 GUI 控件值读取）
     static CaptureInitialSnapshot() {
+        this._InitialAppearance := Appearance.Snapshot()
         this._InitialValues := Map()
         ; 热键控件 — GUI 显示的是 VirtualNewkeyFormat 后的值
         for key in Config.AllHotkeys {
@@ -1607,6 +1639,12 @@ class GuiManager {
         if (Config.AllImportant.Has(controlName)) {
             if (controlName = "Frame")
                 Config.SetImportant("Frame", Constants.FrameOptions[currentValue])
+            else if (controlName = "ThemeMode") {
+                mode := this.ThemeModes[currentValue]
+                Config.SetImportant("ThemeMode", mode)
+                Theme.Preview(mode)
+                this._UpdateThemeEditButtonVisibility()
+            }
             else if (controlName = "Language") {
                 Config.SetImportant("Language", this.LanguageCodes[currentValue])
             }
@@ -1628,6 +1666,8 @@ class GuiManager {
 
     ; 所有控件（热键/重要/自定义/自定义按键）是否与初始快照一致
     static _AllControlsMatchSnapshot() {
+        if IsObject(this._InitialAppearance) && !Appearance.Equal(Appearance.Snapshot(), this._InitialAppearance)
+            return false
         for key in Config.AllHotkeys {
             try {
                 if (this.MainGui[key].Value != this._InitialValues[key])
@@ -1706,6 +1746,33 @@ class GuiManager {
             }
         }
         this._HideOtherCategories()
+    }
+
+    ; 同时限制主题和页面；页面批量显示控件后也必须重新应用此条件。
+    static _UpdateThemeEditButtonVisibility() {
+        if this.ThemeEditButton != ""
+            this.ThemeEditButton.Visible := this.CurrentTab = "other"
+                && this.CurrentOtherCategory = "Display"
+                && Config.GetImportant("ThemeMode") = "custom"
+    }
+
+    ; 独立编辑器完成后，外观工作副本参与主窗口脏状态比较。
+    static TrackAppearanceChange() {
+        Theme.Preview(Config.GetImportant("ThemeMode"), Appearance.Snapshot())
+        if this._AllControlsMatchSnapshot()
+            this.SetIsModifiedFalse()
+        else
+            this.SetIsModifiedTrue()
+    }
+
+    ; 主题配置→下拉框索引
+    static _ThemeToIndex(mode) {
+        mode := Theme.Normalize(mode)
+        for index, item in this.ThemeModes {
+            if (item = mode)
+                return index
+        }
+        return 1
     }
 
     ; 语言配置→下拉框索引
@@ -1995,11 +2062,11 @@ class GuiManager {
             tabItem.EyeControl.Move(this.TabManagerX + 201, rowY + 4, 24, 18)
 
             tabItem.ManagerLabel.Text := tabItem.Label (tabItem.CanHide ? "" : I18n.T("（无法隐藏）"))
-            tabItem.ManagerLabel.SetFont(tabItem.Visible ? "c333333" : "cA0A0A0")
+            Theme.SetFont(tabItem.ManagerLabel, tabItem.Visible ? "cHeading" : "cMuted")
             ; 眼睛图标统一用 U+E890（睁眼，MDL2 中确定存在），用颜色区分状态：蓝=显示，灰=隐藏。
             ; （不依赖"闭眼"字形——MDL2 无此字形，E9CE/E8F4 等均不可靠，可能显示为问号。）
             tabItem.EyeControl.Text := Chr(0xE890)
-            tabItem.EyeControl.SetFont(tabItem.Visible ? "s11 c1994d2" : "s11 cA0A0A0", "Segoe MDL2 Assets")
+            Theme.SetFont(tabItem.EyeControl, tabItem.Visible ? "s11 cAccent" : "s11 cMuted", "Segoe MDL2 Assets")
         }
     }
 
@@ -2123,15 +2190,15 @@ class GuiManager {
             this.TabFontState[tabName] := color
             switch tabName {
                 case "keyBind":
-                    this.TxtKeybind.SetFont(color)
+                    Theme.SetFont(this.TxtKeybind, color)
                 case "quick":
-                    this.TxtQuick.SetFont(color)
+                    Theme.SetFont(this.TxtQuick, color)
                 case "strongHoldProtocol":
-                    this.TxtStrongHoldProtocol.SetFont(color)
+                    Theme.SetFont(this.TxtStrongHoldProtocol, color)
                 case "customKeys":
-                    this.TxtCustomKeys.SetFont(color)
+                    Theme.SetFont(this.TxtCustomKeys, color)
                 default:
-                    this.TxtOther.SetFont(color)
+                    Theme.SetFont(this.TxtOther, color)
             }
         }
     }
@@ -2146,11 +2213,11 @@ class GuiManager {
 
         ; 更新标签样式：仅当目标颜色与记录不一致时才 SetFont，
         ; 避免对相同颜色重复重建字体触发文字重绘闪烁。
-        this._SetTabFontOnce("keyBind", tabName = "keyBind" ? "c1994d2" : "cDefault")
-        this._SetTabFontOnce("quick", tabName = "quick" ? "c1994d2" : "cDefault")
-        this._SetTabFontOnce("strongHoldProtocol", isStrongHold ? "c1994d2" : "cDefault")
-        this._SetTabFontOnce("other", tabName = "other" ? "c1994d2" : "cDefault")
-        this._SetTabFontOnce("customKeys", tabName = "customKeys" ? "c1994d2" : "cDefault")
+        this._SetTabFontOnce("keyBind", tabName = "keyBind" ? "cAccent" : "cText")
+        this._SetTabFontOnce("quick", tabName = "quick" ? "cAccent" : "cText")
+        this._SetTabFontOnce("strongHoldProtocol", isStrongHold ? "cAccent" : "cText")
+        this._SetTabFontOnce("other", tabName = "other" ? "cAccent" : "cText")
+        this._SetTabFontOnce("customKeys", tabName = "customKeys" ? "cAccent" : "cText")
 
         ; 计算目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页。
         ; 先算后比，仅当实际变化时才赋值，避免相同值触发重绘闪烁。
@@ -2282,6 +2349,7 @@ class GuiManager {
         for ctrl in info[1] {
             try ctrl.Visible := true
         }
+        this._UpdateThemeEditButtonVisibility()
         ; 上面遍历会把 CustomControls 内所有控件设为可见（含 RowHighlight 高亮层），
         ; 重绘管理器将其恢复为 TabDragIndex 决定的正确状态，避免启动后全部标签误高亮。
         if (categoryName = "Display")
@@ -2294,9 +2362,9 @@ class GuiManager {
         ; 更新导航项样式
         for i, navItem in this.NavItems {
             if (i = targetIndex) {
-                navItem.SetFont("c1994d2")
+                Theme.SetFont(navItem, "cAccent")
             } else {
-                navItem.SetFont("cDefault")
+                Theme.SetFont(navItem, "cText")
             }
         }
     }
@@ -2352,6 +2420,7 @@ class GuiManager {
     ; 重建设置窗口（语言切换等场景）。当前实现保证可重建主窗口；
     ; 控件数组原地清空以保持 OtherCategories 引用有效。
     static Rebuild() {
+        ThemeEditor.Cancel()
         CustomKeyEditor.Close()   ; 主窗口重建（切换语言）前先关闭编辑窗口
         if (this.MainGui = "") {
             this.Init()
@@ -2359,7 +2428,7 @@ class GuiManager {
         }
         oldGui := this.MainGui
         this.MainGui := ""
-        oldGui.Destroy()
+        Theme.Destroy(oldGui)
         StatusBarHints.Reset()   ; 状态栏随主窗口重建：清空悬停表/轮播状态/控件引用（OnMessage 保留）
         this._ClearControlArrays()
         this.Init()
