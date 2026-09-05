@@ -580,11 +580,14 @@ class GuiManager {
         ddTheme.Value := this._ThemeToIndex(Config.GetImportant("ThemeMode"))
         ddTheme.OnEvent("Change", (*) => this.TrackChange("ThemeMode"))
         StatusBarHints.Register(ddTheme, "立即预览主题，保存或应用后记住，取消后恢复")
-        this.ThemeEditButton := Theme.Add(this.MainGui, "Button", "x160 y+10 w" Max(200, Metrics.TextWidth(I18n.T("编辑自定义主题")) + 24) " h28", I18n.T("编辑自定义主题"))
+        ddTheme.GetPos(&themeX, &themeY, &themeW, &themeH)
+        themeButtonY := themeY + (themeH - 28) // 2
+        this.ThemeEditButton := Theme.Add(this.MainGui, "Button", "x" (themeX + themeW + 12) " y" themeButtonY
+            " w" Max(200, Metrics.TextWidth(I18n.T("编辑自定义主题")) + 24) " h28 Hidden", I18n.T("编辑自定义主题"))
         this.ThemeEditButton.OnEvent("Click", (*) => ThemeEditor.Open())
-        this.ThemeEditButton.Enabled := Config.GetImportant("ThemeMode") = "custom"
         this.DisplayControls.Push(this.ThemeEditButton)
-        themeHint := Theme.Add(this.MainGui, "Text", "x160 y+10 w530 cSecondary", I18n.T("跟随系统时，界面会随 Windows 应用主题自动切换"))
+        themeHint := Theme.Add(this.MainGui, "Text", "x160 y" (Max(themeY + themeH, themeButtonY + 28) + 10)
+            " w530 cSecondary", I18n.T("跟随系统时，界面会随 Windows 应用主题自动切换"))
         this.DisplayControls.Push(txtTheme, ddTheme, themeHint)
         themeHint.GetPos(, &themeHintY, , &themeHintH)
         this.TabManagerTitleY := themeHintY + themeHintH + 16
@@ -1090,8 +1093,7 @@ class GuiManager {
 
     ; 内部：更新其他控件值（从配置）
     static _UpdateImportantControlsFromConfig() {
-        if this.ThemeEditButton != ""
-            this.ThemeEditButton.Enabled := Config.GetImportant("ThemeMode") = "custom"
+        this._UpdateThemeEditButtonVisibility()
         tabSettingsChanged := false
         try {
             tabSettingsChanged := (
@@ -1331,6 +1333,7 @@ class GuiManager {
             }
             if (data.key = "ThemeMode") {
                 this.MainGui["ThemeMode"].Value := this._ThemeToIndex(data.value)
+                this._UpdateThemeEditButtonVisibility()
                 return
             }
             if (data.key = "Language") {
@@ -1640,7 +1643,7 @@ class GuiManager {
                 mode := this.ThemeModes[currentValue]
                 Config.SetImportant("ThemeMode", mode)
                 Theme.Preview(mode)
-                this.ThemeEditButton.Enabled := mode = "custom"
+                this._UpdateThemeEditButtonVisibility()
             }
             else if (controlName = "Language") {
                 Config.SetImportant("Language", this.LanguageCodes[currentValue])
@@ -1743,6 +1746,14 @@ class GuiManager {
             }
         }
         this._HideOtherCategories()
+    }
+
+    ; 同时限制主题和页面；页面批量显示控件后也必须重新应用此条件。
+    static _UpdateThemeEditButtonVisibility() {
+        if this.ThemeEditButton != ""
+            this.ThemeEditButton.Visible := this.CurrentTab = "other"
+                && this.CurrentOtherCategory = "Display"
+                && Config.GetImportant("ThemeMode") = "custom"
     }
 
     ; 独立编辑器完成后，外观工作副本参与主窗口脏状态比较。
@@ -2338,6 +2349,7 @@ class GuiManager {
         for ctrl in info[1] {
             try ctrl.Visible := true
         }
+        this._UpdateThemeEditButtonVisibility()
         ; 上面遍历会把 CustomControls 内所有控件设为可见（含 RowHighlight 高亮层），
         ; 重绘管理器将其恢复为 TabDragIndex 决定的正确状态，避免启动后全部标签误高亮。
         if (categoryName = "Display")

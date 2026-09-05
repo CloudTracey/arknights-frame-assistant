@@ -5,6 +5,21 @@ from test_theme_contract import read, method, balanced
 
 
 class CustomThemeContracts(unittest.TestCase):
+    def test_theme_edit_button_layout_and_visibility(self):
+        gui = read('src/lib/ui/gui.ahk')
+        self.assertIn('ddTheme.GetPos(&themeX, &themeY, &themeW, &themeH)', gui)
+        self.assertIn('(themeX + themeW + 12)', gui)
+        self.assertIn('" h28 Hidden"', gui)
+        visibility = method(gui, '_UpdateThemeEditButtonVisibility')
+        for condition in ('this.CurrentTab = "other"', 'this.CurrentOtherCategory = "Display"',
+                          'Config.GetImportant("ThemeMode") = "custom"'):
+            self.assertIn(condition, visibility)
+        self.assertIn('this.ThemeEditButton.Visible :=', visibility)
+        for caller in ('TrackChange', '_OnSettingsChanged', '_UpdateImportantControlsFromConfig', '_SwitchOtherCategory'):
+            self.assertIn('this._UpdateThemeEditButtonVisibility()', method(gui, caller))
+        category = method(gui, '_SwitchOtherCategory')
+        self.assertLess(category.index('ctrl.Visible := true'), category.index('this._UpdateThemeEditButtonVisibility()'))
+
     def test_save_locals_do_not_shadow_appearance_class(self):
         service = read('src/lib/core/settings/settings_service.ahk')
         self.assertNotRegex(service, r'(?im)^\s*appearance\s*:=')
