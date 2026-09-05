@@ -19,8 +19,15 @@ class SettingsService {
         Config.MigrateGitHubToken()
         Config.MigrateHotkeyCase()
         Config.LoadFromIni()
+        ; 缺键时默认读取不会落盘；启动时仅补回主题键，不保存其他工作副本。
+        if (IniRead(Config.IniFile, "Main", "ThemeMode", "__AFA_MISSING_KEY__") = "__AFA_MISSING_KEY__") {
+            themeBackfill := Config._PersistSingleValue("ThemeMode", "auto")
+            if !themeBackfill.success
+                Logger.Warn("Settings", "回填主题设置失败：" themeBackfill.message)
+        }
         Config.MigrateGamePaths()
         I18n.Init(Config.ReadImportantFromIni("Language"))
+        Theme.Confirm(Config.ReadImportantFromIni("ThemeMode"))
         this._RefreshRuntime()
     }
 
@@ -40,6 +47,8 @@ class SettingsService {
 
     ; 单键配置变更唯一入口：原子写入 INI → 更新 Config 工作副本 → 发布 SettingsChanged
     static UpdatePersistedValue(key, value) {
+        if (key = "ThemeMode")
+            value := Theme.Normalize(value)
         if (key != "Frame"
             && !Config.AllHotkeys.Has(key)
             && !Config.AllCustom.Has(key)
@@ -61,6 +70,8 @@ class SettingsService {
             Config.SetImportant(key, value)
         }
 
+        if (key = "ThemeMode")
+            Theme.Confirm(value)
         EventBus.Publish("SettingsChanged", {key: key, value: value})
         return result
     }
@@ -110,6 +121,7 @@ class SettingsService {
     ; 取消设置修改
     static Cancel() {
         Config.LoadFromIni()
+        Theme.Confirm(Config.ReadImportantFromIni("ThemeMode"))
         this._RefreshRuntime()
         Logger.Info("Settings", "取消设置修改并恢复配置")
         EventBus.Publish("SettingsViewRefreshRequested")
@@ -143,6 +155,7 @@ class SettingsService {
             Logger.Warn("Settings", isApply ? "设置应用中止" : "设置保存中止")
             return
         }
+        Theme.Confirm(Config.ReadImportantFromIni("ThemeMode"))
         this._RefreshRuntime()
         this._ResetGameStateIfNeeded()
         if (isApply) {
@@ -236,7 +249,12 @@ class SettingsService {
         }
 
         ; 保存到 INI（全量保存 Config 工作副本；单键场景请走 UpdatePersistedValue）
-        saveResult := Config.SaveAllToIni()
+        ; 主题最后提交：自定义按键文件失败时，不把仍处于预览的主题提前落盘。
+        themeMode := Config.GetImportant("ThemeMode")
+        savedThemeMode := Config.ReadImportantFromIni("ThemeMode")
+        Config.SetImportant("ThemeMode", savedThemeMode)
+        try saveResult := Config.SaveAllToIni()
+        finally Config.SetImportant("ThemeMode", themeMode)
         if (!saveResult.success) {
             MessageBox.Error(saveResult.message, I18n.T("设置保存失败"))
             return false
@@ -248,6 +266,13 @@ class SettingsService {
             Logger.Warn("Settings", "保存中止：自定义按键文件写入失败：" customSaveResult.message)
             MessageBox.Error(I18n.T("配置文件写入失败：{1}", customSaveResult.message), I18n.T("设置保存失败"))
             return false
+        }
+        if (themeMode != savedThemeMode) {
+            themeSaveResult := Config._PersistSingleValue("ThemeMode", themeMode)
+            if (!themeSaveResult.success) {
+                MessageBox.Error(themeSaveResult.message, I18n.T("设置保存失败"))
+                return false
+            }
         }
         return true
     }

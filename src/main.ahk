@@ -19,6 +19,7 @@
 #Include ./lib/base/hotkey_schema.ahk
 #Include ./lib/base/constants.ahk
 #Include ./lib/base/config.ahk
+#Include ./lib/base/theme.ahk
 #Include ./lib/base/eventbus.ahk
 #Include ./lib/base/i18n.ahk
 #Include ./lib/base/changelog_format.ahk

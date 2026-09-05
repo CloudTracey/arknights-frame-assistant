@@ -40,7 +40,7 @@ class UpdateUI {
     ;   - isManual: 是否是手动检查（影响提示内容）
     static ShowUpdateDialog(params) {
         if (this.UpdateDialog != "") {
-            this.UpdateDialog.Destroy()
+            Theme.Destroy(this.UpdateDialog)
             this.UpdateDialog := ""
             this.UpdateDialogParams := ""
         }
@@ -55,8 +55,8 @@ class UpdateUI {
         title := I18n.T("发现新版本")
         this.UpdateDialog := Gui(, title)
         this.UpdateDialog.Opt("+Owner")
-        this.UpdateDialog.BackColor := "FFFFFF"
-        this.UpdateDialog.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
+        Theme.Attach(this.UpdateDialog)
+        Theme.SetFont(this.UpdateDialog, "s9", Metrics.FontFor(I18n.GetCurrent()))
         hWnd := this.UpdateDialog.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
 
@@ -76,18 +76,18 @@ class UpdateUI {
         dialogW := startX * 2 + btnW * 3 + btnGap * 2
 
         ; 先加文本（有公告时加只读 Edit），用实际位置计算按钮行 Y 与窗口高度
-        lastCtrl := this.UpdateDialog.Add("Text", "x" startX " y15 w" (dialogW - startX * 2), message)
+        lastCtrl := Theme.Add(this.UpdateDialog, "Text", "x" startX " y15 w" (dialogW - startX * 2), message)
         if (changelogBody != "") {
             ; 有更新内容时显示 Edit 控件
-            lastCtrl := this.UpdateDialog.Add("Edit", "x" startX " y+10 w" (dialogW - startX * 2) " h200 ReadOnly +VScroll", changelogBody)
+            lastCtrl := Theme.Add(this.UpdateDialog, "Edit", "x" startX " y+10 w" (dialogW - startX * 2) " h200 ReadOnly +VScroll", changelogBody)
         }
         lastCtrl.GetPos(, &lastY, , &lastH)
         btnY := lastY + lastH + 12
         dialogH := btnY + btnH + 14
 
-        btnYes := this.UpdateDialog.Add("Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("是(&Y)"))
-        btnNo := this.UpdateDialog.Add("Button", "x" (startX + btnW + btnGap) " y" btnY " w" btnW " h" btnH, I18n.T("否(&N)"))
-        btnIgnore := this.UpdateDialog.Add("Button", "x" (startX + (btnW + btnGap) * 2) " y" btnY " w" btnW " h" btnH, I18n.T("忽略此版本(&I)"))
+        btnYes := Theme.Add(this.UpdateDialog, "Button", "x" startX " y" btnY " w" btnW " h" btnH " Default", I18n.T("是(&Y)"))
+        btnNo := Theme.Add(this.UpdateDialog, "Button", "x" (startX + btnW + btnGap) " y" btnY " w" btnW " h" btnH, I18n.T("否(&N)"))
+        btnIgnore := Theme.Add(this.UpdateDialog, "Button", "x" (startX + (btnW + btnGap) * 2) " y" btnY " w" btnW " h" btnH, I18n.T("忽略此版本(&I)"))
 
         btnYes.OnEvent("Click", (*) => this.OnUpdateYes())
         btnNo.OnEvent("Click", (*) => this.OnUpdateNo())
@@ -104,7 +104,7 @@ class UpdateUI {
     static OnUpdateYes() {
         params := this.UpdateDialogParams
         Logger.Info("UpdateUI", "用户确认更新：" params.remoteVersion)
-        this.UpdateDialog.Destroy()
+        Theme.Destroy(this.UpdateDialog)
         this.UpdateDialog := ""
         this.UpdateDialogParams := ""
         EventBus.Publish("UpdateConfirmRequested", params)
@@ -114,7 +114,7 @@ class UpdateUI {
     static OnUpdateNo() {
         params := this.UpdateDialogParams
         Logger.Info("UpdateUI", "用户拒绝更新：" params.remoteVersion)
-        this.UpdateDialog.Destroy()
+        Theme.Destroy(this.UpdateDialog)
         this.UpdateDialog := ""
         this.UpdateDialogParams := ""
         ; UpdateDismissed 为孤儿事件，已删除；拒绝更新无需额外处理
@@ -124,7 +124,7 @@ class UpdateUI {
     static OnUpdateIgnore() {
         params := this.UpdateDialogParams
         Logger.Info("UpdateUI", "用户忽略版本 " params.remoteVersion " 的更新提示")
-        this.UpdateDialog.Destroy()
+        Theme.Destroy(this.UpdateDialog)
         this.UpdateDialog := ""
         this.UpdateDialogParams := ""
         EventBus.Publish("UpdateIgnoreRequested", params)
@@ -198,8 +198,8 @@ class UpdateUI {
         title := I18n.T("下载中")
         this.DownloadingDialog := Gui(, title)
         this.DownloadingDialog.Opt("+AlwaysOnTop +Owner")
-        this.DownloadingDialog.BackColor := "FFFFFF"
-        this.DownloadingDialog.SetFont("s9", Metrics.FontFor(I18n.GetCurrent()))
+        Theme.Attach(this.DownloadingDialog)
+        Theme.SetFont(this.DownloadingDialog, "s9", Metrics.FontFor(I18n.GetCurrent()))
         hWnd := this.DownloadingDialog.Hwnd
         try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hWnd, "int", 38, "int*", true, "int", 4)
 
@@ -222,15 +222,15 @@ class UpdateUI {
         textW := dialogW - padding * 2
 
         ; 添加文本（指定宽度但无高度时自动换行增高，后续控件跟随实际位置）
-        this.DownloadingDialog.Add("Text", "x" padding " y15 w" textW " Center vDownloadText", message)
+        Theme.Add(this.DownloadingDialog, "Text", "x" padding " y15 w" textW " Center vDownloadText", message)
         ; 进度条
-        this.DownloadingProgressBar := this.DownloadingDialog.Add("Progress", "x" padding " y+8 w" textW " h20 Range0-1000 vProgressBar")
+        this.DownloadingProgressBar := Theme.Add(this.DownloadingDialog, "Progress", "x" padding " y+8 w" textW " h20 Range0-1000 vProgressBar")
         ; 速度文本
-        this.DownloadingSpeedText := this.DownloadingDialog.Add("Text", "x" padding " y+5 w" textW " Center c6b6b6b vSpeedText", "")
+        this.DownloadingSpeedText := Theme.Add(this.DownloadingDialog, "Text", "x" padding " y+5 w" textW " Center cSecondary vSpeedText", "")
         ; 剩余时间文本
-        this.DownloadingRemainingText := this.DownloadingDialog.Add("Text", "x" padding " y+0 w" textW " Center c6b6b6b vRemainingText", "")
+        this.DownloadingRemainingText := Theme.Add(this.DownloadingDialog, "Text", "x" padding " y+0 w" textW " Center cSecondary vRemainingText", "")
         ; 已下载文本
-        this.DownloadingSizeText := this.DownloadingDialog.Add("Text", "x" padding " y+0 w" textW " Center c6b6b6b vSizeText", "")
+        this.DownloadingSizeText := Theme.Add(this.DownloadingDialog, "Text", "x" padding " y+0 w" textW " Center cSecondary vSizeText", "")
 
         ; 用最后一个文本控件的实际底部计算按钮 Y 与窗口高度，适配任意语言的换行
         this.DownloadingSizeText.GetPos(, &lastY, , &lastH)
@@ -240,9 +240,9 @@ class UpdateUI {
         manualBtnX := padding
         cancelBtnX := padding + btnW + btnGap
 
-        manualBtn := this.DownloadingDialog.Add("Button", "x" manualBtnX " y" btnY " w" btnW " h" btnH, I18n.T("手动下载(&M)"))
+        manualBtn := Theme.Add(this.DownloadingDialog, "Button", "x" manualBtnX " y" btnY " w" btnW " h" btnH, I18n.T("手动下载(&M)"))
         manualBtn.OnEvent("Click", (*) => this.RequestManualDownload())
-        this.DownloadingCancelBtn := this.DownloadingDialog.Add("Button", "x" cancelBtnX " y" btnY " w" btnW " h" btnH, I18n.T("取消下载(&C)"))
+        this.DownloadingCancelBtn := Theme.Add(this.DownloadingDialog, "Button", "x" cancelBtnX " y" btnY " w" btnW " h" btnH, I18n.T("取消下载(&C)"))
         this.DownloadingCancelBtn.OnEvent("Click", (*) => this.OnDownloadCancel())
         this.DownloadingDialog.OnEvent("Close", (*) => this.OnDownloadCancel())
 
@@ -281,7 +281,7 @@ class UpdateUI {
     ; 关闭下载对话框
     static CloseDownloadingDialog() {
         if (this.DownloadingDialog != "") {
-            try this.DownloadingDialog.Destroy()
+            try Theme.Destroy(this.DownloadingDialog)
             this.DownloadingDialog := ""
             this.DownloadingCancelBtn := ""
             this.DownloadingProgressBar := ""

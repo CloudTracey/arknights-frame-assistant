@@ -60,7 +60,8 @@ class Constants {
         "BackCeaseOperations", "使用“返回上级菜单”放弃行动",
         "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键",
         "DebugEnabled", "显示调试日志控制台",
-        "Language", "界面语言"
+        "Language", "界面语言",
+        "ThemeMode", "界面主题"
     )
 
     ; 自定义设置名称映射

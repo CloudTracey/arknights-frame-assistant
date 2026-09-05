@@ -44,7 +44,8 @@ class Config {
         "BackCeaseOperations", "1",
         "InLevelGuard", "1",
         "DebugEnabled", "0",
-        "Language", "auto"
+        "Language", "auto",
+        "ThemeMode", "auto"
     )
 
     ; 内部：默认自定义设置
@@ -106,6 +107,8 @@ class Config {
     static GetImportant(key) {
         if !this._IsLoaded
             this.LoadFromIni()
+        if (key = "ThemeMode")
+            return Theme.Normalize(this._ImportantSettings.Has(key) ? this._ImportantSettings[key] : "auto")
         if (key = "Frame") {
             frame155 := this._ImportantSettings.Has("Frame155") && this._ImportantSettings["Frame155"] != ""
                 ? this._ImportantSettings["Frame155"]
@@ -120,6 +123,8 @@ class Config {
     static ReadImportantFromIni(key) {
         if this.IniFile = ""
             this.InitPath()
+        if (key = "ThemeMode")
+            return Theme.Normalize(IniRead(this.IniFile, "Main", key, "auto"))
         if (key = "GitHubToken") {
             return this._ReadGitHubToken()
         }
@@ -143,6 +148,8 @@ class Config {
 
     ; 设置重要设置（Frame 自动同步 Frame155）
     static SetImportant(key, value) {
+        if (key = "ThemeMode")
+            value := Theme.Normalize(value)
         this._ImportantSettings[key] := value
         if (key = "Frame")
             this._ImportantSettings["Frame155"] := value
@@ -444,6 +451,8 @@ class Config {
                 this._ImportantSettings[keyVar] := IniRead(this.IniFile, "Main", keyVar, defaultVal)
             }
         }
+
+        this._ImportantSettings["ThemeMode"] := Theme.Normalize(this._ImportantSettings["ThemeMode"])
 
         ; 加载自定义设置
         for keyVar, defaultVal in this._DefaultCustom {
