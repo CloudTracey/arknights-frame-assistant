@@ -246,3 +246,9 @@ The icon was created by **[文件名错误EXE](https://www.mihuashi.com/profiles
 
 - Artist: https://www.mihuashi.com/profiles/8282001?role=painter
 - Copyright remains with the original creator.
+
+## Interface theme
+
+Choose **Follow system**, **Light**, or **Dark** under **Other → Display → Interface theme**. The default follows the Windows app theme and updates automatically without restarting.
+
+Selections preview immediately. Save or Apply to keep the choice; Cancel restores the saved theme. Settings, key editing, announcements and update dialogs share the theme. System file pickers, tray menus and the debug console retain their existing appearance. Windows high-contrast colors take priority when enabled.

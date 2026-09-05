@@ -48,6 +48,7 @@
 │       │   ├── key_format.ahk    # 热键键值格式化工具
 │       │   ├── logger.ahk        # 双轨日志系统
 │       │   ├── message_box.ahk   # 自定义消息框
+│       │   ├── theme.ahk         # 主题状态、配色与原生控件绘制
 │       │   ├── timing.ahk        # 高精度延迟工具
 │       │   ├── token_protector.ahk # GitHub Token DPAPI 加密保护
 │       │   ├── touch_injection.ahk # Touch Injection 模拟点击
@@ -265,7 +266,16 @@ git checkout -b feature/your-feature-name
 
 ## 测试流程
 
-本项目暂时**没有自动化测试框架**，所有测试均为**手工验证**。
+运行时与 GUI 功能以**手工验证**为主。仓库同时包含 Python 静态门禁与源码契约检查，可在项目根目录运行：
+
+```powershell
+python -X utf8 tools/layer_check.py --baseline KNOWN_VIOLATIONS
+python -X utf8 tools/event_contract_check.py
+python -X utf8 tools/i18n_check.py
+python -X utf8 tools/test_theme_contract.py
+```
+
+静态检查不启动 AFA，也不证明原生控件绘制正确。AHK 独立测试位于 `test/scripts/`，执行结果与手工结果分别记录。主题流程及增量验收见 [深色模式测试清单](test/finished_test_dark_mode.md)。
 
 ### 测试清单创建
 
