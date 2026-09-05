@@ -45,7 +45,14 @@ class Config {
         "InLevelGuard", "1",
         "DebugEnabled", "0",
         "Language", "auto",
-        "ThemeMode", "auto"
+        "ThemeMode", "auto",
+        "ThemeWindow", "202020",
+        "ThemeSurface", "2B2B2B",
+        "ThemeText", "E6E6E6",
+        "ThemeAccent", "4DB6EA",
+        "ThemeImage", "",
+        "ThemeImageFit", "cover",
+        "ThemeImageOpacity", "20"
     )
 
     ; 内部：默认自定义设置

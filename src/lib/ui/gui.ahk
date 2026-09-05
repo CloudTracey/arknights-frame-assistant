@@ -10,7 +10,9 @@ class GuiManager {
     static ServerPathsText := ""
     static RunningClientsText := ""
     ; 语言代码顺序与下拉框显示顺序一致
-    static ThemeModes := ["auto", "light", "dark"]
+    static ThemeModes := ["auto", "light", "dark", "custom"]
+    static _InitialAppearance := ""
+    static ThemeEditButton := ""
     static LanguageCodes := ["auto", "zh-Hans", "zh-Hant", "ja-JP", "ko-KR", "en-US"]
     ; 下拉框显示名固定使用各语言自己的写法，不随当前界面语言变化
     static LanguageDisplayNames := Map(
@@ -122,8 +124,7 @@ class GuiManager {
         this.MainGui := Gui(, this.WindowName)
         this.MainGui.MarginX := 0
         this.MainGui.Opt("+MinimizeBox")
-        Theme.Attach(this.MainGui)
-        WinSetTransColor("ffa8a8", this.MainGui)
+        Theme.Attach(this.MainGui, false, true)
         Theme.SetFont(this.MainGui, "s9", Metrics.FontFor(I18n.GetCurrent()))
         hWnd := this.MainGui.Hwnd
         this.MainGui.OnEvent("Close", (*) => this._HandleWindowClose())
@@ -571,7 +572,7 @@ class GuiManager {
         ; 标签管理器迁入“显示”分类后，标题重新锚定到本分类内容区顶部
         sepDisplay.GetPos(, &displayTopY)
         txtTheme := Theme.Add(this.MainGui, "Text", "x160 y" (displayTopY + 22), I18n.T("界面主题"))
-        themeLabels := [I18n.T("跟随系统"), I18n.T("浅色"), I18n.T("深色")]
+        themeLabels := [I18n.T("跟随系统"), I18n.T("浅色"), I18n.T("深色"), I18n.T("自定义主题")]
         themeWidth := 160
         for label in themeLabels
             themeWidth := Max(themeWidth, Metrics.TextWidth(label) + 36)
@@ -579,6 +580,10 @@ class GuiManager {
         ddTheme.Value := this._ThemeToIndex(Config.GetImportant("ThemeMode"))
         ddTheme.OnEvent("Change", (*) => this.TrackChange("ThemeMode"))
         StatusBarHints.Register(ddTheme, "立即预览主题，保存或应用后记住，取消后恢复")
+        this.ThemeEditButton := Theme.Add(this.MainGui, "Button", "x160 y+10 w" Max(200, Metrics.TextWidth(I18n.T("编辑自定义主题")) + 24) " h28", I18n.T("编辑自定义主题"))
+        this.ThemeEditButton.OnEvent("Click", (*) => ThemeEditor.Open())
+        this.ThemeEditButton.Enabled := Config.GetImportant("ThemeMode") = "custom"
+        this.DisplayControls.Push(this.ThemeEditButton)
         themeHint := Theme.Add(this.MainGui, "Text", "x160 y+10 w530 cSecondary", I18n.T("跟随系统时，界面会随 Windows 应用主题自动切换"))
         this.DisplayControls.Push(txtTheme, ddTheme, themeHint)
         themeHint.GetPos(, &themeHintY, , &themeHintH)
@@ -1085,6 +1090,8 @@ class GuiManager {
 
     ; 内部：更新其他控件值（从配置）
     static _UpdateImportantControlsFromConfig() {
+        if this.ThemeEditButton != ""
+            this.ThemeEditButton.Enabled := Config.GetImportant("ThemeMode") = "custom"
         tabSettingsChanged := false
         try {
             tabSettingsChanged := (
@@ -1578,6 +1585,7 @@ class GuiManager {
 
     ; 捕获初始值快照（从当前 GUI 控件值读取）
     static CaptureInitialSnapshot() {
+        this._InitialAppearance := Appearance.Snapshot()
         this._InitialValues := Map()
         ; 热键控件 — GUI 显示的是 VirtualNewkeyFormat 后的值
         for key in Config.AllHotkeys {
@@ -1632,6 +1640,7 @@ class GuiManager {
                 mode := this.ThemeModes[currentValue]
                 Config.SetImportant("ThemeMode", mode)
                 Theme.Preview(mode)
+                this.ThemeEditButton.Enabled := mode = "custom"
             }
             else if (controlName = "Language") {
                 Config.SetImportant("Language", this.LanguageCodes[currentValue])
@@ -1654,6 +1663,8 @@ class GuiManager {
 
     ; 所有控件（热键/重要/自定义/自定义按键）是否与初始快照一致
     static _AllControlsMatchSnapshot() {
+        if IsObject(this._InitialAppearance) && !Appearance.Equal(Appearance.Snapshot(), this._InitialAppearance)
+            return false
         for key in Config.AllHotkeys {
             try {
                 if (this.MainGui[key].Value != this._InitialValues[key])
@@ -1732,6 +1743,15 @@ class GuiManager {
             }
         }
         this._HideOtherCategories()
+    }
+
+    ; 独立编辑器完成后，外观工作副本参与主窗口脏状态比较。
+    static TrackAppearanceChange() {
+        Theme.Preview(Config.GetImportant("ThemeMode"), Appearance.Snapshot())
+        if this._AllControlsMatchSnapshot()
+            this.SetIsModifiedFalse()
+        else
+            this.SetIsModifiedTrue()
     }
 
     ; 主题配置→下拉框索引
@@ -2388,6 +2408,7 @@ class GuiManager {
     ; 重建设置窗口（语言切换等场景）。当前实现保证可重建主窗口；
     ; 控件数组原地清空以保持 OtherCategories 引用有效。
     static Rebuild() {
+        ThemeEditor.Cancel()
         CustomKeyEditor.Close()   ; 主窗口重建（切换语言）前先关闭编辑窗口
         if (this.MainGui = "") {
             this.Init()

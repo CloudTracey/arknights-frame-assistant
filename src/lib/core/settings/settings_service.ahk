@@ -250,12 +250,18 @@ class SettingsService {
 
         ; 保存到 INI（全量保存 Config 工作副本；单键场景请走 UpdatePersistedValue）
         ; 主题最后提交：自定义按键文件失败时，不把仍处于预览的主题提前落盘。
-        themeMode := Config.GetImportant("ThemeMode")
-        savedThemeMode := Config.ReadImportantFromIni("ThemeMode")
-        Config.SetImportant("ThemeMode", savedThemeMode)
+        appearanceSnapshot := Appearance.Snapshot()
+        savedAppearance := Appearance.Snapshot(true)
+        try prepared := BackgroundImage.Stage(appearanceSnapshot)
+        catch as err {
+            MessageBox.Error(err.Message, I18n.T("设置保存失败"))
+            return false
+        }
+        Appearance.SetWorking(savedAppearance)
         try saveResult := Config.SaveAllToIni()
-        finally Config.SetImportant("ThemeMode", themeMode)
+        finally Appearance.SetWorking(appearanceSnapshot)
         if (!saveResult.success) {
+            BackgroundImage.Discard(prepared.Created)
             MessageBox.Error(saveResult.message, I18n.T("设置保存失败"))
             return false
         }
@@ -263,18 +269,38 @@ class SettingsService {
         ; 落盘自定义按键（独立文件；Settings.ini 成功后才写入，任一步失败都中止保存）
         customSaveResult := CustomHotkeyStore.Save(Config.AllCustomHotkeys)
         if (!customSaveResult.success) {
+            BackgroundImage.Discard(prepared.Created)
             Logger.Warn("Settings", "保存中止：自定义按键文件写入失败：" customSaveResult.message)
             MessageBox.Error(I18n.T("配置文件写入失败：{1}", customSaveResult.message), I18n.T("设置保存失败"))
             return false
         }
-        if (themeMode != savedThemeMode) {
-            themeSaveResult := Config._PersistSingleValue("ThemeMode", themeMode)
-            if (!themeSaveResult.success) {
-                MessageBox.Error(themeSaveResult.message, I18n.T("设置保存失败"))
+        if !Appearance.Equal(prepared.Values, savedAppearance) {
+            appearanceResult := this._PersistAppearance(prepared.Values)
+            if !appearanceResult.success {
+                BackgroundImage.Discard(prepared.Created)
+                MessageBox.Error(appearanceResult.message, I18n.T("设置保存失败"))
                 return false
             }
         }
+        Appearance.SetWorking(prepared.Values)
+        if (savedAppearance["ThemeImage"] != prepared.Values["ThemeImage"] && BackgroundImage.IsManaged(savedAppearance["ThemeImage"]))
+            BackgroundImage.Discard(BackgroundImage.Path(savedAppearance["ThemeImage"]))
         return true
+    }
+
+    ; 整组外观一次原子提交，持久化失败不确认预览。
+    static _PersistAppearance(values) {
+        entries := []
+        for key, value in values
+            entries.Push({Section: "Main", Key: key, Value: value})
+        wasCritical := A_IsCritical
+        Critical("On")
+        try {
+            Config._WriteIniEntriesAtomic(Config.IniFile, entries)
+            return {success: true, message: ""}
+        } catch as err {
+            return {success: false, message: I18n.T("配置文件写入失败：{1}", err.Message)}
+        } finally Critical(wasCritical)
     }
 
     ; 应用随游戏自动启动配置。外部任务成功后才保存配置开关。

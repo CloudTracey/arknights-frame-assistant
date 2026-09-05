@@ -1,6 +1,13 @@
 ; == 应用主题 ==
 ; 只负责显示状态和 Win32 绘制，不写配置、不引用 core/ui、不启动游戏逻辑。
 class Theme {
+    static SavedAppearance := ""
+    static PreviewAppearance := ""
+    static CustomActive := false
+    static SystemDark := false
+    static CustomPalette := Map()
+    static _DrawingWindow := 0
+    static _DrawingControl := 0
     static SavedMode := "auto"
     static PreviewMode := ""
     static IsDark := false
@@ -28,7 +35,7 @@ class Theme {
 
     static Normalize(mode) {
         switch mode {
-            case "auto", "light", "dark": return StrLower(mode)
+            case "auto", "light", "dark", "custom": return StrLower(mode)
             default: return "auto"
         }
     }
@@ -46,27 +53,35 @@ class Theme {
             return
         this._Ready := true
         try this.SavedMode := this.Normalize(Config.ReadImportantFromIni("ThemeMode"))
+        this.SavedAppearance := Appearance.Snapshot(true)
         this._RefreshCallback := ObjBindMethod(this, "Refresh")
         this._SubclassPtr := CallbackCreate(ObjBindMethod(this, "_Subclass"), , 6)
         for msg in [0x001A, 0x031A, 0x0015] ; setting/theme/system color changes
             OnMessage(msg, ObjBindMethod(this, "_SystemChanged"))
         for msg in [0x0133, 0x0134, 0x0135, 0x0136, 0x0138]
             OnMessage(msg, ObjBindMethod(this, "_ControlColor"))
+        OnMessage(0x0014, ObjBindMethod(this, "_EraseBackground"))
+        OnMessage(0x0005, ObjBindMethod(this, "_BackgroundSized"))
         OnMessage(0x0082, ObjBindMethod(this, "_WindowDestroyed"))
         OnExit(ObjBindMethod(this, "Stop"))
         this.Refresh()
     }
 
-    static Preview(mode) {
+    static Preview(mode, values?) {
         this.Init()
+        this.PreviewAppearance := IsSet(values) ? Appearance.Normalize(values) : Appearance.Snapshot()
         this.PreviewMode := this.Normalize(mode)
+        this.PreviewAppearance["ThemeMode"] := this.PreviewMode
         this.Refresh()
     }
 
     ; 仅在初始化、成功持久化或取消时调用；按键重置不结束主题预览。
-    static Confirm(mode) {
+    static Confirm(mode, values?) {
         this.Init()
+        this.SavedAppearance := IsSet(values) ? Appearance.Normalize(values) : Appearance.Snapshot(true)
         this.SavedMode := this.Normalize(mode)
+        this.SavedAppearance["ThemeMode"] := this.SavedMode
+        this.PreviewAppearance := ""
         this.PreviewMode := ""
         this.Refresh()
     }
@@ -76,22 +91,55 @@ class Theme {
         SetTimer(this._RefreshCallback, -50)
     }
 
+    static CurrentAppearance() => IsObject(this.PreviewAppearance) ? this.PreviewAppearance : this.SavedAppearance
+
+    static _BackgroundSized(wParam, lParam, msg, hwnd) {
+        if hwnd = BackgroundImage.MainHwnd
+            this._SystemChanged()
+    }
+
+    static _EraseBackground(dc, lParam, msg, hwnd) {
+        if (hwnd = BackgroundImage.MainHwnd && this.CustomActive && !this.HighContrast && BackgroundImage.Brush) {
+            rect := Buffer(16)
+            DllCall("user32\GetClientRect", "Ptr", hwnd, "Ptr", rect)
+            DllCall("user32\FillRect", "Ptr", dc, "Ptr", rect, "Ptr", BackgroundImage.AlignedBrush(dc, hwnd))
+            return 1
+        }
+    }
+
     static Refresh(*) {
+        ; 图片解码/缩放不在 Critical 或绘制回调中执行。
+        this._ReadState()
+        oldKey := BackgroundImage.CacheKey
+        if IsObject(this.CurrentAppearance())
+            BackgroundImage.Prepare(this.CurrentAppearance(), this.CustomActive && !this.HighContrast)
+        if !(oldKey == BackgroundImage.CacheKey)
+            this._PaletteSignature := ""
         wasCritical := A_IsCritical
         Critical("On")
         try this._Refresh()
         finally Critical(wasCritical)
     }
 
-    static _Refresh() {
+    static _ReadState() {
         appsLight := 1
         try appsLight := RegRead("HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "AppsUseLightTheme", 1)
         hc := Buffer(8 + A_PtrSize, 0)
         NumPut("UInt", hc.Size, hc)
         this.HighContrast := DllCall("user32\SystemParametersInfoW", "UInt", 0x42,
             "UInt", hc.Size, "Ptr", hc, "UInt", 0) && (NumGet(hc, 4, "UInt") & 1)
-        this.IsDark := this.Resolve(this.SavedMode, this.PreviewMode, appsLight, this.HighContrast) = "dark"
-        signature := this.IsDark ":" this.HighContrast
+        resolved := this.Resolve(this.SavedMode, this.PreviewMode, appsLight, this.HighContrast)
+        this.SystemDark := appsLight = 0
+        this.CustomActive := resolved = "custom"
+        if this.CustomActive
+            this.CustomPalette := Appearance.Palette(this.CurrentAppearance())
+        this.IsDark := this.CustomActive ? Appearance.Luminance(this.CustomPalette["Window"]) < 0.179 : resolved = "dark"
+    }
+
+    static _Refresh() {
+        signature := this.IsDark ":" this.HighContrast ":" this.SystemDark
+        if this.CustomActive
+            signature .= ":" Appearance.Signature(this.CurrentAppearance())
         if this.HighContrast {
             for index in [5, 8, 13, 15, 17, 18, 26]
                 signature .= ":" DllCall("user32\GetSysColor", "Int", index, "UInt")
@@ -102,7 +150,7 @@ class Theme {
         ; 高对比度色可在模式不变时变化，旧画刷在本轮应用前统一释放。
         this._DeleteBrushes()
         for hwnd, window in this._Windows {
-            window.Gui.BackColor := this.Color("Window")
+            window.Gui.BackColor := this.Color("Window", hwnd)
             this._TitleBar(hwnd)
         }
         for hwnd, data in this._Controls {
@@ -113,7 +161,7 @@ class Theme {
             DllCall("user32\RedrawWindow", "Ptr", hwnd, "Ptr", 0, "Ptr", 0, "UInt", 0x0485) ; include non-client borders
     }
 
-    static Color(role) {
+    static Color(role, hwnd := 0) {
         if (role = "Default")
             role := "Text"
         if this.HighContrast {
@@ -128,13 +176,15 @@ class Theme {
             }
             return this._RgbHex(DllCall("user32\GetSysColor", "Int", index, "UInt"))
         }
-        palette := this.IsDark ? this.Dark : this.Light
+        hwnd := hwnd ? hwnd : this._DrawingWindow
+        fixed := this._Windows.Has(hwnd) && this._Windows[hwnd].Fixed
+        palette := fixed ? (this.SystemDark ? this.Dark : this.Light) : this.CustomActive ? this.CustomPalette : this.IsDark ? this.Dark : this.Light
         return palette.Has(role) ? palette[role] : palette["Text"]
     }
 
     static _RgbHex(bgr) => Format("{:06X}", ((bgr & 255) << 16) | (bgr & 0xFF00) | ((bgr >> 16) & 255))
-    static _Bgr(role) {
-        rgb := Integer("0x" this.Color(role))
+    static _Bgr(role, hwnd := 0) {
+        rgb := Integer("0x" this.Color(role, hwnd))
         return ((rgb & 255) << 16) | (rgb & 0xFF00) | ((rgb >> 16) & 255)
     }
 
@@ -151,22 +201,24 @@ class Theme {
         this._Brushes.Clear()
     }
 
-    static Attach(gui) {
+    static Attach(gui, fixed := false, background := false) {
         this.Init()
         if this._Windows.Has(gui.Hwnd)
             return
-        this._Windows[gui.Hwnd] := {Gui: gui, FontRole: "Text"}
-        gui.BackColor := this.Color("Window")
-        gui.SetFont("c" this.Color("Text"))
+        this._Windows[gui.Hwnd] := {Gui: gui, FontRole: "Text", Fixed: fixed}
+        if background
+            BackgroundImage.MainHwnd := gui.Hwnd
+        gui.BackColor := this.Color("Window", gui.Hwnd)
+        gui.SetFont("c" this.Color("Text", gui.Hwnd))
         this._TitleBar(gui.Hwnd)
     }
 
     static _TitleBar(hwnd) {
         ; 失败仅表示当前系统不支持对应 DWM 属性，内容区主题仍可使用。
         try DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", hwnd, "UInt", 20,
-            "Int*", this.IsDark && !this.HighContrast, "UInt", 4)
+            "Int*", (this._Windows[hwnd].Fixed ? this.SystemDark : this.IsDark) && !this.HighContrast, "UInt", 4)
         ; 清除旧主窗口硬编码的白色标题栏；高对比度交还系统。
-        caption := this.HighContrast ? 0xFFFFFFFF : this._Bgr("Window")
+        caption := this.HighContrast ? 0xFFFFFFFF : this._Bgr("Window", hwnd)
         try DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", hwnd, "UInt", 35,
             "UInt*", caption, "UInt", 4)
     }
@@ -176,14 +228,14 @@ class Theme {
         this.Attach(gui)
         fg := this._Windows[gui.Hwnd].FontRole
         bg := (kind = "Edit" || kind = "DropDownList") ? "Field" : "Window"
-        options := this._FontOptions(options, &fg)
+        options := this._FontOptions(options, &fg, gui.Hwnd)
         if RegExMatch(options, "i)(?<!\S)Background(\w+)(?=\s|$)", &m) {
             bg := m[1]
             if bg != "Trans"
-                options := StrReplace(options, m[0], "Background" this.Color(bg))
+                options := StrReplace(options, m[0], "Background" this.Color(bg, gui.Hwnd))
         }
         ctrl := gui.Add(kind, options, args*)
-        data := {Ctrl: ctrl, Parent: gui.Hwnd, Fg: fg, Bg: bg, Hot: false, Pressed: false,
+        data := {Ctrl: ctrl, Kind: kind, Parent: gui.Hwnd, Fg: fg, Bg: bg, Hot: false, Pressed: false,
             Alias: false, Subclassed: false}
         this._Controls[ctrl.Hwnd] := data
         if (kind = "Edit" || kind = "Button" || kind = "Checkbox" || kind = "DropDownList" || kind = "GroupBox" || kind = "UpDown") {
@@ -202,10 +254,10 @@ class Theme {
         return ctrl
     }
 
-    static _FontOptions(options, &role) {
+    static _FontOptions(options, &role, hwnd := 0) {
         if RegExMatch(options, "i)(?<!\S)c(Default|Text|Accent|Link|Heading|Muted|Hint|Secondary|Caption|Grip|Error|Unsaved)(?=\s|$)", &m) {
             role := m[1] = "Default" ? "Text" : m[1]
-            options := StrReplace(options, m[0], "c" this.Color(role))
+            options := StrReplace(options, m[0], "c" this.Color(role, hwnd))
         }
         return options
     }
@@ -215,12 +267,12 @@ class Theme {
             this.Attach(target)
             data := this._Windows[target.Hwnd]
             role := data.FontRole
-            options := this._FontOptions(options, &role)
+            options := this._FontOptions(options, &role, Type(target) = "Gui" ? target.Hwnd : data.Parent)
             data.FontRole := role
         } else {
             data := this._Controls[target.Hwnd]
             role := data.Fg
-            options := this._FontOptions(options, &role)
+            options := this._FontOptions(options, &role, Type(target) = "Gui" ? target.Hwnd : data.Parent)
             data.Fg := role
         }
         target.SetFont(options, fontName?)
@@ -239,11 +291,22 @@ class Theme {
     }
 
     static _ControlColor(dc, hwnd, msg, parent) {
+        previous := this._DrawingWindow
+        this._DrawingWindow := this._Controls.Has(hwnd) ? this._Controls[hwnd].Parent : 0
+        try return this._ControlBrush(dc, hwnd)
+        finally this._DrawingWindow := previous
+    }
+
+    static _ControlBrush(dc, hwnd) {
         if !this._Controls.Has(hwnd)
             return
         data := this._Controls[hwnd]
         fg := data.Ctrl.Enabled ? data.Fg : "Muted"
         DllCall("gdi32\SetTextColor", "Ptr", dc, "UInt", this._Bgr(fg))
+        if (data.Bg = "Window" && data.Parent = BackgroundImage.MainHwnd && this.CustomActive && !this.HighContrast && BackgroundImage.Brush) {
+            DllCall("gdi32\SetBkMode", "Ptr", dc, "Int", 1)
+            return BackgroundImage.AlignedBrush(dc, hwnd)
+        }
         if (data.Bg = "Trans") {
             DllCall("gdi32\SetBkMode", "Ptr", dc, "Int", 1)
             return DllCall("gdi32\GetStockObject", "Int", 5, "Ptr") ; NULL_BRUSH
@@ -253,9 +316,12 @@ class Theme {
         return this._Brush(data.Bg)
     }
 
-    ; 保留原生控件的输入/焦点/勾选/可访问性；只在深色下接管绘制。
+    ; 保留原生控件的输入/焦点/勾选/可访问性；深色及自定义模式接管绘制，高对比度使用原生绘制。
     static _Subclass(hwnd, msg, wParam, lParam, id, refData) {
         Critical("On")
+        previousWindow := this._DrawingWindow, previousControl := this._DrawingControl
+        this._DrawingWindow := this._Controls.Has(hwnd) ? this._Controls[hwnd].Parent : 0
+        this._DrawingControl := hwnd
         try {
             if (msg = 0x0082) {
                 DllCall("comctl32\RemoveWindowSubclass", "Ptr", hwnd, "Ptr", this._SubclassPtr, "UPtr", id)
@@ -265,7 +331,7 @@ class Theme {
                 data := this._Controls[hwnd]
                 if (data.Ctrl.Type = "Edit")
                     return this._EditMessage(data, hwnd, msg, wParam, lParam)
-                if (this.IsDark && !this.HighContrast) {
+                if ((this.IsDark || this.CustomActive) && !this.HighContrast) {
                     if (msg = 0x000F || msg = 0x0318) { ; WM_PAINT / WM_PRINTCLIENT
                         ps := Buffer(A_PtrSize = 8 ? 72 : 64, 0)
                         dc := msg = 0x000F ? DllCall("user32\BeginPaint", "Ptr", hwnd, "Ptr", ps, "Ptr") : wParam
@@ -305,6 +371,9 @@ class Theme {
                 this._PaintErrorLogged := true
                 Logger.Warn("Theme", "主题绘制失败：" err.Message)
             }
+        } finally {
+            this._DrawingWindow := previousWindow
+            this._DrawingControl := previousControl
         }
         return DllCall("comctl32\DefSubclassProc", "Ptr", hwnd, "UInt", msg, "UPtr", wParam, "Ptr", lParam, "Ptr")
     }
@@ -312,7 +381,7 @@ class Theme {
     static _EditMessage(data, hwnd, msg, wParam, lParam) {
         ; 先保留原生文本、光标、选区及滚动条绘制；仅覆盖非客户区的亮色边缘。
         result := DllCall("comctl32\DefSubclassProc", "Ptr", hwnd, "UInt", msg, "UPtr", wParam, "Ptr", lParam, "Ptr")
-        if (this.IsDark && !this.HighContrast) {
+        if ((this.IsDark || this.CustomActive) && !this.HighContrast) {
             if (msg = 0x0085) { ; WM_NCPAINT
                 this._PaintEditBorder(data)
             } else {
@@ -360,7 +429,12 @@ class Theme {
         return rect
     }
 
-    static _Fill(dc, rect, role) => DllCall("user32\FillRect", "Ptr", dc, "Ptr", rect, "Ptr", this._Brush(role))
+    static _Fill(dc, rect, role) {
+        brush := this._Brush(role)
+        if (role = "Window" && this._DrawingWindow = BackgroundImage.MainHwnd && this.CustomActive && !this.HighContrast && BackgroundImage.Brush)
+            brush := BackgroundImage.AlignedBrush(dc, this._DrawingControl)
+        return DllCall("user32\FillRect", "Ptr", dc, "Ptr", rect, "Ptr", brush)
+    }
     static _Frame(dc, rect, role) => DllCall("user32\FrameRect", "Ptr", dc, "Ptr", rect, "Ptr", this._Brush(role))
 
     static _Text(dc, value, rect, flags, role) {
@@ -394,7 +468,7 @@ class Theme {
             focused := DllCall("user32\GetFocus", "Ptr") = ctrl.Hwnd
             uiState := DllCall("user32\SendMessageW", "Ptr", ctrl.Hwnd, "UInt", 0x0129, "UPtr", 0, "Ptr", 0)
             flags := 0x24 | ((uiState & 2) ? 0x100000 : 0) ; single line, vertical center, keyboard cues
-            kind := ctrl.Type
+            kind := data.Kind
             if (kind = "CheckBox" || kind = "GroupBox") {
                 if (kind = "CheckBox") {
                     this._Fill(dc, rect, "Window")
@@ -463,6 +537,10 @@ class Theme {
     }
 
     static Detach(hwnd) {
+        if hwnd = BackgroundImage.MainHwnd {
+            BackgroundImage.Clear()
+            BackgroundImage.MainHwnd := 0
+        }
         removed := []
         for controlHwnd, data in this._Controls {
             if (data.Parent = hwnd) {
@@ -478,12 +556,14 @@ class Theme {
     }
 
     static Stop(*) {
+        Critical("On")
         SetTimer(this._RefreshCallback, 0)
         windows := []
         for hwnd in this._Windows
             windows.Push(hwnd)
         for hwnd in windows
             this.Detach(hwnd)
+        BackgroundImage.Stop()
         this._DeleteBrushes()
         if this._SubclassPtr {
             CallbackFree(this._SubclassPtr)

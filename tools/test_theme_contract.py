@@ -116,9 +116,9 @@ class ThemeContracts(unittest.TestCase):
 
     def test_theme_is_persisted_after_custom_keys(self):
         save = method(self.service, '_ValidateAndPersist')
-        self.assertIn('finally Config.SetImportant("ThemeMode", themeMode)', save)
+        self.assertIn('finally Appearance.SetWorking(appearanceSnapshot)', save)
         self.assertLess(save.index('CustomHotkeyStore.Save('),
-                        save.index('Config._PersistSingleValue("ThemeMode", themeMode)'))
+                        save.index('this._PersistAppearance(prepared.Values)'))
 
     def test_preview_is_part_of_existing_dirty_tracking(self):
         track = method(self.gui, 'TrackChange')
@@ -184,7 +184,7 @@ class ThemeContracts(unittest.TestCase):
         self.assertLess(subclass.index('this._EditMessage('), subclass.index('this._Paint('))
         edit = method(self.theme, '_EditMessage')
         self.assertIn('DefSubclassProc', edit)
-        self.assertIn('this.IsDark && !this.HighContrast', edit)
+        self.assertIn('(this.IsDark || this.CustomActive) && !this.HighContrast', edit)
         self.assertIn('msg = 0x0085', edit)
         self.assertIn('0x0007, 0x0008, 0x000A', edit)
         self.assertIn('return result', edit)

@@ -14,6 +14,8 @@
 #Include ../../src/lib/base/hotkey_schema.ahk
 #Include ../../src/lib/base/constants.ahk
 #Include ../../src/lib/base/config.ahk
+#Include ../../src/lib/base/appearance.ahk
+#Include ../../src/lib/base/background_image.ahk
 #Include ../../src/lib/base/theme.ahk
 #Include ../../src/lib/base/eventbus.ahk
 #Include ../../src/lib/base/i18n.ahk
@@ -58,6 +60,7 @@
 #Include ../../src/lib/ui/changelog_ui.ahk
 #Include ../../src/lib/core/changelog/changelog_checker.ahk
 #Include ../../src/lib/ui/status_bar.ahk
+#Include ../../src/lib/ui/theme_editor.ahk
 #Include ../../src/lib/ui/gui.ahk
 #Include ../../src/lib/ui/custom_key_editor.ahk
 #Include ../../src/lib/core/monitor/game_monitor.ahk
