@@ -75,27 +75,29 @@ class SettingsService {
         return result
     }
 
-    ; 处理热键动作发布的单键设置变更请求
+    ; 处理热键动作发布的单键设置变更请求（开局自动暂停 / 开局自动二倍速开关共用）
     static _HandleSettingsValueChangeRequested(data) {
-        if (data.key != "AutoBeginPause")
+        if (data.key = "AutoBeginPause") {
+            logName := "切换开局自动暂停"
+            onTip := I18n.T("已开启开局自动暂停")
+            offTip := I18n.T("已关闭开局自动暂停")
+        } else if (data.key = "AutoBeginSpeed") {
+            logName := "切换开局自动二倍速"
+            onTip := I18n.T("已开启开局自动二倍速")
+            offTip := I18n.T("已关闭开局自动二倍速")
+        } else {
             return
+        }
         result := this.UpdatePersistedValue(data.key, data.value)
         if (!result.success) {
             Logger.Warn("Settings", "单键设置写入失败：" result.message)
             return
         }
-        Logger.Info("Settings", "切换开局自动暂停 → " (data.value = "1" ? "开" : "关"))
-        if (data.value = "1") {
-            HideTrayTip()
-            SetTimer HideTrayTip, 0
-            ShowTrayTip(I18n.T("已开启开局自动暂停"), "AFA", "Mute")
-            SetTimer HideTrayTip, -3000
-        } else {
-            HideTrayTip()
-            SetTimer HideTrayTip, 0
-            ShowTrayTip(I18n.T("已关闭开局自动暂停"), "AFA", "Mute")
-            SetTimer HideTrayTip, -3000
-        }
+        Logger.Info("Settings", logName " → " (data.value = "1" ? "开" : "关"))
+        HideTrayTip()
+        SetTimer HideTrayTip, 0
+        ShowTrayTip(data.value = "1" ? onTip : offTip, "AFA", "Mute")
+        SetTimer HideTrayTip, -3000
     }
 
     ; 处理更新公告忽略请求（经统一配置写口）

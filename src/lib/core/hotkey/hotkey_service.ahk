@@ -83,6 +83,9 @@ class HotkeyService {
                 profile.OnUp := true
             if (item.noActivate)
                 profile.NoActivate := true
+            ; noPassThrough 为可选标志（仅控制类热键设置），用 HasOwnProp 避免缺省项报错
+            if (item.HasOwnProp("noPassThrough") && item.noPassThrough)
+                profile.NoPassThrough := true
             this.ActionCallbacks[item.id] := profile
         }
     }
@@ -191,6 +194,7 @@ class HotkeyService {
         "PauseSkill", HotkeyActions.ActionPauseSkill.Bind(HotkeyActions),
         "PauseRetreat", HotkeyActions.ActionPauseRetreat.Bind(HotkeyActions),
         "AutoBeginPauseSwitch", HotkeyActions.ActionBeginPauseSwitch.Bind(HotkeyActions),
+        "AutoBeginSpeedSwitch", HotkeyActions.ActionBeginSpeedSwitch.Bind(HotkeyActions),
         ; 快捷操作
         "LButtonClick", HotkeyActions.ActionLButtonClick.Bind(HotkeyActions),
         "Harvest", HotkeyActions.ActionHarvest.Bind(HotkeyActions),
@@ -270,14 +274,16 @@ class HotkeyService {
     ; 注册单个热键（数据驱动：profile.OnUp=功能在松开时触发；profile.Guarded=拦截键注册 Up 变体补发透传）
     ; 注意：属性访问用 HasOwnProp 判断——profile 无 OnUp/Guarded 属性时直接访问会抛 PropertyError
     static _RegisterOne(hotkeyValue, profile, pattern) {
+        ; 控制类热键（noPassThrough）无论是否为游戏键都抑制原键，不透传给游戏
+        noPass := profile.HasOwnProp("NoPassThrough") && profile.NoPassThrough
         if (profile.HasOwnProp("OnUp") && !InStr(hotkeyValue, "Wheel")) {
             ; 松开暂停：功能在松开时触发（Up 变体注册）
-            reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
+            reg := ((hotkeyValue ~= pattern) || noPass) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
             Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
             HotkeyService.ActiveHotkeys.Set(reg, reg)
             return
         }
-        intercept := hotkeyValue ~= pattern
+        intercept := (hotkeyValue ~= pattern) || noPass
         reg := intercept ? hotkeyValue : "~" hotkeyValue
         Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
         HotkeyService.ActiveHotkeys.Set(reg, reg)

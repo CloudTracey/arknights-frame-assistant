@@ -507,6 +507,17 @@ class HotkeyActions {
         PureKeyWait(ThisHotkey)
     }
 
+    ; 快捷切换开局自动二倍速开关
+    static ActionBeginSpeedSwitch(ThisHotkey) {
+        currentValue := Config.GetImportant("AutoBeginSpeed")
+        newValue := (currentValue = "1") ? "0" : "1"
+        ; 只发布设置变更请求，由 SettingsService 执行持久化与刷新
+        EventBus.Publish("SettingsValueChangeRequested", {key: "AutoBeginSpeed", value: newValue})
+        if InStr(ThisHotkey, "Wheel")
+            return
+        PureKeyWait(ThisHotkey)
+    }
+
     ; 模拟鼠标左键点击
     static ActionLButtonClick(ThisHotkey) {
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")

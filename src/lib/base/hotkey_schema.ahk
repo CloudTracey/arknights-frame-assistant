@@ -8,7 +8,9 @@
 class HotkeySchema {
     ; id / nameKey / group / defaultKey 为必填；
     ; descKey 为状态栏悬停功能说明（中文原文，可空字符串表示无说明）；
-    ; guarded / onUp / noActivate 为热键行为元数据（供 HotkeyService 生成回调 profile）。
+    ; guarded / onUp / noActivate 为热键行为元数据（供 HotkeyService 生成回调 profile）；
+    ; noPassThrough 为可选标志：AFA 内部命令类热键（设置开关等）触发时不透传原键给游戏，
+    ; 与 SwitchHotkey 的抑制语义一致（区别于游戏动作类热键的“非游戏键透传”规则）。
     ; 顺序即 GUI 显示顺序：常规作战左列→右列，快捷操作左列→右列，卫戍协议左列→右列。
     static Items := [
         ; ---- 常规作战 ----
@@ -26,7 +28,8 @@ class HotkeySchema {
         {id: "OneClickRetreat", nameKey: "一键撤退", descKey: "鼠标移动到想要撤退的单位上，按下后自动选中并撤退", group: "combat", defaultKey: "q", guarded: true, onUp: false, noActivate: false},
         {id: "PauseSkill", nameKey: "暂停技能", descKey: "暂停时，鼠标移动到想要开技能的单位上，按下后自动选中并开启技能", group: "combat", defaultKey: "XButton2", guarded: true, onUp: false, noActivate: false},
         {id: "PauseRetreat", nameKey: "暂停撤退", descKey: "暂停时，鼠标移动到想要撤退的单位上，按下后自动选中并撤退", group: "combat", defaultKey: "XButton1", guarded: true, onUp: false, noActivate: false},
-        {id: "AutoBeginPauseSwitch", nameKey: "开局自动暂停开关", descKey: "切换「开局自动暂停」的开关", group: "combat", defaultKey: "", guarded: false, onUp: false, noActivate: true},
+        {id: "AutoBeginPauseSwitch", nameKey: "开局自动暂停开关", descKey: "切换「开局自动暂停」的开关", group: "combat", defaultKey: "", guarded: false, onUp: false, noActivate: true, noPassThrough: true},
+        {id: "AutoBeginSpeedSwitch", nameKey: "开局自动二倍速开关", descKey: "切换「开局自动二倍速」的开关", group: "combat", defaultKey: "p", guarded: false, onUp: false, noActivate: true, noPassThrough: true},
         ; ---- 快捷操作 ----
         {id: "LButtonClick", nameKey: "模拟左键点击", descKey: "模拟按下鼠标左键", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "Harvest", nameKey: "基建快速收取", descKey: "点击屏幕左下角的基建收取按钮收取产物", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
