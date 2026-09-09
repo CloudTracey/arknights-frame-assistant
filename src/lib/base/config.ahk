@@ -41,6 +41,7 @@ class Config {
         "TabOrder", Constants.DefaultTabOrder,
         "HiddenTabs", "",
         "AutoBeginPause", "0",
+        "AutoBeginSpeed", "0",
         "BackCeaseOperations", "1",
         "InLevelGuard", "1",
         "DebugEnabled", "0",
@@ -928,4 +929,3 @@ class Config {
     static AllCustom => this._CustomSettings
 
 }
-

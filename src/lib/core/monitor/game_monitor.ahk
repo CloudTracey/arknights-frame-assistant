@@ -88,8 +88,9 @@ class GameMonitor {
             }
         }
 
-        ; 自动开局暂停（运行时读 INI，同 AutoExit 理由）
-        if (Config.ReadImportantFromIni("AutoBeginPause") == "1" && GameTarget.IsActive()) {
+        ; 自动开局暂停 / 自动二倍速（运行时读 INI，同 AutoExit 理由）：任一开启即进入开局检测链
+        autoBeginEnabled := Config.ReadImportantFromIni("AutoBeginPause") == "1" || Config.ReadImportantFromIni("AutoBeginSpeed") == "1"
+        if (autoBeginEnabled && GameTarget.IsActive()) {
             ; 寻找黑屏：遍历 17 个全屏采样点，允许 1 个点被游戏鼠标遮挡
             if (this._BlackScreenDetected == false) {
                 points := GameMonitor.BlackScreenPoints()
@@ -200,10 +201,15 @@ class GameMonitor {
                 SetTimer this._PauseWaitTimerTick(), -this.PauseWaitIntervalMs
                 return
             }
-            GameKeys.SendDown("pauseBattle")
-            USleep(50)
-            GameKeys.SendUp("pauseBattle")
-            Logger.Info("GameMonitor", "自动暂停：已暂停")
+            ; 战斗 UI 就绪。自动暂停与自动二倍速共用此刻，二者都依赖后面的代理识别结果。
+            autoPause := Config.ReadImportantFromIni("AutoBeginPause") == "1"
+            autoSpeed := Config.ReadImportantFromIni("AutoBeginSpeed") == "1"
+            if (autoPause) {
+                GameKeys.SendDown("pauseBattle")
+                USleep(50)
+                GameKeys.SendUp("pauseBattle")
+                Logger.Info("GameMonitor", "自动暂停：已暂停")
+            }
             ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
             isProxy := false
             TobC := TakeOverButtonPositions()
@@ -221,13 +227,21 @@ class GameMonitor {
                 Logger.Debug("GameMonitor", "代理指挥判定：手图标识别失败")
                 isProxy := false
             }
-            if isProxy {
-                GameKeys.SendDown("pauseBattle")
-                USleep(50)
-                GameKeys.SendUp("pauseBattle")
-                Logger.Info("GameMonitor", "代理指挥，取消暂停")
-            } else {
-                Logger.Info("GameMonitor", "非代理指挥，保持暂停")
+            if (autoPause) {
+                if isProxy {
+                    GameKeys.SendDown("pauseBattle")
+                    USleep(50)
+                    GameKeys.SendUp("pauseBattle")
+                    Logger.Info("GameMonitor", "代理指挥，取消暂停")
+                } else {
+                    Logger.Info("GameMonitor", "非代理指挥，保持暂停")
+                }
+            }
+            ; 自动二倍速：仅非代理作战时盲切一次（每场战斗从 1x 开始，切一次即 2x），排在自动暂停处理之后；
+            ; 代理作战时与自动暂停一起不生效（保持代理原生自动节奏）。
+            if (autoSpeed && !isProxy) {
+                GameKeys.Tap("changeSpeed")
+                Logger.Info("GameMonitor", "非代理作战，切换二倍速")
             }
             this._ResetPauseWait()
         } finally {
