@@ -110,7 +110,7 @@ class GuiManager {
     ; 具有对应 GUI 控件的 Important 设置；不直接遍历 Config.AllImportant，后者还包含内部字段
     static GuiImportantKeys := ["Frame", "AutoExit", "AutoOpenSettings", "ExitOnWindowClose",
         "DefaultStrongHoldProtocol", "TabOrder", "HiddenTabs", "AutoRunGame", "AutoStartWithGame", "GamePath",
-        "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause",
+        "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause", "AutoBeginSpeed",
         "BackCeaseOperations", "InLevelGuard", "DebugEnabled", "Language", "ThemeMode"]
 
     ; 初始化GUI（单例模式）
@@ -340,7 +340,7 @@ class GuiManager {
         autoBeginW := Metrics.TextWidth(I18n.T(" 开局自动暂停"))
         checkboxAutoBeginPause := Theme.Add(this.MainGui, "Checkbox", "x" (500 - autoBeginW - 20) " yp-2 h24 vAutoBeginPause", I18n.T(" 开局自动暂停"))
         checkboxAutoBeginPause.OnEvent("Click", (*) => this.TrackChange("AutoBeginPause"))
-        StatusBarHints.Register(checkboxAutoBeginPause, "进入关卡时自动按下暂停，按下绑定的快捷键可切换功能启用或停用")
+        StatusBarHints.Register(checkboxAutoBeginPause, "进入关卡时自动按下暂停（代理作战除外），按下绑定的快捷键可切换功能启用或停用")
         this.MainGui["AutoBeginPause"].Value := Config.GetImportant("AutoBeginPause")
         checkboxAutoBeginPause.GetPos(&cbPauseX, &cbPauseY)   ; 记录位置供快捷操作页复用
         this.KeybindControls.Push(checkboxAutoBeginPause)
@@ -365,6 +365,20 @@ class GuiManager {
         StatusBarHints.Register(checkboxCombatGuard, "识别关卡界面，在关卡界面外禁用常规作战热键，避免误触发")
         this.MainGui["InLevelGuard"].Value := Config.GetImportant("InLevelGuard")
         this.KeybindControls.Push(checkboxCombatGuard)
+
+        ; 开局自动二倍速开关（仅"常规作战"页显示；与自动暂停独立，非代理作战时进关盲切一次 2x）。
+        ; 置于"游戏内帧率"下一行左列（与 InLevelGuard 同行）：复选框左缘 x45，切换热键输入框贴其右；
+        ; 整组在右列（InLevelGuard 左缘 ~354）之前收拢，避免横向重叠。
+        checkboxAutoBeginSpeed := Theme.Add(this.MainGui, "Checkbox", "x45 y" cbGY " h24 vAutoBeginSpeed", I18n.T(" 开局自动二倍速"))
+        checkboxAutoBeginSpeed.GetPos(&cbSX, &cbSY, &cbSW)
+        checkboxAutoBeginSpeed.OnEvent("Click", (*) => this.TrackChange("AutoBeginSpeed"))
+        StatusBarHints.Register(checkboxAutoBeginSpeed, "进入关卡时自动切换到二倍速（代理作战除外）")
+        this.MainGui["AutoBeginSpeed"].Value := Config.GetImportant("AutoBeginSpeed")
+        this.KeybindControls.Push(checkboxAutoBeginSpeed)
+        editAutoBeginSpeedSwitch := Theme.Add(this.MainGui, "Edit", "x" (cbSX + cbSW + 10) " yp w140 Center -TabStop Uppercase vAutoBeginSpeedSwitch",
+            Config.GetHotkey("AutoBeginSpeedSwitch"))
+        StatusBarHints.Register(editAutoBeginSpeedSwitch, "按下后切换开局自动二倍速的启用/禁用")
+        this.KeybindControls.Push(editAutoBeginSpeedSwitch)
 
         ; 帧数设置提示语
         Theme.SetFont(this.MainGui, "s9 cAccent")
@@ -1152,11 +1166,11 @@ class GuiManager {
         return Min(Max(maxW + 6, 120), 135)
     }
 
-    ; 内部：按分组返回 Schema 热键项（排除 GUI 特殊行 AutoBeginPauseSwitch，由手工布局创建）
+    ; 内部：按分组返回 Schema 热键项（排除 GUI 特殊行 AutoBeginPauseSwitch/AutoBeginSpeedSwitch，由手工布局创建）
     static _GetSchemaItems(group) {
         result := []
         for item in HotkeySchema.Items {
-            if (item.group = group && item.id != "AutoBeginPauseSwitch")
+            if (item.group = group && item.id != "AutoBeginPauseSwitch" && item.id != "AutoBeginSpeedSwitch")
                 result.Push(item)
         }
         return result
@@ -1344,6 +1358,10 @@ class GuiManager {
             }
             if (data.key = "ThemeMode") {
                 this.MainGui["ThemeMode"].Value := this._ThemeToIndex(data.value)
+                return
+            }
+            if (data.key = "AutoBeginSpeed") {
+                this.MainGui["AutoBeginSpeed"].Value := (data.value = "1" || data.value = 1) ? 1 : 0
                 return
             }
             if (data.key = "Language") {
