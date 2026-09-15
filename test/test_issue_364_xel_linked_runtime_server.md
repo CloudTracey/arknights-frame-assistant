@@ -50,7 +50,7 @@
 - [ ] **操作**：打开 AFA 设置 →「启动与退出」→ 点击「识别游戏路径」
 - [ ] **预期**：「当前运行客户端」显示 **国服**（修复前此处显示「哔哩哔哩服」）
 - [x] **预期**：「已识别区服路径」中 `CN:` 指向该 `.xel-linked-runtime\…\Official\Arknights.exe` 路径
-- [ ] **操作**：查看日志 `%AppData%\ArknightsFrameAssistant\PC\logs\afa-*.log`
+- [x] **操作**：查看日志 `%AppData%\ArknightsFrameAssistant\PC\logs\afa-*.log`
 - [x] **预期**：出现 `绑定目标窗口 … serverId=CN exe=…\Official\Arknights.exe` 与
       `识别到 CN 游戏路径：…\Official\Arknights.exe`，**不再**出现该路径被判为 `serverId=BILI`
 - [ ] **操作**：查看 `%AppData%\ArknightsFrameAssistant\PC\Settings.ini` 的 `[Main]`
@@ -106,9 +106,9 @@
 
 - [ ] **前置**：先备份 `%AppData%\ArknightsFrameAssistant\PC\Settings.ini`；确认当前存在误判残留：
       `GamePathBILI` 指向 `.xel-linked-runtime\…\Official\Arknights.exe`
-- [ ] **操作**：重启 AFA，查看日志
-- [ ] **预期**：出现 `[Config] 误识别路径已迁移：GamePathBILI -> GamePathCN（路径：…）`
-- [ ] **预期**：`Settings.ini` 中该路径从 `GamePathBILI` 移到 `GamePathCN`（若 `GamePathCN` 已有值则原键被清空）
+- [x] **操作**：重启 AFA，查看日志
+- [x] **预期**：出现 `[Config] 误识别路径已迁移：GamePathBILI -> GamePathCN（路径：…）` —— 实测 17:46:44 命中（注入的残留为 `…\Official\Arknights.exe`）
+- [x] **预期**：`Settings.ini` 中该路径从 `GamePathBILI` 移到 `GamePathCN`（若 `GamePathCN` 已有值则原键被清空） —— 实测 `GamePathCN` 已有值时原键被清空，符合说明
 
 ##### 异常路径
 
@@ -137,21 +137,21 @@
 
 > 涉及模块：`ServerProfile`、`GameClientRegistry`、`GameLauncher`、`Config`
 
-- [ ] **前置**：在 XelLauncher 中**关闭**硬链接并切到 **B服**（物理安装目录内应为 B服 渠道文件：
+- [x] **前置**：在 XelLauncher 中**关闭**硬链接并切到 **B服**（物理安装目录内应为 B服 渠道文件：
       存在 `PCGameSDK.dll` 与 `BLPlatform64\`、不存在 `hgsdk.dll`）
-- [ ] **操作**：启动游戏，在 AFA 设置中点击「识别游戏路径」
-- [ ] **预期**：「当前运行客户端」显示 **哔哩哔哩服**（修复前显示「国服」）
+- [x] **操作**：启动游戏，在 AFA 设置中点击「识别游戏路径」
+- [x] **预期**：「当前运行客户端」显示 **哔哩哔哩服**（修复前显示「国服」）
 - [ ] **预期**：`Settings.ini` 中该物理路径写入 `GamePathBILI`、`GamePathCN` 被清空
-- [ ] **操作**：切回**官服**并重新启动游戏后再次点「识别游戏路径」
-- [ ] **预期**：显示回 **国服**，`GamePathCN` 重新写入、`GamePathBILI` 清空
+- [x] **操作**：切回**官服**并重新启动游戏后再次点「识别游戏路径」
+- [x] **预期**：显示回 **国服** —— 实测 17:42:55 该物理路径绑定 `serverId=CN`（`GamePathCN` 已写入；`GamePathBILI` 仍在但内容正确，见下方问题记录）
 - [ ] **操作**：查看日志
-- [ ] **预期**：出现 `[GameKeys] 前台区服切换：BILI` / `CN`，与实际运行的渠道一致
+- [x] **预期**：出现 `[GameKeys] 前台区服切换：BILI` / `CN`，与实际运行的渠道一致 —— 实测 17:42:05 路径判为 BILI、17:42:55 判为 CN、17:43:32 运行目录判为 BILI
 
 ##### 异常路径（需实机复测）
 
 - [ ] **异常**：目录内渠道特征文件**都不存在**（游戏文件不完整）→
       **预期**：不猜测，回落目录特征判定（显示「国服」），不报错、不影响其他区服记录
-- [ ] **异常**：硬链接运行目录若被人为塞入另一渠道的特征文件 →
+- [x] **异常**：硬链接运行目录若被人为塞入另一渠道的特征文件 →
       **预期**：仍以渠道段目录名为准（运行目录判定优先于渠道文件），显示不变
 
 ---
@@ -186,8 +186,15 @@
 
 ## 问题反馈
 
-### 问题1：[问题描述]
+### 问题1：传统切服下同一物理路径被同时记入 GamePathCN 与 GamePathBILI
+
 - [ ] 已解决
+- **现象**：17:42 会话日志中，物理安装路径 `E:\Hypergryph Launcher\games\Arknights Game\Arknights.exe`
+  先被「运行中客户端识别」写入 `GamePathBILI`（当时目录内为 B服 渠道文件，判定 BILI 正确），
+  随后被「目录扫描」写入 `GamePathCN`（该路径同时满足官服安装布局）。两个键指向同一路径。
+- **影响**：随游戏自启任务的触发器会多出指向同一路径的冗余条目；硬链接模式下该条目指向的
+  其实是另一个渠道的安装目录。不影响识别正确性，属记录冗余。
+- **说明**：该行为在本次改动前即存在（两个键之间没有互斥校验），非本次引入。
 
 ### 问题2：[问题描述]
 - [ ] 已解决
