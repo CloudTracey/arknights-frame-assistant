@@ -13,9 +13,15 @@ class ServerProfile {
     ; 因此所有需要顺序的遍历必须走 Order（CN 优先：CN 与 BILI 共享 company/product，
     ; 兜底匹配时默认展示为官服）。
     ; DirectoryHint 用于目录特征识别；ScanPaths 用于无进程时按特征扫描（相对安装父目录）。
+    ; TC（繁中服）的 company/product 取自游戏本体 Arknights_Data\app.info 的实测值
+    ; （对应 Unity persistentDataPath 为 AppData\LocalLow\Gryphline\Arknights_TC）。
+    ; Company 必须保持 app.info 的拼写 "Gryphline"：启动器写的是 HKCU\Software\GRYPHLINK\Launcher，
+    ; 实测这两个键在 HKCU\Software 下并存（仅大小写不同），而注册表查找对精确拼写优先——用 "GRYPHLINK"
+    ; 会落到启动器那个键上、读不到 Arknights_TC 子键（等价于把 TC 判成未安装）。
     static Profiles := Map(
         "CN", {Id: "CN", DisplayNameKey: "国服", Company: "HyperGryph", Product: "Arknights", DirectoryHint: "Arknights Game", Locale: "zh-CN", ScanPaths: ["Arknights Game\Arknights.exe", "games\Arknights\Arknights.exe"]},
         "BILI", {Id: "BILI", DisplayNameKey: "哔哩哔哩服", Company: "HyperGryph", Product: "Arknights", DirectoryHint: "Arknights bilibili", Locale: "zh-CN", ScanPaths: ["Arknights bilibili\games\Arknights\Arknights.exe"]},
+        "TC", {Id: "TC", DisplayNameKey: "繁中服", Company: "Gryphline", Product: "Arknights_TC", DirectoryHint: "Arknights_TC", Locale: "zh-Hant"},
         "JP", {Id: "JP", DisplayNameKey: "日服", Company: "Yostar", Product: "Arknights_JP", DirectoryHint: "Arknights_JP", Locale: "ja-JP"},
         "KR", {Id: "KR", DisplayNameKey: "韩服", Company: "Yostar", Product: "Arknights_KR", DirectoryHint: "Arknights_KR", Locale: "ko-KR"},
         "EN", {Id: "EN", DisplayNameKey: "国际服", Company: "Yostar", Product: "Arknights_EN", DirectoryHint: "Arknights_EN", Locale: "en-US"}
@@ -24,7 +30,8 @@ class ServerProfile {
     ; 区服优先级/枚举序（新增区服必须同步登记到此处与 Profiles）。
     ; CN 优先于 BILI：两者共享 company/product 与注册表根，兜底时默认展示为官服；
     ; BILI 安装目录必然含 "Arknights bilibili"，由目录特征先行命中，不冲突。
-    static Order := ["CN", "BILI", "JP", "KR", "EN"]
+    ; TC 与任何区服都不共享 company/product，顺序仅决定 GUI 总览中的展示次序（中文区服相邻）。
+    static Order := ["CN", "BILI", "TC", "JP", "KR", "EN"]
 
     ; 按 serverId 获取元数据；不存在返回 ""
     static Get(serverId) {
@@ -163,7 +170,9 @@ class ServerProfile {
 
     ; 在不启动游戏的情况下，按已知目录特征扫描常见位置，返回 serverId → exePath。
     ; 目录特征：CN=Arknights Game / games\Arknights（Hypergryph Launcher 布局），
-    ; BILI=Arknights bilibili（games\Arknights 子目录布局），JP/KR/EN=Arknights_JP|KR|EN。
+    ; BILI=Arknights bilibili（games\Arknights 子目录布局），TC=Arknights_TC
+    ; （Gryphline Launcher 布局：<启动器目录>\games\Arknights_TC\Arknights.exe），
+    ; JP/KR/EN=Arknights_JP|KR|EN。
     static FindInstalledPaths() {
         result := Map()
         for serverId in this.Ids() {
@@ -210,8 +219,10 @@ class ServerProfile {
                     return candidate
             }
 
-            ; 常见启动器/安装目录
-            for parent in ["YostarGames", "Hypergryph Launcher"] {
+            ; 常见启动器/安装目录。GRYPHLINK = 繁中服 Gryphline Launcher 的安装目录名
+            ; （游戏在 <启动器目录>\games\Arknights_TC\，启动器可安装在任意层级，
+            ; 故只按目录名匹配，不假设它位于盘符根目录）
+            for parent in ["YostarGames", "Hypergryph Launcher", "GRYPHLINK"] {
                 for scanPath in scanPaths {
                     candidate := root parent "\" scanPath
                     if FileExist(candidate)
