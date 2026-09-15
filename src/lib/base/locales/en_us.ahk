@@ -543,5 +543,12 @@ class LocaleEnUS {
         "浅色", "Light",
         "深色", "Dark",
         "修改AFA的界面主题", "Change the AFA interface theme",
+        "一键静音", "Mute game audio",
+        "静音/取消静音游戏音频，只影响游戏本身", "Mute/unmute game audio; affects the game only",
+        "已静音游戏音频", "Game audio muted",
+        "已取消静音游戏音频", "Game audio unmuted",
+        "未找到游戏进程，无法静音", "Game process not found; cannot mute",
+        "未找到游戏音频会话，无法静音", "No game audio session found; cannot mute",
+        "静音失败：{1}", "Mute failed: {1}",
     )
 }

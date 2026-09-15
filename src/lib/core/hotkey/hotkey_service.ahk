@@ -199,6 +199,7 @@ class HotkeyService {
         "Skip", HotkeyActions.ActionSkip.Bind(HotkeyActions),
         "CollectCollectibles", HotkeyActions.ActionCollectCollectibles.Bind(HotkeyActions),
         "Back", HotkeyActions.ActionBack.Bind(HotkeyActions),
+        "MuteGame", HotkeyActions.ActionMuteGame.Bind(HotkeyActions),
         ; 卫戍协议
         "CheckEnemies", HotkeyActions.ActionCheckEnemies.Bind(HotkeyActions),
         "DispatchCenter", HotkeyActions.ActionDispatchCenter.Bind(HotkeyActions),

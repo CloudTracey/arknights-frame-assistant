@@ -35,6 +35,7 @@ class HotkeySchema {
         {id: "Skip", nameKey: "跳过招募动画/剧情", descKey: "快速移动鼠标点击右上角的跳过按钮", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "CollectCollectibles", nameKey: "肉鸽收取道具", descKey: "快速移动鼠标点击集成战略的“收下”按钮", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "Back", nameKey: "返回上级菜单", descKey: "模拟点击ESC键，返回上一级菜单", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
+        {id: "MuteGame", nameKey: "一键静音", descKey: "静音/取消静音游戏音频，只影响游戏本身", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: true},
         ; ---- 卫戍协议 ----
         {id: "CheckEnemies", nameKey: "查看敌人", descKey: "查看敌人信息", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "DispatchCenter", nameKey: "调度中心", descKey: "打开调度中心（商店）", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},

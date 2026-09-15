@@ -581,6 +581,57 @@ class HotkeyActions {
     static ActionCollectCollectibles(ThisHotkey) {
         this._ClickButton("ActionCollectCollectibles", CollectButtonPosition, ThisHotkey)
     }
+    ; 一键静音：切换游戏音频会话的静音状态（按进程静音，语音软件等其他程序不受影响）
+    static ActionMuteGame(ThisHotkey) {
+        ; 先停掉可能存在的「静音维持」巡检：若本次操作结果是取消静音或失败，
+        ; 巡检继续跑会把游戏重新静音，与用户意图相反
+        GameAudioMute.StopMuteWatch()
+        pid := GameAudioMute.ResolveGamePid()
+        if (!pid) {
+            Logger.Warn("HotkeyActions", "ActionMuteGame 跳过：未找到游戏进程")
+            this._ShowMuteTip(I18n.T("未找到游戏进程，无法静音"))
+            this._WaitMuteHotkey(ThisHotkey)
+            return
+        }
+        try {
+            result := GameAudioMute.Toggle(pid)
+        } catch Error as e {
+            Logger.Error("HotkeyActions", "ActionMuteGame 执行失败：" e.Message)
+            this._ShowMuteTip(I18n.T("静音失败：{1}", e.Message))
+            this._WaitMuteHotkey(ThisHotkey)
+            return
+        }
+        if (!result.success) {
+            Logger.Warn("HotkeyActions", "ActionMuteGame 未完全成功：pid=" pid "，" result.message)
+            this._ShowMuteTip(I18n.T("静音失败：{1}", result.message))
+        } else if (result.found = 0) {
+            Logger.Info("HotkeyActions", "ActionMuteGame：pid=" pid " 未找到音频会话")
+            this._ShowMuteTip(I18n.T("未找到游戏音频会话，无法静音"))
+        } else {
+            Logger.Info("HotkeyActions", "ActionMuteGame：pid=" pid " 会话数=" result.found
+                "，结果=" (result.muted ? "已静音" : "已取消静音"))
+            if (result.muted)
+                ; 静音生效后开启低频巡检：新插入设备 / 切换默认设备时自动保持静音
+                GameAudioMute.StartMuteWatch(pid)
+            this._ShowMuteTip(result.muted ? I18n.T("已静音游戏音频") : I18n.T("已取消静音游戏音频"))
+        }
+        this._WaitMuteHotkey(ThisHotkey)
+    }
+
+    ; 托盘提示静音结果（3 秒后自动隐藏，与设置类提示保持一致）
+    static _ShowMuteTip(message) {
+        HideTrayTip()
+        SetTimer HideTrayTip, 0
+        ShowTrayTip(message, "AFA", "Mute")
+        SetTimer HideTrayTip, -3000
+    }
+
+    ; 静音不涉及注入按键，无需等待按键状态，仅保持与其他快捷动作一致的滚轮处理
+    static _WaitMuteHotkey(ThisHotkey) {
+        if InStr(ThisHotkey, "Wheel")
+            return
+        PureKeyWait(ThisHotkey)
+    }
 
     ; 通用按钮点击实现：移动鼠标到按钮位置点击后恢复原鼠标位置
     static _ClickButton(actionName, posGetter, ThisHotkey) {
