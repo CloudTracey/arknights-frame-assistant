@@ -28,6 +28,7 @@ class Config {
         "GamePath", "",
         "GamePathCN", "",
         "GamePathBILI", "",
+        "GamePathTC", "",
         "GamePathJP", "",
         "GamePathKR", "",
         "GamePathEN", "",
