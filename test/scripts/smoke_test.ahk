@@ -36,6 +36,7 @@
 #Include ../../src/lib/base/tray.ahk
 #Include ../../src/lib/base/version_utils.ahk
 #Include ../../src/lib/base/touch_injection.ahk
+#Include ../../src/lib/base/game_audio_mute.ahk
 #Include ../../src/lib/base/custom_hotkey_store.ahk
 #Include ../../src/lib/core/game/game_client_registry.ahk
 #Include ../../src/lib/core/diagnostics/log_exporter.ahk
@@ -79,6 +80,8 @@ try {
     if !IsSet(SettingsService) || !IsSet(HotkeyConflictValidator)
         ExitApp 1
     if !IsSet(CustomHotkeyStore) || !IsSet(CustomScriptEngine) || !IsSet(CustomKeyEditor)
+        ExitApp 1
+    if !IsSet(GameAudioMute)
         ExitApp 1
     if !IsSet(ReleaseRepository) || !IsSet(GitHubTokenService) || !IsSet(ChangelogChecker)
         ExitApp 1
