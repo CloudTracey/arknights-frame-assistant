@@ -57,6 +57,7 @@ class Constants {
         "GamePath", "游戏路径",
         "GamePathCN", "国服游戏路径",
         "GamePathBILI", "哔哩哔哩服游戏路径",
+        "GamePathTC", "繁中服游戏路径",
         "GamePathJP", "日服游戏路径",
         "GamePathKR", "韩服游戏路径",
         "GamePathEN", "国际服游戏路径",
