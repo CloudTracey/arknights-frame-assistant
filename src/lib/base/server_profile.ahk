@@ -219,9 +219,14 @@ class ServerProfile {
                     return candidate
             }
 
-            ; 常见启动器/安装目录。GRYPHLINK = 繁中服 Gryphline Launcher 的安装目录名
-            ; （游戏在 <启动器目录>\games\Arknights_TC\，启动器可安装在任意层级，
-            ; 故只按目录名匹配，不假设它位于盘符根目录）
+            ; 常见启动器/安装目录。GRYPHLINK = 繁中服 Gryphline Launcher 的安装目录名，
+            ; 游戏位于其 <启动器目录>\games\Arknights_TC\ 下。
+            ; 扫描范围注意：parent 只在**每个固定盘的根目录**下匹配，即只覆盖
+            ; <盘符>:\GRYPHLINK\games\Arknights_TC\Arknights.exe 这类布局；启动器装在更深层级
+            ; （如 D:\Tools\GRYPHLINK\）时扫不到——这是所有区服共有的既有扫描限制（整盘有界递归
+            ; 在多区服版本试过后回退：深层路径仍未识别且「识别游戏路径」界面卡死，见
+            ; test/test_multi_server_and_i18n.md 问题7），此时靠启动一次游戏由进程路径识别，
+            ; 或手动填「游戏路径」后由启动迁移写入 GamePath<Id>。
             for parent in ["YostarGames", "Hypergryph Launcher", "GRYPHLINK"] {
                 for scanPath in scanPaths {
                     candidate := root parent "\" scanPath

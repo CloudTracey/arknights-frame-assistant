@@ -30,6 +30,7 @@
 - [x] **预期**：输出 `PASS: smoke contracts and no initialization`，退出码 0
 - [x] **操作**：AHK 探针断言 `ServerProfile.Get("TC")` / `RegistryRoot("TC")` / `Ids()` / `FromExePath()`
 - [x] **预期**：`RegistryRoot(TC)=HKCU\Software\Gryphline\Arknights_TC`；`Ids=CN,BILI,TC,JP,KR,EN`；`…\GRYPHLINK\games\Arknights_TC\Arknights.exe`（含嵌套路径 `D:\Tools\GRYPHLINK\…`）→ `TC`（directory_hint）；国服两种布局仍判 `CN`、日服仍判 `JP`、非游戏 exe 判 `Unknown`
+  > 口径限定：本断言验证的是「**给定**某个路径时能否识别出区服」（`FromExePath` 目录特征匹配），**不代表**无进程扫描（`FindInstalledPaths`）能找到嵌套安装——扫描只覆盖 `<盘符>:\GRYPHLINK\games\Arknights_TC\`，启动器装在更深层级时需启动一次游戏由进程路径识别，或手动填「游戏路径」（已知限制，见下方问题 2）
 - [x] **操作**：AHK 探针遍历五语言 `I18n.Init` 后取新增两键
 - [x] **预期**：`zh-Hans=繁中服/繁中服游戏路径`、`zh-Hant=繁中服/繁中服遊戲路徑`、`ja-JP=繁体字中国語サーバー/繁体字中国語サーバーのゲームパス`、`ko-KR=번체 중국어 서버/번체 중국어 서버 게임 경로`、`en-US=Traditional Chinese Server/Traditional Chinese Game Path`；`Constants.ImportantNames[GamePathTC]=繁中服游戏路径`；`Config._DefaultImportant[GamePathTC]` 为空串
 
@@ -158,3 +159,14 @@
 
 ### 问题1：无
 - [x] 无阻塞问题；唯一一条历史 WARN（`14:03:12 [Settings] 保存中止：无法从路径推断区服：…Arknights_TC\Arknights.exe`）出现在改动前的旧代码，正是本次适配修复的现象，新代码会话已不复现。
+
+### 问题2：无进程扫描不覆盖嵌套安装目录（PR #365 审查提出，记录为已知限制、不在本 PR 范围）
+- [x] 已定性并记录（**不修复**）
+
+**现象**：`ServerProfile._FindServerPath` 的 `parent` 只在每个固定盘根目录下匹配，故 `D:\Tools\GRYPHLINK\games\Arknights_TC\Arknights.exe` 这类更深的嵌套布局扫不到。
+
+**定性**：属**所有区服共有的既有扫描设计**（`20089e1` 初始实现即如此，国服装到 `D:\MyGames\Hypergryph Launcher\games\Arknights Game\` 同样扫不到），非本次改动引入；扫不到的后果仅是该区服路径记录为空，不会写入错误的 `GamePath<Id>`。
+
+**为何不按审查建议做递归**：`test/test_multi_server_and_i18n.md` 问题7 已记录——多区服版本加入**整盘有界递归**后「深层路径未能识别，且『识别游戏路径』按钮点击后没有反应」，遂整体回退并留下「深层目录自动识别留待后续单独优化」。照做会重演该失败。
+
+**用户的兜底路径**：启动一次游戏即由进程路径权威识别（实测 `[GameLauncher] 识别到 TC 游戏路径`），或手动填「游戏路径」后由启动迁移写入 `GamePathTC`。后续如需覆盖，可考虑「每盘枚举一次顶层目录」的深度 1 受限扫描（非递归）或读 `HKCU\Software\GRYPHLINK\Launcher\*\install_path`（仅新版启动器有效），二者均未在本 PR 实施。
