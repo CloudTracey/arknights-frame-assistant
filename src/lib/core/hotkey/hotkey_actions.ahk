@@ -185,9 +185,9 @@ class KeyForward {
 }
 
 ; == 功能实现 ==
-; -- 常规作战 --
-; 按下暂停
 class HotkeyActions {
+    ; -- 常规作战 --
+    ; 按下暂停
     static ActionPressPause(ThisHotkey) {
         if !GuardInLevel("ActionPressPause", ThisHotkey)
             return
@@ -746,11 +746,10 @@ class HotkeyActions {
         PureKeyWait(ThisHotkey)
         try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
     }
-
-    ; == 工具函数 ==
-    ; 去除修饰符前缀
 }
 
+; == 工具函数 ==
+; 去除修饰符前缀
 PureKeyWait(ThisHotkey) {
     if (ThisHotkey == "")
         return
