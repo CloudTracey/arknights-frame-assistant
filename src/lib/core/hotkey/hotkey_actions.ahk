@@ -583,6 +583,9 @@ class HotkeyActions {
     }
     ; 一键静音：切换游戏音频会话的静音状态（按进程静音，语音软件等其他程序不受影响）
     static ActionMuteGame(ThisHotkey) {
+        ; 先停掉可能存在的「静音维持」巡检：若本次操作结果是取消静音或失败，
+        ; 巡检继续跑会把游戏重新静音，与用户意图相反
+        GameAudioMute.StopMuteWatch()
         pid := GameAudioMute.ResolveGamePid()
         if (!pid) {
             Logger.Warn("HotkeyActions", "ActionMuteGame 跳过：未找到游戏进程")
@@ -607,6 +610,9 @@ class HotkeyActions {
         } else {
             Logger.Info("HotkeyActions", "ActionMuteGame：pid=" pid " 会话数=" result.found
                 "，结果=" (result.muted ? "已静音" : "已取消静音"))
+            if (result.muted)
+                ; 静音生效后开启低频巡检：新插入设备 / 切换默认设备时自动保持静音
+                GameAudioMute.StartMuteWatch(pid)
             this._ShowMuteTip(result.muted ? I18n.T("已静音游戏音频") : I18n.T("已取消静音游戏音频"))
         }
         this._WaitMuteHotkey(ThisHotkey)

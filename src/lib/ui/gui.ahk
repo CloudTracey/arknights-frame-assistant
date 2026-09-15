@@ -399,8 +399,12 @@ class GuiManager {
 
         ; -- 快捷操作 --
         ; 快捷操作 - 左列（由 Schema 顺序生成，前半列）
+        ; 用 Floor 而非 Ceil 切分（与下方"卫戍协议"页一致）：项数为奇数时右列比左列多一行，
+        ; 新增热键项追加到 Schema 末尾会落在右列最下面，既有项的行列位置保持不变，
+        ; 下方说明文字锚定最后创建的控件（右列末行 = 全局最低点）自动下移，不会重叠；
+        ; 若左列多一行（Ceil 时）说明文字会与左列末行重叠。
         quickItems := this._GetSchemaItems("quick")
-        quickHalf := Ceil(quickItems.Length / 2)
+        quickHalf := Floor(quickItems.Length / 2)
         bindColX := 0
         Theme.Add(this.MainGui, "GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
         this.QuickControls.Push(this.MainGui["QuickLeftGroup"])
