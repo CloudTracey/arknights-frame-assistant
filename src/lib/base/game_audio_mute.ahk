@@ -120,23 +120,32 @@ class GameAudioMute {
         try {
             ; IMMDeviceEnumerator::GetDefaultAudioEndpoint（vtable 4）：取 eRender 默认端点
             hr := ComCall(4, pEnumerator, "Int", 0, "Int", role, "Ptr*", &pDevice, "Int")
-            if (hr != 0 || !pDevice)
+            if (hr != 0 || !pDevice) {
+                ; 端点/接口级失败必须计入失败，否则会被误报成"没有游戏音频会话"
+                this._Fail(stats, hr, "获取默认音频端点失败")
                 return
+            }
             ; IMMDevice::Activate（vtable 3）：激活 IAudioSessionManager2
             managerIid := this._GuidBuffer(this.IID_IAudioSessionManager2)
             hr := ComCall(3, pDevice, "Ptr", managerIid.Ptr, "UInt", this.CLSCTX_ALL, "Ptr", 0,
                 "Ptr*", &pManager, "Int")
-            if (hr != 0 || !pManager)
+            if (hr != 0 || !pManager) {
+                this._Fail(stats, hr, "激活 IAudioSessionManager2 失败")
                 return
+            }
             ; IAudioSessionManager2::GetSessionEnumerator（vtable 5）
             hr := ComCall(5, pManager, "Ptr*", &pSessionEnum, "Int")
-            if (hr != 0 || !pSessionEnum)
+            if (hr != 0 || !pSessionEnum) {
+                this._Fail(stats, hr, "获取音频会话枚举器失败")
                 return
+            }
             ; IAudioSessionEnumerator::GetCount（vtable 3）
             sessionCount := 0
             hr := ComCall(3, pSessionEnum, "Int*", &sessionCount, "Int")
-            if (hr != 0)
+            if (hr != 0) {
+                this._Fail(stats, hr, "获取音频会话数量失败")
                 return
+            }
             control2Iid := this._GuidBuffer(this.IID_IAudioSessionControl2)
             volumeIid := this._GuidBuffer(this.IID_ISimpleAudioVolume)
             Loop sessionCount {
@@ -152,11 +161,19 @@ class GameAudioMute {
                             ; IAudioSessionControl2::GetProcessId（在 IAudioSessionControl 基础上偏移，vtable 14）
                             sessionPid := 0
                             hr := ComCall(14, pControl2, "UInt*", &sessionPid, "Int")
-                            if (hr = 0 && sessionPid = pid) {
+                            if (hr != 0) {
+                                ; 无法判断是否属于目标进程（常见于已退出进程的残留会话、系统会话）。
+                                ; 只记日志不计数：别人的会话查不到，不代表静音游戏本身失败，
+                                ; 否则一个僵死会话就会让用户看到"静音失败"。
+                                Logger.Warn("GameAudioMute", "读取音频会话进程 ID 失败，HRESULT="
+                                    this._FormatHResult(hr))
+                            } else if (sessionPid = pid) {
                                 ; QueryInterface → ISimpleAudioVolume
                                 hr := ComCall(0, pControl2, "Ptr", volumeIid.Ptr, "Ptr*", &pVolume, "Int")
                                 if (hr = 0 && pVolume)
                                     this._ApplyToSession(pVolume, mode, stats)
+                                else if (hr != 0)
+                                    this._Fail(stats, hr, "获取会话音量接口失败")
                             }
                         }
                     }
@@ -215,8 +232,24 @@ class GameAudioMute {
         ; 回读确认写入结果，避免把失败的写入报成已生效
         after := 0
         hr := ComCall(6, pVolume, "Int*", &after, "Int")
-        if (hr = 0 && after)
+        if (hr != 0) {
+            ; 写入已成功但回读失败：不能把默认的 after=0 当成"未静音"报给用户
+            stats.failed++
+            stats.message := this._FormatHResult(hr)
+            Logger.Warn("GameAudioMute", "回读静音状态失败，HRESULT=" stats.message)
+            return
+        }
+        if (after)
             stats.mutedCount++
+    }
+
+    ; 功能：记录一次操作失败（累计计数 + 保存 HRESULT 文案 + 写日志）
+    ; 参数：stats - 累计统计对象；hr - 失败的 HRESULT；what - 失败环节描述
+    ; 返回：无
+    static _Fail(stats, hr, what) {
+        stats.failed++
+        stats.message := this._FormatHResult(hr)
+        Logger.Warn("GameAudioMute", what "，HRESULT=" stats.message)
     }
 
     ; 功能：把统计对象整理成对外结果对象
