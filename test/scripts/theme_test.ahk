@@ -1,4 +1,7 @@
 #Requires AutoHotkey v2.0
+; 加载期错误（缺 include、include 路径写错、语法错误）OnError 抓不到，只能靠 #ErrorStdOut 送 stderr，
+; 否则会弹窗阻塞自动化：见 docs/ahk_docs/lib/_ErrorStdOut.htm 与 docs/ahk_docs/lib/OnError.htm
+#ErrorStdOut "UTF-8"
 #Warn All, Off
 #Include ../../src/lib/base/hotkey_schema.ahk
 #Include ../../src/lib/base/constants.ahk
