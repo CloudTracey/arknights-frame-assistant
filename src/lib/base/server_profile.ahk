@@ -68,6 +68,8 @@ class ServerProfile {
     ; 从可执行文件完整路径推断区服。
     ; 返回对象：{serverId, company, product, registryRoot, source}
     ; 识别顺序：
+    ;  0. XelLauncher 链接运行环境（`.xel-linked-runtime\<...>\<渠道>\`）：渠道段目录名即权威渠道
+    ;     （Official→CN、Bilibili→BILI）；见 _DetectXelLinkedRuntime。
     ;  1. 安装目录特征（权威）：CN 与 BILI 共享 company/product，app.info 完全相同，
     ;     只有目录特征能区分渠道；其余区服的目录特征与 app.info 结果一致，先查不影响结论。
     ;  2. app.info（兜底）：目录被移动/重命名后仍可识别；命中 CN 的 app.info 与 BILI 语义等价
@@ -84,6 +86,19 @@ class ServerProfile {
             ; 于是校验被绕过，且后续第 3 步注册表兜底只看本机有没有某服按键设置、与传入路径无关，
             ; 会把 C:\Windows\System32 这类无关目录判成已安装的那个区服。
             return this._Unknown("", "")
+        }
+
+        ; 0. XelLauncher「硬链接共享运行环境」的渠道特征（最高优先级，见 _DetectXelLinkedRuntime）
+        xelServerId := this._DetectXelLinkedRuntime(exeDir)
+        if (xelServerId != "") {
+            profile := this.Get(xelServerId)
+            return {
+                serverId: xelServerId,
+                company: profile.Company,
+                product: profile.Product,
+                registryRoot: "HKCU\Software\" profile.Company "\" profile.Product,
+                source: "xel_linked_runtime"
+            }
         }
 
         ; 1. 安装目录特征（BILI 与 CN 共用 app.info，目录特征先行；按 Order 显式顺序遍历）
@@ -142,6 +157,47 @@ class ServerProfile {
 
         ; 4. 完全无法识别
         return this._Unknown("", "")
+    }
+
+    ; 识别 XelLauncher「硬链接共享运行环境」（.xel-linked-runtime）生成的运行目录，
+    ; 返回渠道对应的区服 id；不是这种布局时返回 ""（调用方继续走原有识别链）。
+    ;
+    ; 目录约定（Xel-Launcher Helpers/LinkedRuntimeService.GetRuntimePath）：
+    ;   <物理安装的父目录>\.xel-linked-runtime\<GameId>\<sharedRootId>\<渠道>\Arknights.exe
+    ;   - 容器名 .xel-linked-runtime 为源码常量；
+    ;   - GameId 固定为 Arknights，sharedRootId 为物理安装路径的哈希；
+    ;   - 渠道取自 GameChannelCatalog 的 Channel 字段：Official / Bilibili。
+    ;
+    ; 为什么必须按渠道段判定：渠道段的目录名是本次运行客户端渠道的权威身份。硬链接只覆盖
+    ; Arknights_Data 下内容一致的资源文件，Arknights.exe 与 SDK/config 等渠道差异文件是各渠道
+    ; 独立文件，因此运行目录归属只取决于渠道段，与祖先目录叫什么无关。
+    ; 而 path 上的目录特征（步骤 1）无法承担这个判定：物理安装为 B服 时其父目录名必然含
+    ; "Arknights bilibili"，官服渠道的运行目录路径也会带上该子串而被判成 BILI；且 CN 与 BILI 的
+    ; app.info 同为 HyperGryph/Arknights，靠 app.info 兜底也无法区分这两个渠道。
+    ;
+    ; 健壮性约定：只按**固定位置**取段（容器段之后第 3 段 = 渠道段），不做全路径子串匹配，
+    ; 否则祖先目录名会再次污染判定；渠道段名字变了或段数不足时返回 ""，回落既有识别链。
+    static _DetectXelLinkedRuntime(exeDir) {
+        if (exeDir = "" || !InStr(exeDir, ".xel-linked-runtime", false))
+            return ""
+        parts := StrSplit(exeDir, "\")
+        for index, part in parts {
+            if (part != "" && InStr(part, ".xel-linked-runtime", false)) {
+                ; 渠道段 = 容器段之后第 3 段：中间还有 GameId 与 sharedRootId 两段
+                channelIndex := index + 3
+                if (channelIndex > parts.Length)
+                    return ""
+                channel := parts[channelIndex]
+                if (channel = "")
+                    return ""
+                if (StrLower(channel) = "official")
+                    return "CN"
+                if (StrLower(channel) = "bilibili")
+                    return "BILI"
+                return ""
+            }
+        }
+        return ""
     }
 
     ; 从游戏目录（含 Arknights.exe 的目录）推断区服；传目录的调用方用这个方法
