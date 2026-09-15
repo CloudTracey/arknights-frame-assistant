@@ -88,8 +88,11 @@ class GameMonitor {
             }
         }
 
-        ; 自动开局暂停（运行时读 INI，同 AutoExit 理由）
-        if (Config.ReadImportantFromIni("AutoBeginPause") == "1" && GameTarget.IsActive()) {
+        ; 自动开局暂停 / 自动开局二倍速（运行时读 INI，同 AutoExit 理由）：
+        ; 两者共用同一套进关检测状态机（黑屏→Loading→倍速按钮），任一开启即进入检测。
+        autoPause := Config.ReadImportantFromIni("AutoBeginPause") == "1"
+        if ((autoPause || Config.ReadImportantFromIni("AutoBeginSpeed") == "1") && GameTarget.IsActive()) {
+            autoSpeed := Config.ReadImportantFromIni("AutoBeginSpeed") == "1"
             ; 寻找黑屏：遍历 17 个全屏采样点，允许 1 个点被游戏鼠标遮挡
             if (this._BlackScreenDetected == false) {
                 points := GameMonitor.BlackScreenPoints()
@@ -107,7 +110,7 @@ class GameMonitor {
                     }
                     if (missCount <= 1) {
                         this._BlackScreenDetected := true
-                        Logger.Info("GameMonitor", "检测到黑屏，可能是进入关卡前的加载，开始识别 Loading")
+                        Logger.Info("GameMonitor", "检测到黑屏，可能是进入关卡前的加载，开始识别 Loading（自动暂停=" (autoPause ? "开" : "关") "，自动二倍速=" (autoSpeed ? "开" : "关") "）")
                         this._ScheduleTimeout(-8000)
                         this.SetPollInterval(200)
                     }
@@ -141,7 +144,7 @@ class GameMonitor {
                             }
                         }
                         if (allWhite) {
-                            Logger.Info("GameMonitor", "识别到白色 Loading，准备自动暂停")
+                            Logger.Info("GameMonitor", "识别到白色 Loading，进入等待倍速按钮阶段")
                             this._ReadyForPause := true
                             this._ScheduleTimeout(0)
                             ; 缓存同一 bound 对象（本文件既定约定），否则每次新建对象会让 SetTimer 无法取消
@@ -161,7 +164,9 @@ class GameMonitor {
     ; 自动开局暂停：进入「等待倍速按钮」阶段（由 Loading 识别命中后延迟 2 秒调度）
     ; 像素/图像搜索全部走 Safe* 包装：窗口/桌面不可用时按未命中处理，不抛 OSError
     static ActionBeginPause() {
-        Logger.Info("GameMonitor", "自动暂停：等待倍速按钮")
+        autoPause := Config.ReadImportantFromIni("AutoBeginPause") == "1"
+        autoSpeed := Config.ReadImportantFromIni("AutoBeginSpeed") == "1"
+        Logger.Info("GameMonitor", "等待倍速按钮阶段开始（自动暂停=" (autoPause ? "开" : "关") "，自动二倍速=" (autoSpeed ? "开" : "关") "）")
         this._PauseWaitDeadline := A_TickCount + this.PauseWaitTimeoutMs
         this._PauseWaitTick()
     }
@@ -174,25 +179,25 @@ class GameMonitor {
         try {
             ; 游戏窗口消失 → 结束等待，避免 Safe 包装按未命中处理造成无限轮询
             if !GameTarget.Exists() {
-                Logger.Warn("GameMonitor", "自动暂停：等待倍速按钮期间游戏窗口已不存在")
+                Logger.Warn("GameMonitor", "等待倍速按钮：等待期间游戏窗口已不存在")
                 this._ResetPauseWait()
                 return
             }
             ; 游戏已不在前台：与 CheckGameStatus 的自动暂停前置条件保持一致。
             ; 继续等下去只会对着遮挡窗口做像素判断，既可能误命中（凭空注入一次暂停），也白占主线程。
             if !GameTarget.IsActive() {
-                Logger.Info("GameMonitor", "自动暂停：游戏已切出前台，放弃本次自动暂停")
+                Logger.Info("GameMonitor", "等待倍速按钮：游戏已切出前台，放弃本次检测")
                 this._ResetPauseWait()
                 return
             }
             if (A_TickCount > this._PauseWaitDeadline) {
-                Logger.Info("GameMonitor", "自动暂停：" (this.PauseWaitTimeoutMs // 1000) " 秒内未识别到倍速按钮，放弃本次自动暂停")
+                Logger.Info("GameMonitor", "等待倍速按钮：8 秒内未识别到倍速按钮，放弃本次检测")
                 this._ResetPauseWait()
                 return
             }
             PosC := SpeedButtonPositionColor()
             if !PosC {
-                Logger.Warn("GameMonitor", "自动暂停：游戏窗口不存在")
+                Logger.Warn("GameMonitor", "等待倍速按钮：游戏窗口不存在")
                 this._ResetPauseWait()
                 return
             }
@@ -200,34 +205,50 @@ class GameMonitor {
                 SetTimer this._PauseWaitTimerTick(), -this.PauseWaitIntervalMs
                 return
             }
-            GameKeys.SendDown("pauseBattle")
-            USleep(50)
-            GameKeys.SendUp("pauseBattle")
-            Logger.Info("GameMonitor", "自动暂停：已暂停")
+            Logger.Debug("GameMonitor", "等待倍速按钮：命中白色像素（x=" Round(FoundX) " y=" Round(FoundY) "），进入进关后处理")
+            autoPause := Config.ReadImportantFromIni("AutoBeginPause") == "1"
+            autoSpeed := Config.ReadImportantFromIni("AutoBeginSpeed") == "1"
+            if autoPause {
+                GameKeys.SendDown("pauseBattle")
+                USleep(50)
+                GameKeys.SendUp("pauseBattle")
+                Logger.Info("GameMonitor", "自动暂停：已暂停")
+            }
             ; 为了降低暂停延迟，后置代理指挥识别，识别到是代理指挥时取消暂停
             isProxy := false
             TobC := TakeOverButtonPositions()
             if !TobC {
-                Logger.Warn("GameMonitor", "自动暂停：游戏窗口不存在（代理指挥识别）")
+                Logger.Warn("GameMonitor", "等待倍速按钮：游戏窗口不存在（代理指挥识别）")
                 this._ResetPauseWait()
                 return
             }
             ; 接管代理按钮右侧边缘
-            if SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver1Path) or SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver2Path) {
+            takeoverHit := SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver1Path) || SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.RLX, TobC.ImageRegion.RUY, TobC.ImageRegion.RRX, TobC.ImageRegion.RDY, "*90 " FileExtractor.TakeOver2Path)
+            if takeoverHit
                 isProxy := true
-            }
             ; 接管代理按钮“手”图标拇指
-            if !SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.HLX, TobC.ImageRegion.HUY, TobC.ImageRegion.HRX, TobC.ImageRegion.HDY, "*90 " FileExtractor.TakeOver3Path) {
-                Logger.Debug("GameMonitor", "代理指挥判定：手图标识别失败")
+            handHit := SafeImageSearch(&OutputVarX, &OutputVarY, TobC.ImageRegion.HLX, TobC.ImageRegion.HUY, TobC.ImageRegion.HRX, TobC.ImageRegion.HDY, "*90 " FileExtractor.TakeOver3Path)
+            if !handHit
                 isProxy := false
+            Logger.Debug("GameMonitor", "代理指挥判定：接管按钮=" (takeoverHit ? "命中" : "未命中") "，手图标=" (handHit ? "命中" : "未命中") "，判定=" (isProxy ? "代理" : "非代理"))
+            if autoPause {
+                if isProxy {
+                    GameKeys.SendDown("pauseBattle")
+                    USleep(50)
+                    GameKeys.SendUp("pauseBattle")
+                    Logger.Info("GameMonitor", "代理指挥，取消暂停")
+                } else {
+                    Logger.Info("GameMonitor", "非代理指挥，保持暂停")
+                }
             }
-            if isProxy {
-                GameKeys.SendDown("pauseBattle")
-                USleep(50)
-                GameKeys.SendUp("pauseBattle")
-                Logger.Info("GameMonitor", "代理指挥，取消暂停")
+            ; 开局自动二倍速：非代理作战时盲切一次倍速（进关默认 1 倍速，切一次即 2 倍速）；
+            ; 代理作战沿用游戏自动节奏不干预，与自动暂停的代理排除策略保持一致。
+            if (autoSpeed && !isProxy) {
+                Logger.Debug("GameMonitor", "开局自动二倍速：开始注入倍速键（自动暂停=" (autoPause ? "开" : "关") "）")
+                GameKeys.Tap("changeSpeed")
+                Logger.Info("GameMonitor", "开局自动二倍速：已切换倍速")
             } else {
-                Logger.Info("GameMonitor", "非代理指挥，保持暂停")
+                Logger.Info("GameMonitor", "开局自动二倍速：跳过（二倍速开关=" (autoSpeed ? "开" : "关") "，代理判定=" (isProxy ? "代理" : "非代理") "）")
             }
             this._ResetPauseWait()
         } finally {

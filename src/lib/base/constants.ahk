@@ -4,6 +4,18 @@
 class Constants {
     static DefaultTabOrder := "keyBind,quick,strongHoldProtocol,customKeys,other"
 
+    ; 界面主题模式：唯一合法值集合与规范化规则（Config/Theme/GUI 共用，勿在别处重复定义）
+    static ThemeModes := ["auto", "light", "dark"]
+
+    ; 规范化主题模式：大小写不敏感，非法值回退 auto（纯函数，无外部依赖）
+    static NormalizeThemeMode(mode) {
+        mode := StrLower(mode)
+        for item in this.ThemeModes
+            if (item = mode)
+                return mode
+        return "auto"
+    }
+
     ; 延迟常量
     static Delay30 := 34      ; 30帧
     static Delay60 := 17      ; 60帧
@@ -45,6 +57,7 @@ class Constants {
         "GamePath", "游戏路径",
         "GamePathCN", "国服游戏路径",
         "GamePathBILI", "哔哩哔哩服游戏路径",
+        "GamePathTC", "繁中服游戏路径",
         "GamePathJP", "日服游戏路径",
         "GamePathKR", "韩服游戏路径",
         "GamePathEN", "国际服游戏路径",
@@ -57,10 +70,12 @@ class Constants {
         "TabOrder", "标签页顺序",
         "HiddenTabs", "隐藏的标签页",
         "AutoBeginPause", "开局自动暂停",
+        "AutoBeginSpeed", "开局自动二倍速",
         "BackCeaseOperations", "使用“返回上级菜单”放弃行动",
         "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键",
         "DebugEnabled", "显示调试日志控制台",
-        "Language", "界面语言"
+        "Language", "界面语言",
+        "ThemeMode", "界面主题"
     )
 
     ; 自定义设置名称映射

@@ -151,7 +151,7 @@ class LogExporter {
             lines.Push(key "=" value)
         lines.Push("")
         lines.Push("[Main]")
-        safeKeys := ["AutoExit", "AutoOpenSettings", "ExitOnWindowClose", "Frame", "Frame155", "AutoUpdate", "LastDismissedVersion", "LastLaunchedVersion", "UpdateChannel", "UpdateSource", "UseGitHubToken", "AutoRunGame", "AutoStartWithGame", "DismissedChangelogVersion", "DefaultStrongHoldProtocol", "AutoBeginPause", "DebugEnabled"]
+        safeKeys := ["AutoExit", "AutoOpenSettings", "ExitOnWindowClose", "Frame", "Frame155", "AutoUpdate", "LastDismissedVersion", "LastLaunchedVersion", "UpdateChannel", "UpdateSource", "UseGitHubToken", "AutoRunGame", "AutoStartWithGame", "DismissedChangelogVersion", "DefaultStrongHoldProtocol", "AutoBeginPause", "AutoBeginSpeed", "DebugEnabled"]
         for key in safeKeys
             lines.Push(key "=" Config.GetImportant(key))
         lines.Push("GamePath=" gamePath)

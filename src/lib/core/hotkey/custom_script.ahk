@@ -136,10 +136,11 @@ class CustomScriptEngine {
         y := Round(fy * ctx.wh)
         BlockInput "MouseMove"
         MouseMove x, y
+        USleep(TimingService.GetCurrentDelay())
         Send "{LButton Down}"
         MouseMove x, y
         Send "{LButton Up}"
-        USleep(40)
+        USleep(TimingService.GetCurrentDelay())
         MouseMove ctx.origX, ctx.origY
         BlockInput "MouseMoveOff"
     }

@@ -6,14 +6,6 @@ class KeyFormat {
     static VirtualNewkeyFormat(value) {
         if(value == "")
             return
-        ; 将<替换为L，>替换为R
-        value := RegExReplace(value, "<", "L")
-        value := RegExReplace(value, ">", "R")
-
-        ; 将修饰符!^+替换为完整名称
-        value := RegExReplace(value, "!", "ALT")
-        value := RegExReplace(value, "\^", "CTRL")
-        value := RegExReplace(value, "\+", "SHIFT")
 
         ; 提取CTRL、SHIFT、ALT修饰符
         hasLCTRL := false
@@ -22,8 +14,36 @@ class KeyFormat {
         hasRCTRL := false
         hasRSHIFT := false
         hasRALT := false
+        hasCTRL := false
+        hasSHIFT := false
+        hasALT := false
         hasMainkey := false
         mainkey := ""
+
+        ; 先从 AHK 内部格式中移除带侧别和通用修饰符，避免把 +c 直接替换成
+        ; SHIFTC 而丢失显示分隔符。命名键（如 CtrlBreak）不含符号，不会被误拆。
+        if InStr(value, "<^")
+            hasLCTRL := true, value := StrReplace(value, "<^", "")
+        if InStr(value, ">^")
+            hasRCTRL := true, value := StrReplace(value, ">^", "")
+        if InStr(value, "<+")
+            hasLSHIFT := true, value := StrReplace(value, "<+", "")
+        if InStr(value, ">+")
+            hasRSHIFT := true, value := StrReplace(value, ">+", "")
+        if InStr(value, "<!")
+            hasLALT := true, value := StrReplace(value, "<!", "")
+        if InStr(value, ">!")
+            hasRALT := true, value := StrReplace(value, ">!", "")
+        if InStr(value, "^")
+            hasCTRL := true, value := StrReplace(value, "^", "")
+        if InStr(value, "+")
+            hasSHIFT := true, value := StrReplace(value, "+", "")
+        if InStr(value, "!")
+            hasALT := true, value := StrReplace(value, "!", "")
+
+        ; 修饰键单独绑定时使用 <SHIFT/>SHIFT 等长名称，转成显示侧别后复用下方识别。
+        value := RegExReplace(value, "<", "L")
+        value := RegExReplace(value, ">", "R")
 
         ; 检查是否包含各修饰符
         if RegExMatch(value, "i)LCTRL") {
@@ -50,10 +70,10 @@ class KeyFormat {
             hasRALT := true
             value := RegExReplace(value, "i)RALT", "")
         }
-        if RegExMatch(value, "i).*") {
+        if value != "" {
             hasMainkey := true
             mainkey := value
-            value := RegExReplace(value, "i).*", "")
+            value := ""
         }
 
         ; 按CTRL > SHIFT > ALT > Mainkey顺序排列
@@ -61,14 +81,20 @@ class KeyFormat {
             value := value . "LCTRL+"
         if hasRCTRL
             value := value . "RCTRL+"
+        if hasCTRL
+            value := value . "CTRL+"
         if hasLSHIFT
             value := value . "LSHIFT+"
         if hasRSHIFT
             value := value . "RSHIFT+"
+        if hasSHIFT
+            value := value . "SHIFT+"
         if hasLALT
             value := value . "LALT+"
         if hasRALT
             value := value . "RALT+"
+        if hasALT
+            value := value . "ALT+"
         if hasMainkey
             value := value . mainkey
 

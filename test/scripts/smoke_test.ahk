@@ -1,4 +1,7 @@
 #Requires AutoHotkey v2.0
+; 加载期错误（缺 include、include 路径写错、语法错误）OnError 抓不到，只能靠 #ErrorStdOut 送 stderr，
+; 否则会弹窗阻塞自动化：见 docs/ahk_docs/lib/_ErrorStdOut.htm 与 docs/ahk_docs/lib/OnError.htm
+#ErrorStdOut "UTF-8"
 #Warn All, Off
 
 ; 冒烟测试骨架：
@@ -14,6 +17,7 @@
 #Include ../../src/lib/base/hotkey_schema.ahk
 #Include ../../src/lib/base/constants.ahk
 #Include ../../src/lib/base/config.ahk
+#Include ../../src/lib/base/theme.ahk
 #Include ../../src/lib/base/eventbus.ahk
 #Include ../../src/lib/base/i18n.ahk
 #Include ../../src/lib/base/changelog_format.ahk
@@ -61,75 +65,87 @@
 #Include ../../src/lib/ui/custom_key_editor.ahk
 #Include ../../src/lib/core/monitor/game_monitor.ahk
 
-; 骨架断言：关键类/函数应已定义（类名在 AHK v2 中可作为值访问）
-if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema) || !IsSet(I18n)
-    ExitApp 1
-if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyService)
-    ExitApp 1
-if !IsSet(StatusBarHints)
-    ExitApp 1
-if !IsSet(GameMonitor) || !IsSet(VersionUtils) || !IsSet(KeyFormat) || !IsSet(HotkeyActions)
-    ExitApp 1
-if !IsSet(SettingsService) || !IsSet(HotkeyConflictValidator)
-    ExitApp 1
-if !IsSet(CustomHotkeyStore) || !IsSet(CustomScriptEngine) || !IsSet(CustomKeyEditor)
-    ExitApp 1
-if !IsSet(ReleaseRepository) || !IsSet(GitHubTokenService) || !IsSet(ChangelogChecker)
-    ExitApp 1
+OnError(SmokeFailure)
+try {
+    ; 骨架断言：关键类/函数应已定义（类名在 AHK v2 中可作为值访问）
+    if !IsSet(Config) || !IsSet(Constants) || !IsSet(HotkeySchema) || !IsSet(I18n)
+        ExitApp 1
+    if !IsSet(GuiManager) || !IsSet(KeyBinder) || !IsSet(HotkeyService)
+        ExitApp 1
+    if !IsSet(StatusBarHints)
+        ExitApp 1
+    if !IsSet(GameMonitor) || !IsSet(VersionUtils) || !IsSet(KeyFormat) || !IsSet(HotkeyActions)
+        ExitApp 1
+    if !IsSet(SettingsService) || !IsSet(HotkeyConflictValidator)
+        ExitApp 1
+    if !IsSet(CustomHotkeyStore) || !IsSet(CustomScriptEngine) || !IsSet(CustomKeyEditor)
+        ExitApp 1
+    if !IsSet(ReleaseRepository) || !IsSet(GitHubTokenService) || !IsSet(ChangelogChecker)
+        ExitApp 1
 
-; ---- HotkeySchema 完整性校验 ----
-HotkeyService._BuildActionCallbacks()
+    ; ---- HotkeySchema 完整性校验 ----
+    HotkeyService._BuildActionCallbacks()
 
-; id 唯一 + 行为标志为布尔
-seenIds := Map()
-for item in HotkeySchema.Items {
-    if seenIds.Has(item.id)
-        ExitApp 1
-    seenIds[item.id] := true
-    if (item.guarded != true && item.guarded != false)
-        ExitApp 1
-    if (item.onUp != true && item.onUp != false)
-        ExitApp 1
-    if (item.noActivate != true && item.noActivate != false)
-        ExitApp 1
-}
-
-; ActionBindings 与 Schema 双向覆盖
-for id, _ in HotkeyService.ActionBindings {
-    if (HotkeySchema.GetItem(id) = "")
-        ExitApp 1
-}
-for item in HotkeySchema.Items {
-    if !HotkeyService.ActionBindings.Has(item.id)
-        ExitApp 1
-}
-
-; ActionCallbacks 数量与绑定一致，且行为标志与 Schema 一致
-if (HotkeyService.ActionCallbacks.Count != HotkeyService.ActionBindings.Count)
-    ExitApp 1
-for item in HotkeySchema.Items {
-    profile := HotkeyService.ActionCallbacks[item.id]
-    if (profile.HasOwnProp("Guarded") != item.guarded)
-        ExitApp 1
-    if (profile.HasOwnProp("OnUp") != item.onUp)
-        ExitApp 1
-    if (profile.HasOwnProp("NoActivate") != item.noActivate)
-        ExitApp 1
-}
-
-; 分组 Map 与 Schema 一致
-for group, constantsMap in Map("combat", Constants.CombatHotkeys, "quick", Constants.QuickHotkeys, "strongHold", Constants.StrongHoldHotkeys) {
-    schemaMap := HotkeySchema.GetGroupMap(group)
-    if (schemaMap.Count != constantsMap.Count)
-        ExitApp 1
-    for id, _ in schemaMap {
-        if !constantsMap.Has(id)
+    ; id 唯一 + 行为标志为布尔
+    seenIds := Map()
+    for item in HotkeySchema.Items {
+        if seenIds.Has(item.id)
+            ExitApp 1
+        seenIds[item.id] := true
+        if (item.guarded != true && item.guarded != false)
+            ExitApp 1
+        if (item.onUp != true && item.onUp != false)
+            ExitApp 1
+        if (item.noActivate != true && item.noActivate != false)
             ExitApp 1
     }
-}
 
-; 探针：确认没有顶层副作用把 Config.IniFile 提前初始化（应仍为空）
-if (Config.IniFile != "")
+    ; ActionBindings 与 Schema 双向覆盖
+    for id, _ in HotkeyService.ActionBindings {
+        if (HotkeySchema.GetItem(id) = "")
+            ExitApp 1
+    }
+    for item in HotkeySchema.Items {
+        if !HotkeyService.ActionBindings.Has(item.id)
+            ExitApp 1
+    }
+
+    ; ActionCallbacks 数量与绑定一致，且行为标志与 Schema 一致
+    if (HotkeyService.ActionCallbacks.Count != HotkeyService.ActionBindings.Count)
+        ExitApp 1
+    for item in HotkeySchema.Items {
+        profile := HotkeyService.ActionCallbacks[item.id]
+        if (profile.HasOwnProp("Guarded") != item.guarded)
+            ExitApp 1
+        if (profile.HasOwnProp("OnUp") != item.onUp)
+            ExitApp 1
+        if (profile.HasOwnProp("NoActivate") != item.noActivate)
+            ExitApp 1
+    }
+
+    ; 分组 Map 与 Schema 一致
+    for group, constantsMap in Map("combat", Constants.CombatHotkeys, "quick", Constants.QuickHotkeys, "strongHold", Constants.StrongHoldHotkeys) {
+        schemaMap := HotkeySchema.GetGroupMap(group)
+        if (schemaMap.Count != constantsMap.Count)
+            ExitApp 1
+        for id, _ in schemaMap {
+            if !constantsMap.Has(id)
+                ExitApp 1
+        }
+    }
+
+    ; 探针：确认没有顶层副作用把 Config.IniFile 提前初始化（应仍为空）
+    if (Config.IniFile != "" || Theme._Ready || Theme._SubclassPtr)
+        ExitApp 1
+
+    FileAppend("PASS: smoke contracts and no initialization`n", "*", "UTF-8")
+    ExitApp 0
+} catch as err
+    SmokeFailure(err)
+
+SmokeFailure(err, *) {
+    message := "FAIL: " err.Message " (line " err.Line ")`n"
+    try FileAppend(message, "**", "UTF-8")
+    try FileAppend(message, A_Temp "\AFA-smoke-test-error.txt", "UTF-8")
     ExitApp 1
-
-ExitApp 0
+}

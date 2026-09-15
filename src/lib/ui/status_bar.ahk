@@ -59,8 +59,11 @@ class StatusBarHints {
         this._CurrentText := ""
         this._LastTip := ""
         ; 主题色指示块（左下角）+ 说明文本（紧随其右，黑色）
-        this.SepLine := mainGui.Add("Text", "x0 y+-6 w28 h13 Background1994d2")
-        this.TextCtrl := mainGui.Add("Text", "x+4 yp-2 w660 cDefault", "")
+        this.SepLine := Theme.Add(mainGui, "Text", "x0 y+-6 w28 h13 BackgroundAccent")
+        this.TextCtrl := Theme.Add(mainGui, "Text", "x+4 yp-2 w660 cText", "")
+        ; 双缓冲（WS_EX_COMPOSITED）下系统按实际 Z 序合成，与对话框项按创建顺序绘制的约定不同；
+        ; 指示块与末尾 1×1 空白占位 Text（x0 白底）重叠，需显式置顶，否则占位会以白点浮在指示块上
+        GuiManager._SetOverlayZ(this.SepLine, 0)
         if !this._MsgRegistered {
             this._MsgRegistered := true
             OnMessage(0x0200, ObjBindMethod(this, "OnMouseMove"))
