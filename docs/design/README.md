@@ -8,7 +8,7 @@
 
 | 文件 | 什么时候读 | 内容 |
 |------|-----------|------|
-| [module_responsibilities.md](module_responsibilities.md) | 要改某个模块、找不到职责归属、新增模块时 | 启动流程（含行号）、四层架构、58 个模块的职责表 |
+| [module_responsibilities.md](module_responsibilities.md) | 要改某个模块、找不到职责归属、新增模块时 | 启动流程（按 `StartupMark` 语义标记定位）、四层架构、56 个模块的职责表 |
 | [key_designs_hotkey.md](key_designs_hotkey.md) | 改热键/注入/按键透传/关卡检测/多区服识别时 | 多区服与热路径预算、热键注册与拦截、关卡守卫与透传、帧开头轮询、InjectedPressKeys、GameKeys、冲突检测 |
 | [key_designs_base.md](key_designs_base.md) | 改配置/日志/诊断/更新/发布链路时 | Constants、Logger、调试控制台、Config 读写分离、EventBus 约定、自动开局暂停、双源更新、chcp 陷阱、钩子健康探针 |
 | [key_designs_ui.md](key_designs_ui.md) | 改 GUI 布局/主题/标签页/坐标换算时 | 脏值对比、主题生命周期、深色绘制与 Win32 边界、DPI 换算、Text 背景色、标签页管理器 |

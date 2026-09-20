@@ -34,9 +34,9 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 > 4. 配置写入只经 `SettingsService`；热键元数据只来自 `base/hotkey_schema.ahk`；`State` 类已删除，字段归唯一 owner。
 
 **启动流程**（`main.ahk` 的 `App.Bootstrap()`）：环境初始化 → 单例识别 → 非管理员 `*RunAs` 提权重启 → `Logger.Init()` → 各域 `Init()` → `SettingsService.Initialize()` 加载配置 → 随游戏自启校准 → 资源提取 → `GameKeys.Init()` → `HotkeyService.HotkeyOn()` → `HookHealth.Start()` → GUI 初始化 → 发布 `AppStartCompleted` → `GameMonitor.Start()` → Legacy 事件收尾。
-**三条顺序依赖**：`GameKeys.Init()` 必须在 `HotkeyOn()` **之前**；`HookHealth.Start()` 必须在 `HotkeyOn()` **之后**；`SingleInstance.Release()` 必须先于 `*RunAs` 重启。完整流程（含行号与每个调用）见 [module_responsibilities.md](docs/design/module_responsibilities.md#启动流程当前实现)。
+**三条顺序依赖**：`GameKeys.Init()` 必须在 `HotkeyOn()` **之前**；`HookHealth.Start()` 必须在 `HotkeyOn()` **之后**；`SingleInstance.Release()` 必须先于 `*RunAs` 重启。完整流程（按 `StartupMark` 语义标记定位，不写行号）见 [module_responsibilities.md](docs/design/module_responsibilities.md#启动流程当前实现)。
 
-**模块职责**（58 个 `.ahk` 的完整表）见 [module_responsibilities.md](docs/design/module_responsibilities.md#模块职责)。改某个模块前先查它，勿凭猜测扩写。
+**模块职责**（56 个 `.ahk` 的完整表）见 [module_responsibilities.md](docs/design/module_responsibilities.md#模块职责)。改某个模块前先查它，勿凭猜测扩写。
 
 ## 铁律速查（新代码必须遵守）
 
@@ -88,7 +88,6 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 | 约束 | 说明 |
 |------|------|
 | [不能用环境变量注入构造测试条件](docs/design/key_designs_base.md) | AFA 非管理员时 `*RunAs` 提权会**重建干净环境块**，`$env:X='1'` 全部丢失。需特定变量时先在已提权会话设好再启动；**测试结论必须能自证前提成立** |
-| [输入链冲突判据 = 症状，不是来源](docs/design/key_designs_base.md#键盘钩子健康探针) | Windows 无 API 枚举其它进程的低级钩子。用「物理按下未触发热键」+ `HookStarvationCount` 两个事实计数判读 |
 | [`#Warn All, Off` 抑制了全部警告](docs/design/ahk_v2_pitfalls.md) | 调试异常行为时不会看到警告输出，需手动排查 |
 
 ## 代码规范
@@ -102,5 +101,5 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 ## 版本号
 
 - **AFA**：在 `src/lib/base/version.ahk` 的 `Version.Number` 中定义，版本检查器通过 GitHub API 或国内源 CDN 对比此值与远程 release tag/version.json
-- **AHK**：当前为 v2.0.26，无需向用户确认
+- **AHK**：版本以 [CONTRIBUTING.md](CONTRIBUTING.md)「开发环境」为准（不复述数字，避免升级时两处不同步），无需向用户确认
 - **Windows**：跟随测试环境，自行获取，无需向用户确认

@@ -5,21 +5,26 @@
 
 ## 启动流程（当前实现）
 
-所有 `.ahk` 只定义、零顶层副作用；`src/main.ahk` 的 `#Include` 仅负责加载定义，启动由 `App.Bootstrap()` 显式执行。当前启动顺序（行号为 `src/main.ahk` 内位置）：
+所有 `.ahk` 只定义、零顶层副作用；`src/main.ahk` 的 `#Include` 仅负责加载定义，启动由 `App.Bootstrap()` 显式执行。
 
-1. **环境初始化**（`:104-127`）：`ListLines False`、`KeyHistory 200`、`ProcessSetPriority "High"`、`SendMode "Input"`、`SetKeyDelay -1,-1`、`A_MaxHotkeysPerInterval := 200` 且 `A_HotkeyInterval := 0`（详见 [ahk_v2_pitfalls.md](ahk_v2_pitfalls.md) 的热键频率阈值条）、`SetMouseDelay -1`、`SetWinDelay -1`、`SetDefaultMouseSpeed 0`、`SetTitleMatchMode 3`、`CoordMode "Mouse","Client"`、`timeBeginPeriod(1)`、`OnExit HandleAfaExit`。
+> **本流程用 `StartupMark("…")` 语义标记定位，不写行号**——行号会随任何一处增删而整体错位，而标记串只在阶段含义变化时才动。
+> 快速查看当前标记序列：`grep -n 'StartupMark(' src/main.ahk`。
+
+当前启动顺序：
+
+1. **环境初始化**（`App.Bootstrap()` 开头，`StartupMark` **之前**）：`ListLines False`、`KeyHistory 200`、`ProcessSetPriority "High"`、`SendMode "Input"`、`SetKeyDelay -1,-1`、`A_MaxHotkeysPerInterval := 200` 且 `A_HotkeyInterval := 0`（详见 [ahk_v2_pitfalls.md](ahk_v2_pitfalls.md) 的热键频率阈值条）、`SetMouseDelay -1`、`SetWinDelay -1`、`SetDefaultMouseSpeed 0`、`SetTitleMatchMode 3`、`CoordMode "Mouse","Client"`、`timeBeginPeriod(1)`、`OnExit HandleAfaExit`。
    注意：`#Warn All, Off` 抑制了所有 AHK 警告，调试时如遇异常行为需手动排查，不会看到警告输出。
-2. **单例识别**（`:131-144`）：`SingleInstance.Acquire()` 失败时，`--game-autostart` 触发则静默退出，手动重复启动则弹窗提示后退出（弹窗早于 `SettingsService.Initialize()`，故先按 INI 语言 `I18n.Init`）。
-3. **提权**（`:146-159`）：非管理员先 `SingleInstance.Release()` 让位互斥体，再以 `*RunAs` + `/restart`（并透传 `--game-autostart`）重启，随后退出本进程。
-4. **管理员进程日志**（`:161-165`）：`Logger.Init()`；记录脚本名与互斥体句柄。
-5. **初始化各域**（`:167-185`）：`Config.InitPath()` → `GameClientRegistry.Init()` → `LogExporter.Init()` → `InputChainEnv.Capture()` → `HotkeyActionsStart()` → `LevelDetector.Init()` → `KeyBinder.Start()` → `HotkeyService.Init()` → `TimingService.Init()` → `SettingsService.Init()` → `VersionChecker.Init()` → `Updater.Init()` → `ChangelogChecker.Init()` → `ChangelogUI.Init()` → `GameLauncher.Init()`。
-6. **加载设置**（`:187-199`）：`SettingsService.Initialize()` 加载配置；`Logger.RegisterSecret()` 注册 Token 与脚本路径；若 `Logger.PreviousAbnormalFile != ""`（上一会话异常退出）则提示导出诊断包。
-7. **随游戏自动启动校准**（`:201-214`）：`AppContext.SetStartedByGameAutoStart()` + `GameAutoStartManager.Reconcile()`；关闭该功能时若返回 `shouldExit` 则只清理任务并退出。
-8. **资源与游戏按键**（`:216-228`）：`FileExtractor.EnsureExtracted()` 提取嵌入资源；`GameKeys.Init()`（读注册表游戏按键 + 启动 10s 轮询定时器，**必须在 `HotkeyOn` 之前**）→ `HotkeyService.HotkeyOn()` 激活热键 → `HookHealth.Start()` 启动键盘钩子健康探针（**必须在 `HotkeyOn` 之后**，其监视键位表来自已注册热键）。
-9. **GUI 初始化**（`:230-246`）：发布 `ChangelogShowRequested` → `GuiManager.Start()`（含 Alt+F4 退出热键注册）→ `UpdateUI.Init()`；随游戏自启校准失败的托盘提示在此处（GUI 就绪后）只发一次。
-10. **启动收尾**（`:248-264`）：发布 `AppStartCompleted`（触发自动更新检查与游戏自动启动）→ `GameMonitor.Start()` → 发布 Legacy 事件 `SetSwitchKey`、`GuiUpdateHotkeyControls`、`GuiUpdateImportantControls`、`GuiUpdateCustomControls` 完成 GUI 初始化 → `StartupMark("")` 输出总耗时。
+2. **单例识别**（无标记）：`SingleInstance.Acquire()` 失败时，`--game-autostart` 触发则静默退出，手动重复启动则弹窗提示后退出（弹窗早于 `SettingsService.Initialize()`，故先按 INI 语言 `I18n.Init`）。
+3. **提权**（无标记）：非管理员先 `SingleInstance.Release()` 让位互斥体，再以 `*RunAs` + `/restart`（并透传 `--game-autostart`）重启，随后退出本进程。
+4. **管理员进程日志** — `StartupMark("日志初始化")`：`Logger.Init()`；记录脚本名与互斥体句柄。
+5. **初始化各域** — `StartupMark("模块初始化")`：`Config.InitPath()` → `GameClientRegistry.Init()` → `LogExporter.Init()` → `HotkeyActionsStart()` → `LevelDetector.Init()` → `KeyBinder.Start()` → `HotkeyService.Init()` → `TimingService.Init()` → `SettingsService.Init()` → `VersionChecker.Init()` → `Updater.Init()` → `ChangelogChecker.Init()` → `ChangelogUI.Init()` → `GameLauncher.Init()`。
+6. **加载设置** — `StartupMark("设置加载")`：`SettingsService.Initialize()` 加载配置；`Logger.RegisterSecret()` 注册 Token 与脚本路径；若 `Logger.PreviousAbnormalFile != ""`（上一会话异常退出）则提示导出诊断包。
+7. **随游戏自动启动校准** — `StartupMark("随游戏自动启动校准")`：`AppContext.SetStartedByGameAutoStart()` + `GameAutoStartManager.Reconcile()`；关闭该功能时若返回 `shouldExit` 则只清理任务并退出。
+8. **资源与游戏按键** — `StartupMark("资源提取")` 起，经 `StartupMark("游戏按键识别")`、`StartupMark("热键注册")`：`FileExtractor.EnsureExtracted()` 提取嵌入资源；`GameKeys.Init()`（读注册表游戏按键 + 启动 10s 轮询定时器，**必须在 `HotkeyOn` 之前**）→ `HotkeyService.HotkeyOn()` 激活热键 → `HookHealth.Start()` 启动键盘钩子健康探针（**必须在 `HotkeyOn` 之后**，其监视键位表来自已注册热键）。
+9. **GUI 初始化** — `StartupMark("GUI 初始化")`：发布 `ChangelogShowRequested` → `GuiManager.Start()`（含 Alt+F4 退出热键注册）→ `UpdateUI.Init()`；随游戏自启校准失败的托盘提示在此处（GUI 就绪后）只发一次。
+10. **启动收尾** — `StartupMark("启动收尾")` 至 `StartupMark("")`：发布 `AppStartCompleted`（触发自动更新检查与游戏自动启动）→ `GameMonitor.Start()` → 发布 Legacy 事件 `SetSwitchKey`、`GuiUpdateHotkeyControls`、`GuiUpdateImportantControls`、`GuiUpdateCustomControls` 完成 GUI 初始化 → `StartupMark("")` 输出总耗时。
 
-> 早期版本的 AGENTS.md 曾漏记 `GameClientRegistry.Init()`、`LogExporter.Init()`、`InputChainEnv.Capture()`、`HookHealth.Start()` 四个调用。以本文件为准。
+> 早期版本的 AGENTS.md 曾漏记 `GameClientRegistry.Init()`、`LogExporter.Init()`、`HookHealth.Start()` 三个调用。以本文件为准。
 
 ## 模块职责
 
@@ -74,7 +79,6 @@
 | `core/changelog/changelog_checker.ahk` | 更新公告检查。订阅 `ChangelogShowRequested`，构建 body（经 `ChangelogFormat.LocalizeBody` 裁剪语言）后发布 `ChangelogAvailable` |
 | `core/diagnostics/log_exporter.ahk` | 诊断压缩包导出（`LogExporter` 类）。`CreateArchiveInteractive()` 弹出文件保存对话框，收集所有日志 + 脱敏后的设置文件 + 诊断信息，通过 PowerShell 打包为 ZIP。`OpenLogDirectory()` 打开日志目录 |
 | `core/diagnostics/hook_health.ahk` | 键盘钩子存活探针与自愈（`HookHealth`）。详见 [key_designs_base.md](key_designs_base.md#键盘钩子健康探针) |
-| `core/diagnostics/input_chain_env.ahk` | 输入链环境快照（`InputChainEnv`，诊断用）。启动时采集一次（注册表 + 进程枚举属慢 IO），诊断导出只读内存字段。字段判读（`LowLevelHooksTimeout`/`HookStarvationCount`/自愈计数）见源码头部注释；**快照只给原始取值、不给「是否偏大」的判读**——判读属排查者职责，写进包会把结论前置且随认知过期 |
 
 ### ui 层（依赖 core/base）
 
