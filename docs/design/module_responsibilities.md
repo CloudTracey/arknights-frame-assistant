@@ -33,7 +33,7 @@
 |------|------|
 | `base/config.ahk`（含 `base/constants.ahk`、`base/hotkey_schema.ahk`） | 全局配置管理（`Config` 类；`Constants` 与 `HotkeySchema` 为独立类）。配置持久化到 `%AppData%\ArknightsFrameAssistant\PC\Settings.ini`。Config 用懒加载模式（`_IsLoaded` 标志位） |
 | `base/custom_hotkey_store.ahk` | `CustomHotkeys.json` 唯一 owner（自定义按键独立存储，与 Settings.ini 隔离）。UTF-8 JSON v2、写定式（键序固定 `key/name/func/arg/type`，func=按键功能码、arg=参数文本）+ 字符集白名单 + 严格正则读取；解析失败备份 `.bak` 并回退空列表（v1 脚本格式不迁移，按损坏处理）；写入走临时文件 + `ReplaceFileW` 原子替换；清空写空数组不删文件 |
-| `base/token_protector.ahk` | GitHub Token 的 Windows DPAPI 加密保护（`TokenProtector` 类）。`Protect()` 用 `CryptProtectData`（CurrentUser）加密并 Base64 编码，返回带 `dpapi:v1:` 前缀的存储值；`Unprotect()` 解密，无前缀值按旧版明文处理（供迁移）。内存缓冲用 `_SecureZero` 清零。由 `config.ahk` 的 `_ReadGitHubToken`/`_MigrateLegacyToken` 调用，加密值存于 `[Main]` 的 `GitHubTokenProtected` 键 |
+| `base/token_protector.ahk` | GitHub Token 的 Windows DPAPI 加密保护（`TokenProtector` 类）。`Protect()` 用 `CryptProtectData`（CurrentUser）加密并 Base64 编码，返回带 `dpapi:v1:` 前缀的存储值；`Unprotect()` 解密，无前缀值按旧版明文处理（供迁移）。内存缓冲用 `_SecureZero` 清零。由 `config.ahk` 的 `_ReadGitHubToken`/`MigrateGitHubToken`（启动时把旧版明文迁移为加密值）调用，加密值存于 `[Main]` 的 `GitHubTokenProtected` 键 |
 | `base/eventbus.ahk` | 发布/订阅事件总线，模块间解耦。事件清单见 [reference.md](reference.md#eventbus-事件清单) |
 | `base/file_extractor.ahk` | 管理编译时 `FileInstall` 嵌入资源的运行时提取。`EnsureExtracted()` 将 `logo.ico`（含大小校验防旧版残留）、三张 `TakeOverButton_*.png`（代理作战按钮图像）和关卡检测模板（保留备用，PixelSearch 方案不依赖）统一提取到 `%AppData%\ArknightsFrameAssistant\PC\resources\` |
 | `base/game_target.ahk` | 「当前目标游戏窗口」的唯一 owner：`Hwnd`/`Pid`/`ExePath`/`ServerId`。未绑定客户端实例时宽松回退旧语义 `ahk_exe Arknights.exe`（决策 D2），保证升级零回归、降级不弹窗；**禁止其他模块再直接写 `"ahk_exe Arknights.exe"`**。只持有状态与查询 API，绑定/仲裁由 `core/game/game_client_registry.ahk` 驱动 |

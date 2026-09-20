@@ -21,15 +21,14 @@
 
 | 事件 | 说明 |
 |------|------|
-| `HotkeyOn` / `HotkeyOff` | 热键总开关 |
+| `HotkeyOff` | 热键总关闭（`Legacy`）。**没有** `HotkeyOn` 事件——开启是 `HotkeyService.HotkeyOn()` 方法调用，勿当事件找 |
 | `HotkeyToggleRequested` | 请求切换热键开关 |
 | `HotkeyStateChanged` | 热键状态事实 |
 | `HotkeyGroupChanged` | 热键组切换事实 |
 | `SwitchHotkey` | 切换键触发 |
 | `SwitchKeyChanged` | 切换键变更事实 |
 | `SetSwitchKey` / `UnsetSwitchKey` | 切换键管理（`Legacy`） |
-| `KeyBindFocusSave` | 按键绑定保存 |
-| `KeyBindFocusCancel` | 按键绑定取消 |
+| `KeyBindFocusCancel` | 按键绑定取消（`Legacy`） |
 | `HotkeyBindingsChanged` | 按键绑定变更（触发冲突检测刷新） |
 | `GameKeysChanged` | 游戏按键映射变更（注册表轮询检出） |
 | `InLevelChanged` | 关卡内判定状态变更 |
@@ -84,5 +83,5 @@
 | `tools/layer_check.py` | `python -X utf8 tools/layer_check.py --baseline KNOWN_VIOLATIONS` | 涉及跨模块引用或 include 顺序的改动 |
 | `tools/event_contract_check.py` | `python -X utf8 tools/event_contract_check.py` | 涉及 `EventBus.Publish/Subscribe` 的改动（已接入 CI） |
 | `tools/i18n_check.py` | `python -X utf8 tools/i18n_check.py` | 涉及文案或语言资源的改动 |
-| `test/scripts/smoke_test.ahk` | 见 AGENTS.md「用 AHK 脚本做测试时的错误捕获」 | 涉及模块结构/include 的改动（include 全模块后验证无顶层副作用） |
-| `test/scripts/theme_test.ahk` | 同上 | 涉及主题逻辑的改动（`Theme.Resolve`/`Normalize` 与 `Constants.NormalizeThemeMode` 一致性断言） |
+| `test/scripts/smoke_test.ahk` | `AutoHotkey64.exe /ErrorStdOut "test/scripts/smoke_test.ahk"`（取错方式见 AGENTS.md「用 AHK 脚本做测试时的错误捕获」） | 涉及模块结构/include 的改动（include 全模块后验证无顶层副作用） |
+| `test/scripts/theme_test.ahk` | 同 smoke_test 的运行方式，仅换脚本路径 | 涉及主题逻辑的改动（`Theme.Resolve`/`Normalize` 与 `Constants.NormalizeThemeMode` 一致性断言） |
