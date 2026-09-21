@@ -211,12 +211,19 @@ class HotkeyActions {
         return true
     }
 
-    ; 按住周期结束：清掉该键的提示计数（下一次按住重新计）
+    ; 按住周期结束：清掉该键的提示计数与节流时间戳。
+    ; 两者必须一起清：间隔节流是"同一次按住内不刷屏"的手段；时间戳若跨周期保留，
+    ; 上一次按住的提示会压住下一次按住的**首条**提示（同样按住 30s 却不再报警）。
     static ResetHoldWarn(pureKey) {
-        if !this.HoldWarnCount.Has(pureKey)
-            return
-        try this.HoldWarnCount.Delete(pureKey)
-        catch UnsetItemError {
+        if (this.HoldWarnCount.Has(pureKey)) {
+            try this.HoldWarnCount.Delete(pureKey)
+            catch UnsetItemError {
+            }
+        }
+        if (this.HoldWarnTick.Has(pureKey)) {
+            try this.HoldWarnTick.Delete(pureKey)
+            catch UnsetItemError {
+            }
         }
     }
 
