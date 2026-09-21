@@ -14,29 +14,32 @@ HotkeyContext(hotkeyName) {
     pureKey := KeyForward.PureKeyName(hotkeyName)
     if (pureKey = "")
         return false
+    ; 单次 HotIf 求值计时：求值本身就发生在钩子判定路径上，主线程在此停留多久直接决定钩子会不会超时。
+    evalStart := Qpc()
+
     ; Up 变体（守卫补发型）：仅当该键的 down 已被 AFA 主热键处理过（DownHandled 有记录，无论守卫放行/拦截）
     ; 才放行补发 key up——覆盖失焦/拖出卡键；游戏外主热键不触发（down 透传）则不放行，物理 up 正常透传（打字不受影响）。
     if RegExMatch(hotkeyName, " Up$") {
         ; 补发 up 期间钩子会捕获 Send 注入的 up，若仍放行会递归触发 Up 变体无限循环（游戏外按键失灵）。
         ; 仅抑制同名键（键级作用域）——全局布尔会在多键同松时误挡其它键的 Up 变体（卡键），须按键判断。
         if KeyForward.SuppressUp.Has(pureKey)
-            return false
+            return HotkeyService._TraceEval(hotkeyName, pureKey, evalStart, false)
         if KeyForward.DownHandled.Has(pureKey)
-            return true
+            return HotkeyService._TraceEval(hotkeyName, pureKey, evalStart, true)
     }
     ; 鼠标键/滚轮：悬停判定
     if (pureKey ~= "i)^(lbutton|rbutton|mbutton|xbutton1|xbutton2|wheel)")
-        return IsMouseInClient()
+        return HotkeyService._TraceEval(hotkeyName, pureKey, evalStart, IsMouseInClient())
     ; 键盘键：优先使用热路径廉价校验（前台 hwnd→pid 与缓存比对）；
     ; 缓存未命中时回退旧语义并投递异步补识别，不在判定线程内做重 IO。
     if GameTarget.IsForegroundCached()
-        return true
+        return HotkeyService._TraceEval(hotkeyName, pureKey, evalStart, true)
     if WinActive(GameTarget.WinTitle()) {
         GameClientRegistry.ScheduleRefresh()
-        return true
+        return HotkeyService._TraceEval(hotkeyName, pureKey, evalStart, true)
     }
     ; 失焦悬停操作开关关闭后，键盘键仅当游戏为活动窗口时才触发
-    return HotkeyService.GetHoverOperate() && IsMouseInClient()
+    return HotkeyService._TraceEval(hotkeyName, pureKey, evalStart, HotkeyService.GetHoverOperate() && IsMouseInClient())
 }
 
 class HotkeyService {
@@ -58,10 +61,44 @@ class HotkeyService {
         return this._HoverOperate
     }
 
+    ; HotkeyContext 的统一出口：记录单次求值耗时，并在求值通过时记下"本次输入已交付"的起点。
+    ; 热路径预算：每次判定只多两次 QPC 读点（频率已由 Qpc() 内部 static 缓存）+ 最多一次 Map 写入。
+    static _TraceEval(hotkeyName, pureKey, evalStart, matched) {
+        elapsedMs := QpcMs(Qpc() - evalStart)
+        if (elapsedMs >= 0) {
+            this._EvalCount++
+            this._EvalTotalMs += elapsedMs
+            if (elapsedMs > this._EvalMaxMs)
+                this._EvalMaxMs := elapsedMs
+            if (elapsedMs >= this.EvalWarnThresholdMs && A_TickCount >= this._NextEvalWarnTick) {
+                this._NextEvalWarnTick := A_TickCount + this._TelemetryWarnCooldownMs
+                Logger.Warn("Hotkey", "HotIf 求值耗时异常：本次 " Round(elapsedMs, 1) "ms（阈值 " this.EvalWarnThresholdMs
+                    . "ms），hotkey=" hotkeyName "，key=" pureKey "，累计求值=" this._EvalCount "，峰值=" Round(this._EvalMaxMs, 1) "ms")
+            }
+        }
+        return matched
+    }
+
     ; 热键域内部状态
     static _ActiveTab := "keyBind"
     static _Group := "combatQuick"
     static _SwitchKey := ""
+
+    ; ---- 判定路径耗时观测（ctxEval）----
+    static _EvalCount := 0
+    static _EvalTotalMs := 0.0
+    static _EvalMaxMs := 0.0
+    static EvalWarnThresholdMs := 50    ; 单次 HotIf 求值超过此值记 WARN（阈值 50ms，远离系统钩子超时红线）
+    static _NextEvalWarnTick := 0
+    static _TelemetryWarnCooldownMs := 10000
+
+    ; 键位集合变更后通知探针立即重建监视表。
+    ; 必须即时：定时刷新间隔 5s，而 HotkeyOff/EnableByTab 会立刻清空 ActiveHotkeys；
+    ; 若探针在此期间仍盯着已注销的键，就会为一次"本不该有回调"的按下建档，宽限期后误报未触发。
+    ; 直接调用而非发事件：只有探针一个消费者，发事件会让"热键已重建"与"探针开始监视"的先后不确定。
+    static _NotifyWatchKeysChanged() {
+        HookHealth.RefreshWatchKeysNow()
+    }
 
     ; 初始化热键服务
     static Init() {
@@ -327,6 +364,7 @@ class HotkeyService {
         this._BuildCustomProfiles()
         this._EnableCustomGroup("combatQuick")
         this._EnableCustomGroup("all")
+        this._NotifyWatchKeysChanged()
         Logger.Info("Hotkey", "热键已启用，数量=" this.ActiveHotkeys.Count ", 明细: " this._BuildDetailList(Constants.KeyNames))
     }
 
@@ -344,6 +382,7 @@ class HotkeyService {
         KeyForward.InterceptedKeys.Clear()
         GameKeys.InjectedPressKeys.Clear()
         HotIf
+        this._NotifyWatchKeysChanged()
         if !silent
             Logger.Info("Hotkey", "热键已禁用")
     }
@@ -361,6 +400,7 @@ class HotkeyService {
             }
         }
         HotIf
+        this._NotifyWatchKeysChanged()
     }
 
     ; 禁用指定组的热键
@@ -386,6 +426,7 @@ class HotkeyService {
             }
         }
         HotIf
+        this._NotifyWatchKeysChanged()
     }
 
     ; 构建热键明细列表（用于日志）
@@ -464,6 +505,7 @@ class HotkeyService {
             }
         }
         HotIf
+        this._NotifyWatchKeysChanged()
     }
 
     ; 构建自定义按键明细列表（用于日志）
