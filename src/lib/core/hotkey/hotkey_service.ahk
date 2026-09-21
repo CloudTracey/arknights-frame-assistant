@@ -61,8 +61,8 @@ class HotkeyService {
         return this._HoverOperate
     }
 
-    ; HotkeyContext 的统一出口：记录单次求值耗时，并在求值通过时记下"本次输入已交付"的起点。
-    ; 热路径预算：每次判定只多两次 QPC 读点（频率已由 Qpc() 内部 static 缓存）+ 最多一次 Map 写入。
+    ; HotkeyContext 的统一出口：记录单次求值耗时（ctxEval），并原样回传递给调用方的判定结果。
+    ; 热路径预算：每次判定只多两次 QPC 读点（频率已由 Qpc() 内部 static 缓存）。
     static _TraceEval(hotkeyName, pureKey, evalStart, matched) {
         elapsedMs := QpcMs(Qpc() - evalStart)
         if (elapsedMs >= 0) {
