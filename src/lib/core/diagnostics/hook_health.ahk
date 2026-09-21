@@ -23,13 +23,18 @@ class HookHealth {
                                       ; 过短会在激活路径耗时较长时把真实触发误判为未触发。
     static MissWarnCooldownMs := 5000 ; 同键误报节流：记录"未触发"告警后，该键短时间内不再重复告警，
                                       ; 避免按住连打时按一次刷一条
-    static MissThreshold := 3         ; 连续多少次未命中判定为钩子失效
+    static MissThreshold := 5         ; 连续多少次未命中判定为钩子失效。
+                                      ; 原为 3：太少——动作本身耗时长（失焦悬停激活、触控注入段）会拉长宽限期附近的判定，
+                                      ; 抬高阈值换更低的误报率；代价是真失效时多按两次键才触发自愈。
     static FireRaceWindowMs := 250    ; 按下沿与回调之间的竞态窗口：
                                       ; 探针 100ms 轮询晚于钩子回调，按下瞬间回调可能先跑、
                                       ; 探针后采样（档时快照已含本次回调计数），3000ms 后计数值不再
                                       ; 增长而误判"未触发"。窗口内已回调的按下直接视为命中、不建档。
     static WatchRefreshMs := 5000     ; 监视键位表刷新间隔（纯内存，无 IO）
-    static RecoverCooldownMs := 5000  ; 两次自愈之间的最小间隔，避免异常持续时反复重装钩子
+    static RecoverCooldownMs := 30000 ; 两次自愈之间的最小间隔，避免异常持续时反复重装钩子。
+                                      ; 原为 5s：Force 重装会**抢占其它进程已安装钩子的优先级**（见 _OnSuspected），
+                                      ; 若真实原因是"输入被前置钩子吞掉"而非"钩子被摘除"，反复自愈只会把冲突搅得更乱，
+                                      ; 故拉长到 30s，把抢占动作压到最低频率。
     static AutoRecover := true        ; 已确认故障模式为钩子被系统摘除，默认开启自愈
 
     ; ---- 运行时状态 ----
@@ -41,6 +46,9 @@ class HookHealth {
     static _FireTotal := 0            ; 全部热键回调累计次数
     static _LastFireTick := Map()     ; pureKey -> 该键最近一次回调时刻（按键隔离的命中判据，
                                       ; 兼作按下沿竞态窗口判定）
+    static _LastUpEdge := Map()       ; pureKey -> 该键最近一次**抬起被采样到**的时刻。
+                                      ; 竞态判定必须用它当基准（见 _SamplePhysicalKeys），不能用按下沿：
+                                      ; 按下与热键回调几乎同时发生，而探针 100ms 才采一次，比较"谁更晚"不可靠。
     static _LastPressEdge := Map()    ; pureKey -> 该键最近一次**按下沿被采样到**的时刻。
                                       ; 竞态判定用它区分"回调属于本次按下还是上一次按下"——
                                       ; 快速连按（<250ms）时上一次的回调不应抑制本次建档
@@ -57,13 +65,57 @@ class HookHealth {
     static _RecoverCount := 0
     static _Suspected := false
     static _Started := false
+    ; ---- 探针自证计数（按纯键名累计，供快照 probe=[…] 与未命中 WARN 引用）----
+    ; 判读式：arm ≈ cleared + miss + discard + watchDrop。
+    ; 各字段含义：arm 建档 / raceSkip 因"回调已发生且尚未观测到抬起"跳过建档 / cleared 被回调清掉 /
+    ; miss 超时判未触发 / discard 结算时前提失效（切窗、光标移出）/ watchDrop 该键已不在监视表。
+    static _ProbeStats := Map()
+
+    static _BumpProbe(pureKey, field) {
+        if !this._ProbeStats.Has(pureKey)
+            this._ProbeStats[pureKey] := {arm: 0, raceSkip: 0, cleared: 0, miss: 0, discard: 0, watchDrop: 0}
+        stats := this._ProbeStats[pureKey]
+        stats.%field% += 1
+    }
+
+    static _ProbeKeyStats(pureKey) {
+        if !this._ProbeStats.Has(pureKey)
+            return "arm=0,cleared=0"
+        stats := this._ProbeStats[pureKey]
+        return "arm=" stats.arm ",raceSkip=" stats.raceSkip ",cleared=" stats.cleared
+            . ",miss=" stats.miss ",discard=" stats.discard ",watchDrop=" stats.watchDrop
+    }
+
+    static _ProbeSnapshot() {
+        parts := ""
+        for key, stats in this._ProbeStats {
+            parts .= (parts = "" ? "" : " ") key "(arm=" stats.arm ",raceSkip=" stats.raceSkip
+                . ",cleared=" stats.cleared ",miss=" stats.miss ",discard=" stats.discard
+                . ",watchDrop=" stats.watchDrop ")"
+        }
+        return (parts = "" ? "(无)" : parts)
+    }
+
+    ; 该纯键名当前是否仍在监视表里（表是 vk -> pureKey，故按键名反查）
+    static _IsWatchedKey(pureKey) {
+        for _, watchedKey in this._WatchKeys {
+            if (watchedKey = pureKey)
+                return true
+        }
+        return false
+    }
+
+    ; 当前前台窗口句柄（建档时留档，结算时比对：换过窗口就作废该次观测）
+    static _ForegroundHwnd() {
+        return DllCall("GetForegroundWindow", "Ptr")
+    }
 
     ; 启动探针（由 App.Bootstrap 在 HotkeyOn 之后调用，保证 ActiveHotkeys 已就绪）
     static Start() {
         if (this._Started)
             return
         this._Started := true
-        this._RefreshWatchKeys()
+        this._RebuildWatchKeys()
         if (this._Timer = "")
             this._Timer := HookHealth._Poll.Bind(HookHealth)
         SetTimer this._Timer, this.PollIntervalMs
@@ -129,9 +181,10 @@ class HookHealth {
     ; ---- 采样主循环 ----
     static _Poll() {
         now := A_TickCount
-        if (now >= this._NextWatchTick) {
-            this._NextWatchTick := now + this.WatchRefreshMs
-            this._RefreshWatchKeys()
+        ; 立即刷新会把 _NextWatchTick 推后（见 RefreshWatchKeysNow），故用 > 0 判定是否已安排
+        if (this._NextWatchTick > 0 && now >= this._NextWatchTick) {
+            this._NextWatchTick := 0
+            this._RebuildWatchKeys()
         }
         this._SamplePhysicalKeys(now)
         this._ResolvePending(now)
@@ -148,33 +201,38 @@ class HookHealth {
             isDown := (DllCall("GetAsyncKeyState", "Int", vk, "Short") & 0x8000) != 0
             wasDown := this._PrevDown.Has(vk) && this._PrevDown[vk]
             this._PrevDown[vk] := isDown
-            if (!isDown || wasDown)
+            if (!isDown) {
+                ; 观测到抬起：记下来，作为"新的一次按下"的判据基准（见下面的竞态判定）
+                if (wasDown)
+                    this._LastUpEdge[pureKey] := now
+                continue
+            }
+            if (wasDown)
                 continue
             ; 新的物理按下沿：只在"本应触发热键"的条件下建档，避免误报
             if (!this._ShouldArm(pureKey))
                 continue
-            ; 按下-回调竞态窗口：探针 100ms 轮询必然晚于钩子回调。若本键刚发生过回调
-            ; （距现在 < FireRaceWindowMs），说明本次按下的回调已先于采样执行——
-            ; 此时快照计数已含本次回调，再建档会在宽限期后误判"未触发"——直接视为命中、不建档。
-            ; 判定必须双重限定，缺一不可：
-            ;   (a) 回调时刻晚于**上一次**按下沿（_LastPressEdge）——否则它属于上一次按下，
-            ;       快速连按时会把这个"上一次的回调"误当成"本次按下的证据"，
-            ;       钩子在 250ms 内失效时本次按下将被漏检（审查 PR #351 指出的正确缺陷）；
-            ;   (b) now - 回调 < 竞态窗口——正常一次按键按-回调间隔在 100ms 采样内。
-            ; 钩子真正失效时 _LastFireTick 冻结在失效前（不会晚于本次按下沿），
-            ; 本次按下正常建档、宽限后正常报 WARN，检测能力不受影响；
-            ; ~ 透传键（无 Up 变体、松开无回调）正是靠本逻辑消除误报。
-            prevEdge := this._LastPressEdge.Get(pureKey, 0)
+            ; 按下-回调竞态窗口：探针 100ms 轮询必然晚于钩子回调，故不能比较"回调与按下沿谁更晚"。
+            ; 判据改为：该键若刚发生过回调、且**自那以后我们还没见过它抬起**，说明这次按下就是那次
+            ; 回调的来源，本次不该再建档（否则宽限期后无人清理，必然误报"未触发热键"）。
+            ; 以"上次观测到抬起"为基准与采样快慢无关；漏掉抬起只会导致"本次不建档"（不误报），
+            ; 不会削弱真失效的检测——那时回调计数长期不增长，下一次可辨识的按下仍会建档并如实报 miss。
+            lastUp := this._LastUpEdge.Get(pureKey, 0)
             this._LastPressEdge[pureKey] := now
             lastFire := this._LastFireTick.Get(pureKey, 0)
-            if (lastFire != 0 && lastFire > prevEdge && now - lastFire < this.FireRaceWindowMs)
+            if (lastFire != 0 && lastFire > lastUp) {
+                this._BumpProbe(pureKey, "raceSkip")
                 continue
+            }
             ; 记录按下瞬间的 idleKbd 备查。注意：钩子未安装时 A_TimeIdleKeyboard 会退化为 A_TimeIdle，
             ; 纯键盘输入下两种情况数值都接近 0，故**不能单看此值判定钩子存活**，
             ; 真正的判据是快照里 idle/idleKbd/idlePhys 三值是否恒等。
             ; fire：本次**按下时刻**该键的累计回调计数快照。结算时与之比较（而非用 Has 判断"曾触发"）——
             ; Has 会因该键历史上触发过而永远为真，导致钩子真失效后每次按下都被误判为命中、永不计 miss。
-            this._Pending[vk] := {tick: now, key: pureKey, idleKbd: A_TimeIdleKeyboard, fire: this._FireByKey.Get(pureKey, 0)}
+            ; fgHwnd：同步留档前台窗口，结算时比对（换过窗口则作废该次观测）。
+            this._Pending[vk] := {tick: now, key: pureKey, idleKbd: A_TimeIdleKeyboard
+                , fire: this._FireByKey.Get(pureKey, 0), fgHwnd: this._ForegroundHwnd()}
+            this._BumpProbe(pureKey, "arm")
         }
     }
 
@@ -195,7 +253,7 @@ class HookHealth {
     ; 命中判定完全按键隔离（NoteFire 里已按同键即时结算），此处只处理超时未决项。
     ; 误报防护：告警冷却状态保存在键级持久表 _LastWarnTick（不随 _Pending 短生命周期销毁），
     ; 同键在冷却窗口内不再重复告警，避免按住连打时按一次刷一条。
-    static _ResolvePending(now) {
+    static _ResolvePending(now, ignorePointerPrecondition := false) {
         if (this._Pending.Count = 0)
             return
         settled := []
@@ -209,8 +267,29 @@ class HookHealth {
                 settled.Push(vk)
                 continue
             }
+            ; 该键已不在监视表（热键被禁用/该分组被注销）⇒ 作废：没有回调是**正确**的，
+            ; 前提已不存在。与键位集合变更时的即时刷新配套，作为第二道防线。
+            if !this._IsWatchedKey(info.key) {
+                this._BumpProbe(info.key, "watchDrop")
+                settled.Push(vk)
+                continue
+            }
             if (this._Depth > 0)
                 continue                    ; 同键重入被 MaxThreadsPerHotkey 正常屏蔽，不算异常
+            ; 前台窗口变了 ⇒ 作废本次观测：热键是否该触发取决于前台（HotkeyContext），
+            ; 建档时成立、结算时已失效的前提，不能再用来判"未触发"（否则切窗即误报）。
+            if (info.HasOwnProp("fgHwnd") && info.fgHwnd != this._ForegroundHwnd()) {
+                this._BumpProbe(info.key, "discard")
+                settled.Push(vk)
+                continue
+            }
+            ; 同理：鼠标键的触发前提是"光标在游戏客户区内"（HotkeyContext 的鼠标键分支）。
+            ; 建档后把光标移出游戏窗口，热键同样按设计不触发——也不能记未命中。
+            if (!ignorePointerPrecondition && IsMouseKey(info.key) && !IsMouseInClient()) {
+                this._BumpProbe(info.key, "discard")
+                settled.Push(vk)
+                continue
+            }
             lastWarn := this._LastWarnTick.Get(info.key, 0)
             if (lastWarn != 0 && now - lastWarn < this.MissWarnCooldownMs)
                 continue                    ; 冷却期内不重复告警
@@ -218,10 +297,12 @@ class HookHealth {
             this._LastWarnTick[info.key] := now
             this._MissTotal++
             this._MissStreak++
+            this._BumpProbe(info.key, "miss")
             Logger.Warn("HookHealth", "物理按下未触发热键：key=" info.key
                 . "，按下瞬间 idleKbd=" info.idleKbd "ms"
                 . "，监听 " this.PendingGraceMs "ms 内无对应回调"
-                . "，连续未命中=" this._MissStreak "，累计=" this._MissTotal)
+                . "，连续未命中=" this._MissStreak "，累计=" this._MissTotal
+                . "，该键自证=" this._ProbeKeyStats(info.key))
             if (this._MissStreak >= this.MissThreshold)
                 this._OnSuspected()
         }
@@ -257,9 +338,14 @@ class HookHealth {
         this._RecoverCount++
         ; ahk_docs/lib/InstallKeybdHook.htm：Force=true 会卸载并重装钩子，
         ; "If the system has stopped calling the hook due to an unresponsive program, reinstalling the hook might get it working again."
+        ; 但同一段文档也写明该动作 "has the effect of giving it precedence over any hooks previously installed by other processes"——
+        ; 即自愈对"输入被前置钩子吞掉"这类冲突是**反向操作**，故日志必须把这句话说清楚，便于事后对照冲突时间线。
+        Logger.Warn("HookHealth", "钩子自愈：已强制重装键盘钩子并抢占优先级（第 " this._RecoverCount " 次）"
+            . "——若真实原因是输入被其它进程的前置钩子吞掉，本操作会改变钩子链优先级顺序；"
+            . "连续未命中=" this._MissStreak "，冷却=" this.RecoverCooldownMs "ms，累计自愈=" this._RecoverCount)
         try {
             InstallKeybdHook(true, true)
-            Logger.Warn("HookHealth", "已重装键盘钩子（第 " this._RecoverCount " 次自愈），热键应即刻恢复")
+            Logger.Warn("HookHealth", "钩子自愈完成（第 " this._RecoverCount " 次自愈），热键应即刻恢复")
         } catch Error as e {
             Logger.Exception("HookHealth", e, "重装键盘钩子失败")
         }
@@ -281,11 +367,24 @@ class HookHealth {
         return "idle=" A_TimeIdle ", idleKbd=" A_TimeIdleKeyboard ", idlePhys=" A_TimeIdlePhysical
             . ", fire=" this._FireTotal ", miss=" this._MissTotal "/" this._MissStreak
             . ", depth=" this._Depth "(max " this._MaxDepth ")"
+            . ", recover=" this._RecoverCount
+            . ", ctxEval=" this._FmtMs(HotkeyService._EvalMaxMs) "/" this._FmtMs(this._AvgMs(HotkeyService._EvalTotalMs, HotkeyService._EvalCount)) "ms(max/avg, n=" HotkeyService._EvalCount ")"
+            . ", probe=[" this._ProbeSnapshot() "]（arm≈cleared+miss+discard+watchDrop 为正常）"
             . ", inflight=[" this._InFlightNames() "]"
             . ", SuppressUp=[" this._KeyList(KeyForward.SuppressUp) "]"
             . ", DownHandled=[" this._KeyList(KeyForward.DownHandled) "]"
             . ", Intercepted=[" this._KeyList(KeyForward.InterceptedKeys) "]"
             . ", InjectedPress=[" this._KeyList(GameKeys.InjectedPressKeys) "]"
+    }
+
+    static _AvgMs(totalMs, count) {
+        return count > 0 ? totalMs / count : 0
+    }
+
+    ; 耗时统一一位小数定长输出（直接拼浮点会输出 0.30000000000000004 这类噪声；
+    ; 而按整数值拼接又会时而是 "0" 时而是 "0.0"，事后解析不稳定）
+    static _FmtMs(valueMs) {
+        return Format("{:.1f}", valueMs)
     }
 
     static _InFlightNames() {
@@ -309,8 +408,16 @@ class HookHealth {
         return parts
     }
 
+    ; 键位集合刚发生变化（热键启用/禁用/分组重建）时由 HotkeyService 调用，立即重建监视表。
+    ; 必须即时：定时刷新间隔是 5s，而 HotkeyOff/EnableByTab 会**立刻**清空 ActiveHotkeys；
+    ; 若探针在此期间仍盯着已注销的键，就会为一次"本不该有回调"的按下建档，宽限期后误报未触发。
+    static RefreshWatchKeysNow() {
+        this._RebuildWatchKeys()
+        this._NextWatchTick := A_TickCount + this.WatchRefreshMs
+    }
+
     ; 监视键位表 = 当前已注册热键的纯键名（纯内存读取 HotkeyService.ActiveHotkeys，无 INI IO）
-    static _RefreshWatchKeys() {
+    static _RebuildWatchKeys() {
         next := Map()
         for _, hotkeyValue in HotkeyService.ActiveHotkeys {
             pureKey := KeyForward.PureKeyName(hotkeyValue)
@@ -333,7 +440,22 @@ class HookHealth {
             if (!next.Has(vk))
                 stale.Push(vk)
         }
-        for vk in stale
-            this._PrevDown.Delete(vk)
+        for vk in stale {
+            if (this._PrevDown.Has(vk))
+                this._PrevDown.Delete(vk)
+        }
+        ; 键位下线后其抬起记录不再有意义，顺手清理，避免 Map 无界增长
+        if (this._LastUpEdge.Count > 0) {
+            known := Map()
+            for _, pureKey in next
+                known[pureKey] := true
+            for key, _ in this._LastUpEdge {
+                if !known.Has(key) {
+                    try this._LastUpEdge.Delete(key)
+                    catch UnsetItemError {
+                    }
+                }
+            }
+        }
     }
 }
