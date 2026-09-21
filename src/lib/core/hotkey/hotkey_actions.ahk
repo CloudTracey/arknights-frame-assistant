@@ -186,6 +186,47 @@ class KeyForward {
 
 ; == 功能实现 ==
 class HotkeyActions {
+    ; ---- 长按提示（PureKeyWait 用）----
+    ; 放在类级而非 PureKeyWait 的函数级 static：函数级 static 外部不可见，诊断脚本无法断言。
+    static HoldWarnFirstMs := 30000      ; 首次长按提示的按住时长门槛
+    static HoldWarnIntervalMs := 60000   ; 之后每隔多久再提示一次
+    static HoldWarnMaxPerHold := 3       ; 每键每按住周期最多提示条数
+    static HoldWarnTotal := 0            ; 累计提示条数（观测用，不参与判定）
+    static HoldWarnCount := Map()        ; 每键本按住周期已提示次数
+    static HoldWarnTick := Map()         ; 每键上次提示时刻
+
+    ; 是否应就"等待物理松开过久"提示一次（节流：首条门槛 + 间隔 + 每周期上限）；
+    ; 需要提示时顺手记一次并返回 true，调用方据此落 WARN。
+    static NoteHoldWarn(pureKey, heldMs) {
+        if (heldMs < this.HoldWarnFirstMs)
+            return false
+        if (this.HoldWarnCount.Get(pureKey, 0) >= this.HoldWarnMaxPerHold)
+            return false
+        lastTick := this.HoldWarnTick.Get(pureKey, 0)
+        if (lastTick != 0 && A_TickCount - lastTick < this.HoldWarnIntervalMs)
+            return false
+        this.HoldWarnTick[pureKey] := A_TickCount
+        this.HoldWarnCount[pureKey] := this.HoldWarnCount.Get(pureKey, 0) + 1
+        this.HoldWarnTotal += 1
+        return true
+    }
+
+    ; 按住周期结束：清掉该键的提示计数与节流时间戳。
+    ; 两者必须一起清：间隔节流是"同一次按住内不刷屏"的手段；时间戳若跨周期保留，
+    ; 上一次按住的提示会压住下一次按住的**首条**提示（同样按住 30s 却不再报警）。
+    static ResetHoldWarn(pureKey) {
+        if (this.HoldWarnCount.Has(pureKey)) {
+            try this.HoldWarnCount.Delete(pureKey)
+            catch UnsetItemError {
+            }
+        }
+        if (this.HoldWarnTick.Has(pureKey)) {
+            try this.HoldWarnTick.Delete(pureKey)
+            catch UnsetItemError {
+            }
+        }
+    }
+
     ; -- 常规作战 --
     ; 按下暂停
     static ActionPressPause(ThisHotkey) {
@@ -750,7 +791,8 @@ class HotkeyActions {
 
 ; == 工具函数 ==
 ; 去除修饰符前缀
-PureKeyWait(ThisHotkey) {
+PureKeyWait(ThisHotkey, waitIntervalMs := 3000) {
+    ; waitIntervalMs：分段采样间隔，默认 3000ms（生产路径一律用默认值）
     if (ThisHotkey == "")
         return
     pureKey := KeyForward.PureKeyName(ThisHotkey)
@@ -759,12 +801,28 @@ PureKeyWait(ThisHotkey) {
     ; 钩子一旦被系统摘除，此处会永久挂起，动作线程堆满 #MaxThreads(默认 10) 后所有热键都无法启动。
     ; 注意"按住超过 3 秒"（按下暂停/按住瞄准等）是正常操作，非异常——观测用 DEBUG，
     ; 只有持续按住才逐步升级采样，避免正常长按把 WARN 轨（5 MiB critical）刷爆。
+    static LastLogTick := Map()
+    static LogIntervalMs := 500
     idx := 0
-    while !KeyWait(pureKey, "T3") {
+    intervalMs := Max(Integer(waitIntervalMs), 50)
+    while !KeyWait(pureKey, "T" intervalMs / 1000) {
         idx++
-        if (idx = 1 || Mod(idx, 10) = 0)
-            Logger.Debug("KeyForward", "等待物理松开已 " (idx * 3) "s：key=" pureKey "（长按属正常操作；若钩子失效此处会永久挂起并占用线程）")
+        ; DEBUG 采样：首条 + 之后每 10 个采样点一条（默认 3s 间隔下即 3s/30s）
+        if (idx = 1 || Mod(idx, 10) = 0) {
+            now := A_TickCount
+            if (now - LastLogTick.Get(pureKey, 0) >= LogIntervalMs) {
+                LastLogTick[pureKey] := now
+                Logger.Debug("KeyForward", "等待物理松开已 " Round(idx * intervalMs / 1000, 1) "s：key=" pureKey "（长按属正常操作；若钩子失效此处会永久挂起并占用线程）")
+            }
+        }
+        if HotkeyActions.NoteHoldWarn(pureKey, idx * intervalMs)
+            Logger.Warn("KeyForward", "等待物理松开已 " Round(idx * intervalMs / 1000, 1) "s（第 "
+                . HotkeyActions.HoldWarnCount.Get(pureKey, 0) " 次提示）：key=" pureKey
+                . "。若用户并未按着不放，说明键盘钩子可能已失效、KeyWait 永久挂起"
+                . "（动作线程会一直占着，堆满 #MaxThreads 后所有热键都启动不了）")
     }
+    ; 本按住周期结束：清掉长按提示计数，下一次按住重新计
+    HotkeyActions.ResetHoldWarn(pureKey)
 }
 ; 关卡守卫：在关卡内返回 true；拦截时透传原键并记录日志，返回 false
 ; 判定依据：LevelDetector 投票状态机维护的 LevelDetector.IsInLevel()（读内存标志，无像素检测、无 DPI 切换）

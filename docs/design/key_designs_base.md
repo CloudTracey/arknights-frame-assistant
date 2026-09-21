@@ -88,6 +88,10 @@ AFA 全部热键注册在 `HotIf` 回调下，每次按键都要主线程求值�
 
 判读要点：快照里的 idle/idleKbd/idlePhys 三值恒等，说明 `A_TimeIdleKeyboard` 与 `A_TimeIdlePhysical` 已退化为 `A_TimeIdle`（文档：钩子未安装时二者等价于 `A_TimeIdle`），即钩子确已不再被调用；三值有差异则说明钩子仍在正常区分键盘与鼠标输入。**注意单看 idleKbd 数值大小无法判定**——纯键盘输入时两种情况都接近 0，必须看三值是否恒等。
 
+快照另外带 `ctxEval`（单次 HotIf 求值耗时，用 QueryPerformanceCounter 采样、频率缓存见 `base/timing.ahk` 的 `Qpc()`）与累计自愈次数 `recover`。**这是快照里唯一的耗时项**：曾有的 `inToAction`（首次求值→动作线程开始）因在生产上无法自证正确、连报假延迟而整项移除——测不准的指标不留。**判读顺序与「Windows 卡住 / 游戏正常」的完整排查路径见 [input_stall_diagnosis.md](input_stall_diagnosis.md)**，不要只凭快照里单个数字下结论。
+
+自愈用 `InstallKeybdHook(true, true)`，文档明确该 Force 重装会"抢占其它进程先前安装钩子的优先级"——因此它对"钩子被摘除"有效，对"输入被前置钩子吞掉"却是反向操作，故阈值与冷却都取保守值（见 `input_stall_diagnosis.md` 第 6 节）。
+
 ## cmd `chcp 65001` 批处理陷阱
 
 （`self_replacer.ahk`）
