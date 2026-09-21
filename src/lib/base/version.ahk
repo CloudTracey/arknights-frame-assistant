@@ -2,7 +2,7 @@
 
 class Version {
     ; AFA当前版本号
-    static Number := "v2.1.0"
+    static Number := "v2.1.1-alpha.2"
 
     ; ===== 编译元数据 =====
     ;@Ahk2Exe-Let U_afaVersion = %A_PriorLine~^.*\bNumber\s*:=\s*"v?(\S+)"\s*$~$1%
