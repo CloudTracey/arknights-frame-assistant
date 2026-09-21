@@ -132,7 +132,8 @@ class HookHealth {
         this._FireByKey[pureKey] := this._FireByKey.Get(pureKey, 0) + 1
         this._LastFireTick[pureKey] := A_TickCount
         ; 同键回调既然已经真实发生，立即结算并清掉该键挂起的按键，绝不误报为未触发
-        this._ClearPendingFor(pureKey)
+        if (this._ClearPendingFor(pureKey))
+            this._BumpProbe(pureKey, "cleared")
         if (this._Suspected)
             this._NoteHit()
     }
@@ -217,10 +218,13 @@ class HookHealth {
             ; 回调的来源，本次不该再建档（否则宽限期后无人清理，必然误报"未触发热键"）。
             ; 以"上次观测到抬起"为基准与采样快慢无关；漏掉抬起只会导致"本次不建档"（不误报），
             ; 不会削弱真失效的检测——那时回调计数长期不增长，下一次可辨识的按下仍会建档并如实报 miss。
+            ; "新鲜度"边界必不可少：抬起与下一次按下都落在同一个 100ms 采样间隙内时，_LastUpEdge 会停在
+            ; 旧值，单看 lastFire > lastUp 会把此后每次按下都跳过；回调若已过去很久（钩子已死、计数冻结），
+            ; 那种"跳过"就会掩盖真失效。故只在回调足够新时才认定它属于本次按下。
             lastUp := this._LastUpEdge.Get(pureKey, 0)
             this._LastPressEdge[pureKey] := now
             lastFire := this._LastFireTick.Get(pureKey, 0)
-            if (lastFire != 0 && lastFire > lastUp) {
+            if (lastFire != 0 && lastFire > lastUp && now - lastFire < this.FireRaceWindowMs) {
                 this._BumpProbe(pureKey, "raceSkip")
                 continue
             }
