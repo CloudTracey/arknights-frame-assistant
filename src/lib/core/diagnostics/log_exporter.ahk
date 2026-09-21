@@ -18,7 +18,7 @@ class LogExporter {
 
         result := this.CreateArchive(target)
         if (result.success)
-            MessageBox.Info(I18n.T("日志压缩包已生成：`n{1}", result.path), I18n.T("导出成功"))
+            MessageBox.Info(I18n.T("日志压缩包已生成"), I18n.T("导出成功"))
         else
             MessageBox.Error(result.message, I18n.T("导出失败"))
         return result
@@ -123,6 +123,9 @@ class LogExporter {
         ; 日志全级别恒持久化；记录运行时**实际**控制台状态（SetConsoleEnabled 在 AllocConsole 失败时
         ; 会复位降级，设置的 DebugEnabled 值仅存在于 settings-sanitized.ini 中）
         lines.Push("DebugConsoleEnabled=" (Logger.ConsoleEnabled ? "true" : "false"))
+        ; 环境事实：导出那一刻在跑的全部进程名
+        for line in this._BuildProcessListLines()
+            lines.Push(line)
         lines.Push("LogDirectoryAvailable=" (Logger.FileAvailable ? "true" : "false"))
         if !IsObject(retention)
             retention := Logger.GetRetentionSummary()
@@ -165,6 +168,69 @@ class LogExporter {
         for line in lines
             result .= line "`n"
         return result
+    }
+
+    ; 诊断包的环境事实：导出那一刻在跑的全部进程名
+    static _BuildProcessListLines() {
+        processNames := this._ListRunningProcessNames()
+        return ["RunningProcessCount=" processNames.Length
+            , "RunningProcesses=" (processNames.Length = 0 ? "(枚举失败)" : this._JoinNameList(processNames))]
+    }
+
+    ; 枚举当前所有进程名
+    static _ListRunningProcessNames() {
+        tempFile := A_Temp "\AFA-processlist-" Random(100000, 999999) ".txt"
+        names := Map()
+        try {
+            RunWait(A_ComSpec " /c tasklist /fo csv /nh > " this._CmdQuote(tempFile), , "Hide")
+            if FileExist(tempFile) {
+                Loop Read, tempFile {
+                    line := Trim(A_LoopReadLine)
+                    if (line = "" || SubStr(line, 1, 1) != Chr(34))
+                        continue
+                    endQuote := InStr(line, Chr(34), , 2)
+                    if (endQuote < 2)
+                        continue
+                    procName := SubStr(line, 2, endQuote - 2)
+                    if (procName != "")
+                        names[procName] := true
+                }
+            }
+        } catch Error {
+        } finally {
+            if FileExist(tempFile) {
+                try FileDelete(tempFile)
+            }
+        }
+        result := []
+        for procName, _ in names
+            result.Push(procName)
+        return this._SortedNames(result)
+    }
+
+    ; 简单插入排序（进程数量级 ~10²，足够；避免依赖任何外部排序工具）
+    static _SortedNames(items) {
+        sorted := []
+        for item in items {
+            pos := sorted.Length + 1
+            while (pos > 1 && StrCompare(sorted[pos - 1], item) > 0) {
+                pos -= 1
+            }
+            sorted.InsertAt(pos, item)
+        }
+        return sorted
+    }
+
+    static _JoinNameList(items) {
+        result := ""
+        for item in items
+            result .= (result = "" ? "" : " ") item
+        return result
+    }
+
+    ; cmd 重定向用的引用
+    static _CmdQuote(value) {
+        return Chr(34) StrReplace(value, Chr(34), "") Chr(34)
     }
 
     static _PowerShellQuote(value) {

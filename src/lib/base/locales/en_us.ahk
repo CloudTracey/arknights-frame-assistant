@@ -189,7 +189,7 @@ class LocaleEnUS {
         "启用随游戏自动启动", "Enable Auto Start with Game",
         "启用随游戏自动启动失败", "Failed to Enable Auto Start with Game",
         "关闭随游戏自动启动失败", "Failed to Disable Auto Start with Game",
-        "日志压缩包已生成：`n{1}", "Log archive created:`n{1}",
+        "日志压缩包已生成", "Log archive created",
         "导出成功", "Export Successful",
         "导出失败", "Export Failed",
         "无法打开日志目录：`n{1}", "Cannot open log directory:`n{1}",
