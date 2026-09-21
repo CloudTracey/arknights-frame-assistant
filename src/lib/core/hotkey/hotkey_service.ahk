@@ -268,19 +268,35 @@ class HotkeyService {
         return Wrapped
     }
 
+    ; 观测包装
+    static _WrapObserved(fn, label := "") {
+        Wrapped(ThisHotkey) {
+            probe := HookHealth.EnterAction(label != "" ? label : (IsObject(fn) ? fn.Name : fn), KeyForward.PureKeyName(ThisHotkey))
+            try {
+                fn(ThisHotkey)
+            } finally {
+                HookHealth.ExitAction(probe)
+            }
+        }
+        return Wrapped
+    }
+
     ; 注册单个热键（数据驱动：profile.OnUp=功能在松开时触发；profile.Guarded=拦截键注册 Up 变体补发透传）
     ; 注意：属性访问用 HasOwnProp 判断——profile 无 OnUp/Guarded 属性时直接访问会抛 PropertyError
     static _RegisterOne(hotkeyValue, profile, pattern) {
+        callback := profile.HasOwnProp("NoActivate")
+            ? this._WrapObserved(profile.Fn)
+            : this._WrapAction(profile.Fn)
         if (profile.HasOwnProp("OnUp") && !InStr(hotkeyValue, "Wheel")) {
             ; 松开暂停：功能在松开时触发（Up 变体注册）
             reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
-            Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
+            Hotkey(reg, callback, "On")
             HotkeyService.ActiveHotkeys.Set(reg, reg)
             return
         }
         intercept := hotkeyValue ~= pattern
         reg := intercept ? hotkeyValue : "~" hotkeyValue
-        Hotkey(reg, profile.HasOwnProp("NoActivate") ? profile.Fn : this._WrapAction(profile.Fn), "On")
+        Hotkey(reg, callback, "On")
         HotkeyService.ActiveHotkeys.Set(reg, reg)
         ; 有守卫的拦截键（非滚轮）：注册 Up 变体，松开时由 KeyForward.ActionUpForward 补发 key up
         ; 注意：类静态方法引用需 Bind(KeyForward)——方法的 MinParams 含 self，直接传引用 Hotkey 回调验证会失败（Invalid callback function）
