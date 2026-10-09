@@ -29,6 +29,7 @@
 #Include ../../src/lib/base/locales/zh_hant.ahk
 #Include ../../src/lib/base/server_profile.ahk
 #Include ../../src/lib/base/game_target.ahk
+#Include ../../src/lib/base/game_audio_mute.ahk
 #Include ../../src/lib/base/file_extractor.ahk
 #Include ../../src/lib/base/timing.ahk
 #Include ../../src/lib/base/window.ahk
@@ -38,6 +39,7 @@
 #Include ../../src/lib/base/touch_injection.ahk
 #Include ../../src/lib/base/custom_hotkey_store.ahk
 #Include ../../src/lib/core/game/game_client_registry.ahk
+#Include ../../src/lib/core/audio/game_audio_controller.ahk
 #Include ../../src/lib/core/diagnostics/log_exporter.ahk
 #Include ../../src/lib/core/launch/app_context.ahk
 #Include ../../src/lib/core/launch/game_auto_start.ahk
@@ -152,6 +154,7 @@ try {
     if (Config.IniFile != "" || Theme._Ready || Theme._SubclassPtr)
         ExitApp 1
 
+    SmokeAudioShortcuts()
     FileAppend("PASS: smoke contracts and no initialization`n", "*", "UTF-8")
     ExitApp 0
 } catch as err
@@ -162,4 +165,81 @@ SmokeFailure(err, *) {
     try FileAppend(message, "**", "UTF-8")
     try FileAppend(message, A_Temp "\AFA-smoke-test-error.txt", "UTF-8")
     ExitApp 1
+}
+
+SmokeAudioShortcuts() {
+    first := SmokeAudioSession(1, "default", 0.95)
+    other := SmokeAudioSession(1, "other", 0.3)
+    unrelated := SmokeAudioSession(2, "default", 0.6)
+    snapshot := {sessions: [other, first, unrelated], defaultDevice: "default", failed: 0, message: ""}
+    up := {pid: 1, created: "same", kind: "volume", delta: 0.1}
+    down := {pid: 1, created: "same", kind: "volume", delta: -0.1}
+    mute := {pid: 1, created: "same", kind: "mute", delta: 0}
+    SmokeAudioController.Apply(mute, snapshot)
+    if !first.muted || !other.muted || unrelated.muted
+        throw Error("mute must affect only target PID")
+    SmokeAudioController.Apply(down, snapshot)
+    if Abs(first.level - 0.85) > 0.0001 || first.level != other.level || !first.muted
+        throw Error("down must use default device and preserve mute")
+    first.fail := true
+    result := SmokeAudioController.Apply(up, snapshot)
+    if result.success || !first.muted || other.muted
+        throw Error("failed volume writes must not unmute that session")
+    first.fail := false
+    first.level := 0.95
+    SmokeAudioController.Apply(up, snapshot)
+    SmokeAudioController.Apply(down, snapshot)
+    if Abs(first.level - 0.9) > 0.0001 || first.muted
+        throw Error("FIFO clamping at 100% must preserve opposite steps")
+    first.level := 0.05
+    SmokeAudioController.Apply(down, snapshot)
+    SmokeAudioController.Apply(up, snapshot)
+    if Abs(first.level - 0.1) > 0.0001
+        throw Error("FIFO clamping at 0% must preserve opposite steps")
+    up.created := "reused"
+    before := first.level
+    result := SmokeAudioController.Apply(up, snapshot)
+    if result.success || first.level != before || unrelated.level != 0.6
+        throw Error("PID reuse or unrelated volume was not protected")
+    result := SmokeAudioController.Apply(mute, {sessions: [], defaultDevice: "", failed: 0, message: ""})
+    if result.found || !result.success
+        throw Error("no session must return an observable empty result")
+    first.readFail := true, other.muted := false
+    snapshot.sessions := [first, other, unrelated]
+    result := SmokeAudioController.Apply(mute, snapshot)
+    if result.success || !other.muted
+        throw Error("one unreadable mute session must not block healthy sessions")
+    up.created := "same", other.level := 0.4
+    result := SmokeAudioController.Apply(up, snapshot)
+    if result.success || Abs(other.level - 0.5) > 0.0001
+        throw Error("unreadable reference must fall back to other available sessions")
+    if GameAudioController.Timer || GameAudioController.Actions.Length
+        throw Error("audio must have no initialization side effects")
+    FileAppend("PASS: audio PID isolation, 10-point steps, boundaries and partial failure`n", "*", "UTF-8")
+}
+
+class SmokeAudioController extends GameAudioController {
+    static Identity(pid) => "same"
+}
+class SmokeAudioSession {
+    __New(pid, device, level) {
+        this.pid := pid, this.device := device, this.level := level
+        this.status := 1, this.muted := false, this.fail := false, this.readFail := false
+    }
+    GetVolume() {
+        if this.readFail
+            throw Error("test read failure")
+        return this.level
+    }
+    GetMute() {
+        if this.readFail
+            throw Error("test read failure")
+        return this.muted
+    }
+    SetMute(value) => this.muted := value
+    SetVolume(value) {
+        if this.fail
+            throw Error("test volume failure")
+        this.level := value
+    }
 }
