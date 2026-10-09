@@ -3,7 +3,7 @@
 
 class HotkeySchema {
     ; id/nameKey/group/defaultKey 必填；descKey 为状态栏悬停说明（中文原文，可含 {1} 占位符）；
-    ; guarded/onUp/noActivate 为热键行为元数据；数组顺序即 GUI 显示顺序。
+    ; guarded/onUp/noActivate 为热键行为元数据；可选 repeatable 默认 false；数组顺序即 GUI 显示顺序。
     static Items := [
         ; ---- 常规作战 ----
         {id: "PressPause", nameKey: "按下时暂停", descKey: "按下时切换暂停", group: "combat", defaultKey: "f", guarded: true, onUp: false, noActivate: false},
@@ -30,6 +30,9 @@ class HotkeySchema {
         {id: "Skip", nameKey: "跳过招募动画/剧情", descKey: "快速移动鼠标点击右上角的跳过按钮", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "CollectCollectibles", nameKey: "肉鸽收取道具", descKey: "快速移动鼠标点击集成战略的“收下”按钮", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "Back", nameKey: "返回上级菜单", descKey: "模拟点击ESC键，返回上一级菜单", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
+        {id: "MuteGame", nameKey: "一键静音", descKey: "切换明日方舟静音，不影响其他程序声音", group: "quick", defaultKey: "F8", guarded: false, onUp: false, noActivate: true},
+        {id: "GameVolumeUp", nameKey: "提高游戏音量", descKey: "提高明日方舟音量 10%，并解除静音", group: "quick", defaultKey: "^Up", guarded: false, onUp: false, noActivate: true, repeatable: true},
+        {id: "GameVolumeDown", nameKey: "降低游戏音量", descKey: "降低明日方舟音量 10%，不改变静音状态", group: "quick", defaultKey: "^Down", guarded: false, onUp: false, noActivate: true, repeatable: true},
         ; ---- 卫戍协议 ----
         {id: "CheckEnemies", nameKey: "查看敌人", descKey: "查看敌人信息", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "DispatchCenter", nameKey: "调度中心", descKey: "打开调度中心（商店）", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
