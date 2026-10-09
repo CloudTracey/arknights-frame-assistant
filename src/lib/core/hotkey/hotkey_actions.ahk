@@ -644,7 +644,43 @@ class HotkeyActions {
             return
     }
 
-    ; 快捷切换开局自动二倍速开关
+    static ActionMuteGame(ThisHotkey) => this._QueueGameAudio("mute", 0)
+    static ActionGameVolumeUp(ThisHotkey) => this._QueueGameAudio("volume", 0.1)
+    static ActionGameVolumeDown(ThisHotkey) => this._QueueGameAudio("volume", -0.1)
+
+    static _QueueGameAudio(kind, delta) {
+        pid := GameTarget.Pid()
+        hwnd := GameTarget.Hwnd()
+        candidates := [hwnd]
+        if !hwnd {
+            MouseGetPos(, , &hoverHwnd)
+            candidates := [DllCall("GetForegroundWindow", "Ptr"), hoverHwnd]
+        }
+        GameAudioController.QueueAction(pid, candidates, kind, delta, this._ShowGameAudioResult.Bind(this))
+    }
+
+    static _ShowGameAudioResult(kind, result) {
+        if !result.success
+            message := I18n.T("音频操作未完全成功：{1}", result.message)
+        else if result.found = 0
+            message := I18n.T("未找到明日方舟的音频会话，请确认游戏正在运行")
+        else if kind = "mute"
+            message := result.muted ? I18n.T("已静音明日方舟") : I18n.T("已取消静音明日方舟")
+        else
+            message := I18n.T("明日方舟音量：{1}%", Round(result.volume * 100))
+        this._ShowMuteTip(message)
+    }
+
+    static _ShowMuteTip(message) {
+        static hide := this._HideAudioTip.Bind(this)
+        ToolTip(message, , , 19)
+        SetTimer hide, -1500
+    }
+
+    static _HideAudioTip() {
+        ToolTip(, , , 19)
+    }
+
     static ActionBeginSpeedSwitch(ThisHotkey) {
         currentValue := Config.GetImportant("AutoBeginSpeed")
         newValue := (currentValue = "1") ? "0" : "1"

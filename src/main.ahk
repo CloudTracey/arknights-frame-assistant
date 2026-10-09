@@ -24,6 +24,7 @@
 #Include ./lib/base/locales/zh_hant.ahk
 #Include ./lib/base/server_profile.ahk
 #Include ./lib/base/game_target.ahk
+#Include ./lib/base/game_audio_mute.ahk
 #Include ./lib/base/file_extractor.ahk
 #Include ./lib/base/timing.ahk
 #Include ./lib/base/window.ahk
@@ -33,6 +34,7 @@
 #Include ./lib/base/touch_injection.ahk
 #Include ./lib/base/custom_hotkey_store.ahk
 #Include ./lib/core/game/game_client_registry.ahk
+#Include ./lib/core/audio/game_audio_controller.ahk
 #Include ./lib/core/diagnostics/log_exporter.ahk
 #Include ./lib/core/launch/app_context.ahk
 #Include ./lib/core/launch/game_auto_start.ahk
