@@ -66,6 +66,7 @@
 HandleAfaExit(exitReason, exitCode) {
     Logger.HandleExit(exitReason, exitCode)
     Logger.CloseConsole()
+    SingleInstance.Release()
     DllCall("winmm\timeEndPeriod", "UInt", 1)
 }
 
