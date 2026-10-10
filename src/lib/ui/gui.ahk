@@ -362,11 +362,12 @@ class GuiManager {
         ; -- 快捷操作 --
         ; 快捷操作 - 左列
         quickItems := this._GetSchemaItems("quick")
-        quickHalf := Ceil(quickItems.Length / 2)
+        quickHalf := 3
         bindColX := 0
         Theme.Add(this.MainGui, "GroupBox", "x0 y35 w" this.ColWidth " h0 Section vQuickLeftGroup", "")
         this.QuickControls.Push(this.MainGui["QuickLeftGroup"])
 
+        quickBottom := 35
         for i, item in quickItems {
             if (i = quickHalf + 1) {
                 ; 快捷操作 - 右列
@@ -374,7 +375,12 @@ class GuiManager {
                 this.QuickControls.Push(this.MainGui["QuickRightGroup"])
                 bindColX := this.ColWidth
             }
-            this.QuickControls.Push(AddBindRow(I18n.T(item.nameKey), item.id, bindColX, item.descKey)*)
+            row := AddBindRow(I18n.T(item.nameKey), item.id, bindColX, item.descKey)
+            this.QuickControls.Push(row*)
+            for control in row {
+                control.GetPos(, &quickY, , &quickH)
+                quickBottom := Max(quickBottom, quickY + quickH)
+            }
         }
         ; 空白占位
         placeholderQuick := Theme.Add(this.MainGui, "Text", "xs+45 y+-10 w90 h0 Right +0x200")
@@ -382,7 +388,7 @@ class GuiManager {
 
         ; 快捷操作提示语
         Theme.SetFont(this.MainGui, "s9 cAccent")
-        hintQuick1 := Theme.Add(this.MainGui, "Text", "x0 yp+40 w" this.GuiWidth " Center",
+        hintQuick1 := Theme.Add(this.MainGui, "Text", "x0 y" (quickBottom + 20) " w" this.GuiWidth " Center",
             I18n.T("点击输入框修改按键，使用【BACKSPACE/DELETE】清除按键"))
         Theme.SetFont(this.MainGui, "s9 cAccent bold")
         hintQuick3 := Theme.Add(this.MainGui, "Text", "x0 y+8 w" this.GuiWidth " Center", I18n.T("为避免冲突，切换到此页面时“卫戍协议”按键将被禁用"))
@@ -390,6 +396,8 @@ class GuiManager {
         this.QuickControls.Push(hintQuick1)
         this.QuickControls.Push(hintQuick3)
         this.StrongHoldConflictHints.Push(hintQuick3)
+        hintQuick3.GetPos(, &quickY, , &quickH)
+        this._BottomBaseY := Max(this._BottomBaseY, quickY + quickH)
 
         ; -- 卫戍协议 --
         ; 卫戍协议 - 左列

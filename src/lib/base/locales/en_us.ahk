@@ -555,5 +555,18 @@ class LocaleEnUS {
         "浅色", "Light",
         "深色", "Dark",
         "修改AFA的界面主题", "Change the AFA interface theme",
+        "一键静音", "One-key mute",
+        "切换明日方舟静音，不影响其他程序声音", "Toggle Arknights mute without affecting other apps",
+        "提高游戏音量", "Increase game volume",
+        "降低游戏音量", "Decrease game volume",
+        "提高明日方舟音量 10%，并解除静音", "Increase game volume by 10% and unmute",
+        "降低明日方舟音量 10%，不改变静音状态", "Decrease game volume by 10% and preserve the current mute state",
+        "未找到明日方舟进程，无法静音", "Arknights process not found; cannot mute",
+        "未找到明日方舟的音频会话，请确认游戏正在运行", "No audio session found for Arknights; make sure the game is running",
+        "已静音明日方舟", "Arknights muted",
+        "已取消静音明日方舟", "Arknights unmuted",
+        "未找到明日方舟进程，无法调整音量", "Arknights process not found; cannot adjust volume",
+        "明日方舟音量：{1}%", "Arknights volume: {1}%",
+        "音频操作未完全成功：{1}", "Audio operation was only partially successful: {1}",
     )
 }

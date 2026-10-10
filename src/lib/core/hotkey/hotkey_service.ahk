@@ -63,6 +63,8 @@ class HotkeyService {
                 profile.OnUp := true
             if (item.noActivate)
                 profile.NoActivate := true
+            if (item.HasOwnProp("repeatable") && item.repeatable)
+                profile.Repeatable := true
             this.ActionCallbacks[item.id] := profile
         }
     }
@@ -176,6 +178,9 @@ class HotkeyService {
         "Skip", HotkeyActions.ActionSkip.Bind(HotkeyActions),
         "CollectCollectibles", HotkeyActions.ActionCollectCollectibles.Bind(HotkeyActions),
         "Back", HotkeyActions.ActionBack.Bind(HotkeyActions),
+        "MuteGame", HotkeyActions.ActionMuteGame.Bind(HotkeyActions),
+        "GameVolumeUp", HotkeyActions.ActionGameVolumeUp.Bind(HotkeyActions),
+        "GameVolumeDown", HotkeyActions.ActionGameVolumeDown.Bind(HotkeyActions),
         ; 卫戍协议
         "CheckEnemies", HotkeyActions.ActionCheckEnemies.Bind(HotkeyActions),
         "DispatchCenter", HotkeyActions.ActionDispatchCenter.Bind(HotkeyActions),
@@ -202,17 +207,17 @@ class HotkeyService {
 
     static ActiveSwitchHotkey := ""
 
-    ; 包装动作回调：失焦悬停时先激活游戏窗口
-    static _WrapAction(fn) {
+    ; 包装动作回调：按 Schema 决定重复触发和窗口激活。
+    static _WrapAction(fn, repeatable := false, noActivate := false) {
         Wrapped(ThisHotkey) {
-            if HoldGuard.ShouldGate(KeyForward.PureKeyName(ThisHotkey))
+            if !repeatable && HoldGuard.ShouldGate(KeyForward.PureKeyName(ThisHotkey))
                 && HoldGuard.TryBegin(KeyForward.PureKeyName(ThisHotkey))
                 return
             if !GameTarget.Exists() {
                 Logger.Warn("Hotkey", "动作跳过：目标游戏窗口不存在（key=" KeyForward.PureKeyName(ThisHotkey) "）")
                 return
             }
-            if !GameTarget.IsActive() {
+            if !noActivate && !GameTarget.IsActive() {
                 GameTarget.Activate()
                 if !GameTarget.WaitActive(HotkeyService.ActivateTimeoutMs) {
                     Logger.Warn("Hotkey", "动作跳过：激活游戏窗口超时（key=" KeyForward.PureKeyName(ThisHotkey) "）")
@@ -235,7 +240,9 @@ class HotkeyService {
 
     ; 注册单个热键
     static _RegisterOne(hotkeyValue, profile, pattern) {
-        callback := this._WrapAction(profile.Fn)
+        callback := this._WrapAction(profile.Fn,
+            profile.HasOwnProp("Repeatable") && profile.Repeatable,
+            profile.HasOwnProp("NoActivate") && profile.NoActivate)
         if (profile.HasOwnProp("OnUp") && !InStr(hotkeyValue, "Wheel")) {
             HoldGuard.MarkUngated(KeyForward.PureKeyName(hotkeyValue))
             reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
