@@ -37,15 +37,18 @@ class FileExtractor {
         if (!FileExist(FileExtractor.TakeOver3Path))
             FileInstall "resources\images\TakeOverButton_3.png", FileExtractor.TakeOver3Path, 1
 
-        ; web 引擎资源
-        DirCreate(FileExtractor.WebDir)
-        FileInstall "lib\ui\web\app\index.html", FileExtractor.WebDir "\index.html", 1
-        if (A_PtrSize = 8 && !FileExtractor._LoaderUpToDate()) {
-            FileInstall "lib\vendor\WebView2\64bit\WebView2Loader.dll", FileExtractor.LoaderPath, 1
-            Logger.Info("FileExtractor", "已提取 WebView2 加载器")
+        ; web 引擎资源；失败只记 Warn 并继续——web 是可选引擎，不该拖死经典界面启动
+        try {
+            DirCreate(FileExtractor.WebDir)
+            FileInstall "lib\ui\web\app\index.html", FileExtractor.WebDir "\index.html", 1
+            if (A_PtrSize = 8 && !FileExtractor._LoaderUpToDate()) {
+                FileInstall "lib\vendor\WebView2\64bit\WebView2Loader.dll", FileExtractor.LoaderPath, 1
+                Logger.Info("FileExtractor", "已提取 WebView2 加载器")
+            }
+            Logger.Info("FileExtractor", "嵌入资源提取完成：" FileExtractor.ResourcesDir "、" FileExtractor.WebDir)
+        } catch Error as e {
+            Logger.Warn("FileExtractor", "web 引擎资源提取失败（" e.Message "），本次会话 web 模式将不可用")
         }
-
-        Logger.Info("FileExtractor", "嵌入资源提取完成：" FileExtractor.ResourcesDir "、" FileExtractor.WebDir)
     }
 
     ; 路径上的加载器是否与嵌入版一致（尺寸 + 哈希）
