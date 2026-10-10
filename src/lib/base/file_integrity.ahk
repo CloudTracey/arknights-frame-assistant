@@ -1,11 +1,17 @@
 ; == 文件完整性 ==
 class FileIntegrity {
-    ; 文件 SHA-256
+    ; 文件 SHA-256（失败一律返回空串）
     static Sha256(filePath) {
         if !FileExist(filePath)
             return ""
-        file := FileOpen(filePath, "r")
-        if !IsObject(file)
+        file := ""
+        try {
+            file := FileOpen(filePath, "r")
+        } catch Error as e {
+            Logger.Warn("FileIntegrity", "哈希读取失败，按校验不通过处理（" e.Message "）：" filePath)
+            return ""
+        }
+        if (!IsObject(file))
             return ""
         try {
             hProv := 0
@@ -18,12 +24,17 @@ class FileIntegrity {
                 try {
                     chunkSize := 1024 * 1024
                     buf := Buffer(chunkSize)
-                    while !file.AtEOF {
-                        bytesRead := file.RawRead(buf, chunkSize)
-                        if (bytesRead > 0) {
-                            if !DllCall("Advapi32\CryptHashData", "Ptr", hHash, "Ptr", buf, "UInt", bytesRead, "UInt", 0)
-                                return ""
+                    try {
+                        while !file.AtEOF {
+                            bytesRead := file.RawRead(buf, chunkSize)
+                            if (bytesRead > 0) {
+                                if !DllCall("Advapi32\CryptHashData", "Ptr", hHash, "Ptr", buf, "UInt", bytesRead, "UInt", 0)
+                                    return ""
+                            }
                         }
+                    } catch Error as e {
+                        Logger.Warn("FileIntegrity", "哈希读取失败，按校验不通过处理（" e.Message "）：" filePath)
+                        return ""
                     }
                     hashBuf := Buffer(32)
                     hashLen := 32
