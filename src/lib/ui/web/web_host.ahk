@@ -18,6 +18,7 @@ class WebHost {
     static _ReadyFn := ""
     static _Starting := false  ; _StartCore 进行中；await2 期间可被新线程重入
     static _AltF4Cond := ""
+    static _LoaderGuard := ""  ; 加载器句柄
 
     ; 入口。安检！安检！通过则由 web 引擎接管并返回 true；否则返回 false，false就会让调用的那个地方自己处理回落经典界面。
     static Activate() {
@@ -89,6 +90,11 @@ class WebHost {
             this._BindAltF4()
         } catch Error as e {
             Logger.Warn("WebHost", "Alt+F4 注册失败（继续）：" e.Message)
+        }
+        this._LoaderGuard := this._PinVerifiedLoader()
+        if (this._LoaderGuard = "") {
+            this._Fallback("WebView2 加载器校验失败：" this._LoaderPath())
+            return
         }
         try {
             this.Controller := WebView2.CreateControllerAsync(this.Gui.Hwnd, , this._UserDataDir(), , this._LoaderPath()).await2(this.CREATE_TIMEOUT_MS)
@@ -166,6 +172,15 @@ class WebHost {
     ; 加载器必须给绝对路径：库的默认值是相对名 'WebView2Loader.dll'，会命中进程工作目录里的同名文件（DLL 劫持）。
     static _LoaderPath() {
         return FileExtractor.LoaderPath
+    }
+
+    static _PinVerifiedLoader() {
+        reason := ""
+        guard := FileIntegrity.PinVerified(this._LoaderPath(), FileExtractor.LoaderExpectedHash, &reason)
+        if (IsObject(guard))
+            return guard
+        Logger.Error("WebHost", "WebView2 加载器不可用（" reason "）：" this._LoaderPath())
+        return ""
     }
 
     ; Alt+F4 始终退出（与经典界面一致）：经典模式由 GuiManager.Start() 注册，web 模式走这里。
@@ -290,6 +305,10 @@ class WebHost {
     static _DestroyGui() {
         this._UnbindAltF4()
         this._DisarmReadyTimeout()
+        if (IsObject(this._LoaderGuard)) {
+            this._LoaderGuard.Close()
+            this._LoaderGuard := ""
+        }
         try {
             if (this.Controller != "")
                 this.Controller.Close()
