@@ -24,6 +24,7 @@
 #Include ./lib/base/locales/zh_hant.ahk
 #Include ./lib/base/server_profile.ahk
 #Include ./lib/base/game_target.ahk
+#Include ./lib/base/file_integrity.ahk
 #Include ./lib/base/file_extractor.ahk
 #Include ./lib/base/timing.ahk
 #Include ./lib/base/window.ahk

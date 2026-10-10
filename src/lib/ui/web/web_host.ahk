@@ -18,6 +18,7 @@ class WebHost {
     static _ReadyFn := ""
     static _Starting := false  ; _StartCore 进行中；await2 期间可被新线程重入
     static _AltF4Cond := ""
+    static _LoaderGuard := ""  ; 加载器句柄
 
     ; 入口。安检！安检！通过则由 web 引擎接管并返回 true；否则返回 false，false就会让调用的那个地方自己处理回落经典界面。
     static Activate() {
@@ -90,6 +91,11 @@ class WebHost {
         } catch Error as e {
             Logger.Warn("WebHost", "Alt+F4 注册失败（继续）：" e.Message)
         }
+        this._LoaderGuard := this._PinVerifiedLoader()
+        if (this._LoaderGuard = "") {
+            this._Fallback("WebView2 加载器校验失败：" this._LoaderPath())
+            return
+        }
         try {
             this.Controller := WebView2.CreateControllerAsync(this.Gui.Hwnd, , this._UserDataDir(), , this._LoaderPath()).await2(this.CREATE_TIMEOUT_MS)
             this.CoreWV := this.Controller.CoreWebView2
@@ -150,15 +156,12 @@ class WebHost {
         return true
     }
 
-    ; 编译版由资源提取阶段提供页面，当前只在源码运行时可用。
     static _EnsureAssets() {
-        if (A_IsCompiled)
-            return false
         return StrLen(FileExist(this._AssetsDir() "\index.html")) > 0
     }
 
     static _AssetsDir() {
-        return A_ScriptDir "\lib\ui\web\app"
+        return FileExtractor.WebDir
     }
 
     ; 库的默认用户数据目录是本机共享的 Edge 用户数据根，多应用会互相干扰，故指定应用私有目录。
@@ -167,9 +170,17 @@ class WebHost {
     }
 
     ; 加载器必须给绝对路径：库的默认值是相对名 'WebView2Loader.dll'，会命中进程工作目录里的同名文件（DLL 劫持）。
-    ; A_LineFile 是"文件"路径，故退三级到 lib\ 再进 vendor\。
     static _LoaderPath() {
-        return A_LineFile "\..\..\..\vendor\WebView2\" (A_PtrSize = 8 ? "64bit" : "32bit") "\WebView2Loader.dll"
+        return FileExtractor.LoaderPath
+    }
+
+    static _PinVerifiedLoader() {
+        reason := ""
+        guard := FileIntegrity.PinVerified(this._LoaderPath(), FileExtractor.LoaderExpectedHash, &reason)
+        if (IsObject(guard))
+            return guard
+        Logger.Error("WebHost", "WebView2 加载器不可用（" reason "）：" this._LoaderPath())
+        return ""
     }
 
     ; Alt+F4 始终退出（与经典界面一致）：经典模式由 GuiManager.Start() 注册，web 模式走这里。
@@ -294,6 +305,10 @@ class WebHost {
     static _DestroyGui() {
         this._UnbindAltF4()
         this._DisarmReadyTimeout()
+        if (IsObject(this._LoaderGuard)) {
+            this._LoaderGuard.Close()
+            this._LoaderGuard := ""
+        }
         try {
             if (this.Controller != "")
                 this.Controller.Close()

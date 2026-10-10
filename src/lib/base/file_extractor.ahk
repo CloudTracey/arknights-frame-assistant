@@ -13,6 +13,14 @@ class FileExtractor {
     ; logo.ico 的预期字节数。更换图标文件后，更新此值为新文件的字节数即可
     static LogoExpectedSize := 120488
 
+    ; web 引擎资源提取目录
+    static WebDir     := FileExtractor.BaseDir "\web"
+    static LoaderPath := FileExtractor.WebDir "\WebView2Loader.dll"
+
+    ; WebView2Loader.dll的预期字节数与 SHA-256。更换加载器后两者必须同时更新
+    static LoaderExpectedSize := 160880
+    static LoaderExpectedHash := "bf2fefaff7fd4775ea1e07328cc3142721943948f16d261fb82cbd978b7f99e2"
+
     ; 确保所有嵌入文件已提取到 AppData
     static EnsureExtracted() {
         ; 确保模板子目录存在（目录已存在时无副作用）
@@ -28,6 +36,36 @@ class FileExtractor {
             FileInstall "resources\images\TakeOverButton_2.png", FileExtractor.TakeOver2Path, 1
         if (!FileExist(FileExtractor.TakeOver3Path))
             FileInstall "resources\images\TakeOverButton_3.png", FileExtractor.TakeOver3Path, 1
-        Logger.Info("FileExtractor", "嵌入资源提取完成：" FileExtractor.ResourcesDir)
+
+        ; web 引擎资源
+        try {
+            DirCreate(FileExtractor.WebDir)
+            FileInstall "lib\ui\web\app\index.html", FileExtractor.WebDir "\index.html", 1
+            if (A_PtrSize = 8 && !FileExtractor._LoaderUpToDate()) {
+                FileInstall "lib\vendor\WebView2\64bit\WebView2Loader.dll", FileExtractor.LoaderPath, 1
+                Logger.Info("FileExtractor", "已提取 WebView2 加载器")
+            }
+            Logger.Info("FileExtractor", "嵌入资源提取完成：" FileExtractor.ResourcesDir "、" FileExtractor.WebDir)
+        } catch Error as e {
+            Logger.Warn("FileExtractor", "web 引擎资源提取失败（" e.Message "），本次会话 web 模式将不可用")
+        }
+    }
+
+    ; 路径上的加载器是否与嵌入版一致（尺寸 + 哈希）
+    static LoaderIntact() {
+        if !FileExist(FileExtractor.LoaderPath)
+            return false
+        if (FileGetSize(FileExtractor.LoaderPath) != FileExtractor.LoaderExpectedSize)
+            return false
+        return FileIntegrity.Sha256(FileExtractor.LoaderPath) = FileExtractor.LoaderExpectedHash
+    }
+
+    ; 提取阶段
+    static _LoaderUpToDate() {
+        if FileExtractor.LoaderIntact()
+            return true
+        if (FileExist(FileExtractor.LoaderPath) && FileGetSize(FileExtractor.LoaderPath) = FileExtractor.LoaderExpectedSize)
+            Logger.Warn("FileExtractor", "已提取的 WebView2 加载器哈希与嵌入版不符，重写")
+        return false
     }
 }

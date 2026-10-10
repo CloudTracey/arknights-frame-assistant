@@ -8,5 +8,9 @@ Files taken (minimum closure of WebView2\WebView2.ahk):
   WebView2\32bit\WebView2Loader.dll  - 微软 WebView2Loader（二进制）
   WebView2\64bit\WebView2Loader.dll  - 微软 WebView2Loader（二进制）
 
-除以上 6 个文件外，ahk2_lib 的其余文件（约 60 个）与本项目无关，未收录。
+除上述文件外，ahk2_lib 的其余文件（约 60 个）与本项目无关，未收录。
 See LICENSE for upstream license terms (MIT, thqby).
+
+分发说明：
+  ComVar.ahk / Promise.ahk / WebView2.ahk 以源码形式随 AFA 分发，适用上面的 MIT 条款。
+  两个 WebView2Loader.dll 是微软 WebView2 SDK 的再分发物，不适用 MIT，按其自身条款分发。
