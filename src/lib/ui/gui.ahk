@@ -9,6 +9,7 @@ class GuiManager {
     static ServerPathsText := ""
     static RunningClientsText := ""
     static ThemeModes := Constants.ThemeModes   ; 主题模式清单唯一来源（Constants）
+    static UiEngines := Constants.UiEngines     ; 界面类型清单唯一来源（Constants）
     static LanguageCodes := ["auto", "zh-Hans", "zh-Hant", "ja-JP", "ko-KR", "en-US"]  ; 顺序与下拉框显示顺序一致
     static LanguageDisplayNames := Map(
         "auto", "Auto",
@@ -110,7 +111,7 @@ class GuiManager {
     static GuiImportantKeys := ["Frame", "AutoExit", "AutoOpenSettings", "ExitOnWindowClose",
         "DefaultStrongHoldProtocol", "TabOrder", "HiddenTabs", "AutoRunGame", "AutoStartWithGame", "GamePath",
         "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause", "AutoBeginSpeed",
-        "BackCeaseOperations", "InLevelGuard", "DebugEnabled", "Language", "ThemeMode"]
+        "BackCeaseOperations", "InLevelGuard", "DebugEnabled", "Language", "ThemeMode", "UiEngine"]
 
     ; 初始化GUI（单例模式）
     static Init() {
@@ -607,12 +608,22 @@ class GuiManager {
         this.DisplayControls.Push(sepDisplay)
         this.DisplayControls.Push(sepDisplayTxt)
         sepDisplay.GetPos(, &displayTopY)
-        txtTheme := Theme.Add(this.MainGui, "Text", "x160 y" (displayTopY + 22), I18n.T("界面主题"))
+        engineLabels := [I18n.T("Windows原生GUI"), I18n.T("WebView2")]
         themeLabels := [I18n.T("跟随系统"), I18n.T("浅色"), I18n.T("深色")]
-        themeWidth := 160
+        settingWidth := 160
+        for label in engineLabels
+            settingWidth := Max(settingWidth, Metrics.TextWidth(label) + 36)
         for label in themeLabels
-            themeWidth := Max(themeWidth, Metrics.TextWidth(label) + 36)
-        ddTheme := Theme.Add(this.MainGui, "DropDownList", "x+12 yp-3 w" themeWidth " vThemeMode", themeLabels)
+            settingWidth := Max(settingWidth, Metrics.TextWidth(label) + 36)
+        txtEngine := Theme.Add(this.MainGui, "Text", "x160 y" (displayTopY + 22), I18n.T("界面类型"))
+        ddEngine := Theme.Add(this.MainGui, "DropDownList", "x+12 yp-3 w" settingWidth " vUiEngine", engineLabels)
+        ddEngine.Value := this._EngineToIndex(Config.GetImportant("UiEngine"))
+        ddEngine.OnEvent("Change", (*) => this.TrackChange("UiEngine"))
+        StatusBarHints.Register(ddEngine, "修改AFA的界面类型（重启后生效）")
+        this.DisplayControls.Push(txtEngine, ddEngine)
+
+        txtTheme := Theme.Add(this.MainGui, "Text", "x160 y+16", I18n.T("界面主题"))
+        ddTheme := Theme.Add(this.MainGui, "DropDownList", "x+12 yp-3 w" settingWidth " vThemeMode", themeLabels)
         ddTheme.Value := this._ThemeToIndex(Config.GetImportant("ThemeMode"))
         ddTheme.OnEvent("Change", (*) => this.TrackChange("ThemeMode"))
         StatusBarHints.Register(ddTheme, "修改AFA的界面主题")
@@ -1129,6 +1140,8 @@ class GuiManager {
                     this.MainGui[key].Value := this._FrameTextToIndex(Config.GetImportant("Frame"))
                 } else if (key = "ThemeMode") {
                     this.MainGui[key].Value := this._ThemeToIndex(Config.GetImportant("ThemeMode"))
+                } else if (key = "UiEngine") {
+                    this.MainGui[key].Value := this._EngineToIndex(Config.GetImportant("UiEngine"))
                 } else if (key = "Language") {
                     this.MainGui[key].Value := this._LanguageToIndex(Config.GetImportant("Language"))
                 } else {
@@ -1193,7 +1206,6 @@ class GuiManager {
         EventBus.Subscribe("UpdateCheckStarted", (*) => this.OnCheckUpdateStart())
         EventBus.Subscribe("HotkeyStateChanged", (data) => this._OnHotkeyStateChanged(data))
         EventBus.Subscribe("HotkeyGroupChanged", (data) => this._OnHotkeyGroupChanged(data))
-        EventBus.Subscribe("SwitchKeyChanged", (data) => this._OnSwitchKeyChanged(data))
         EventBus.Subscribe("SettingsSaved", (*) => this._OnSettingsSaved())
         EventBus.Subscribe("SettingsApplied", (*) => this._OnSettingsApplied())
         EventBus.Subscribe("SettingsCancelled", (*) => this._OnSettingsCancelled())
@@ -1218,7 +1230,6 @@ class GuiManager {
     static _OnForegroundClientChanged(data) {
         Logger.Info("Gui", "前台客户端变化：serverId=" data.serverId ", pid=" data.pid)
         this._RefreshRunningClientsText()
-        TrayController.UpdateServer(data.serverId)
     }
 
     ; 语言切换：记录变更，保存/应用后统一重建
@@ -1236,10 +1247,8 @@ class GuiManager {
         HideTrayTip()
         SetTimer HideTrayTip, 0
         if (data.enabled) {
-            TrayController.SetTooltip("AFA`n" I18n.T("热键已启用"))
             ShowTrayTip(I18n.T("热键已启用"), "AFA", "Mute")
         } else {
-            TrayController.SetTooltip("AFA`n" I18n.T("热键已禁用"))
             ShowTrayTip(I18n.T("热键已禁用"), "AFA", "Mute")
         }
         SetTimer HideTrayTip, -3000
@@ -1261,14 +1270,6 @@ class GuiManager {
                 ShowTrayTip(I18n.T("已退出卫戍协议方案"), "AFA", "Mute")
             SetTimer HideTrayTip, -3000
         }
-    }
-
-    ; 处理切换键变化
-    static _OnSwitchKeyChanged(data) {
-        if (data.key = "")
-            TrayController.SetHotkeyItemLabel(I18n.T("启用/禁用热键"))
-        else
-            TrayController.SetHotkeyItemLabel(I18n.T("启用/禁用热键") "(" KeyFormat.VirtualNewkeyFormat(data.key) ")")
     }
 
     ; 处理设置保存
@@ -1358,6 +1359,10 @@ class GuiManager {
         }
         if (data.key = "ThemeMode") {
             this.MainGui["ThemeMode"].Value := this._ThemeToIndex(data.value)
+            return
+        }
+        if (data.key = "UiEngine") {
+            this.MainGui["UiEngine"].Value := this._EngineToIndex(data.value)
             return
         }
         if (data.key = "Language") {
@@ -1671,6 +1676,8 @@ class GuiManager {
                 Config.SetImportant("ThemeMode", mode)
                 Theme.Preview(mode)
             }
+            else if (controlName = "UiEngine")
+                Config.SetImportant("UiEngine", this.UiEngines[currentValue])
             else if (controlName = "Language") {
                 Config.SetImportant("Language", this.LanguageCodes[currentValue])
             }
@@ -1781,6 +1788,16 @@ class GuiManager {
         mode := Theme.Normalize(mode)
         for index, item in this.ThemeModes {
             if (item = mode)
+                return index
+        }
+        return 1
+    }
+
+    ; 界面类型配置→下拉框索引
+    static _EngineToIndex(engine) {
+        engine := Constants.NormalizeUiEngine(engine)
+        for index, item in this.UiEngines {
+            if (item = engine)
                 return index
         }
         return 1

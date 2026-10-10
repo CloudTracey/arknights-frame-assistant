@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>AFA</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background: #101014; color: #e8e8ea;
+    font: 14px/1.6 "Microsoft YaHei UI", system-ui, sans-serif;
+  }
+  main { text-align: center; }
+  h1 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+  p { margin: 0; color: #9a9aa2; }
+</style>
+</head>
+<body>
+<main>
+  <h1>WebView2 <span id="version">-</span></h1>
+  <p id="state">loading</p>
+</main>
+<script type="module">
+  const edge = navigator.userAgent.match(/Edg\/([\d.]+)/);
+  document.getElementById('version').textContent = edge ? edge[1] : '(unknown)';
+  window.chrome.webview.postMessage('ready');
+  document.getElementById('state').textContent = 'ready';
+</script>
+</body>
+</html>

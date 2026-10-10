@@ -32,6 +32,7 @@
 #Include ./lib/base/version_utils.ahk
 #Include ./lib/base/touch_injection.ahk
 #Include ./lib/base/custom_hotkey_store.ahk
+#Include ./lib/base/webview_runtime.ahk
 #Include ./lib/core/game/game_client_registry.ahk
 #Include ./lib/core/diagnostics/log_exporter.ahk
 #Include ./lib/core/launch/app_context.ahk
@@ -59,6 +60,7 @@
 #Include ./lib/ui/gui.ahk
 #Include ./lib/ui/ui_shell.ahk
 #Include ./lib/ui/tray_controller.ahk
+#Include ./lib/ui/web/web_engine.ahk
 #Include ./lib/ui/custom_key_editor.ahk
 #Include ./lib/core/monitor/game_monitor.ahk
 #Include ./lib/core/monitor/hook_monitor.ahk

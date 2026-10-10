@@ -16,10 +16,10 @@ class Constants {
         return "auto"
     }
 
-    ; 界面引擎：唯一合法值集合与规范化规则
+    ; 界面类型
     static UiEngines := ["classic", "web"]
 
-    ; 规范化界面引擎：大小写不敏感，非法值回退 classic
+    ; 规范化界面类型
     static NormalizeUiEngine(engine) {
         engine := StrLower(engine)
         for item in this.UiEngines
@@ -88,7 +88,7 @@ class Constants {
         "DebugEnabled", "显示调试日志控制台",
         "Language", "界面语言",
         "ThemeMode", "界面主题",
-        "UiEngine", "界面引擎"
+        "UiEngine", "界面类型"
     )
 
     ; 自定义设置名称映射

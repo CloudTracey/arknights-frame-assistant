@@ -146,6 +146,7 @@ class SettingsService {
 
     ; 内部：保存/应用共用流程
     static _SaveOrApply(isApply) {
+        savedEngine := Config.ReadImportantFromIni("UiEngine")
         if (!this._ValidateAndPersist()) {
             Logger.Warn("Settings", isApply ? "设置应用中止" : "设置保存中止")
             return
@@ -156,12 +157,44 @@ class SettingsService {
         if (isApply) {
             EventBus.Publish("SettingsApplied")
             Logger.Info("Settings", "设置已应用")
-            MessageBox.Info(I18n.T("设置已应用！"), I18n.T("应用成功"))
         } else {
             EventBus.Publish("SettingsSaved")
             Logger.Info("Settings", "设置已保存并关闭")
-            MessageBox.Info(I18n.T("设置已保存！后续可双击右下角托盘区图标或通过右键菜单打开设置"), I18n.T("保存成功"))
         }
+        if (this._UiEngineChanged(savedEngine)) {
+            this._PromptRestart()
+            return
+        }
+        if (isApply)
+            MessageBox.Info(I18n.T("设置已应用！"), I18n.T("应用成功"))
+        else
+            MessageBox.Info(I18n.T("设置已保存！后续可双击右下角托盘区图标或通过右键菜单打开设置"), I18n.T("保存成功"))
+    }
+
+    ; 内部：界面类型是否更改
+    static _UiEngineChanged(savedEngine) {
+        return Constants.NormalizeUiEngine(Config.GetImportant("UiEngine"))
+            != Constants.NormalizeUiEngine(savedEngine)
+    }
+
+    ; 询问是否立即重启
+    static _PromptRestart() {
+        result := MessageBox.Confirm(I18n.T("界面类型已变更，重启后生效，是否立刻重启？"), I18n.T("界面类型"))
+        if (result != "Yes") {
+            Logger.Info("Settings", "界面类型已变更，重启后生效")
+            return
+        }
+        Logger.Info("Settings", "界面类型已变更，用户选择立即重启")
+        SingleInstance.Restart()
+    }
+
+    ; 内部：确认无WebView2 runtime时是否更改
+    static _NeedsWebRuntimeWarning() {
+        if (Constants.NormalizeUiEngine(Config.GetImportant("UiEngine")) != "web")
+            return false
+        if (Constants.NormalizeUiEngine(Config.ReadImportantFromIni("UiEngine")) = "web")
+            return false
+        return !WebViewRuntime.IsAvailable()
     }
 
     ; 内部：验证并持久化当前 Config 工作副本
@@ -249,6 +282,15 @@ class SettingsService {
                 MessageBox.Error(I18n.T("自定义按键「{1}」：`n{2}", name, result.message), I18n.T("自定义按键参数错误"))
                 return false
             }
+        }
+
+        ; 界面类型改到 web 但本机没有 WebView2
+        if (this._NeedsWebRuntimeWarning()) {
+            confirmResult := MessageBox.Confirm(
+                I18n.T("未检测到 WebView2 运行时，切换到 WebView2 后会回退到 Windows 原生 GUI。是否仍要保存此设置？"),
+                I18n.T("界面类型"))
+            if (confirmResult != "Yes")
+                return false
         }
 
         ; 保存到 INI；已确认的失效路径清理在此提交
