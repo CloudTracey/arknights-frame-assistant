@@ -37,7 +37,7 @@ class FileExtractor {
         if (!FileExist(FileExtractor.TakeOver3Path))
             FileInstall "resources\images\TakeOverButton_3.png", FileExtractor.TakeOver3Path, 1
 
-        ; web 引擎资源；失败只记 Warn 并继续——web 是可选引擎，不该拖死经典界面启动
+        ; web 引擎资源
         try {
             DirCreate(FileExtractor.WebDir)
             FileInstall "lib\ui\web\app\index.html", FileExtractor.WebDir "\index.html", 1
