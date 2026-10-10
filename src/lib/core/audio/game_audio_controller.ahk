@@ -16,10 +16,22 @@ class GameAudioController {
     }
 
     static QueueAction(pid, candidates, kind, delta, callback) {
+        if kind = "volume" && pid && this.Actions.Length {
+            last := this.Actions[-1]
+            if last.kind = kind && last.pid = pid && last.delta * delta > 0 {
+                last.delta := Min(1, Max(-1, last.delta + delta))
+                last.candidates := candidates, last.callback := callback
+                return true
+            }
+        }
+        if kind = "volume" && this.Actions.Length >= 16
+            return false
         this.Actions.Push({pid: pid, candidates: candidates, kind: kind, delta: delta, callback: callback})
         if !this.Timer
             this.Timer := this.Tick.Bind(this)
-        SetTimer(this.Timer, -1)
+        if this.Actions.Length = 1
+            SetTimer(this.Timer, -1)
+        return true
     }
 
     static Tick() {
@@ -111,6 +123,8 @@ class GameAudioController {
                 if IsNumber(reference)
                     result.volume := Min(1, Max(0, reference + action.delta))
             }
+            if action.kind = "mute" && allMuted && result.failed > snapshot.failed
+                return result
             result.muted := !allMuted
             for session in snapshot.sessions {
                 if session.pid != action.pid || session.status = 2

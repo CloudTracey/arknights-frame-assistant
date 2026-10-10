@@ -155,6 +155,7 @@ try {
         ExitApp 1
 
     SmokeAudioShortcuts()
+    SmokeAudioQueue()
     FileAppend("PASS: smoke contracts and no initialization`n", "*", "UTF-8")
     ExitApp 0
 } catch as err
@@ -209,6 +210,9 @@ SmokeAudioShortcuts() {
     result := SmokeAudioController.Apply(mute, snapshot)
     if result.success || !other.muted
         throw Error("one unreadable mute session must not block healthy sessions")
+    result := SmokeAudioController.Apply(mute, snapshot)
+    if result.success || !other.muted
+        throw Error("unknown group mute state must not unmute a readable session")
     up.created := "same", other.level := 0.4
     result := SmokeAudioController.Apply(up, snapshot)
     if result.success || Abs(other.level - 0.5) > 0.0001
@@ -216,6 +220,85 @@ SmokeAudioShortcuts() {
     if GameAudioController.Timer || GameAudioController.Actions.Length
         throw Error("audio must have no initialization side effects")
     FileAppend("PASS: audio PID isolation, 10-point steps, boundaries and partial failure`n", "*", "UTF-8")
+}
+
+SmokeAudioQueue() {
+    capture := GameAudioMute.GetOwnPropDesc("Capture")
+    release := GameAudioMute.GetOwnPropDesc("ReleaseSnapshot")
+    exeName := ServerProfile.ExeName, hidden := A_DetectHiddenWindows
+    pid := DllCall("GetCurrentProcessId", "UInt")
+    session := SmokeAudioSession(pid, "default", 1)
+    snapshot := {sessions: [session], defaultDevice: "default", failed: 0, message: ""}
+    scans := 0, results := []
+    CaptureQueue(*) {
+        scans++
+        return snapshot
+    }
+    Queue(delta) => SmokeAudioController.QueueAction(pid, [A_ScriptHwnd], "volume", delta,
+        (kind, result) => results.Push(result.volume))
+    try {
+        DetectHiddenWindows(true)
+        ServerProfile.ExeName := ProcessGetName(pid)
+        GameAudioMute.DefineProp("Capture", {Call: CaptureQueue})
+        GameAudioMute.DefineProp("ReleaseSnapshot", {Call: (*) => 0})
+        SmokeAudioController.Actions := []
+        SmokeAudioController.Timer := (*) => 0
+        Queue(0.1), Queue(-0.1)
+        SmokeAudioController.Tick()
+        if Abs(session.level - 0.9) > 0.0001 || results.Length != 2 || results[1] != 1
+            throw Error("Tick must clamp Up before Down at 100%")
+        session.level := 0, results := []
+        Queue(-0.1), Queue(0.1)
+        SmokeAudioController.Tick()
+        if Abs(session.level - 0.1) > 0.0001 || results.Length != 2 || results[1] != 0
+            throw Error("Tick must clamp Down before Up at 0%")
+        session.level := 0.5
+        Queue(0.1)
+        SmokeAudioController.QueueAction(pid, [A_ScriptHwnd], "mute", 0, (kind, result) => 0)
+        Queue(-0.1)
+        SmokeAudioController.Tick()
+        if Abs(session.level - 0.5) > 0.0001 || !session.muted
+            throw Error("volume coalescing must not cross a mute action")
+        before := scans
+        Loop 100
+            Queue(0.1)
+        if SmokeAudioController.Actions.Length > 16
+            throw Error("repeated volume input must not grow the queue without bound")
+        Queue(-0.1)
+        while SmokeAudioController.Actions.Length
+            SmokeAudioController.Tick()
+        if Abs(session.level - 0.9) > 0.0001 || scans - before > 4
+            throw Error("repeated Up must reach 100% before the latest Down, within four batches")
+        Loop 100
+            Queue(Mod(A_Index, 2) ? 0.1 : -0.1)
+        if SmokeAudioController.Actions.Length > 16
+            throw Error("alternating repeated volume input must also remain bounded")
+        while SmokeAudioController.Actions.Length
+            SmokeAudioController.Tick()
+        session.level := 0.1, session.muted := true, results := []
+        completed := [], muteCount := 0
+        RecordPressure(kind, result) => completed.Push({kind: kind, volume: result.volume})
+        SmokeAudioController.QueueAction(pid, [A_ScriptHwnd], "volume", 0.1, RecordPressure)
+        Loop 8 {
+            SmokeAudioController.QueueAction(pid, [A_ScriptHwnd], "mute", 0, RecordPressure)
+            accepted := SmokeAudioController.QueueAction(pid, [A_ScriptHwnd], "volume", -0.1, RecordPressure)
+        }
+        while SmokeAudioController.Actions.Length
+            SmokeAudioController.Tick()
+        for item in completed
+            muteCount += item.kind = "mute" ? 1 : 0
+        if accepted || completed.Length != 16 || muteCount != 8 || completed[1].kind != "volume"
+            || Abs(completed[1].volume - 0.2) > 0.0001 || session.muted
+            throw Error("queue pressure must not discard Up before later mute toggles")
+        FileAppend("PASS: production audio queue bounds and FIFO clamping`n", "*", "UTF-8")
+    } finally {
+        SetTimer(SmokeAudioController.Timer, 0)
+        SmokeAudioController.Timer := 0, SmokeAudioController.Actions := []
+        GameAudioMute.DefineProp("Capture", capture)
+        GameAudioMute.DefineProp("ReleaseSnapshot", release)
+        ServerProfile.ExeName := exeName
+        DetectHiddenWindows(hidden)
+    }
 }
 
 class SmokeAudioController extends GameAudioController {
