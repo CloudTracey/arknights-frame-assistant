@@ -1,4 +1,4 @@
-; web 设置适配：快照读取与草稿写入。
+; web 设置适配：快照读取、草稿写入与保存请求。
 
 class WebSettings {
     static Get(params) {
@@ -62,6 +62,33 @@ class WebSettings {
         }
         Config.SetHotkey(key, value)
         return Map("success", JSON.true, "key", key, "value", Config.GetHotkey(key))
+    }
+
+    static RequestSave() {
+        SetTimer(ObjBindMethod(this, "_Save"), -1)
+        return Map("started", JSON.true)
+    }
+
+    static RequestApply() {
+        SetTimer(ObjBindMethod(this, "_Apply"), -1)
+        return Map("started", JSON.true)
+    }
+
+    static RequestCancel() {
+        SetTimer(ObjBindMethod(this, "_Cancel"), -1)
+        return Map("started", JSON.true)
+    }
+
+    static _Save() {
+        SettingsService.Save()
+    }
+
+    static _Apply() {
+        SettingsService.Apply()
+    }
+
+    static _Cancel() {
+        SettingsService.Cancel()
     }
 
     static Read(key) {

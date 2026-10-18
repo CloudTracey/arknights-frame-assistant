@@ -27,14 +27,18 @@ class WebBridge {
         this._Methods := Map(
             "app.getState", ObjBindMethod(this, "_GetAppState"),
             "settings.get", ObjBindMethod(this, "_GetSettings"),
-            "settings.setDraft", ObjBindMethod(this, "_SetSettingsDraft")
+            "settings.setDraft", ObjBindMethod(this, "_SetSettingsDraft"),
+            "settings.save", ObjBindMethod(this, "_SaveSettings"),
+            "settings.apply", ObjBindMethod(this, "_ApplySettings"),
+            "settings.cancel", ObjBindMethod(this, "_CancelSettings"),
+            "i18n.get", ObjBindMethod(this, "_GetI18n")
         )
         try {
             this._MessageHandler := ObjBindMethod(this, "_OnMessage")
             this._NavHandler := ObjBindMethod(this, "_OnNavigationStarting")
             this._MessageToken := coreWV.add_WebMessageReceived(this._MessageHandler)
             this._NavToken := coreWV.add_NavigationStarting(this._NavHandler)
-            this._SubscribeSettings()
+            this._SubscribeEvents()
         } catch Error as e {
             Logger.Error("WebBridge", "绑定前端消息失败：" e.Message)
             this.Detach()
@@ -46,7 +50,7 @@ class WebBridge {
     ; 幂等
     static Detach() {
         coreWV := this.CoreWV
-        this._UnsubscribeSettings()
+        this._UnsubscribeEvents()
         this.CoreWV := ""
         this.Ready := false
         this._OnReady := ""
@@ -76,18 +80,59 @@ class WebBridge {
             this._OnNavigating.Call()
     }
 
-    static _SubscribeSettings() {
+    static _SubscribeEvents() {
         if (this._EventHandlers.Count > 0)
             return
         handler := ObjBindMethod(this, "_OnSettingsChanged")
         this._EventHandlers["SettingsChanged"] := handler
         EventBus.Subscribe("SettingsChanged", handler)
+
+        handler := ObjBindMethod(this, "_OnBridgeEvent", "SettingsSaveStarting")
+        this._EventHandlers["SettingsSaveStarting"] := handler
+        EventBus.Subscribe("SettingsSaveStarting", handler)
+
+        handler := ObjBindMethod(this, "_OnBridgeEvent", "SettingsSaveFailed")
+        this._EventHandlers["SettingsSaveFailed"] := handler
+        EventBus.Subscribe("SettingsSaveFailed", handler)
+
+        handler := ObjBindMethod(this, "_OnBridgeEvent", "SettingsSaved")
+        this._EventHandlers["SettingsSaved"] := handler
+        EventBus.Subscribe("SettingsSaved", handler)
+
+        handler := ObjBindMethod(this, "_OnBridgeEvent", "SettingsApplied")
+        this._EventHandlers["SettingsApplied"] := handler
+        EventBus.Subscribe("SettingsApplied", handler)
+
+        handler := ObjBindMethod(this, "_OnBridgeEvent", "SettingsCancelled")
+        this._EventHandlers["SettingsCancelled"] := handler
+        EventBus.Subscribe("SettingsCancelled", handler)
+
+        handler := ObjBindMethod(this, "_OnBridgeEvent", "SettingsViewRefreshRequested")
+        this._EventHandlers["SettingsViewRefreshRequested"] := handler
+        EventBus.Subscribe("SettingsViewRefreshRequested", handler)
+
+        handler := ObjBindMethod(this, "_OnBridgeEvent", "LocaleChanged")
+        this._EventHandlers["LocaleChanged"] := handler
+        EventBus.Subscribe("LocaleChanged", handler)
     }
 
-    static _UnsubscribeSettings() {
+    static _UnsubscribeEvents() {
         for name, handler in this._EventHandlers
             EventBus.Unsubscribe(name, handler)
         this._EventHandlers := Map()
+    }
+
+    static _OnBridgeEvent(eventName, data) {
+        if (!this.Ready)
+            return
+        if (!IsObject(data))
+            data := Map()
+        this._Post(Map(
+            "v", this.VERSION,
+            "type", "event",
+            "name", eventName,
+            "data", data
+        ))
     }
 
     static _OnSettingsChanged(data) {
@@ -210,6 +255,36 @@ class WebBridge {
 
     static _SetSettingsDraft(params) {
         return WebSettings.SetDraft(params)
+    }
+
+    static _SaveSettings(params) {
+        return WebSettings.RequestSave()
+    }
+
+    static _ApplySettings(params) {
+        return WebSettings.RequestApply()
+    }
+
+    static _CancelSettings(params) {
+        return WebSettings.RequestCancel()
+    }
+
+    static _GetI18n(params) {
+        locale := I18n.GetCurrent()
+        values := Map()
+        if (!params.Has("keys"))
+            return Map("success", JSON.true, "locale", locale, "values", values)
+        keys := params["keys"]
+        if (Type(keys) != "Array")
+            return Map("success", JSON.false, "code", "bad_request", "message", "keys 必须是数组")
+        if (keys.Length > 512)
+            return Map("success", JSON.false, "code", "too_many_keys", "message", "keys 数量超过 512")
+        for key in keys {
+            if (Type(key) != "String")
+                return Map("success", JSON.false, "code", "bad_request", "message", "keys 必须是字符串数组")
+            values[key] := I18n.T(key)
+        }
+        return Map("success", JSON.true, "locale", locale, "values", values)
     }
 
     static _MethodNames() {

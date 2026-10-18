@@ -149,6 +149,7 @@ class SettingsService {
         savedEngine := Config.ReadImportantFromIni("UiEngine")
         if (!this._ValidateAndPersist()) {
             Logger.Warn("Settings", isApply ? "设置应用中止" : "设置保存中止")
+            EventBus.Publish("SettingsSaveFailed", {mode: isApply ? "apply" : "save"})
             return
         }
         Theme.Confirm(Config.ReadImportantFromIni("ThemeMode"))
