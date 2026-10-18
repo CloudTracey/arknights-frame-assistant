@@ -31,6 +31,10 @@ AHK v2 的箭头函数 `(p) => expr` **只支持单一表达式，不支持 `{ }
 
 **可选属性必须用 `HasOwnProp` 判断**：直接访问不存在的属性会抛 `PropertyError`，而 profile 上的 `Guarded`/`OnUp`/`NoActivate` 等行为标志是"存在才有意义"的可选字段——`profile.HasOwnProp("Guarded")` 而非 `profile.Guarded`。
 
+### 局部变量不要遮蔽内置函数名
+
+AHK v2 中函数定义（含内置函数）本身就是同名只读变量；函数内若声明了同名局部变量（如 `type` 与 `Type()`），该名字会在整个函数作用域内按局部变量解析。**即使调用写在赋值之前**，也会读取未赋值的局部变量并抛 `This local variable has not been assigned a value. A global declaration inside the function may be required.`，错误信息不指出具体变量名。`WebBridge._OnMessage` 曾用 `type` 遮蔽 `Type()`，导致 `ready` 消息解析直接失败；局部变量改名 `msgType` 后恢复。新代码注意不要声明与内置函数同名的局部变量。
+
 ### 回调/定时器/热键按函数对象身份匹配
 
 （`custom_key_editor.ahk` 拾取会话）
