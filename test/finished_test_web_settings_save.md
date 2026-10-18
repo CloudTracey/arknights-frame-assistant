@@ -49,12 +49,14 @@
 - [x] **操作**：再次执行 `settings.get`
 - [x] **预期**：`ClickDelay` 恢复为 `"61"`，不是 `"99"`
 
-### 功能点：`SettingsSaveFailed`
+### 功能点：`SettingsActionFailed`
+
+> 事件名已由 `SettingsSaveFailed` 更名，复测见文末「追加测试（审查修复）」。
 
 - [x] **操作**：执行 `settings.setDraft`，`key:'GamePath'`、`value:'C:\NoSuchPath\Arknights.exe'`
 - [x] **操作**：执行 `settings.save`，id:306
 - [x] **预期**：原生「路径不存在」提示出现，选择「否」
-- [x] **预期**：收到 `id:306`、`ok:true`、`result.started` 为 `true`，随后收到 `type:'event'`、`name:'SettingsSaveFailed'`、`data.mode:'save'`
+- [x] **预期**：收到 `id:306`、`ok:true`、`result.started` 为 `true`，随后收到 `type:'event'`、`name:'SettingsActionFailed'`、`data.mode:'save'`
 - [x] **操作**：执行 `settings.cancel`，恢复草稿
 - [x] **预期**：`settings.get` 的 `GamePath` 恢复为原持久化值
 
@@ -76,7 +78,7 @@
 > 涉及模块：`WebSettings`、`WebBridge`、`SettingsService`
 
 - [x] **操作**：保持 Console 监听，执行一次 `settings.setDraft` 后 `settings.save`
-- [x] **预期**：事件顺序为 `SettingsSaveStarting` → `SettingsSaved`（或失败时 `SettingsSaveFailed`）
+- [x] **预期**：事件顺序为 `SettingsSaveStarting` → `SettingsSaved`（或失败时 `SettingsActionFailed`）
 - [x] **预期**：`settings.save` 的 `reply` 先于原生 MessageBox 出现，页面不会被弹窗阻塞回复
 
 ### 流程：语言变更
@@ -104,7 +106,7 @@
 > 涉及模块：`SettingsService`、`GuiManager`
 
 - [x] **操作**：切回经典界面，打开设置，修改一个值并保存
-- [x] **预期**：经典界面的保存/应用/取消行为与之前一致；没有因为新增 `SettingsSaveFailed` 产生额外弹窗或错误
+- [x] **预期**：经典界面的保存/应用/取消行为与之前一致；没有因为新增 `SettingsActionFailed` 产生额外弹窗或错误
 
 ---
 
@@ -132,3 +134,15 @@
 ## 问题反馈
 
 无。
+
+## 追加测试（审查修复）
+
+> 对应更改：设置动作串行化、`SettingsActionFailed` 事件、i18n 键长度限制、apply 落盘检查。
+
+- [ ] **apply 落盘**：设置 `ClickDelay=62` 后 `settings.apply`，点击原生确定；直接检查 `Settings.ini` 的 `[Custom] ClickDelay=62`，不要先调用 `settings.save`；完成后恢复为 `20`
+- [ ] **失败事件**：把 `GamePath` 设为不存在路径并 `settings.save`，原生提示选「否」；收到 `SettingsActionFailed`，`data.mode` 为 `save`
+- [ ] **长键拒绝**：`i18n.get` 传入 129 字符的 key；`result.success` 为 `false`，`result.code` 为 `key_too_long`
+- [ ] **忙状态（可选）**：连续发送两次 `settings.save`；若第二次收到 `started:false`、`code:'busy'` 则通过；时序无法稳定触发则跳过
+- [ ] 追加测试结果：通过 / 存在问题
+
+> 说明：`SettingsService` 抛异常时由 `WebSettings._Run` 捕获并发布 `SettingsActionFailed`，该异常路径由代码审查覆盖。
