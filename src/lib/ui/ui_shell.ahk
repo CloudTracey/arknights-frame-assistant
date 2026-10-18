@@ -27,6 +27,11 @@ class UiShell {
             GuiManager.Show()
     }
 
+    static FallbackToClassic() {
+        this.Engine := "classic"
+        GuiManager.Start()
+    }
+
     static _Subscribe() {
         if (this._Subscribed)
             return

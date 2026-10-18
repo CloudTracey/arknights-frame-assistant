@@ -299,7 +299,7 @@ class WebHost {
         Logger.Warn("WebHost", "web 引擎回落经典界面：" reason)
         this._Notify()
         this._DestroyGui()
-        GuiManager.Start()
+        UiShell.FallbackToClassic()
     }
 
     static _DestroyGui() {
