@@ -91,9 +91,9 @@ class WebBridge {
         this._EventHandlers["SettingsSaveStarting"] := handler
         EventBus.Subscribe("SettingsSaveStarting", handler)
 
-        handler := ObjBindMethod(this, "_OnBridgeEvent", "SettingsSaveFailed")
-        this._EventHandlers["SettingsSaveFailed"] := handler
-        EventBus.Subscribe("SettingsSaveFailed", handler)
+        handler := ObjBindMethod(this, "_OnBridgeEvent", "SettingsActionFailed")
+        this._EventHandlers["SettingsActionFailed"] := handler
+        EventBus.Subscribe("SettingsActionFailed", handler)
 
         handler := ObjBindMethod(this, "_OnBridgeEvent", "SettingsSaved")
         this._EventHandlers["SettingsSaved"] := handler
@@ -282,6 +282,8 @@ class WebBridge {
         for key in keys {
             if (Type(key) != "String")
                 return Map("success", JSON.false, "code", "bad_request", "message", "keys 必须是字符串数组")
+            if (StrLen(key) > 128)
+                return Map("success", JSON.false, "code", "key_too_long", "message", "翻译键过长")
             values[key] := I18n.T(key)
         }
         return Map("success", JSON.true, "locale", locale, "values", values)

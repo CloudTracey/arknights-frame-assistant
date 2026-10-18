@@ -4,6 +4,7 @@ class I18n {
     static Current := "zh-Hans"
     static _Locales := Map()
     static _WarnedKeys := Map()
+    static WARNED_KEYS_LIMIT := 256
 
     static Init(localeId := "") {
         if (this._Locales.Count = 0) {
@@ -52,7 +53,7 @@ class I18n {
             value := this._Lookup("zh-Hans", key)
         if (value = "") {
             if (this.Current != "zh-Hans") {
-                if !this._WarnedKeys.Has(key) {
+                if !this._WarnedKeys.Has(key) && this._WarnedKeys.Count < this.WARNED_KEYS_LIMIT {
                     this._WarnedKeys[key] := true
                     Logger.Warn("I18n", "缺失翻译键：" key)
                 }

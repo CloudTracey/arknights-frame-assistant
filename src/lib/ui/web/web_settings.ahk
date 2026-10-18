@@ -1,6 +1,8 @@
 ; web 设置适配：快照读取、草稿写入与保存请求。
 
 class WebSettings {
+    static _Busy := false
+
     static Get(params) {
         values := Map()
         for key in GuiManager.GuiImportantKeys {
@@ -24,6 +26,8 @@ class WebSettings {
     }
 
     static SetDraft(params) {
+        if (this._Busy)
+            return this._Fail("busy", "已有设置操作进行中")
         if (!params.Has("key") || Type(params["key"]) != "String")
             return this._Fail("bad_request", "缺少 key")
         key := params["key"]
@@ -65,30 +69,44 @@ class WebSettings {
     }
 
     static RequestSave() {
-        SetTimer(ObjBindMethod(this, "_Save"), -1)
-        return Map("started", JSON.true)
+        return this._Request("save")
     }
 
     static RequestApply() {
-        SetTimer(ObjBindMethod(this, "_Apply"), -1)
-        return Map("started", JSON.true)
+        return this._Request("apply")
     }
 
     static RequestCancel() {
-        SetTimer(ObjBindMethod(this, "_Cancel"), -1)
+        return this._Request("cancel")
+    }
+
+    static _Request(mode) {
+        if (this._Busy)
+            return Map("started", JSON.false, "code", "busy", "message", "已有设置操作进行中")
+        this._Busy := true
+        try {
+            SetTimer(ObjBindMethod(this, "_Run", mode), -1)
+        } catch Error as e {
+            this._Busy := false
+            throw e
+        }
         return Map("started", JSON.true)
     }
 
-    static _Save() {
-        SettingsService.Save()
-    }
-
-    static _Apply() {
-        SettingsService.Apply()
-    }
-
-    static _Cancel() {
-        SettingsService.Cancel()
+    static _Run(mode) {
+        try {
+            if (mode = "save")
+                SettingsService.Save()
+            else if (mode = "apply")
+                SettingsService.Apply()
+            else
+                SettingsService.Cancel()
+        } catch Error as e {
+            Logger.Error("WebSettings", "设置操作失败：" e.Message)
+            SettingsService.PublishActionFailed(mode)
+        } finally {
+            this._Busy := false
+        }
     }
 
     static Read(key) {

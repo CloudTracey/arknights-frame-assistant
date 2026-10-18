@@ -123,6 +123,10 @@ class SettingsService {
         EventBus.Publish("SettingsCancelled")
     }
 
+    static PublishActionFailed(mode) {
+        EventBus.Publish("SettingsActionFailed", {mode: mode})
+    }
+
     ; 重置按键为默认值
     static Reset() {
         result := MessageBox.Confirm(I18n.T("  确定重置*所有*非自定义按键为默认设置吗 ？"), I18n.T("重置按键设置"))
@@ -149,7 +153,7 @@ class SettingsService {
         savedEngine := Config.ReadImportantFromIni("UiEngine")
         if (!this._ValidateAndPersist()) {
             Logger.Warn("Settings", isApply ? "设置应用中止" : "设置保存中止")
-            EventBus.Publish("SettingsSaveFailed", {mode: isApply ? "apply" : "save"})
+            this.PublishActionFailed(isApply ? "apply" : "save")
             return
         }
         Theme.Confirm(Config.ReadImportantFromIni("ThemeMode"))
