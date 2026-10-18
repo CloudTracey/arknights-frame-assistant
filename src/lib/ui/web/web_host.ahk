@@ -119,11 +119,11 @@ class WebHost {
             this._Fallback("虚拟源映射失败：" e.Message)
             return
         }
-        try {
-            this.CoreWV.add_WebMessageReceived(ObjBindMethod(this, "_OnWebMessageReceived"))
-        } catch Error as e {
-            Logger.Warn("WebHost", "绑定前端消息失败（界面将无法与内核通信）：" e.Message)
+        if (!WebBridge.Attach(this.CoreWV, ObjBindMethod(this, "_OnPageReady"))) {
+            this._Fallback("前端通信桥初始化失败")
+            return
         }
+        this.PageReady := false
         try {
             this.CoreWV.Navigate("https://" this.VIRTUAL_HOST "/index.html")
         } catch Error as e {
@@ -131,7 +131,6 @@ class WebHost {
             return
         }
         this.Ready := true
-        this.PageReady := false
         this._ArmReadyTimeout()
         if (Config.ReadImportantFromIni("DebugEnabled") = "1") {
             try this.CoreWV.OpenDevToolsWindow()
@@ -225,42 +224,12 @@ class WebHost {
         try this.Controller.Fill()
     }
 
-    static _OnWebMessageReceived(sender, args) {
-        try {
-            text := this._ExtractMessageText(args)
-            if (text = "ready")
-                this._OnPageReady()
-            else if (StrLen(text) > 0)
-                Logger.Debug("WebHost", "收到前端消息：" text)
-        } catch Error as e {
-            Logger.Error("WebHost", "处理前端消息失败：" e.Message)
-        }
-    }
-
     static _OnPageReady() {
         if (this.PageReady)
             return
         this.PageReady := true
         this._DisarmReadyTimeout()
         Logger.Info("WebHost", "界面已上报 ready")
-    }
-
-    ; 前端 postMessage(字符串) 时 WebMessageAsJson 是带引号的 JSON 字符串字面量，需还原。
-    static _ExtractMessageText(args) {
-        try {
-            json := args.WebMessageAsJson
-            if (StrLen(json) > 0)
-                return this._UnwrapJsonString(json)
-        }
-        try
-            return args.TryGetWebMessageAsString()
-        return ""
-    }
-
-    static _UnwrapJsonString(json) {
-        if (SubStr(json, 1, 1) = '"' && SubStr(json, -1) = '"')
-            return SubStr(json, 2, StrLen(json) - 2)
-        return json
     }
 
     static _ArmReadyTimeout() {
@@ -305,6 +274,7 @@ class WebHost {
     static _DestroyGui() {
         this._UnbindAltF4()
         this._DisarmReadyTimeout()
+        try WebBridge.Detach()
         if (IsObject(this._LoaderGuard)) {
             this._LoaderGuard.Close()
             this._LoaderGuard := ""

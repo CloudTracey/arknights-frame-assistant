@@ -18,14 +18,60 @@
 </head>
 <body>
 <main>
-  <h1>WebView2 <span id="version">-</span></h1>
+  <h1>AFA <span id="version">-</span></h1>
   <p id="state">loading</p>
 </main>
 <script type="module">
-  const edge = navigator.userAgent.match(/Edg\/([\d.]+)/);
-  document.getElementById('version').textContent = edge ? edge[1] : '(unknown)';
-  window.chrome.webview.postMessage('ready');
-  document.getElementById('state').textContent = 'ready';
+  const versionEl = document.getElementById('version');
+  const stateEl = document.getElementById('state');
+  const webview = window.chrome && window.chrome.webview;
+  const pending = new Map();
+  let seq = 0;
+
+  function call(method, params = {}) {
+    return new Promise((resolve, reject) => {
+      const id = ++seq;
+      pending.set(id, { resolve, reject });
+      webview.postMessage({ v: 1, type: 'call', id, method, params });
+      setTimeout(() => {
+        if (pending.delete(id))
+          reject(new Error(`timeout: ${method}`));
+      }, 5000);
+    });
+  }
+
+  function onMessage(event) {
+    const msg = event.data;
+    if (!msg || typeof msg !== 'object')
+      return;
+    if (msg.type === 'welcome') {
+      versionEl.textContent = msg.app && msg.app.version ? msg.app.version : '(unknown)';
+      stateEl.textContent = 'connected';
+      call('app.getState')
+        .then(app => {
+          stateEl.textContent = `connected · ${app.locale} · ${app.theme} · ${app.engine}`;
+        })
+        .catch(err => {
+          stateEl.textContent = `error: ${err.message}`;
+        });
+      return;
+    }
+    if (msg.type === 'reply' && pending.has(msg.id)) {
+      const request = pending.get(msg.id);
+      pending.delete(msg.id);
+      if (msg.ok)
+        request.resolve(msg.result);
+      else
+        request.reject(new Error(msg.error && msg.error.message ? msg.error.message : 'request failed'));
+    }
+  }
+
+  if (!webview) {
+    stateEl.textContent = 'not running in AFA';
+  } else {
+    webview.addEventListener('message', onMessage);
+    webview.postMessage({ v: 1, type: 'ready' });
+  }
 </script>
 </body>
 </html>
