@@ -59,6 +59,11 @@ class WebBridge {
 
     ; 页面刷新/跳转后重新等 ready
     static _OnNavigationStarting(sender, args) {
+        if (!this._IsLocalSource(args.Uri)) {
+            args.Cancel := true
+            Logger.Warn("WebBridge", "已拦截非本地导航：" args.Uri)
+            return
+        }
         this.Ready := false
         if IsObject(this._OnNavigating)
             this._OnNavigating.Call()

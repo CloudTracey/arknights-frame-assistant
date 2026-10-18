@@ -16,6 +16,7 @@ class WebHost {
     static _FellBack := false
     static _Notified := false
     static _ReadyFn := ""
+    static _NavGen := 0
     static _Starting := false  ; _StartCore 进行中；await2 期间可被新线程重入
     static _AltF4Cond := ""
     static _LoaderGuard := ""  ; 加载器句柄
@@ -233,13 +234,15 @@ class WebHost {
     }
 
     static _OnPageNavigating() {
+        this._NavGen += 1
         this.PageReady := false
         this._ArmReadyTimeout()
     }
 
     static _ArmReadyTimeout() {
         this._DisarmReadyTimeout()
-        this._ReadyFn := ObjBindMethod(this, "_OnReadyTimeout")
+        gen := this._NavGen
+        this._ReadyFn := ObjBindMethod(this, "_OnReadyTimeout", gen)
         SetTimer(this._ReadyFn, -this.READY_TIMEOUT_MS)
     }
 
@@ -251,7 +254,9 @@ class WebHost {
         this._ReadyFn := ""
     }
 
-    static _OnReadyTimeout() {
+    static _OnReadyTimeout(gen) {
+        if (gen != this._NavGen)
+            return
         this._ReadyFn := ""
         if (this.PageReady || this._FellBack)
             return
@@ -264,6 +269,8 @@ class WebHost {
                 return
             }
         }
+        if (gen != this._NavGen)
+            return
         this._Fallback(reason)
     }
 
