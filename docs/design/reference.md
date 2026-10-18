@@ -42,7 +42,7 @@
 | 事件 | 说明 |
 |------|------|
 | `SettingsSaveRequested` / `SettingsApplyRequested` / `SettingsCancelRequested` / `SettingsResetRequested` | 设置命令 |
-| `SettingsSaved` / `SettingsApplied` / `SettingsCancelled` / `SettingsReset` | 设置事实 |
+| `SettingsSaved` / `SettingsApplied` / `SettingsCancelled` / `SettingsActionFailed` / `SettingsReset` | 设置事实 |
 | `SettingsChanged` | 单键设置变更 |
 | `SettingsSaveStarting` | 保存前通知 |
 | `SettingsValueChangeRequested` | 请求修改单个设置值 |

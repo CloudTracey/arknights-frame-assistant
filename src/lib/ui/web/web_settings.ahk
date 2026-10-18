@@ -1,6 +1,8 @@
-; web 设置适配：快照读取与草稿写入。
+; web 设置适配：快照读取、草稿写入与保存请求。
 
 class WebSettings {
+    static _Busy := false
+
     static Get(params) {
         values := Map()
         for key in GuiManager.GuiImportantKeys {
@@ -24,6 +26,8 @@ class WebSettings {
     }
 
     static SetDraft(params) {
+        if (this._Busy)
+            return this._Fail("busy", "已有设置操作进行中")
         if (!params.Has("key") || Type(params["key"]) != "String")
             return this._Fail("bad_request", "缺少 key")
         key := params["key"]
@@ -62,6 +66,47 @@ class WebSettings {
         }
         Config.SetHotkey(key, value)
         return Map("success", JSON.true, "key", key, "value", Config.GetHotkey(key))
+    }
+
+    static RequestSave() {
+        return this._Request("save")
+    }
+
+    static RequestApply() {
+        return this._Request("apply")
+    }
+
+    static RequestCancel() {
+        return this._Request("cancel")
+    }
+
+    static _Request(mode) {
+        if (this._Busy)
+            return Map("started", JSON.false, "code", "busy", "message", "已有设置操作进行中")
+        this._Busy := true
+        try {
+            SetTimer(ObjBindMethod(this, "_Run", mode), -1)
+        } catch Error as e {
+            this._Busy := false
+            throw e
+        }
+        return Map("started", JSON.true)
+    }
+
+    static _Run(mode) {
+        try {
+            if (mode = "save")
+                SettingsService.Save()
+            else if (mode = "apply")
+                SettingsService.Apply()
+            else
+                SettingsService.Cancel()
+        } catch Error as e {
+            Logger.Error("WebSettings", "设置操作失败：" e.Message)
+            SettingsService.PublishActionFailed(mode)
+        } finally {
+            this._Busy := false
+        }
     }
 
     static Read(key) {
