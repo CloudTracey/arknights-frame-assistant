@@ -119,7 +119,7 @@ class WebHost {
             this._Fallback("虚拟源映射失败：" e.Message)
             return
         }
-        if (!WebBridge.Attach(this.CoreWV, ObjBindMethod(this, "_OnPageReady"))) {
+        if (!WebBridge.Attach(this.CoreWV, ObjBindMethod(this, "_OnPageReady"), ObjBindMethod(this, "_OnPageNavigating"))) {
             this._Fallback("前端通信桥初始化失败")
             return
         }
@@ -232,6 +232,11 @@ class WebHost {
         Logger.Info("WebHost", "界面已上报 ready")
     }
 
+    static _OnPageNavigating() {
+        this.PageReady := false
+        this._ArmReadyTimeout()
+    }
+
     static _ArmReadyTimeout() {
         this._DisarmReadyTimeout()
         this._ReadyFn := ObjBindMethod(this, "_OnReadyTimeout")
@@ -273,8 +278,8 @@ class WebHost {
 
     static _DestroyGui() {
         this._UnbindAltF4()
-        this._DisarmReadyTimeout()
         try WebBridge.Detach()
+        this._DisarmReadyTimeout()
         if (IsObject(this._LoaderGuard)) {
             this._LoaderGuard.Close()
             this._LoaderGuard := ""

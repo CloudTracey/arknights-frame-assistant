@@ -8,6 +8,7 @@ class WebBridge {
     static Ready := false
 
     static _OnReady := ""
+    static _OnNavigating := ""
     static _MessageHandler := ""
     static _NavHandler := ""
     static _MessageToken := 0
@@ -15,12 +16,13 @@ class WebBridge {
     static _Methods := Map()
 
     ; 绑定消息与导航事件
-    static Attach(coreWV, onReady) {
+    static Attach(coreWV, onReady, onNavigating) {
         if (!IsObject(coreWV))
             return false
         this.Detach()
         this.CoreWV := coreWV
         this._OnReady := onReady
+        this._OnNavigating := onNavigating
         this._Methods := Map("app.getState", ObjBindMethod(this, "_GetAppState"))
         try {
             this._MessageHandler := ObjBindMethod(this, "_OnMessage")
@@ -41,6 +43,7 @@ class WebBridge {
         this.CoreWV := ""
         this.Ready := false
         this._OnReady := ""
+        this._OnNavigating := ""
         this._Methods := Map()
         if (coreWV != "") {
             if (this._MessageToken)
@@ -57,6 +60,8 @@ class WebBridge {
     ; 页面刷新/跳转后重新等 ready
     static _OnNavigationStarting(sender, args) {
         this.Ready := false
+        if IsObject(this._OnNavigating)
+            this._OnNavigating.Call()
     }
 
     static _OnMessage(sender, args) {
@@ -70,12 +75,12 @@ class WebBridge {
             text := args.WebMessageAsJson
             if (StrLen(text) = 0)
                 return
-            msg := JSON.parse(text)
-            if (Type(msg) = "String") {
-                if (msg = "ready")
+            if (SubStr(text, 1, 1) = Chr(34)) {
+                if (args.TryGetWebMessageAsString() = "ready")
                     this._OnReadyMessage(Map("v", this.VERSION, "type", "ready"))
                 return
             }
+            msg := JSON.parse(text)
             if (Type(msg) != "Map")
                 return
             msgType := msg.Has("type") && Type(msg["type"]) = "String" ? msg["type"] : ""
@@ -95,13 +100,18 @@ class WebBridge {
     static _OnReadyMessage(msg) {
         if (this.Ready)
             return
-        this.Ready := true
-        if (!this._Post(Map(
+        if (!msg.Has("v") || msg["v"] != this.VERSION) {
+            Logger.Warn("WebBridge", "ready 协议版本不匹配")
+            return
+        }
+        payload := Map(
             "v", this.VERSION,
             "type", "welcome",
             "app", this._GetAppState(Map()),
             "methods", this._MethodNames()
-        ))) {
+        )
+        this.Ready := true
+        if (!this._Post(payload)) {
             this.Ready := false
             return
         }
