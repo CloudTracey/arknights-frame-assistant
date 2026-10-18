@@ -119,9 +119,9 @@
 
 > 对应更改：ready 版本校验、旧版字符串 ready、导航时重置 `PageReady` 并重新武装超时、握手构造失败可重试。
 
-- [ ] 正常启动 web UI，页面仍显示 `connected · ...`，DevTools 手动 `app.getState` 仍返回 `ok:true`
-- [ ] 在 web 页面执行 `location.reload()`，页面重新显示 `connected · ...`，且 8 秒内不会误回退
-- [ ] （可选）刷新后新页面不发送 `ready` 时，8 秒后按既有策略提示/回退；无法构造则跳过
-- [ ] 追加测试结果：通过 / 存在问题
+- [x] 正常启动 web UI，页面仍显示 `connected · ...`，DevTools 手动 `app.getState` 仍返回 `ok:true`
+- [x] 在 web 页面执行 `location.reload()`，页面重新显示 `connected · ...`，且 8 秒内不会误回退
+- [ ] （可选）刷新后新页面不发送 `ready` 时，8 秒后按既有策略提示/回退；无法构造则跳过 —— **跳过**：未构造
+- [x] 追加测试结果：通过（可选项跳过）
 
 > 说明：ready 版本不匹配与旧版字符串 ready 两条分支由代码审查覆盖；运行态构造需要替换页面，不作为必测项。
