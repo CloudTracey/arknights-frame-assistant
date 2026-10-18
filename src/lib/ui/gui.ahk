@@ -152,7 +152,7 @@ class GuiManager {
         A_TrayMenu.Delete
         A_TrayMenu.Add(I18n.T("打开设置界面"), (*) => this.Show())
         A_TrayMenu.Add(I18n.T("启用/禁用热键"), (*) => EventBus.Publish("HotkeyToggleRequested"))
-        A_TrayMenu.Add(I18n.T("重启AFA"), (*) => (SingleInstance.Release(), Reload()))
+        A_TrayMenu.Add(I18n.T("重启AFA"), (*) => SingleInstance.Restart())
         A_TrayMenu.Add(I18n.T("退出"), (*) => ExitApp())
         A_TrayMenu.Default := I18n.T("打开设置界面")
 
