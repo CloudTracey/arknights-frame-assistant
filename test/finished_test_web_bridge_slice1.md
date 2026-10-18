@@ -132,8 +132,8 @@
 
 > 对应更改：外部导航拦截、超时回调代次 token、控制器复用探针。
 
-- [ ] 在 DevTools Console 执行 `location.href='https://example.com'`；预期页面不跳转，日志出现 `[WebBridge] 已拦截非本地导航`
-- [ ] 在 DevTools Console 执行 `window.__afaReuseProbe = 1`，点击 X 隐藏窗口，再从托盘打开设置；Console 中 `window.__afaReuseProbe` 仍为 `1`（`undefined` 表示控制器/页面被重建）
-- [ ] 追加测试结果：通过 / 存在问题
+- [x] 在 DevTools Console 执行 `location.href='https://example.com'`；预期页面不跳转，日志出现 `[WebBridge] 已拦截非本地导航`
+- [x] 在 DevTools Console 执行 `window.__afaReuseProbe = 1`，点击 X 隐藏窗口，再从托盘打开设置；Console 中 `window.__afaReuseProbe` 仍为 `1`（`undefined` 表示控制器/页面被重建）
+- [x] 追加测试结果：通过
 
 > 说明：探针验证同一 JS 上下文；控制器或页面重建会丢失该值。
