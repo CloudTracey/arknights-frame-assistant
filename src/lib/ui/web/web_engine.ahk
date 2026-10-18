@@ -2,5 +2,7 @@
 ; 避免在上游唯一的 include 热点里展开多个条目。
 
 #Include ../../vendor/Promise.ahk
+#Include ../../vendor/JSON.ahk
 #Include ../../vendor/WebView2/WebView2.ahk
+#Include web_bridge.ahk
 #Include web_host.ahk
