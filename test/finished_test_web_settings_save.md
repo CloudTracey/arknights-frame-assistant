@@ -139,10 +139,10 @@
 
 > 对应更改：设置动作串行化、`SettingsActionFailed` 事件、i18n 键长度限制、apply 落盘检查。
 
-- [ ] **apply 落盘**：设置 `ClickDelay=62` 后 `settings.apply`，点击原生确定；直接检查 `Settings.ini` 的 `[Custom] ClickDelay=62`，不要先调用 `settings.save`；完成后恢复为 `20`
-- [ ] **失败事件**：把 `GamePath` 设为不存在路径并 `settings.save`，原生提示选「否」；收到 `SettingsActionFailed`，`data.mode` 为 `save`
-- [ ] **长键拒绝**：`i18n.get` 传入 129 字符的 key；`result.success` 为 `false`，`result.code` 为 `key_too_long`
-- [ ] **忙状态（可选）**：连续发送两次 `settings.save`；若第二次收到 `started:false`、`code:'busy'` 则通过；时序无法稳定触发则跳过
-- [ ] 追加测试结果：通过 / 存在问题
+- [x] **apply 落盘**：设置 `ClickDelay=62` 后 `settings.apply`，点击原生确定；直接检查 `Settings.ini` 的 `[Custom] ClickDelay=62`，不要先调用 `settings.save`；完成后恢复为 `20`
+- [x] **失败事件**：把 `GamePath` 设为不存在路径并 `settings.save`，原生提示选「否」；收到 `SettingsActionFailed`，`data.mode` 为 `save`
+- [x] **长键拒绝**：`i18n.get` 传入 129 字符的 key；`result.success` 为 `false`，`result.code` 为 `key_too_long`
+- [ ] **忙状态（可选）**：连续发送两次 `settings.save`；若第二次收到 `started:false`、`code:'busy'` 则通过；时序无法稳定触发则跳过 —— **跳过**：时序不可控
+- [x] 追加测试结果：通过（忙状态跳过）
 
 > 说明：`SettingsService` 抛异常时由 `WebSettings._Run` 捕获并发布 `SettingsActionFailed`，该异常路径由代码审查覆盖。
