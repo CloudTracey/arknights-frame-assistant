@@ -14,6 +14,7 @@ class WebBridge {
     static _MessageToken := 0
     static _NavToken := 0
     static _Methods := Map()
+    static _EventHandlers := Map()
 
     ; 绑定消息与导航事件
     static Attach(coreWV, onReady, onNavigating) {
@@ -23,12 +24,17 @@ class WebBridge {
         this.CoreWV := coreWV
         this._OnReady := onReady
         this._OnNavigating := onNavigating
-        this._Methods := Map("app.getState", ObjBindMethod(this, "_GetAppState"))
+        this._Methods := Map(
+            "app.getState", ObjBindMethod(this, "_GetAppState"),
+            "settings.get", ObjBindMethod(this, "_GetSettings"),
+            "settings.setDraft", ObjBindMethod(this, "_SetSettingsDraft")
+        )
         try {
             this._MessageHandler := ObjBindMethod(this, "_OnMessage")
             this._NavHandler := ObjBindMethod(this, "_OnNavigationStarting")
             this._MessageToken := coreWV.add_WebMessageReceived(this._MessageHandler)
             this._NavToken := coreWV.add_NavigationStarting(this._NavHandler)
+            this._SubscribeSettings()
         } catch Error as e {
             Logger.Error("WebBridge", "绑定前端消息失败：" e.Message)
             this.Detach()
@@ -40,6 +46,7 @@ class WebBridge {
     ; 幂等
     static Detach() {
         coreWV := this.CoreWV
+        this._UnsubscribeSettings()
         this.CoreWV := ""
         this.Ready := false
         this._OnReady := ""
@@ -67,6 +74,36 @@ class WebBridge {
         this.Ready := false
         if IsObject(this._OnNavigating)
             this._OnNavigating.Call()
+    }
+
+    static _SubscribeSettings() {
+        if (this._EventHandlers.Count > 0)
+            return
+        handler := ObjBindMethod(this, "_OnSettingsChanged")
+        this._EventHandlers["SettingsChanged"] := handler
+        EventBus.Subscribe("SettingsChanged", handler)
+    }
+
+    static _UnsubscribeSettings() {
+        for name, handler in this._EventHandlers
+            EventBus.Unsubscribe(name, handler)
+        this._EventHandlers := Map()
+    }
+
+    static _OnSettingsChanged(data) {
+        if (!this.Ready)
+            return
+        key := data.key
+        if (key = "Frame")
+            key := "Frame155"
+        if (!WebSettings.IsExposedKey(key))
+            return
+        this._Post(Map(
+            "v", this.VERSION,
+            "type", "event",
+            "name", "SettingsChanged",
+            "data", Map("key", key, "value", WebSettings.Read(key))
+        ))
     }
 
     static _OnMessage(sender, args) {
@@ -165,6 +202,14 @@ class WebBridge {
             "engine", UiShell.Engine,
             "hotkeysEnabled", HotkeyService.HotkeyState ? JSON.true : JSON.false
         )
+    }
+
+    static _GetSettings(params) {
+        return WebSettings.Get(params)
+    }
+
+    static _SetSettingsDraft(params) {
+        return WebSettings.SetDraft(params)
     }
 
     static _MethodNames() {

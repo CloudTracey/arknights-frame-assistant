@@ -4,5 +4,6 @@
 #Include ../../vendor/Promise.ahk
 #Include ../../vendor/JSON.ahk
 #Include ../../vendor/WebView2/WebView2.ahk
+#Include web_settings.ahk
 #Include web_bridge.ahk
 #Include web_host.ahk
