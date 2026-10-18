@@ -91,6 +91,8 @@
 - [x] 验证：`DebugEnabled=1` 时 DevTools 正常打开
 - [ ] 验证：`DebugEnabled=0` 时不打开 —— **跳过**：需改配置并重启，与本 slice 的桥接逻辑无关
 
+> 说明：第 90 行只验证重新打开后页面可显示；控制器是否复用由下方「追加测试（导航与控制器复用）」的探针验证。
+
 ### 功能：`app.getState` 的语言/主题字段
 
 - [x] 验证：`app.getState` 返回的 `locale`/`theme` 与当前配置一致（第 2 组已覆盖）
@@ -125,3 +127,13 @@
 - [x] 追加测试结果：通过（可选项跳过）
 
 > 说明：ready 版本不匹配与旧版字符串 ready 两条分支由代码审查覆盖；运行态构造需要替换页面，不作为必测项。
+
+## 追加测试（导航与控制器复用）
+
+> 对应更改：外部导航拦截、超时回调代次 token、控制器复用探针。
+
+- [ ] 在 DevTools Console 执行 `location.href='https://example.com'`；预期页面不跳转，日志出现 `[WebBridge] 已拦截非本地导航`
+- [ ] 在 DevTools Console 执行 `window.__afaReuseProbe = 1`，点击 X 隐藏窗口，再从托盘打开设置；Console 中 `window.__afaReuseProbe` 仍为 `1`（`undefined` 表示控制器/页面被重建）
+- [ ] 追加测试结果：通过 / 存在问题
+
+> 说明：探针验证同一 JS 上下文；控制器或页面重建会丢失该值。
