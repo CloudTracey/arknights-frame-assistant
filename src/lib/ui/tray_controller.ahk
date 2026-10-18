@@ -100,6 +100,18 @@ class TrayController {
         return profile != "" ? I18n.T(profile.DisplayNameKey) : I18n.T("未知区服")
     }
 
+    ; 热键总开关状态变化
+    static _OnHotkeyStateChanged(data) {
+        this._RenderTooltip(this._LastServerId)
+        HideTrayTip()
+        SetTimer HideTrayTip, 0
+        if (data.enabled)
+            ShowTrayTip(I18n.T("热键已启用"), "AFA", "Mute")
+        else
+            ShowTrayTip(I18n.T("热键已禁用"), "AFA", "Mute")
+        SetTimer HideTrayTip, -3000
+    }
+
     ; 运行期刷新订阅
     static _SubscribeRefresh() {
         if (this._SubscribedRefresh)
@@ -107,6 +119,6 @@ class TrayController {
         this._SubscribedRefresh := true
         EventBus.Subscribe("SwitchKeyChanged", (data) => this.RefreshHotkeyItem(data.key))
         EventBus.Subscribe("ForegroundClientChanged", (data) => this.UpdateServer(data.serverId))
-        EventBus.Subscribe("HotkeyStateChanged", (*) => this._RenderTooltip(this._LastServerId))
+        EventBus.Subscribe("HotkeyStateChanged", (data) => this._OnHotkeyStateChanged(data))
     }
 }

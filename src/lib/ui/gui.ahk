@@ -1204,7 +1204,6 @@ class GuiManager {
         EventBus.Subscribe("GuiHideStopHook", HandleGuiHideStopHook)
         EventBus.Subscribe("UpdateCheckCompleted", (*) => this.OnCheckUpdateComplete())
         EventBus.Subscribe("UpdateCheckStarted", (*) => this.OnCheckUpdateStart())
-        EventBus.Subscribe("HotkeyStateChanged", (data) => this._OnHotkeyStateChanged(data))
         EventBus.Subscribe("HotkeyGroupChanged", (data) => this._OnHotkeyGroupChanged(data))
         EventBus.Subscribe("SettingsSaved", (*) => this._OnSettingsSaved())
         EventBus.Subscribe("SettingsApplied", (*) => this._OnSettingsApplied())
@@ -1240,18 +1239,6 @@ class GuiManager {
         if (this.MainGui != "")
             this.MainGui.Title := I18n.T("明日方舟帧操小助手 ArknightsFrameAssistant - {1}", Version.Get())
         StatusBarHints.OnLocaleChanged()
-    }
-
-    ; 处理热键总开关状态变化
-    static _OnHotkeyStateChanged(data) {
-        HideTrayTip()
-        SetTimer HideTrayTip, 0
-        if (data.enabled) {
-            ShowTrayTip(I18n.T("热键已启用"), "AFA", "Mute")
-        } else {
-            ShowTrayTip(I18n.T("热键已禁用"), "AFA", "Mute")
-        }
-        SetTimer HideTrayTip, -3000
     }
 
     ; 处理热键组变化（卫戍协议/常规作战切换提示）
