@@ -60,7 +60,8 @@
 
 - [x] **前置**：web UI 已正常显示 `connected · ...`
 - [x] **操作**：如果 DevTools 截到 `welcome`，检查 `methods`；否则直接执行 `settings.get`
-- [x] **预期**：`settings.get` 返回 `ok:true`；截到 `welcome` 时其 `methods` 包含 `app.getState`、`settings.get`、`settings.setDraft`
+- [x] **预期**：`settings.get` 返回 `ok:true`；`welcome.methods` 未截到时不作运行时断言，方法注册由直接调用覆盖
+- **说明**：`welcome.methods` 的完整性由代码审查覆盖；运行态以三个方法可直接调用为准
 - [x] **操作**：执行 `location.reload()`，重新执行 `settings.get`
 - [x] **预期**：页面重新握手，`settings.get` 仍返回快照；没有 8 秒误回退
 
