@@ -83,4 +83,3 @@
 | `tools/layer_check.py` | `python -X utf8 tools/layer_check.py --baseline KNOWN_VIOLATIONS` | 涉及跨模块引用或 include 顺序的改动 |
 | `tools/event_contract_check.py` | `python -X utf8 tools/event_contract_check.py` | 涉及 `EventBus.Publish/Subscribe` 的改动（已接入 CI） |
 | `tools/i18n_check.py` | `python -X utf8 tools/i18n_check.py` | 涉及文案或语言资源的改动 |
-| `test/scripts/smoke_test.ahk` | `AutoHotkey64.exe /ErrorStdOut "test/scripts/smoke_test.ahk"`（取错方式见 AGENTS.md「用 AHK 脚本做测试时的错误捕获」） | 涉及模块结构/include 的改动（include 全模块后验证无顶层副作用） |
