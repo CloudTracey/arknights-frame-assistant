@@ -75,7 +75,7 @@
 
 - **跳过**：本 slice 未改动原有的 8 秒 ready 超时与回退策略。如需构造，可在开发态临时让页面不发送 `ready`，预期仍按现有策略提示/回退，且不会出现 `WebBridge` 异常堆栈；本项不作为本 slice 的必测项
 - [x] **操作**：在 DevTools Console 执行 `chrome.webview.postMessage({v:1,type:'call',id:103,method:'app.getState'})`（不带 `params`）
-- [x] **预期**：仍能收到 `ok:true` 的 `reply`，说明缺省 `params` 被当作空对象处理
+- [x] **预期**：仍能收到 `ok:true` 的 `reply`；本项仅验证缺参不报错，`app.getState` 不观察 `params`，默认空对象由代码审查保证，待后续 params API 再补可判别测试
 
 ---
 
@@ -114,3 +114,14 @@
 - 原因：`_OnMessage` 的局部变量 `type` 遮蔽了内置函数 `Type()`，`Type(msg)` 读到未赋值的局部变量，抛 `UnsetError`，`ready` 未被处理
 - 修复：局部变量改名为 `msgType`
 - [x] 重新编译后复测通过
+
+## 追加测试（握手加固）
+
+> 对应更改：ready 版本校验、旧版字符串 ready、导航时重置 `PageReady` 并重新武装超时、握手构造失败可重试。
+
+- [ ] 正常启动 web UI，页面仍显示 `connected · ...`，DevTools 手动 `app.getState` 仍返回 `ok:true`
+- [ ] 在 web 页面执行 `location.reload()`，页面重新显示 `connected · ...`，且 8 秒内不会误回退
+- [ ] （可选）刷新后新页面不发送 `ready` 时，8 秒后按既有策略提示/回退；无法构造则跳过
+- [ ] 追加测试结果：通过 / 存在问题
+
+> 说明：ready 版本不匹配与旧版字符串 ready 两条分支由代码审查覆盖；运行态构造需要替换页面，不作为必测项。
