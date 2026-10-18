@@ -102,7 +102,7 @@ class WebBridge {
             "v", this.VERSION,
             "type", "event",
             "name", "SettingsChanged",
-            "data", Map("key", key, "value", data.value)
+            "data", Map("key", key, "value", WebSettings.Read(key))
         ))
     }
 

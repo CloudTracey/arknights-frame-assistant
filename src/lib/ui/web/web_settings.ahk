@@ -64,6 +64,18 @@ class WebSettings {
         return Map("success", JSON.true, "key", key, "value", Config.GetHotkey(key))
     }
 
+    static Read(key) {
+        if (key = "Frame" || key = "Frame155")
+            return Config.GetImportant("Frame")
+        if (Config.AllImportant.Has(key))
+            return Config.GetImportant(key)
+        if (Config.AllCustom.Has(key))
+            return Config.GetCustom(key)
+        if (Config.AllHotkeys.Has(key))
+            return Config.GetHotkey(key)
+        return ""
+    }
+
     static IsExposedKey(key) {
         if (key = "Frame155")
             return true
