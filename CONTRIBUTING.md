@@ -274,7 +274,7 @@ python -X utf8 tools/event_contract_check.py
 python -X utf8 tools/i18n_check.py
 ```
 
-静态检查不启动 AFA。AHK 独立测试位于 `test/scripts/`，执行结果与手工结果分别记录。
+静态检查不启动 AFA；静态检查结果与手工验证结果分别记录。
 
 ### 测试清单创建
 
