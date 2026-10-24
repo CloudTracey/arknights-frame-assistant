@@ -103,23 +103,43 @@ class GameAutoStartManager {
         return this.Disable()
     }
 
-    ; 获取当前配置的全部游戏路径（GamePath + 各区服 GamePath*）
+    ; 获取当前内存配置的全部游戏路径
     static GetConfiguredGamePaths() {
+        return this._CollectConfiguredGamePaths(false)
+    }
+
+    ; 读取已持久化的全部游戏路径
+    static GetConfiguredGamePathsFromIni() {
+        return this._CollectConfiguredGamePaths(true)
+    }
+
+    ; 规范化游戏路径
+    static NormalizeGamePath(gamePath) {
+        if (gamePath = "")
+            return ""
+        return this._GetLongPath(this._NormalizePath(gamePath))
+    }
+
+    static _CollectConfiguredGamePaths(fromIni) {
         result := []
         seen := Map()
-        candidates := [Config.GetImportant("GamePath")]
+        candidates := [this._ReadConfiguredPath("GamePath", fromIni)]
         for serverId in ServerProfile.Ids()
-            candidates.Push(Config.GetImportant("GamePath" serverId))
+            candidates.Push(this._ReadConfiguredPath("GamePath" serverId, fromIni))
         for path in candidates {
             if (path = "")
                 continue
-            norm := this._NormalizePath(path)
+            norm := this.NormalizeGamePath(path)
             if (norm != "" && !seen.Has(StrLower(norm))) {
                 seen[StrLower(norm)] := true
-                result.Push(this._GetLongPath(norm))
+                result.Push(norm)
             }
         }
         return result
+    }
+
+    static _ReadConfiguredPath(key, fromIni) {
+        return fromIni ? Config.ReadImportantFromIni(key) : Config.GetImportant(key)
     }
 
     static _AsPathArray(gamePath) {

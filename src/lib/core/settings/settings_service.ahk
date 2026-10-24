@@ -13,6 +13,8 @@ class SettingsService {
 
     ; 启动时加载设置
     static Initialize() {
+        Config.CleanupStaleFiles()
+        CustomHotkeyStore.CleanupStaleFiles()
         Config.MigrateFrameRate()
         Config.MigrateGitHubToken()
         Config.MigrateHotkeyCase()
@@ -135,6 +137,7 @@ class SettingsService {
         saveResult := Config.SaveHotkeysToIni()
         if (!saveResult.success) {
             Logger.Warn("Settings", "重置按键并保存中止：" saveResult.message)
+            HotkeyService.RestoreAfterSaveFailure()
             MessageBox.Error(saveResult.message, I18n.T("设置保存失败"))
             return
         }
@@ -146,21 +149,29 @@ class SettingsService {
 
     ; 内部：保存/应用共用流程
     static _SaveOrApply(isApply) {
-        if (!this._ValidateAndPersist()) {
-            Logger.Warn("Settings", isApply ? "设置应用中止" : "设置保存中止")
-            return
-        }
-        Theme.Confirm(Config.ReadImportantFromIni("ThemeMode"))
-        this._RefreshRuntime()
-        this._ResetGameStateIfNeeded()
-        if (isApply) {
-            EventBus.Publish("SettingsApplied")
-            Logger.Info("Settings", "设置已应用")
-            MessageBox.Info(I18n.T("设置已应用！"), I18n.T("应用成功"))
-        } else {
-            EventBus.Publish("SettingsSaved")
-            Logger.Info("Settings", "设置已保存并关闭")
-            MessageBox.Info(I18n.T("设置已保存！后续可双击右下角托盘区图标或通过右键菜单打开设置"), I18n.T("保存成功"))
+        saved := false
+        try {
+            if (!this._ValidateAndPersist()) {
+                Logger.Warn("Settings", isApply ? "设置应用中止" : "设置保存中止")
+                return
+            }
+            Theme.Confirm(Config.ReadImportantFromIni("ThemeMode"))
+            this._RefreshRuntime()
+            this._ResetGameStateIfNeeded()
+            if (isApply) {
+                EventBus.Publish("SettingsApplied")
+                saved := true
+                Logger.Info("Settings", "设置已应用")
+                MessageBox.Info(I18n.T("设置已应用！"), I18n.T("应用成功"))
+            } else {
+                EventBus.Publish("SettingsSaved")
+                saved := true
+                Logger.Info("Settings", "设置已保存并关闭")
+                MessageBox.Info(I18n.T("设置已保存！后续可双击右下角托盘区图标或通过右键菜单打开设置"), I18n.T("保存成功"))
+            }
+        } finally {
+            if (!saved)
+                HotkeyService.RestoreAfterSaveFailure()
         }
     }
 
@@ -170,6 +181,14 @@ class SettingsService {
         EventBus.Publish("UnsetSwitchKey")   ; Legacy
         EventBus.Publish("SettingsSaveStarting")
 
+        draft := this._ValidateDraft()
+        if (!draft.success)
+            return false
+        return this._PersistDraft(draft)
+    }
+
+    ; 内部：校验草稿；返回 {success, missingEntries, missingPaths}
+    static _ValidateDraft() {
         Logger.RegisterSecret(Config.GetImportant("GitHubToken"))
 
         currentToken := Config.GetImportant("GitHubToken")
@@ -180,7 +199,7 @@ class SettingsService {
                 Logger.Warn("Settings", "GitHub Token 验证失败：" tokenResult.message)
                 result := MessageBox.Confirm(I18n.T("GitHub Token验证失败：{1}`n`n是否仍要保存此Token？", tokenResult.message), I18n.T("Token验证失败"))
                 if (result = "No")
-                    return false
+                    return {success: false}
             } else {
                 GitHubTokenService.TokenValidated := true
                 Logger.Info("Settings", "GitHub Token 验证成功")
@@ -193,7 +212,7 @@ class SettingsService {
         if (!tokenStorage.success) {
             Logger.Warn("Settings", "保存中止：GitHub Token 无法安全保存（" tokenStorage.message "）")
             MessageBox.Error(I18n.T("GitHub Token 无法安全保存：`n{1}", tokenStorage.message), I18n.T("设置保存失败"))
-            return false
+            return {success: false}
         }
 
         ; 验证游戏路径
@@ -216,7 +235,7 @@ class SettingsService {
         if (missingEntries.Length > 0) {
             if (MessageBox.Confirm(this._BuildMissingPathsPrompt(missingEntries, missingPaths), I18n.T("路径不存在")) != "Yes") {
                 Logger.Warn("Settings", "保存中止：用户选择自行修正无效路径，共 " missingEntries.Length " 条")
-                return false
+                return {success: false}
             }
             ; 只记录清理意图，真正改工作副本推迟到落盘前（_ClearConfirmedPaths）
         }
@@ -225,19 +244,9 @@ class SettingsService {
             if (info.serverId = "" || info.serverId = "Unknown") {
                 MessageBox.Error(I18n.T("游戏路径不正确：`n{1}`n`n目标文件不是明日方舟可执行文件（Arknights.exe），请修正后再保存。", item.path), I18n.T("路径不正确"))
                 Logger.Warn("Settings", "保存中止：无法从路径推断区服：" item.path)
-                return false
+                return {success: false}
             }
             Logger.Info("Settings", "游戏路径区服识别：" info.serverId " - " item.path)
-        }
-
-        ; 自启校验须看到「已确认清理后」的路径视图，故临时清空内存取值、校验后还原
-        autoStartSnapshot := this._SnapshotPaths(missingEntries)
-        this._ClearConfirmedPaths(missingEntries)
-        autoStartOk := this._ApplyGameAutoStart()
-        this._RestorePaths(autoStartSnapshot)
-        if (!autoStartOk) {
-            Logger.Warn("Settings", "保存中止：随游戏自动启动设置应用失败")
-            return false
         }
 
         ; 校验自定义按键功能与参数
@@ -247,40 +256,78 @@ class SettingsService {
                 name := entry.Name != "" ? entry.Name : I18n.T("自定义按键 {1}", i)
                 Logger.Warn("Settings", "保存中止：自定义按键「" name "」功能参数非法：" result.message)
                 MessageBox.Error(I18n.T("自定义按键「{1}」：`n{2}", name, result.message), I18n.T("自定义按键参数错误"))
-                return false
+                return {success: false}
             }
         }
 
-        ; 保存到 INI；已确认的失效路径清理在此提交
-        this._ClearConfirmedPaths(missingEntries)
+        return {success: true, missingEntries: missingEntries, missingPaths: missingPaths}
+    }
 
-        ; 主题最后提交
-        themeMode := Config.GetImportant("ThemeMode")
-        savedThemeMode := Config.ReadImportantFromIni("ThemeMode")
-        Config.SetImportant("ThemeMode", savedThemeMode)
-        try saveResult := Config.SaveAllToIni()
-        finally Config.SetImportant("ThemeMode", themeMode)
-        if (!saveResult.success) {
-            MessageBox.Error(saveResult.message, I18n.T("设置保存失败"))
+    static _PersistDraft(draft) {
+        autoStartState := this._SnapshotAutoStartState()
+        autoStartSnapshot := this._SnapshotPaths(draft.missingEntries)
+        this._ClearConfirmedPaths(draft.missingEntries)
+        autoStartOk := this._ApplyGameAutoStart()
+        this._RestorePaths(autoStartSnapshot)
+        if (!autoStartOk) {
+            Logger.Warn("Settings", "保存中止：随游戏自动启动设置应用失败")
+            this._RestoreAutoStart(autoStartState)
             return false
         }
-        this._LogConfirmedPathsCleared(missingEntries, missingPaths)
+
+        ; 保存到 INI；已确认的失效路径清理在此提交
+        this._ClearConfirmedPaths(draft.missingEntries)
+        this._NormalizeDraftGamePaths()
+
+        saveResult := Config.SaveAllToIni()
+        if (!saveResult.success) {
+            this._ShowSaveFailure(saveResult.message, this._RestoreAutoStart(autoStartState))
+            return false
+        }
 
         ; 落盘自定义按键（独立文件）
         customSaveResult := CustomHotkeyStore.Save(Config.AllCustomHotkeys)
         if (!customSaveResult.success) {
             Logger.Warn("Settings", "保存中止：自定义按键文件写入失败：" customSaveResult.message)
-            MessageBox.Error(I18n.T("配置文件写入失败：{1}", customSaveResult.message), I18n.T("设置保存失败"))
+            rollback := this._RollbackPersistence(saveResult.backup, autoStartState)
+            Logger.Info("Settings", "设置未保存，回滚结果：Settings.ini=" (rollback.rolledBack ? "已恢复" : "未恢复") "，计划任务=" (rollback.autoStartRestored ? "已恢复" : "未恢复"))
+            this._ShowSaveFailure(this._BuildCustomSaveFailureMessage(customSaveResult.message, rollback.rolledBack), rollback.autoStartRestored)
             return false
         }
-        if (themeMode != savedThemeMode) {
-            themeSaveResult := Config._PersistSingleValue("ThemeMode", themeMode)
-            if (!themeSaveResult.success) {
-                MessageBox.Error(themeSaveResult.message, I18n.T("设置保存失败"))
-                return false
-            }
-        }
+        Config.DiscardIniBackup(saveResult.backup)
+        this._LogConfirmedPathsCleared(draft.missingEntries, draft.missingPaths)
         return true
+    }
+
+    ; 内部：自定义按键文件写入失败提示（含回滚结果）
+    static _BuildCustomSaveFailureMessage(customMessage, rolledBack) {
+        message := I18n.T("配置文件写入失败：{1}", customMessage) "`n`n"
+        if (rolledBack)
+            return message I18n.T("设置未保存，原配置已恢复。")
+        return message I18n.T("设置未保存，但配置文件可能已被部分修改，请检查 Settings.ini 与 CustomHotkeys.json。")
+    }
+
+    ; 内部：保存失败提示
+    static _ShowSaveFailure(message, autoStartRestored) {
+        if (!autoStartRestored)
+            message .= "`n`n" I18n.T("随游戏自动启动的计划任务可能已改变，重启 AFA 会自动校准。")
+        MessageBox.Error(message, I18n.T("设置保存失败"))
+    }
+
+    ; 内部：回退已提交的文件与已应用的自启任务
+    static _RollbackPersistence(iniBackup, autoStartState) {
+        rolledBack := (iniBackup = "") ? true : Config.RollbackIni(iniBackup)
+        return {rolledBack: rolledBack, autoStartRestored: this._RestoreAutoStart(autoStartState)}
+    }
+
+    ; 内部：读取已持久化的自启状态（保存失败时用于恢复任务）
+    static _SnapshotAutoStartState() {
+        if !Config.AllImportant.Has("AutoStartWithGame")
+            return {supported: false, enabled: false, paths: []}
+        enabled := Config.ReadImportantFromIni("AutoStartWithGame") = "1"
+        if (!enabled)
+            return {supported: true, enabled: false, paths: []}
+        return {supported: true, enabled: true, paths: GameAutoStartManager.GetConfiguredGamePathsFromIni()}
     }
 
     ; 应用随游戏自动启动配置（外部任务成功后才保存开关）
@@ -315,6 +362,37 @@ class SettingsService {
         return true
     }
 
+    ; 内部：把计划任务恢复到已持久化状态
+    static _RestoreAutoStart(state) {
+        if (!state.supported)
+            return true
+        try {
+            if (!state.enabled) {
+                result := GameAutoStartManager.Disable()
+                if (!result.success) {
+                    Logger.Error("Settings", "恢复随游戏自动启动失败：" result.message)
+                    return false
+                }
+            } else if (state.paths.Length > 0) {
+                auditResult := GameAutoStartManager.EnableProcessCreationAudit()
+                if (!auditResult.success) {
+                    Logger.Error("Settings", "恢复随游戏自动启动失败：" auditResult.message)
+                    return false
+                }
+                taskResult := GameAutoStartManager.EnsureTask(state.paths)
+                if (!taskResult.success) {
+                    Logger.Error("Settings", "恢复随游戏自动启动失败：" taskResult.message)
+                    return false
+                }
+            } else
+                Logger.Warn("Settings", "自启开关已开启但无已持久化路径，跳过计划任务恢复")
+            return true
+        } catch Error as e {
+            Logger.Error("Settings", "恢复随游戏自动启动失败：" e.Message)
+            return false
+        }
+    }
+
     ; 收集要写入自启任务的路径；返回 {paths, invalidMessage}
     static _CollectAutoStartPaths(enabled) {
         result := {paths: [], invalidMessage: ""}
@@ -324,7 +402,6 @@ class SettingsService {
         gamePaths := GameAutoStartManager.GetConfiguredGamePaths()
         if (gamePaths.Length = 0)
             gamePaths := [Config.GetImportant("GamePath")]
-        defaultGamePath := Config.GetImportant("GamePath")
         for gamePath in gamePaths {
             if (gamePath = "")
                 continue
@@ -333,14 +410,21 @@ class SettingsService {
                 result.invalidMessage := validation.message
                 return result
             }
-            ; 只有用户指定的默认启动路径才回写 GamePath
-            if (gamePath = defaultGamePath) {
-                Config.SetImportant("GamePath", validation.path)
-                EventBus.Publish("GamePathNormalized", {path: validation.path})
-            }
             result.paths.Push(validation.path)
         }
         return result
+    }
+
+    ; 内部：把已配置的游戏路径规范化为绝对长路径
+    static _NormalizeDraftGamePaths() {
+        for entry in ServerProfile.AllGamePathEntries() {
+            gamePath := Config.GetImportant(entry.key)
+            if (gamePath = "")
+                continue
+            normalized := GameAutoStartManager.NormalizeGamePath(gamePath)
+            if (normalized != "" && normalized != gamePath)
+                Config.SetImportant(entry.key, normalized)
+        }
     }
 
     ; 暂存配置项当前值；返回 Map(key → value)

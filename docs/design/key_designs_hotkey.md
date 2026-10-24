@@ -43,6 +43,8 @@
 
 **热键分组**：三组热键：CombatHotkeys（常规作战）、QuickHotkeys（快捷操作）、StrongHoldHotkeys（卫戍协议）。按标签页启用对应组，组间互斥。自定义按键按「按键类型」并入既有组（global 任何标签下注册、combat/quick 并入常规组、strongHold 并入卫戍组）；「自定义按键」与「特殊操作」标签页为管理型（切到这两页不切换热键组，`HotkeyService._HandleActiveTabChangeRequested` 对 `other`/`customKeys`/`specialOps` 直接返回，`GuiManager.LastActiveTab` 也不记录它们）。自定义按键**不进** `HotkeySchema.Items`（条数运行时可变），其类型 → 生效组 / 是否受守卫的映射只在 `HotkeySchema.CustomTypeProfiles` 定义。`ActionCallbacks` 数据化（`{Fn, Guarded}`）声明守卫标志，为守卫拦截键注册 Up 变体补发透传。
 
+**保存生命周期**：`SettingsService` 保存/应用/重置前发布 `HotkeyOff`/`UnsetSwitchKey`（Legacy）；成功经 `SettingsSaved/Applied/Reset` 触发 `_HandleSettingsSavedOrApplied()`（`EnableByTab` + `SetSwitchKey`），失败则由 `_SaveOrApply`/`Reset()` 调 `HotkeyService.RestoreAfterSaveFailure()`，按 INI/JSON 的持久化值重建热键，避免保存失败后热键一直关闭。`HotkeyState` 为否（用户主动禁用）时只恢复 SwitchHotkey。
+
 ## 常规作战关卡守卫与按键透传
 
 常规作战 14 个功能经 `GuardInLevel(actionName, ThisHotkey)` 守卫——关卡内放行、关卡外拦截。拦截时由 `KeyForward` 类透传原键：
