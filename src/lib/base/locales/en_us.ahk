@@ -567,5 +567,8 @@ class LocaleEnUS {
         "浅色", "Light",
         "深色", "Dark",
         "修改AFA的界面主题", "Change the AFA interface theme",
+        "设置未保存，原配置已恢复。", "Settings were not saved and the previous configuration has been restored.",
+        "设置未保存，但配置文件可能已被部分修改，请检查 Settings.ini 与 CustomHotkeys.json。", "Settings were not saved, but the config files may have been partially modified. Check Settings.ini and CustomHotkeys.json.",
+        "随游戏自动启动的计划任务可能已改变，重启 AFA 会自动校准。", "The auto-start scheduled task may have changed. Restarting AFA will reconcile it automatically.",
     )
 }

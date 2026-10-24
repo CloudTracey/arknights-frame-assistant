@@ -61,7 +61,7 @@
 
 `Theme.Preview` 仅更新显示，保存成功与取消经 `Theme.Confirm` 同步；预览优先于已保存模式，按键重置及切页不结束预览。
 
-**主题最后落盘**：`SaveAllToIni()` 前把 `ThemeMode` 还原为已保存值，等 Settings.ini 与 `CustomHotkeys.json` 都写成功后才经 `_PersistSingleValue` 单独提交，避免自定义按键文件保存失败时提前提交主题。
+**主题随主提交落盘**：`ThemeMode` 与其余设置一起由 `SaveAllToIni()` 提交，不再单独延后；`CustomHotkeys.json` 写入失败时随 Settings.ini 一起回滚，避免主题先于其他设置生效。`Theme.Confirm` 只在整次保存/应用成功后调用。
 
 颜色变化**预览（未保存）时只重绘**，不重建窗口、不重建热键组；保存/应用仍走常规设置流程（`HotkeyService._HandleSettingsSavedOrApplied()` 对任何保存/应用/重置都无条件 `EnableByTab()` 重建热键，与主题是否变化无关）。
 

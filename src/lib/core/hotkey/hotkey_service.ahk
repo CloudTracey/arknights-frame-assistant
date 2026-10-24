@@ -144,6 +144,13 @@ class HotkeyService {
         this.SetSwitchKey()
     }
 
+    ; 设置保存/应用失败后恢复被关闭的热键
+    static RestoreAfterSaveFailure() {
+        if (this.HotkeyState)
+            this.EnableByTab(this._ActiveTab)
+        this.SetSwitchKey()
+    }
+
     ; 当前激活的功能标签页
     static GetActiveTab() {
         return this._ActiveTab

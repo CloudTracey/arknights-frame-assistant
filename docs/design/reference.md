@@ -63,7 +63,7 @@
 
 ### 游戏客户端与路径
 
-`GameClientsChanged`、`ForegroundClientChanged`、`CheckGamePathClick`、`GamePathDetected`、`GamePathNormalized`。
+`GameClientsChanged`、`ForegroundClientChanged`、`CheckGamePathClick`、`GamePathDetected`。
 
 ## 配置文件与数据文件
 

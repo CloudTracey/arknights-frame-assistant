@@ -1210,7 +1210,6 @@ class GuiManager {
         EventBus.Subscribe("SettingsCancelled", (*) => this._OnSettingsCancelled())
         EventBus.Subscribe("SettingsReset", (*) => this._OnSettingsReset())
         EventBus.Subscribe("SettingsChanged", (data) => this._OnSettingsChanged(data))
-        EventBus.Subscribe("GamePathNormalized", (data) => this.SetControlValue("GamePath", data.path))
         EventBus.Subscribe("GamePathDetected", (data) => this._OnGamePathDetected(data))
         EventBus.Subscribe("SettingsViewRefreshRequested", (data) => this._OnSettingsViewRefreshRequested(data))
         EventBus.Subscribe("ConsoleOpened", (*) => this._OnConsoleOpened())
