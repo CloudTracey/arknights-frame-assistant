@@ -71,6 +71,25 @@ class Config {
         this.IniFile := configDir "\Settings.ini"
     }
 
+    ; 清理上次异常退出遗留的 INI 临时/备份文件
+    static CleanupStaleFiles() {
+        if this.IniFile = ""
+            this.InitPath()
+        SplitPath(this.IniFile, , &configDir)
+        removed := 0
+        Loop Files, configDir "\Settings.ini.*-*", "F" {
+            if !RegExMatch(A_LoopFileName, "^Settings\.ini\.(bak|tmp)-\d+-\d+$")
+                continue
+            try {
+                FileSetAttrib("-R", A_LoopFileFullPath)
+                FileDelete(A_LoopFileFullPath)
+                removed++
+            }
+        }
+        if (removed > 0)
+            Logger.Info("Config", "已清理遗留配置临时/备份文件：" removed " 个")
+    }
+
     ; 仅规范化单个 ASCII 大写字母主键（A -> a、<^A -> <^a）
     static _NormalizeHotkeyValue(value) {
         if RegExMatch(value, "^([~*$!^+#&<>()]*)([A-Z])$", &match)
@@ -673,10 +692,11 @@ class Config {
 
         targetIniFile := this.IniFile
         tempIniFile := ""
+        backupFile := ""
         Critical "On"
         try {
             if (this.TokenStorageStatus = "decrypt_failed" && this._ImportantSettings.Has("GitHubToken") && this._ImportantSettings["GitHubToken"] = "")
-                return {success: false, message: I18n.T("GitHub Token 无法解密，已保留原加密配置。请重新输入 Token 后保存。")}
+                return {success: false, message: I18n.T("GitHub Token 无法解密，已保留原加密配置。请重新输入 Token 后保存。"), backup: ""}
 
             tokenStorage := this.PrepareGitHubTokenForStorage(this._ImportantSettings.Has("GitHubToken") ? this._ImportantSettings["GitHubToken"] : "")
             if !tokenStorage.success
@@ -714,18 +734,41 @@ class Config {
             }
 
             this.IniFile := targetIniFile
-            this._CommitIniTemp(tempIniFile, targetIniFile)
+            backupFile := targetIniFile ".bak-" A_TickCount "-" Random(1000, 9999)
+            this._CommitIniTemp(tempIniFile, targetIniFile, backupFile)
             tempIniFile := ""
-            return {success: true, message: ""}
+            return {success: true, message: "", backup: backupFile}
         } catch Error as e {
             Logger.Error("Config", "配置文件保存失败：" e.Message)
-            return {success: false, message: I18n.T("配置文件写入失败：{1}", e.Message)}
+            if (backupFile != "" && FileExist(backupFile))
+                Logger.Warn("Config", "配置保存失败，已保留提交前备份：" backupFile)
+            return {success: false, message: I18n.T("配置文件写入失败：{1}", e.Message), backup: backupFile}
         } finally {
             this.IniFile := targetIniFile
             if (tempIniFile != "" && FileExist(tempIniFile))
                 try FileDelete(tempIniFile)
             Critical "Off"
         }
+    }
+
+    ; 用保存前备份回滚 INI
+    static RollbackIni(backupFile) {
+        if (backupFile = "" || !FileExist(backupFile))
+            return false
+        try {
+            this._CommitIniTemp(backupFile, this.IniFile)
+            return true
+        } catch Error as e {
+            Logger.Error("Config", "配置回滚失败：" e.Message)
+            return false
+        }
+    }
+
+    ; 删除保存成功后的 INI 备份
+    static DiscardIniBackup(backupFile) {
+        if (backupFile = "" || !FileExist(backupFile))
+            return
+        try FileDelete(backupFile)
     }
 
     ; 原子写入/删除若干 INI 键；entries: Array<{Section, Key, Value}>，缺 Value 即删除该键
@@ -853,20 +896,31 @@ class Config {
     }
 
     ; 用已写入的临时文件替换正式配置文件
-    static _CommitIniTemp(tempIniFile, targetIniFile) {
+    static _CommitIniTemp(tempIniFile, targetIniFile, backupFile := "") {
         if !FileExist(targetIniFile) {
             FileMove(tempIniFile, targetIniFile, true)
             return
         }
 
-        if !DllCall("Kernel32\ReplaceFileW"
-            , "Str", targetIniFile
-            , "Str", tempIniFile
-            , "Ptr", 0
-            , "UInt", 0x1 ; REPLACEFILE_WRITE_THROUGH
-            , "Ptr", 0
-            , "Ptr", 0
-            , "Int") {
+        if (backupFile = "")
+            replaced := DllCall("Kernel32\ReplaceFileW"
+                , "Str", targetIniFile
+                , "Str", tempIniFile
+                , "Ptr", 0
+                , "UInt", 0x1 ; REPLACEFILE_WRITE_THROUGH
+                , "Ptr", 0
+                , "Ptr", 0
+                , "Int")
+        else
+            replaced := DllCall("Kernel32\ReplaceFileW"
+                , "Str", targetIniFile
+                , "Str", tempIniFile
+                , "Str", backupFile
+                , "UInt", 0x1 ; REPLACEFILE_WRITE_THROUGH
+                , "Ptr", 0
+                , "Ptr", 0
+                , "Int")
+        if !replaced {
             errorCode := A_LastError
             throw Error("配置文件替换失败，错误码：" errorCode)
         }

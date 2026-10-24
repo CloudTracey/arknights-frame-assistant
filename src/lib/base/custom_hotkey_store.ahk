@@ -13,6 +13,25 @@ class CustomHotkeyStore {
         this.File := configDir "\CustomHotkeys.json"
     }
 
+    ; 清理上次异常退出遗留的 JSON 临时文件
+    static CleanupStaleFiles() {
+        if this.File = ""
+            this.InitPath()
+        SplitPath(this.File, , &configDir)
+        removed := 0
+        Loop Files, configDir "\CustomHotkeys.json.tmp-*", "F" {
+            if !RegExMatch(A_LoopFileName, "^CustomHotkeys\.json\.tmp-\d+-\d+$")
+                continue
+            try {
+                FileSetAttrib("-R", A_LoopFileFullPath)
+                FileDelete(A_LoopFileFullPath)
+                removed++
+            }
+        }
+        if (removed > 0)
+            Logger.Info("CustomHotkeyStore", "已清理遗留临时文件：" removed " 个")
+    }
+
     ; 读取全部条目；文件不存在或解析失败 → 空数组
     ; 返回 Array<{Key, Name, Func, Arg, Type}>
     static Load() {
@@ -43,13 +62,16 @@ class CustomHotkeyStore {
     static Save(entries) {
         if this.File = ""
             this.InitPath()
-        text := this._Serialize(entries)
         target := this.File
         temp := target ".tmp-" A_TickCount "-" Random(1000, 9999)
         Critical "On"
         try {
+            text := this._Serialize(entries)
             if FileExist(target)
                 FileCopy(target, temp, true)
+            ; FileCopy 会继承只读属性
+            if FileExist(temp)
+                FileSetAttrib("-R", temp)
             handle := FileOpen(temp, "w", "UTF-8")
             handle.Write(text)
             handle.Close()
