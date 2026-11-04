@@ -3,6 +3,7 @@
 class GuiManager {
     static MainGui := ""
     static WindowName := ""
+    static SwitchMenuText := ""
     static BtnSave := ""
     static BtnDefaultHotkeys := ""
     static BtnCheckGamePath := ""
@@ -110,7 +111,8 @@ class GuiManager {
     static GuiImportantKeys := ["Frame", "AutoExit", "AutoOpenSettings", "ExitOnWindowClose",
         "DefaultStrongHoldProtocol", "TabOrder", "HiddenTabs", "AutoRunGame", "AutoStartWithGame", "GamePath",
         "UpdateChannel", "UpdateSource", "AutoUpdate", "UseGitHubToken", "GitHubToken", "AutoBeginPause", "AutoBeginSpeed",
-        "BackCeaseOperations", "InLevelGuard", "DebugEnabled", "Language", "ThemeMode"]
+        "BackCeaseOperations", "InLevelGuard", "DebugEnabled", "Language", "ThemeMode",
+        "OverlayOpacity", "OverlayBackground"]
 
     ; 初始化GUI（单例模式）
     static Init() {
@@ -151,10 +153,14 @@ class GuiManager {
         A_IconTip := "AFA`n" I18n.T("热键已启用")
         A_TrayMenu.Delete
         A_TrayMenu.Add(I18n.T("打开设置界面"), (*) => this.Show())
-        A_TrayMenu.Add(I18n.T("启用/禁用热键"), (*) => EventBus.Publish("HotkeyToggleRequested"))
+        A_TrayMenu.Add(I18n.T("显示/隐藏悬浮窗"), (*) => FloatingWindow.Toggle())
+        this.SwitchMenuText := I18n.T("启用/禁用热键")
+        A_TrayMenu.Add(this.SwitchMenuText, (*) => EventBus.Publish("HotkeyToggleRequested"))
+        this._OnSwitchKeyChanged({key: Config.ReadCustomFromIni("SwitchHotkey")})
         A_TrayMenu.Add(I18n.T("重启AFA"), (*) => SingleInstance.Restart())
         A_TrayMenu.Add(I18n.T("退出"), (*) => ExitApp())
         A_TrayMenu.Default := I18n.T("打开设置界面")
+        FloatingWindow.Init()
 
         ; 根据设置决定是否自动显示
         if (Config.GetImportant("AutoOpenSettings") == "1") {
@@ -516,7 +522,8 @@ class GuiManager {
         ; -- 其他设置 --
         ; 导航区域右侧分割线
         dividerHeight := this._BottomBaseY + 20 - 38
-        this.OtherSettingsControls.Push(Theme.Add(this.MainGui, "Text", "x130 y38 w1 h" dividerHeight " BackgroundBorder"))
+        settingsDivider := Theme.Add(this.MainGui, "Text", "x130 y38 w1 h" dividerHeight " BackgroundBorder")
+        this.OtherSettingsControls.Push(settingsDivider)
 
         ; 其他设置 - 左侧导航
         ; 导航项"通用"
@@ -607,7 +614,11 @@ class GuiManager {
         this.GeneralControls.Push(ddLanguage)
 
         ; 分类"显示"
-        sepDisplay := Theme.Add(this.MainGui, "Text", "x160 y48 w530 h1 BackgroundBorder Center Section")
+        displayX := this.TabManagerX
+        displayWidth := this.TabManagerRowWidth
+        overlayX := displayX + displayWidth + 24
+        overlayWidth := 530 - displayWidth - 24
+        sepDisplay := Theme.Add(this.MainGui, "Text", "x" displayX " y48 w" displayWidth " h1 BackgroundBorder Center Section")
         sepDisplayTxt := Theme.Add(this.MainGui, "Text", "xs+40 y+-9 Center cMuted", I18n.T("  显示设置  "))
         this._SetOverlayZ(sepDisplayTxt, 0)
         this.DisplayControls.Push(sepDisplay)
@@ -618,13 +629,35 @@ class GuiManager {
         themeWidth := 160
         for label in themeLabels
             themeWidth := Max(themeWidth, Metrics.TextWidth(label) + 36)
-        ddTheme := Theme.Add(this.MainGui, "DropDownList", "x+12 yp-3 w" themeWidth " vThemeMode", themeLabels)
+        ddTheme := Theme.Add(this.MainGui, "DropDownList", "x" displayX " y+6 w" themeWidth " vThemeMode", themeLabels)
         ddTheme.Value := this._ThemeToIndex(Config.GetImportant("ThemeMode"))
         ddTheme.OnEvent("Change", (*) => this.TrackChange("ThemeMode"))
         StatusBarHints.Register(ddTheme, "修改AFA的界面主题")
         this.DisplayControls.Push(txtTheme, ddTheme)
-        txtTheme.GetPos(, &txtThemeY, , &txtThemeH)
-        this.TabManagerTitleY := txtThemeY + txtThemeH + 16
+        ddTheme.GetPos(, &themeY, , &themeH)
+        this.TabManagerTitleY := themeY + themeH + 16
+
+        sepOverlay := Theme.Add(this.MainGui, "Text", "x" overlayX " y48 w" overlayWidth " h1 BackgroundBorder Center Section")
+        sepOverlayTxt := Theme.Add(this.MainGui, "Text", "xs+16 y+-9 Center cMuted", I18n.T("  悬浮窗设置  "))
+        this._SetOverlayZ(sepOverlayTxt, 0)
+        this.DisplayControls.Push(sepOverlay, sepOverlayTxt)
+        txtOverlayOpacity := Theme.Add(this.MainGui, "Text", "x" overlayX " y70 w" overlayWidth, I18n.T("悬浮窗不透明度（20-100%）"))
+        editOverlayOpacity := Theme.Add(this.MainGui, "Edit", "x" overlayX " y+6 w70 h21 Number Limit3 vOverlayOpacity", Config.GetImportant("OverlayOpacity"))
+        editOverlayOpacity.OnEvent("Change", (*) => this.TrackChange("OverlayOpacity"))
+        txtOverlayBackground := Theme.Add(this.MainGui, "Text", "x" overlayX " y+12 w" overlayWidth, I18n.T("悬浮窗背景色（RRGGBB）"))
+        editOverlayBackground := Theme.Add(this.MainGui, "Edit", "x" overlayX " y+6 w90 h21 Limit6 vOverlayBackground", Config.GetImportant("OverlayBackground"))
+        editOverlayBackground.OnEvent("Change", (*) => this.TrackChange("OverlayBackground"))
+        hintOverlayBackground := Theme.Add(this.MainGui, "Text", "x" overlayX " y+5 w" overlayWidth " cMuted", I18n.T("输入6位十六进制颜色值，例如 202020"))
+        this.DisplayControls.Push(txtOverlayOpacity, editOverlayOpacity, txtOverlayBackground, editOverlayBackground, hintOverlayBackground)
+        txtOverlayHotkey := Theme.Add(this.MainGui, "Text", "x" overlayX " y+12 w" overlayWidth, I18n.T("悬浮窗快捷键"))
+        editOverlayHotkey := Theme.Add(this.MainGui, "Edit", "x" overlayX " y+6 w140 Center -TabStop Uppercase vFloatingWindowToggle", Config.GetHotkey("FloatingWindowToggle"))
+        StatusBarHints.Register(editOverlayHotkey, "设置悬浮窗显示或隐藏的快捷键")
+        this.DisplayControls.Push(txtOverlayHotkey, editOverlayHotkey)
+        hintOverlayUsage := Theme.Add(this.MainGui, "Text", "x" overlayX " y+12 w" overlayWidth " cMuted",
+            I18n.T("默认左键穿透；按住右键拖动中部可移动窗口，拖动边缘可调整大小。"))
+        hintOverlayFeatures := Theme.Add(this.MainGui, "Text", "x" overlayX " y+8 w" overlayWidth " cMuted",
+            I18n.T("通过托盘菜单或快捷键切换显示；按当前方案显示已启用按键，并记住窗口大小。"))
+        this.DisplayControls.Push(hintOverlayUsage, hintOverlayFeatures)
 
         ; 分类"启动与退出"
         sepLaunch := Theme.Add(this.MainGui, "Text", "x160 y48 w530 h1 BackgroundBorder Center Section")
@@ -948,11 +981,17 @@ class GuiManager {
 
         Theme.SetFont(this.MainGui, "s9 cText norm", Metrics.FontFor(I18n.GetCurrent()))
 
+        for control in this.DisplayControls {
+            control.GetPos(, &controlY, , &controlHeight)
+            this._BottomBaseY := Max(this._BottomBaseY, controlY + controlHeight)
+        }
+        settingsDivider.Move(, , , this._BottomBaseY + 20 - 38)
+
         ; 隐藏非默认分类的控件
         this._HideOtherCategories()
         this._ShowControls(this.LaunchControls)  ; 默认显示"启动与退出"
 
-        ; 底部按钮区域锚点，"常规作战"帧率提示底部 + 20px 间距
+        ; 底部按钮区域锚点：内容底部 + 20px 间距
         Theme.Add(this.MainGui, "Text", "xm y" this._BottomBaseY + 20 " w0 h0 Section")
 
         ; -- 底部按钮 --
@@ -1283,10 +1322,13 @@ class GuiManager {
 
     ; 处理切换键变化
     static _OnSwitchKeyChanged(data) {
-        if (data.key = "")
-            A_TrayMenu.Rename("2&", I18n.T("启用/禁用热键"))
-        else
-            A_TrayMenu.Rename("2&", I18n.T("启用/禁用热键") "(" KeyFormat.VirtualNewkeyFormat(data.key) ")")
+        nextText := I18n.T("启用/禁用热键")
+        if StrLen(data.key) > 0
+            nextText .= "(" KeyFormat.VirtualNewkeyFormat(data.key) ")"
+        if StrLen(this.SwitchMenuText) = 0
+            return
+        A_TrayMenu.Rename(this.SwitchMenuText, nextText)
+        this.SwitchMenuText := nextText
     }
 
     ; 处理设置保存

@@ -43,7 +43,9 @@ class HotkeySchema {
         {id: "StrongHoldProtocolOneClickRetreat", nameKey: "一键撤退", descKey: "点击鼠标位置单位后自动撤退", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "OneClickSell", nameKey: "一键出售/销毁", descKey: "点击鼠标位置干员/装备后自动出售/销毁", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "OneClickPurchase", nameKey: "一键购买", descKey: "模拟双击左键，购买调度中心商店中的单位", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
-        {id: "StrongHoldProtocolBack", nameKey: "返回上级菜单", descKey: "模拟点击ESC键，返回上一级菜单", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false}
+        {id: "StrongHoldProtocolBack", nameKey: "返回上级菜单", descKey: "模拟点击ESC键，返回上一级菜单", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
+        ; ---- 界面操作 ----
+        {id: "FloatingWindowToggle", nameKey: "显示/隐藏悬浮窗", descKey: "显示或隐藏悬浮窗", group: "overlay", defaultKey: "", guarded: false, onUp: false, noActivate: true}
     ]
 
     ; id -> nameKey

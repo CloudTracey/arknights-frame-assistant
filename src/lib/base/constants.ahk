@@ -3,6 +3,28 @@
 
 class Constants {
     static DefaultTabOrder := "keyBind,quick,strongHoldProtocol,customKeys,specialOps,other"
+    static OverlayDefaults := Map("Opacity", "85", "Background", "202020", "Width", "500", "Height", "300")
+    static OVERLAY_MAX_WIDTH := 3000
+    static OVERLAY_MAX_HEIGHT := 2000
+
+    static NormalizeOverlayOpacity(value) {
+        if !IsNumber(value)
+            return this.OverlayDefaults["Opacity"]
+        return String(Max(20, Min(100, Round(value))))
+    }
+
+    static NormalizeOverlayBackground(value) {
+        value := StrReplace(value, "#")
+        return RegExMatch(value, "i)^[0-9a-f]{6}$") ? StrUpper(value) : this.OverlayDefaults["Background"]
+    }
+
+    static NormalizeOverlayWidth(value) {
+        return IsNumber(value) ? String(Max(1, Min(this.OVERLAY_MAX_WIDTH, Round(value)))) : this.OverlayDefaults["Width"]
+    }
+
+    static NormalizeOverlayHeight(value) {
+        return IsNumber(value) ? String(Max(1, Min(this.OVERLAY_MAX_HEIGHT, Round(value)))) : this.OverlayDefaults["Height"]
+    }
 
     ; 界面主题模式：唯一合法值集合与规范化规则
     static ThemeModes := ["auto", "light", "dark"]
@@ -40,6 +62,7 @@ class Constants {
     static CombatHotkeys := HotkeySchema.GetGroupMap("combat")
     static QuickHotkeys := HotkeySchema.GetGroupMap("quick")
     static StrongHoldHotkeys := HotkeySchema.GetGroupMap("strongHold")
+    static OverlayHotkeys := HotkeySchema.GetGroupMap("overlay")
 
     ; 重要设置名称映射
     static ImportantNames := Map(
@@ -75,7 +98,9 @@ class Constants {
         "InLevelGuard", "在非战斗关卡场景禁用常规战斗热键",
         "DebugEnabled", "显示调试日志控制台",
         "Language", "界面语言",
-        "ThemeMode", "界面主题"
+        "ThemeMode", "界面主题",
+        "OverlayOpacity", "悬浮窗不透明度",
+        "OverlayBackground", "悬浮窗背景色"
     )
 
     ; 自定义设置名称映射
