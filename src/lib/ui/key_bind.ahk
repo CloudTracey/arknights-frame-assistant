@@ -178,18 +178,16 @@ WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
             if (GuiManager.MainGui = "" || KeyBinder.ControlObj.Gui.Hwnd != GuiManager.MainGui.Hwnd)
                 return
         }
-        ; 排除非按键绑定输入框
-        static nonKeybindEdits := Map(
-            "GitHubToken", 1,
-            "GamePath", 1,
-            "ClickDelay", 1,
-            "FrameSkip16msDelay", 1,
-            "FrameSkip33msDelay", 1,
-            "FrameSkip166msDelay", 1,
-            "ServerPathsText", 1,
-            "RunningClientsText", 1
-        )
-        if nonKeybindEdits.Has(KeyBinder.ControlObj.Name) {
+        controlName := KeyBinder.ControlObj.Name
+        isKeybind := Config.AllHotkeys.Has(controlName) || controlName = "SwitchHotkey"
+            || RegExMatch(controlName, "^CustomHotkey\d+Key$")
+        if !isKeybind {
+            if IsObject(KeyBinder.LastEditObject) {
+                try KeyBinder.LastEditObject.Value := KeyBinder.OriginalValue
+                KeyBinder.LastEditObject := ""
+                KeyBinder.WaitingModify := false
+                KeyBinder.StopHook()
+            }
             return
         }
         ; 若为首次点击Edit控件

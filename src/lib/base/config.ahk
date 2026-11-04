@@ -47,7 +47,14 @@ class Config {
         "InLevelGuard", "0",
         "DebugEnabled", "0",
         "Language", "auto",
-        "ThemeMode", "auto"
+        "ThemeMode", "auto",
+        "OverlayOpacity", Constants.OverlayDefaults["Opacity"],
+        "OverlayBackground", Constants.OverlayDefaults["Background"],
+        "OverlayWidth", Constants.OverlayDefaults["Width"],
+        "OverlayHeight", Constants.OverlayDefaults["Height"],
+        "OverlayX", Constants.OverlayDefaults["X"],
+        "OverlayY", Constants.OverlayDefaults["Y"],
+        "OverlayVisible", Constants.OverlayDefaults["Visible"]
     )
 
     ; 内部：默认自定义设置
@@ -141,6 +148,18 @@ class Config {
             this.InitPath()
         if (key = "ThemeMode")
             return Constants.NormalizeThemeMode(IniRead(this.IniFile, "Main", key, "auto"))
+        if (key = "OverlayOpacity")
+            return Constants.NormalizeOverlayOpacity(IniRead(this.IniFile, "Main", key, this._DefaultImportant[key]))
+        if (key = "OverlayBackground")
+            return Constants.NormalizeOverlayBackground(IniRead(this.IniFile, "Main", key, this._DefaultImportant[key]))
+        if (key = "OverlayWidth")
+            return Constants.NormalizeOverlayWidth(IniRead(this.IniFile, "Main", key, this._DefaultImportant[key]))
+        if (key = "OverlayHeight")
+            return Constants.NormalizeOverlayHeight(IniRead(this.IniFile, "Main", key, this._DefaultImportant[key]))
+        if (key = "OverlayX" || key = "OverlayY")
+            return Constants.NormalizeOverlayPosition(IniRead(this.IniFile, "Main", key, this._DefaultImportant[key]))
+        if (key = "OverlayVisible")
+            return Constants.NormalizeOverlayVisible(IniRead(this.IniFile, "Main", key, this._DefaultImportant[key]))
         if (key = "GitHubToken") {
             return this._ReadGitHubToken()
         }
@@ -166,6 +185,18 @@ class Config {
     static SetImportant(key, value) {
         if (key = "ThemeMode")
             value := Constants.NormalizeThemeMode(value)
+        else if (key = "OverlayOpacity")
+            value := Constants.NormalizeOverlayOpacity(value)
+        else if (key = "OverlayBackground")
+            value := Constants.NormalizeOverlayBackground(value)
+        else if (key = "OverlayWidth")
+            value := Constants.NormalizeOverlayWidth(value)
+        else if (key = "OverlayHeight")
+            value := Constants.NormalizeOverlayHeight(value)
+        else if (key = "OverlayX" || key = "OverlayY")
+            value := Constants.NormalizeOverlayPosition(value)
+        else if (key = "OverlayVisible")
+            value := Constants.NormalizeOverlayVisible(value)
         this._ImportantSettings[key] := value
         if (key = "Frame")
             this._ImportantSettings["Frame155"] := value
@@ -461,6 +492,13 @@ class Config {
         }
 
         this._ImportantSettings["ThemeMode"] := Constants.NormalizeThemeMode(this._ImportantSettings["ThemeMode"])
+        this._ImportantSettings["OverlayOpacity"] := Constants.NormalizeOverlayOpacity(this._ImportantSettings["OverlayOpacity"])
+        this._ImportantSettings["OverlayBackground"] := Constants.NormalizeOverlayBackground(this._ImportantSettings["OverlayBackground"])
+        this._ImportantSettings["OverlayWidth"] := Constants.NormalizeOverlayWidth(this._ImportantSettings["OverlayWidth"])
+        this._ImportantSettings["OverlayHeight"] := Constants.NormalizeOverlayHeight(this._ImportantSettings["OverlayHeight"])
+        for key in ["OverlayX", "OverlayY"]
+            this._ImportantSettings[key] := Constants.NormalizeOverlayPosition(this._ImportantSettings[key])
+        this._ImportantSettings["OverlayVisible"] := Constants.NormalizeOverlayVisible(this._ImportantSettings["OverlayVisible"])
 
         ; 加载自定义设置
         for keyVar, defaultVal in this._DefaultCustom {
