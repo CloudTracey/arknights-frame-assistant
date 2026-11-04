@@ -83,6 +83,7 @@
 | 模块 | 职责 |
 |------|------|
 | `ui/gui.ahk` | 设置窗口 GUI 全部逻辑（标签页切换、控件事件、托盘菜单）。详见 [key_designs_ui.md](key_designs_ui.md) |
+| `ui/floating_window.ahk`（`FloatingWindow`） | 无标题栏置顶按键悬浮窗：左键穿透，右键拖动/调整大小；保存上次尺寸；根据热键 Schema、自定义按键与启停热键生成已绑定的功能列表；支持设置快捷键切换显示，并从显示设置读取不透明度与背景色 |
 | `ui/key_bind.ahk` | 按键绑定捕获（InputHook），处理用户在设置界面的按键录制。`NotifyBindingChanged` 发布 `HotkeyBindingsChanged` 触发冲突检测刷新 |
 | `ui/custom_key_editor.ahk` | 自定义按键编辑窗口 + 坐标拾取。独立顶层 Gui（非 MainGui，KeyBinder 按键录制自动豁免）；单编辑窗口（再次打开直接切换目标行，未保存修改丢弃）；字段：命名 / 按键类型 / 按键功能（目前仅「单击」）/ 坐标（`(x, y)` 单值）；底部「删除」按钮确认后移除该行；打开期间光标在游戏客户区内（无需游戏前台）时 8ms 轮询 ToolTip 显示光标处 0-1 比例坐标，LButton 拾取（无 `~` 吞点击）**整体覆盖**坐标框并激活编辑窗口；保存时校验命名（50 字符、禁引号/反斜杠/控制字符）与「功能 + 坐标」，非法拒绝弹窗 |
 | `ui/updater_ui.ahk` | 更新 UI（对话框）。仅通过事件与 Updater 交互，不直接调用其内部方法 |

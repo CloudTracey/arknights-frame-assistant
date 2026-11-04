@@ -40,6 +40,27 @@ class HotkeyService {
         return this._HoverOperate
     }
 
+    static GetActiveGroup() {
+        return this._Group
+    }
+
+    static GetEnabledBindingIds() {
+        ids := Map()
+        if !this.HotkeyState
+            return ids
+        groups := this._Group = "strongHoldProtocol"
+            ? [Constants.StrongHoldHotkeys]
+            : [Constants.CombatHotkeys, Constants.QuickHotkeys]
+        for group in groups
+            for id in group
+                ids[id] := true
+        for id, info in this.CustomProfiles {
+            if info.group = "all" || info.group = this._Group
+                ids[id] := true
+        }
+        return ids
+    }
+
     ; 热键域内部状态
     static _ActiveTab := "keyBind"
     static _Group := "combatQuick"

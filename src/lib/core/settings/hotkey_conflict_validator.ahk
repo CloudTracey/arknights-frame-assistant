@@ -32,14 +32,14 @@ class HotkeyConflictValidator {
         seen := Map()  ; 同对冲突在两组各命中一次时去重
 
         this._FindGroupConflicts(
-            [Constants.CombatHotkeys, Constants.QuickHotkeys, customCombatQuick],
+            [Constants.CombatHotkeys, Constants.QuickHotkeys, customCombatQuick, Constants.OverlayHotkeys],
             bindings,
             conflicts,
             byControl,
             seen
         )
         this._FindGroupConflicts(
-            [Constants.StrongHoldHotkeys, customStrongHold],
+            [Constants.StrongHoldHotkeys, customStrongHold, Constants.OverlayHotkeys],
             bindings,
             conflicts,
             byControl,

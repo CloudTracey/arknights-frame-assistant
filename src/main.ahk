@@ -56,6 +56,7 @@
 #Include ./lib/core/launch/game_launcher.ahk
 #Include ./lib/ui/changelog_ui.ahk
 #Include ./lib/ui/status_bar.ahk
+#Include ./lib/ui/floating_window.ahk
 #Include ./lib/ui/gui.ahk
 #Include ./lib/ui/custom_key_editor.ahk
 #Include ./lib/core/monitor/game_monitor.ahk
