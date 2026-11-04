@@ -85,7 +85,6 @@ class GameAutoStartManager {
         }
     }
 
-    ; Wine/Proton：任务计划服务与审核策略不可用，直接跳过
     static _IsWine() {
         return FileExist("C:\\windows\\system32\\wineboot.exe") != ""
     }

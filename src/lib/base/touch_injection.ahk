@@ -13,9 +13,12 @@ class TouchInjector {
     static _MouseMode := false
     static _MouseHoldMs := 10
     static _MouseGapMs := 40
+    static _FallbackBusy := false
+    static _FallbackBusyAt := 0
+    static _RestoreX := 0
+    static _RestoreY := 0
 
     static Init(maxCount := 3, feedbackMode := 1) {
-        ; Wine 的 user32.dll 没有导出 InjectTouchInput，这里探测后自动回退成鼠标注入。
         hMod := DllCall("GetModuleHandle", "Str", "user32.dll", "Ptr")
         pProc := hMod ? DllCall("GetProcAddress", "Ptr", hMod, "AStr", "InjectTouchInput", "Ptr") : 0
         if (!pProc) {
@@ -36,17 +39,11 @@ class TouchInjector {
         return true
     }
 
-    ; 从 Settings.ini [Custom] 读取整数覆盖项（仅鼠标回退模式使用）
     static _ReadIniInt(key, def) {
-        ini := A_AppData "\ArknightsFrameAssistant\PC\Settings.ini"
-        if !FileExist(ini)
+        v := Config.ReadCustomFromIni(key)
+        if (v = "" || !IsInteger(v))
             return def
-        v := IniRead(ini, "Custom", key, "")
-        if (v = "")
-            return def
-        if !IsInteger(v)
-            return def
-        return Integer(v)
+        return Max(0, Min(Integer(v), 1000))
     }
 
     static _WriteFields(buf, x, y, flags) {
@@ -64,29 +61,39 @@ class TouchInjector {
         NumPut("Int", y+2, buf, 116)
     }
 
-    static _Inject(flags) {
-        if (this._MouseMode) {
-            hwnd := WinExist(GameTarget.WinTitle())
-            pt := Buffer(8, 0)
-            NumPut("Int", this._LastX, pt, 0)
-            NumPut("Int", this._LastY, pt, 4)
-            if (hwnd)
-                DllCall("User32.dll\ClientToScreen", "Ptr", hwnd, "Ptr", pt)
-            sx := NumGet(pt, 0, "Int")
-            sy := NumGet(pt, 4, "Int")
-            DllCall("User32.dll\SetCursorPos", "Int", sx, "Int", sy)
-            if (flags & 0x00010000) {
-                DllCall("User32.dll\mouse_event", "UInt", 0x0002, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
-                Sleep(this._MouseHoldMs)
-            } else if (flags & 0x00040000) {
-                if (this._Down) {
-                    DllCall("User32.dll\mouse_event", "UInt", 0x0004, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
-                    Sleep(this._MouseGapMs)
-                }
+    static _InjectMouse(flags) {
+        hwnd := WinExist(GameTarget.WinTitle())
+        pt := Buffer(8, 0)
+        NumPut("Int", this._LastX, pt, 0)
+        NumPut("Int", this._LastY, pt, 4)
+        if (hwnd)
+            DllCall("User32.dll\ClientToScreen", "Ptr", hwnd, "Ptr", pt)
+        sx := NumGet(pt, 0, "Int")
+        sy := NumGet(pt, 4, "Int")
+        DllCall("User32.dll\SetCursorPos", "Int", sx, "Int", sy)
+        if (flags & TouchInjector.POINTER_FLAG_DOWN) {
+            px := 0, py := 0
+            MouseGetPos(&px, &py)
+            this._RestoreX := px
+            this._RestoreY := py
+            DllCall("User32.dll\mouse_event", "UInt", 0x0002, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
+            this._Down := true
+            Sleep(this._MouseHoldMs)
+        } else if (flags & TouchInjector.POINTER_FLAG_UP) {
+            if (this._Down) {
+                DllCall("User32.dll\mouse_event", "UInt", 0x0004, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
+                this._Down := false
+                DllCall("User32.dll\SetCursorPos", "Int", this._RestoreX, "Int", this._RestoreY)
+                Sleep(this._MouseGapMs)
             }
-            this.LastError := 0
-            return true
         }
+        this.LastError := 0
+        return true
+    }
+
+    static _Inject(flags) {
+        if (this._MouseMode)
+            return this._InjectMouse(flags)
 
         hwnd := WinExist(GameTarget.WinTitle())
         pt := Buffer(8, 0)
@@ -130,9 +137,20 @@ class TouchInjector {
             ; Logger.Warn("TouchInjector", "Down 失败：重复按下，错误码=" this.LastError)
             return false
         }
+        if (this._MouseMode) {
+            if (this._FallbackBusy && A_TickCount - this._FallbackBusyAt < 1000) {
+                this.LastError := 87
+                return false
+            }
+            this._FallbackBusy := true
+            this._FallbackBusyAt := A_TickCount
+        }
         this._ResolveCoord(x?, y?)
-        if (!this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_DOWN))
+        if (!this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_DOWN)) {
+            if (this._MouseMode)
+                this._FallbackBusy := false
             return false
+        }
         this._Down := true
         return true
     }
@@ -146,9 +164,12 @@ class TouchInjector {
         }
 
         this._ResolveCoord(x?, y?)
-        if (!this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_UPDATE))
-            return false
-        if (!this._Inject(TouchInjector.POINTER_FLAG_UP))
+        ok := this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_UPDATE)
+        if (ok)
+            ok := this._Inject(TouchInjector.POINTER_FLAG_UP)
+        if (this._MouseMode)
+            this._FallbackBusy := false
+        if (!ok)
             return false
         this._Down := false
         return true
