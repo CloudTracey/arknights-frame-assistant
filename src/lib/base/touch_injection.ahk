@@ -10,8 +10,22 @@ class TouchInjector {
     static _LastX := 0
     static _LastY := 0
     static LastError := 0
+    static _MouseMode := false
+    static _MouseHoldMs := 10
+    static _MouseGapMs := 40
 
     static Init(maxCount := 3, feedbackMode := 1) {
+        ; Wine 的 user32.dll 没有导出 InjectTouchInput，这里探测后自动回退成鼠标注入。
+        hMod := DllCall("GetModuleHandle", "Str", "user32.dll", "Ptr")
+        pProc := hMod ? DllCall("GetProcAddress", "Ptr", hMod, "AStr", "InjectTouchInput", "Ptr") : 0
+        if (!pProc) {
+            this._MouseMode := true
+            this._MouseHoldMs := this._ReadIniInt("MouseHoldMs", this._MouseHoldMs)
+            this._MouseGapMs := this._ReadIniInt("MouseGapMs", this._MouseGapMs)
+            this._Initialized := true
+            this.LastError := 0
+            return true
+        }
         result := DllCall("User32.dll\InitializeTouchInjection", "UInt", maxCount, "UInt", feedbackMode, "Int")
         if (!result) {
             this.LastError := A_LastError
@@ -20,6 +34,19 @@ class TouchInjector {
         this._Initialized := true
         this.LastError := 0
         return true
+    }
+
+    ; 从 Settings.ini [Custom] 读取整数覆盖项（仅鼠标回退模式使用）
+    static _ReadIniInt(key, def) {
+        ini := A_AppData "\ArknightsFrameAssistant\PC\Settings.ini"
+        if !FileExist(ini)
+            return def
+        v := IniRead(ini, "Custom", key, "")
+        if (v = "")
+            return def
+        if !IsInteger(v)
+            return def
+        return Integer(v)
     }
 
     static _WriteFields(buf, x, y, flags) {
@@ -38,6 +65,29 @@ class TouchInjector {
     }
 
     static _Inject(flags) {
+        if (this._MouseMode) {
+            hwnd := WinExist(GameTarget.WinTitle())
+            pt := Buffer(8, 0)
+            NumPut("Int", this._LastX, pt, 0)
+            NumPut("Int", this._LastY, pt, 4)
+            if (hwnd)
+                DllCall("User32.dll\ClientToScreen", "Ptr", hwnd, "Ptr", pt)
+            sx := NumGet(pt, 0, "Int")
+            sy := NumGet(pt, 4, "Int")
+            DllCall("User32.dll\SetCursorPos", "Int", sx, "Int", sy)
+            if (flags & 0x00010000) {
+                DllCall("User32.dll\mouse_event", "UInt", 0x0002, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
+                Sleep(this._MouseHoldMs)
+            } else if (flags & 0x00040000) {
+                if (this._Down) {
+                    DllCall("User32.dll\mouse_event", "UInt", 0x0004, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
+                    Sleep(this._MouseGapMs)
+                }
+            }
+            this.LastError := 0
+            return true
+        }
+
         hwnd := WinExist(GameTarget.WinTitle())
         pt := Buffer(8, 0)
         NumPut("Int", this._LastX, pt, 0)
@@ -152,4 +202,3 @@ class TouchInjector {
         return this.Move(clientX, clientY)
     }
 }
-

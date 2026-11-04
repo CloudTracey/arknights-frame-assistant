@@ -85,8 +85,17 @@ class GameAutoStartManager {
         }
     }
 
+    ; Wine/Proton：任务计划服务与审核策略不可用，直接跳过
+    static _IsWine() {
+        return FileExist("C:\\windows\\system32\\wineboot.exe") != ""
+    }
+
     ; 根据设置应用外部自动启动状态
     static Apply(enabled, gamePath := "") {
+        if (this._IsWine()) {
+            Logger.Info("GameAutoStart", "Wine 环境：跳过计划任务与审核策略")
+            return {success: true, message: "Wine 环境已跳过随游戏自动启动。", skipped: true}
+        }
         if (enabled) {
             paths := this._AsPathArray(gamePath)
             if (paths.Length = 0)
@@ -202,6 +211,8 @@ class GameAutoStartManager {
 
     ; 启动时校准审核和计划任务
     static Reconcile() {
+        if (this._IsWine())
+            return this._Result(true, {message: "Wine 环境已跳过随游戏自动启动。", skipped: true})
         enabled := (Config.GetImportant("AutoStartWithGame") = "1")
         if (AppContext.GetStartedByGameAutoStart()) {
             if (enabled) {
