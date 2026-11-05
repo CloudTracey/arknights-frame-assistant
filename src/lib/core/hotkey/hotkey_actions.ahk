@@ -949,6 +949,9 @@ InjectMove(x, y) {
 }
 ; 鼠标事件点击：客户区坐标 → 屏幕坐标；按下后保持 MouseHoldMs，抬起后恢复指针并间隔 MouseGapMs
 _InjectMouseTap(x, y) {
+    static busy := false
+    if (busy)
+        return false
     hwnd := WinExist(GameTarget.WinTitle())
     if (!hwnd)
         return false
@@ -959,6 +962,7 @@ _InjectMouseTap(x, y) {
         return false
     screenX := NumGet(pt, 0, "Int")
     screenY := NumGet(pt, 4, "Int")
+    busy := true
     restoreX := 0
     restoreY := 0
     MouseGetPos(&restoreX, &restoreY)
@@ -968,6 +972,7 @@ _InjectMouseTap(x, y) {
     DllCall("User32.dll\mouse_event", "UInt", 0x0004, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
     DllCall("User32.dll\SetCursorPos", "Int", restoreX, "Int", restoreY)
     Sleep(_InjectDelayMs("MouseGapMs", 40))
+    busy := false
     return true
 }
 ; 回退注入的延迟配置（毫秒）
