@@ -442,11 +442,11 @@ class HotkeyActions {
         Logger.Info("HotkeyActions", "ActionPauseSelect 执行，key=" KeyForward.PureKeyName(ThisHotkey))
         MouseGetPos &xpos, &ypos
         Thread "NoTimers"
-        TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
-        TouchInjector.Tap(xpos, ypos)
-        TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
+        InjectTap(PosL.PBLX, PosL.PBLY)
+        InjectTap(xpos, ypos)
+        InjectTap(PosR.PBRX, PosR.PBRY)
         USleep(TimingService.GetCurrentDelay() * 1.5)
-        TouchInjector.Move(xpos, ypos)
+        InjectMove(xpos, ypos)
         MouseMove xpos, ypos
         Thread "NoTimers", false
         if InStr(ThisHotkey, "Wheel") {
@@ -548,13 +548,13 @@ class HotkeyActions {
         Logger.Info("HotkeyActions", "ActionPauseSkill 执行，key=" KeyForward.PureKeyName(ThisHotkey))
         MouseGetPos &xpos, &ypos
         Thread "NoTimers"
-        TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
-        TouchInjector.Tap(xpos, ypos)
-        TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
+        InjectTap(PosL.PBLX, PosL.PBLY)
+        InjectTap(xpos, ypos)
+        InjectTap(PosR.PBRX, PosR.PBRY)
         USleep(TimingService.GetClickDelay())
         GameKeys.SendDown("releaseSkill")
         USleep(Max(TimingService.GetCurrentDelay() * 1.5 - TimingService.GetClickDelay(), 0))
-        TouchInjector.Move(xpos, ypos)
+        InjectMove(xpos, ypos)
         MouseMove xpos, ypos
         USleep(50)
         GameKeys.SendUp("releaseSkill")
@@ -585,13 +585,13 @@ class HotkeyActions {
         Logger.Info("HotkeyActions", "ActionPauseRetreat 执行，key=" KeyForward.PureKeyName(ThisHotkey))
         MouseGetPos &xpos, &ypos
         Thread "NoTimers"
-        TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
-        TouchInjector.Tap(xpos, ypos)
-        TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
+        InjectTap(PosL.PBLX, PosL.PBLY)
+        InjectTap(xpos, ypos)
+        InjectTap(PosR.PBRX, PosR.PBRY)
         USleep(TimingService.GetClickDelay())
         GameKeys.SendDown("retreatChar")
         USleep(Max(TimingService.GetCurrentDelay() * 1.5 - TimingService.GetClickDelay(), 0))
-        TouchInjector.Move(xpos, ypos)
+        InjectMove(xpos, ypos)
         MouseMove xpos, ypos
         USleep(50)
         GameKeys.SendUp("retreatChar")
@@ -623,10 +623,10 @@ class HotkeyActions {
         Logger.Info("HotkeyActions", "ActionSwitchView 执行，key=" KeyForward.PureKeyName(ThisHotkey))
         MouseGetPos &xpos, &ypos
         Thread "NoTimers"
-        TouchInjector.Tap(PosL.PBLX, PosL.PBLY)
-        TouchInjector.Tap(xpos, ypos)
-        TouchInjector.Tap(PosR.PBRX, PosR.PBRY)
-        TouchInjector.Tap(xpos, ypos)
+        InjectTap(PosL.PBLX, PosL.PBLY)
+        InjectTap(xpos, ypos)
+        InjectTap(PosR.PBRX, PosR.PBRY)
+        InjectTap(xpos, ypos)
         Thread "NoTimers", false
         if InStr(ThisHotkey, "Wheel") {
             try DllCall("SetThreadDpiAwarenessContext", "ptr", oldCtx, "ptr")
@@ -934,6 +934,49 @@ PauseButtonPositionRight() {
     PButtonRY := wh * 0.0700
     return {PBRX: PButtonRX, PBRY: PButtonRY}
 }
+; 注入点击：触摸注入不可用时回退为鼠标事件
+InjectTap(x, y) {
+    if (Environment.HasTouchInjection)
+        return TouchInjector.Tap(x, y)
+    return _InjectMouseTap(x, y)
+}
+; 注入无接触移动：触摸注入不可用时直接移动指针
+InjectMove(x, y) {
+    if (Environment.HasTouchInjection)
+        return TouchInjector.Move(x, y)
+    MouseMove x, y, 0
+    return true
+}
+; 鼠标事件点击：客户区坐标 → 屏幕坐标；按下后保持 MouseHoldMs，抬起后恢复指针并间隔 MouseGapMs
+_InjectMouseTap(x, y) {
+    hwnd := WinExist(GameTarget.WinTitle())
+    if (!hwnd)
+        return false
+    pt := Buffer(8, 0)
+    NumPut("Int", x, pt, 0)
+    NumPut("Int", y, pt, 4)
+    if (!DllCall("User32.dll\ClientToScreen", "Ptr", hwnd, "Ptr", pt))
+        return false
+    screenX := NumGet(pt, 0, "Int")
+    screenY := NumGet(pt, 4, "Int")
+    restoreX := 0
+    restoreY := 0
+    MouseGetPos(&restoreX, &restoreY)
+    DllCall("User32.dll\SetCursorPos", "Int", screenX, "Int", screenY)
+    DllCall("User32.dll\mouse_event", "UInt", 0x0002, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
+    Sleep(_InjectDelayMs("MouseHoldMs", 10))
+    DllCall("User32.dll\mouse_event", "UInt", 0x0004, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
+    DllCall("User32.dll\SetCursorPos", "Int", restoreX, "Int", restoreY)
+    Sleep(_InjectDelayMs("MouseGapMs", 40))
+    return true
+}
+; 回退注入的延迟配置（毫秒）
+_InjectDelayMs(key, def) {
+    value := Config.ReadCustomFromIni(key)
+    if (value = "" || !IsInteger(value))
+        return def
+    return Max(0, Min(Integer(value), 1000))
+}
 ; 获取自动暂停倍速按钮识别位置
 SpeedButtonPositionColor() {
     if !SafeWinGetClientPos(&ww, &wh)
@@ -994,12 +1037,14 @@ HotkeyActionsStart() {
     GameKeys.InjectedPressKeys.CaseSense := false
     HoldGuard.Init()
     TouchInjector.Init(3, 1)
-    prevMouseCoordMode := CoordMode("Mouse", "Screen")
-    try {
-        MouseGetPos &screenX, &screenY
-        TouchInjector.MoveFromScreen(screenX, screenY)
-        MouseMove screenX, screenY, 0
-    } finally {
-        CoordMode("Mouse", prevMouseCoordMode)
+    if (Environment.HasTouchInjection) {
+        prevMouseCoordMode := CoordMode("Mouse", "Screen")
+        try {
+            MouseGetPos &screenX, &screenY
+            TouchInjector.MoveFromScreen(screenX, screenY)
+            MouseMove screenX, screenY, 0
+        } finally {
+            CoordMode("Mouse", prevMouseCoordMode)
+        }
     }
 }

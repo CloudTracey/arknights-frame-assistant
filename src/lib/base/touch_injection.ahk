@@ -10,25 +10,10 @@ class TouchInjector {
     static _LastX := 0
     static _LastY := 0
     static LastError := 0
-    static _MouseMode := false
-    static _MouseHoldMs := 10
-    static _MouseGapMs := 40
-    static _FallbackBusy := false
-    static _FallbackBusyAt := 0
-    static _RestoreX := 0
-    static _RestoreY := 0
 
     static Init(maxCount := 3, feedbackMode := 1) {
-        hMod := DllCall("GetModuleHandle", "Str", "user32.dll", "Ptr")
-        pProc := hMod ? DllCall("GetProcAddress", "Ptr", hMod, "AStr", "InjectTouchInput", "Ptr") : 0
-        if (!pProc) {
-            this._MouseMode := true
-            this._MouseHoldMs := this._ReadIniInt("MouseHoldMs", this._MouseHoldMs)
-            this._MouseGapMs := this._ReadIniInt("MouseGapMs", this._MouseGapMs)
-            this._Initialized := true
-            this.LastError := 0
-            return true
-        }
+        if (!Environment.HasTouchInjection)
+            return false
         result := DllCall("User32.dll\InitializeTouchInjection", "UInt", maxCount, "UInt", feedbackMode, "Int")
         if (!result) {
             this.LastError := A_LastError
@@ -37,13 +22,6 @@ class TouchInjector {
         this._Initialized := true
         this.LastError := 0
         return true
-    }
-
-    static _ReadIniInt(key, def) {
-        v := Config.ReadCustomFromIni(key)
-        if (v = "" || !IsInteger(v))
-            return def
-        return Max(0, Min(Integer(v), 1000))
     }
 
     static _WriteFields(buf, x, y, flags) {
@@ -61,40 +39,7 @@ class TouchInjector {
         NumPut("Int", y+2, buf, 116)
     }
 
-    static _InjectMouse(flags) {
-        hwnd := WinExist(GameTarget.WinTitle())
-        pt := Buffer(8, 0)
-        NumPut("Int", this._LastX, pt, 0)
-        NumPut("Int", this._LastY, pt, 4)
-        if (hwnd)
-            DllCall("User32.dll\ClientToScreen", "Ptr", hwnd, "Ptr", pt)
-        sx := NumGet(pt, 0, "Int")
-        sy := NumGet(pt, 4, "Int")
-        DllCall("User32.dll\SetCursorPos", "Int", sx, "Int", sy)
-        if (flags & TouchInjector.POINTER_FLAG_DOWN) {
-            px := 0, py := 0
-            MouseGetPos(&px, &py)
-            this._RestoreX := px
-            this._RestoreY := py
-            DllCall("User32.dll\mouse_event", "UInt", 0x0002, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
-            this._Down := true
-            Sleep(this._MouseHoldMs)
-        } else if (flags & TouchInjector.POINTER_FLAG_UP) {
-            if (this._Down) {
-                DllCall("User32.dll\mouse_event", "UInt", 0x0004, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0)
-                this._Down := false
-                DllCall("User32.dll\SetCursorPos", "Int", this._RestoreX, "Int", this._RestoreY)
-                Sleep(this._MouseGapMs)
-            }
-        }
-        this.LastError := 0
-        return true
-    }
-
     static _Inject(flags) {
-        if (this._MouseMode)
-            return this._InjectMouse(flags)
-
         hwnd := WinExist(GameTarget.WinTitle())
         pt := Buffer(8, 0)
         NumPut("Int", this._LastX, pt, 0)
@@ -137,20 +82,9 @@ class TouchInjector {
             ; Logger.Warn("TouchInjector", "Down 失败：重复按下，错误码=" this.LastError)
             return false
         }
-        if (this._MouseMode) {
-            if (this._FallbackBusy && A_TickCount - this._FallbackBusyAt < 1000) {
-                this.LastError := 87
-                return false
-            }
-            this._FallbackBusy := true
-            this._FallbackBusyAt := A_TickCount
-        }
         this._ResolveCoord(x?, y?)
-        if (!this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_DOWN)) {
-            if (this._MouseMode)
-                this._FallbackBusy := false
+        if (!this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_DOWN))
             return false
-        }
         this._Down := true
         return true
     }
@@ -164,12 +98,9 @@ class TouchInjector {
         }
 
         this._ResolveCoord(x?, y?)
-        ok := this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_UPDATE)
-        if (ok)
-            ok := this._Inject(TouchInjector.POINTER_FLAG_UP)
-        if (this._MouseMode)
-            this._FallbackBusy := false
-        if (!ok)
+        if (!this._Inject(TouchInjector.POINTER_FLAG_INRANGE | TouchInjector.POINTER_FLAG_INCONTACT | TouchInjector.POINTER_FLAG_UPDATE))
+            return false
+        if (!this._Inject(TouchInjector.POINTER_FLAG_UP))
             return false
         this._Down := false
         return true
@@ -223,3 +154,4 @@ class TouchInjector {
         return this.Move(clientX, clientY)
     }
 }
+
