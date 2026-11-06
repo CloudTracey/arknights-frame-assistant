@@ -37,74 +37,119 @@
 
 ```
 ├── src/                          # 源代码目录
-│   ├── main.ahk                  # 主入口文件（仅加载定义，App.Bootstrap() 启动）
-│   └── lib/                      # 按四层架构组织
-│       ├── base/                 # 基础层：不依赖 core/ui
-│       │   ├── config.ahk        # 配置管理（Config 类）
-│       │   ├── constants.ahk     # 全局常量
-│       │   ├── eventbus.ahk      # 事件总线（模块间解耦通信）
-│       │   ├── file_extractor.ahk # 嵌入资源的运行时提取
-│       │   ├── hotkey_schema.ahk # 热键元数据唯一来源
-│       │   ├── key_format.ahk    # 热键键值格式化工具
-│       │   ├── logger.ahk        # 双轨日志系统
-│       │   ├── message_box.ahk   # 自定义消息框
-│       │   ├── theme.ahk         # 主题状态、配色与原生控件绘制
-│       │   ├── timing.ahk        # 高精度延迟工具
-│       │   ├── token_protector.ahk # GitHub Token DPAPI 加密保护
-│       │   ├── touch_injection.ahk # Touch Injection 模拟点击
-│       │   ├── tray.ahk          # 托盘提示封装
-│       │   ├── version.ahk       # 内置版本号
-│       │   ├── version_utils.ahk # 版本/JSON 纯工具
-│       │   └── window.ahk        # 窗口判定工具
-│       ├── core/                 # 核心层：依赖 base，不依赖 ui
-│       │   ├── changelog/        # 更新公告检查
-│       │   │   └── changelog_checker.ahk
-│       │   ├── diagnostics/      # 诊断导出
-│       │   │   └── log_exporter.ahk
-│       │   ├── hotkey/           # 热键域
-│       │   │   ├── game_keys.ahk
-│       │   │   ├── hotkey_actions.ahk
-│       │   │   ├── hotkey_service.ahk
-│       │   │   └── timing_service.ahk
-│       │   ├── launch/           # 启动相关
-│       │   │   ├── app_context.ahk
-│       │   │   ├── game_auto_start.ahk
-│       │   │   └── game_launcher.ahk
-│       │   ├── monitor/          # 游戏监控
-│       │   │   ├── game_monitor.ahk
-│       │   │   └── level_detector.ahk
-│       │   ├── settings/         # 设置域
-│       │   │   ├── hotkey_conflict_validator.ahk
-│       │   │   └── settings_service.ahk
-│       │   └── updater/          # 自动更新模块
-│       │       ├── downloader.ahk
-│       │       ├── github_token_service.ahk
-│       │       ├── release_repository.ahk
-│       │       ├── self_replacer.ahk
-│       │       ├── updater_manager.ahk
-│       │       └── version_checker.ahk
-│       └── ui/                   # UI 层：依赖 core/base
-│           ├── changelog_ui.ahk  # 更新公告 UI
-│           ├── gui.ahk           # 设置窗口 GUI
-│           ├── key_bind.ahk      # 按键绑定（InputHook 捕获按键）
-│           └── updater_ui.ahk    # 更新 UI（对话框）
+│   ├── main.ahk                  # 唯一入口：只 Include 定义，启动由 App.Bootstrap() 执行
+│   ├── lib/                      # 四层单向依赖：bootstrap → ui → core → base
+│   │   ├── base/                 # 基础层：不依赖 core/ui
+│   │   │   ├── changelog_format.ahk # 更新公告多语言裁剪
+│   │   │   ├── config.ahk        # 配置管理（Config 类）
+│   │   │   ├── constants.ahk     # 全局常量
+│   │   │   ├── custom_hotkey_store.ahk # 自定义按键 JSON 存储（独立于 Settings.ini）
+│   │   │   ├── eventbus.ahk      # 事件总线（模块间解耦通信）
+│   │   │   ├── file_extractor.ahk # 嵌入资源的运行时提取
+│   │   │   ├── game_target.ahk   # 当前目标游戏窗口的唯一 owner
+│   │   │   ├── hotkey_schema.ahk # 热键元数据唯一来源
+│   │   │   ├── i18n.ahk          # 国际化核心（I18n 类）
+│   │   │   ├── key_format.ahk    # 热键键值格式化工具
+│   │   │   ├── locales/          # 五语言资源（键 = 中文原文）
+│   │   │   │   ├── zh_hans.ahk
+│   │   │   │   ├── zh_hant.ahk
+│   │   │   │   ├── ja_jp.ahk
+│   │   │   │   ├── ko_kr.ahk
+│   │   │   │   └── en_us.ahk
+│   │   │   ├── logger.ahk        # 双轨日志系统
+│   │   │   ├── message_box.ahk   # 自定义消息框
+│   │   │   ├── metrics.ahk       # UI 度量与字体
+│   │   │   ├── server_profile.ahk # 区服元数据与识别
+│   │   │   ├── single_instance.ahk # 单例识别（命名互斥体）
+│   │   │   ├── theme.ahk         # 主题状态、配色与原生控件绘制
+│   │   │   ├── timing.ahk        # 高精度延迟工具
+│   │   │   ├── token_protector.ahk # GitHub Token DPAPI 加密保护
+│   │   │   ├── touch_injection.ahk # Touch Injection 模拟点击
+│   │   │   ├── tray.ahk          # 托盘提示封装
+│   │   │   ├── version.ahk       # 内置版本号（唯一来源）
+│   │   │   ├── version_utils.ahk # 版本/JSON 纯工具
+│   │   │   └── window.ahk        # 窗口/屏幕工具
+│   │   ├── core/                 # 核心层：依赖 base，不依赖 ui
+│   │   │   ├── audio/            # 音频
+│   │   │   │   └── volume_controller.ahk # 游戏应用音量控制
+│   │   │   ├── diagnostics/      # 诊断
+│   │   │   │   └── log_exporter.ahk # 诊断压缩包导出
+│   │   │   ├── game/             # 游戏客户端
+│   │   │   │   └── game_client_registry.ahk # 游戏客户端实例注册表
+│   │   │   ├── hotkey/           # 热键域
+│   │   │   │   ├── custom_script.ahk # 自定义按键功能引擎
+│   │   │   │   ├── game_keys.ahk # 游戏按键识别与注入
+│   │   │   │   ├── hotkey_actions.ahk # 热键动作实现
+│   │   │   │   ├── hotkey_service.ahk # 热键注册/注销/分组切换
+│   │   │   │   └── timing_service.ahk # 过帧时序服务
+│   │   │   ├── launch/           # 启动相关
+│   │   │   │   ├── app_context.ahk # 启动上下文
+│   │   │   │   ├── game_auto_start.ahk # 随游戏自动启动（计划任务）
+│   │   │   │   └── game_launcher.ahk # 随 AFA 启动游戏
+│   │   │   ├── monitor/          # 游戏监控
+│   │   │   │   ├── game_monitor.ahk # 自动退出/自动开局暂停/二倍速
+│   │   │   │   ├── hook_monitor.ahk # 键盘钩子存活检测
+│   │   │   │   └── level_detector.ahk # 关卡检测状态机
+│   │   │   ├── settings/         # 设置域
+│   │   │   │   ├── hotkey_conflict_validator.ahk # 热键冲突校验
+│   │   │   │   └── settings_service.ahk # 唯一配置写口
+│   │   │   └── updater/          # 自动更新模块
+│   │   │       ├── changelog_checker.ahk # 更新公告检查
+│   │   │       ├── downloader.ahk # 更新包下载
+│   │   │       ├── github_token_service.ahk # GitHub Token 校验
+│   │   │       ├── release_repository.ahk # GitHub/国内源检查
+│   │   │       ├── self_replacer.ahk # 更新器自我替换
+│   │   │       ├── updater_manager.ahk # 更新流程协调器
+│   │   │       └── version_checker.ahk # 版本检查门面
+│   │   └── ui/                   # UI 层：依赖 core/base
+│   │       ├── changelog_ui.ahk  # 更新公告 UI
+│   │       ├── custom_key_editor.ahk # 自定义按键编辑窗口
+│   │       ├── gui.ahk           # 设置窗口 GUI
+│   │       ├── key_bind.ahk      # 按键绑定捕获（InputHook）
+│   │       ├── status_bar.ahk    # 底部模拟状态栏
+│   │       └── updater_ui.ahk    # 更新 UI（对话框）
+│   └── resources/                # 运行时资源
+│       └── images/               # 关卡检测/按钮模板图像（编译期嵌入，运行时提取）
 ├── .github/                      # GitHub 配置
 │   ├── CODEOWNERS                # 代码所有者
-│   ├── ISSUE_TEMPLATE/           # Issue 模板
+│   ├── ISSUE_TEMPLATE/           # Issue 模板（Bug/功能/文档/提问）
 │   ├── PULL_REQUEST_TEMPLATE.md  # PR 模板
-│   ├── RELEASE_TEMPLATE.md       # 发布说明模板
-│   ├── scripts/                  # GitHub Action 辅助脚本
-│   └── workflows/                # GitHub Action 工作流
-├── CONTRIBUTING.md               # 贡献指南
-├── docs/                         # 离线文档
+│   ├── scripts/                  # Actions 辅助脚本（version.json 生成、版本号检查）
+│   └── workflows/                # Actions 工作流（架构检查、版本检查、发布同步）
+├── .dsh/                         # DeepSeek Harness 项目配置（仅 skills 入版本库）
+│   └── skills/test-checklist/    # 生成手工测试清单的 skill
+├── .vscode/                      # 编辑器配置
+│   └── settings.json             # 统一编码/行尾/缩进，避免 PR 噪音
+├── docs/                         # 文档
 │   ├── ahk_docs/                 # AHK v2 官方文档（离线版）
+│   ├── design/                   # 架构与设计参考分册（改到对应模块时再读）
+│   │   ├── README.md             # 分册索引
+│   │   ├── module_responsibilities.md # 启动流程与模块职责表
+│   │   ├── key_designs_hotkey.md # 热键/注入/透传/关卡检测/多区服
+│   │   ├── key_designs_base.md   # 配置/日志/诊断/更新/发布链路
+│   │   ├── key_designs_ui.md     # GUI/主题/DPI/标签页
+│   │   ├── hold_guard.md         # 按住去重状态机
+│   │   ├── input_stall_diagnosis.md # 输入卡顿与按键失效排查
+│   │   ├── ahk_v2_pitfalls.md    # AHK v2 语言/API 陷阱合集
+│   │   ├── i18n.md               # 国际化约定与五语言验证
+│   │   └── reference.md          # 事件/配置键/发布/静态检查速查
+│   ├── i18n/glossary.md          # 游戏术语官方译法
 │   └── win_docs/                 # Windows API 文档
-├── LICENSE                       # 许可证
+├── tools/                        # Python 静态门禁检查
+│   ├── event_contract_check.py   # 事件契约检查
+│   ├── i18n_check.py             # i18n 文案与资源检查
+│   └── layer_check.py            # 四层依赖与 include 顺序检查
+├── test/                         # 手工测试清单
+│   ├── template/test_template.md # 测试清单模板
+│   └── finished_test_*.md        # 已完成的测试清单
+├── AGENTS.md                     # AI 编码助手指南（含铁律速查）
+├── CONTRIBUTING.md               # 贡献指南
+├── KNOWN_VIOLATIONS              # layer_check 已知耦合基线
+├── LICENSE                       # GNU GPL v3.0
+├── README.md                     # 项目说明（另有 en/ja/ko/zh-Hant 版本）
 ├── logo.ico / logo.png           # 项目图标
-├── README.md                     # 项目说明
-└── test/                         # 测试清单
-    ├── template/                 # 测试清单模板
-    └── ...                       # 各次更改对应的测试清单
+├── .gitattributes                # 行尾规范（检出 CRLF / 提交 LF）
+└── .gitignore                    # 版本库排除规则
 ```
 
 ## 代码规范
@@ -128,14 +173,6 @@
  * 多行注释
  * 用于说明复杂功能
  */
-
-; 函数注释示例
-; 功能：检查游戏进程是否存在
-; 参数：process_name - 进程名称
-; 返回：布尔值，存在返回 true，否则 false
-CheckGameProcess(process_name) {
-    ; 实现代码
-}
 ```
 
 ## 如何贡献
@@ -312,26 +349,14 @@ AI编程的优点是一些重复性较高的工作得以快速完成，复杂度
 3. 关于使用的Harness：当前主流的几个Harness一般也没啥问题，比如Claude Code、Codex、ZCode、DeepSeek Harness之类的
 4. 目前项目里的.dsh和AGENTS.md可以根据自己使用的模型和Harness进行重命名，比如使用Claude就改成.claude和CLAUDE.md
 
-### 一点经验分享
-
-#### 模型
-
-先说说我用过的模型，Kimi使用起来的效果还不错，就是实在是太贵了，用了几下额度就爆炸了。
-然后是Minimax，这个很便宜，给的额度也多，但是当时用了一轮对话就感觉这家伙的脑子不太好使，用了两轮后要修的Bug比写出来的功能还多。
-再然后是阿里的Qwen，当时订了一个月的Plan，也是用了一天就感觉不太行，前后一个月加起来可能只用了五次。
-然后是Claude，我用了半天的Opus，强是真的强，号没的也是真的快，A/你赢了。上面的几个模型都是浅尝辄止，2026年初到四月份这段时间大部分时间还是在古法编程，直到四月底DeepSeek v4预览版发布。
-DSv4预览版也不太聪明，但是实在是太便宜了。当时我大部分功能还是手搓的，只有一些简单的重复性工作会交给AI，因此DS v4 Flash很好地扮演了苦力的角色（比如项目内的注释、文档的修改补充、新添加按键重复逻辑的编写等等），Pro则用来做代码审查和一些Bug的分析。
-再然后就是DS v4 Flash正式版了，这个直到现在还是我的主力，在你能极其详细地描述你的需求、你的思路、以及阐明各种限制的时候，v4 Flash正式版真的是个非常好的打手。至于v4 Pro正式版，我的使用很有限，大部分时候我都是自己去想方案，并不需要它来帮我构思或者设计什么，主要还是输出速度太慢了，只有Flash二分之一的输出速度，目前只用它来细化了一下AFA v2.0.0的解耦方案设计
-
-#### Harness
-
-然后是Harness，我使用过的有OpenCode、Claude Code、Codex和DeepSeek Harness，其中OpenCode在年初使用了一段时间，Bug真的奇多，可能是因为当时刚发布没多久的原因吧，听说现在好像也变成了屎山，准备新开一个OpenCode v2了。
-然后是Claude Code，这是我使用时间最长也是最熟悉的Harness，真的好用，非常顺手，但是封了我一次号，导致我后面只敢接DeepSeek开发，没能深入体验完全体，略微遗憾。被封号之后一怒之下转了一天的Codex，用不习惯又转回Claude Code了。
-最后是现在在用的DeepSeek Harness，V4 Pro正式版出来之后换的，目前为止感觉**没有**Claude Code那么好用，一切皆插件的想法很好，但是现在社区充斥着无数的Vibe Coding的屎山插件，踩了几天的雷给我用得身心俱疲。先说一下不加插件的Harness本身，首先是界面，只有Web UI，没有TUI，我个人还是比较喜欢TUI的，轻量，操作起来也很方便，Web UI用起来还是太重了，不管是长对话的内存占用和优化还是各种操作上；然后是回滚功能，DeepSeek Harness本体目前没有回滚功能，想回滚只能通过Git回滚，或者打字叫AI帮你回滚，这就非常麻烦，Git回滚没法回滚被.gitignore忽略的本地文档，AI回滚又慢还要浪费Token；再然后是Diff的审查，Claude Code的话AI所有的修改都会立刻直接显示在TUI界面上，一目了然非常直观，可以很明显看到AI先改了哪个再改了哪个，DeepSeek Harness浏览起来就非常麻烦，只显示了Edit的操作但不显示修改的内容，想看修改的内容还得去IDE里看，但IDE里又不显示修改的先后顺序。不过DeepSeek Harness毕竟还是开发预览版，进步空间还很大，至于插件，我感觉这东西的上限取决于大模型的上限，毕竟大部分的插件最后都是丢给模型去写的，个人还是保持乐观的，毕竟大模型能力还是越来越强的。
-
-#### Skills
+### Skills
 
 目前我最常用的Skill只有我自己写的test-checklist，用来手动生成测试清单，已经放在仓库里了。然后就是mattpocock的这套Skills：https://github.com/mattpocock/skills ，基本上能满足大部分的开发需求了
+
+### 注意事项
+
+PR表现为完全的许愿式编程和显然没经过审查的破坏性变更、大面积改动，或者莫名其妙修改完全不相干部分的代码都会被维护者视为不负责任的PR，可能会在简要说明后被直接关闭，还请见谅
+另外，使用AI开发 ≠ 完全交给AI，PR模版、对评审的回复总该自己写吧，要Vibe Coding我会去自己的Harness里，而不是在PR页面跟不知道是真人还是人机对聊
 
 ## 社区行为准则
 

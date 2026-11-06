@@ -1,7 +1,7 @@
 # 模块职责与启动流程
 
 > 本文件是 AGENTS.md 的参考资料分册：**改某个模块前查这里**，日常任务无需通读。
-> 内容与 `src/` 实际结构对齐（`CONTRIBUTING.md` 的项目结构树已滞后，以其为准的是本文件）。
+> 内容与 `src/` 实际结构对齐；仓库目录树见 [CONTRIBUTING.md 的「项目结构」](../../CONTRIBUTING.md#项目结构)（新增/删除/重命名模块时两处同步更新）。
 
 ## 启动流程（当前实现）
 
@@ -76,7 +76,7 @@
 | `core/launch/game_auto_start.ahk` | 随明日方舟启动自动启动小助手（`GameAutoStartManager` 类）。审核事务临时启用 `SeSecurityPrivilege`，通过 `AuditQuerySystemPolicy` 读取优先，仅在成功审核缺失时调用 `AuditSetSystemPolicy`，复查后恢复令牌权限原状态；错误 1450 按 250/750ms 有限重试。计划任务按动作、参数、工作目录、事件订阅、主体和设置做语义比较，一致时不重写，缺失或漂移时才修复。手动启动执行校准；`--game-autostart` 触发启动在配置开启时跳过校准，配置关闭时尽力删除遗留任务后退出。启动校准失败保留配置和任务，仅在 GUI 就绪后显示一次托盘通知；设置页显式保存仍严格失败且不持久化。`Disable()` 只删除当前用户任务并保留系统审核。任务按 SID 独立命名（`ArknightsFrameAssistant-AutoStartWithGame-{SID}`）。`GetConfiguredGamePaths` 读内存工作副本，`GetConfiguredGamePathsFromIni` 读已持久化值（设置保存失败时恢复任务用） |
 | `core/launch/app_context.ahk` | 应用启动上下文：`StartedByGameAutoStart` 唯一 owner，Bootstrap 写入，GameAutoStartManager/LogExporter 读取 |
 | `core/updater/` | 自动更新全流程：`release_repository.ahk`（GitHub/国内源检查与 changelog 缓存）→ `version_checker.ahk`（门面：首选源/重试/降级）→ `downloader.ahk` → `self_replacer.ahk` → `updater_manager.ahk`（协调器，事件化）；`github_token_service.ahk` 提供 Token 验证（`Validate()`，超时 5000ms，带校验状态缓存）。`ui/updater_ui.ahk` 仅通过事件与 Updater 交互。详见 [key_designs_base.md](key_designs_base.md#双源更新与自动降级) |
-| `core/changelog/changelog_checker.ahk` | 更新公告检查。订阅 `ChangelogShowRequested`，构建 body（经 `ChangelogFormat.LocalizeBody` 裁剪语言）后发布 `ChangelogAvailable` |
+| `core/updater/changelog_checker.ahk` | 更新公告检查。订阅 `ChangelogShowRequested`，构建 body（经 `ChangelogFormat.LocalizeBody` 裁剪语言）后发布 `ChangelogAvailable` |
 | `core/diagnostics/log_exporter.ahk` | 诊断压缩包导出（`LogExporter` 类）。`CreateArchiveInteractive()` 弹出文件保存对话框，收集所有日志 + 脱敏后的设置文件 + 诊断信息，通过 PowerShell 打包为 ZIP。`OpenLogDirectory()` 打开日志目录 |
 
 ### ui 层（依赖 core/base）

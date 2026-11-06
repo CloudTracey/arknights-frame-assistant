@@ -12,7 +12,7 @@
 <img alt="stars" src="https://img.shields.io/github/stars/CloudTracey/arknights-frame-assistant?style=social">
 <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/CloudTracey/arknights-frame-assistant/total?style=social">
 
-Welcome to **Arknights Frame Assistant** (AFA), a small Windows utility for improving the Arknights PC experience. It provides fully customizable hotkeys, Frame Advance, Quick Actions, and Stronghold Protocol operations.
+Welcome to **Arknights Frame Assistant** (AFA), a Windows utility for improving the Arknights PC experience. It provides fully customizable hotkeys, Frame Advance, Quick Actions, and Stronghold Protocol operations.
 </div>
 
 <br>
@@ -28,6 +28,7 @@ Welcome to **Arknights Frame Assistant** (AFA), a small Windows utility for impr
   - [Quick Actions](#quick-actions)
   - [Stronghold Protocol Operations](#stronghold-protocol-operations)
   - [Fully Customizable Hotkeys](#fully-customizable-hotkeys)
+  - [Special Operations](#special-operations)
   - [Other Settings](#other-settings)
 - [Notes](#notes)
   - [Arknights Process Only](#arknights-process-only)
@@ -43,121 +44,146 @@ Welcome to **Arknights Frame Assistant** (AFA), a small Windows utility for impr
 
 ## Download and Start
 
-1. Download the latest executable from the [GitHub Releases page](https://github.com/CloudTracey/arknights-frame-assistant/releases).
-2. Start AFA with the game; either order is supported, or enable automatic startup in settings.
-3. Customize the hotkeys and settings you need.
-4. Click **Save and Close** or **Apply Settings**. Changes take effect in the game.
+1. Download the latest executable from the [GitHub Releases page](https://github.com/CloudTracey/arknights-frame-assistant/releases), or from the [AFA official download source (mainland China only)](https://release.arknightsframeassistant.com/latest)
+2. Start AFA with the game; either order is supported, or enable automatic startup in settings
+3. Customize the hotkeys and settings you want to change
+4. Click **Save and Close** or **Apply Settings**. Changes take effect in the game
 
 <br>
 
 ## Features
 
+AFA's settings window is divided into six pages: **Combat**, **Quick Actions**, **Stronghold Protocol**, **Custom Keys**, **Special Operations**, and **Other Settings**. Their main features and settings are described below.
+
 ### Frame Advance and Precise Operations
+
+The following hotkey functions and related settings are available on the **Combat** page:
 
 | Feature | Description |
 |------|------|
-| One-click Skill | Activate the skill of the unit under the mouse cursor |
-| One-click Retreat | Retreat the unit under the mouse cursor |
-| Select while Paused | Select the unit under the cursor at 0 frames while paused |
-| Paused Skill | Activate the skill of the unit under the mouse cursor at 0 frames while paused |
-| Paused Retreat | Retreat the unit under the mouse cursor at 0 frames while paused |
-| Frame Advance 16ms | Advance one logical frame at 2x speed |
-| Frame Advance 33ms | Advance one logical frame at 1x speed (30 logical frames per second) |
-| Frame Advance 166ms | Advance one logical frame at 0.2x speed when a unit or the deployment area is selected |
-| Switch Camera | Move the camera to a unit without selecting it while paused |
-| Opening Auto-pause | Automatically pause when combat starts |
+| Pause on Press | Toggle pause on press |
+| Pause on Release | Toggle pause on release, recreating the "click" feel of an emulator |
+| Toggle Speed | Toggle game speed (1x / 2x) |
+| Select While Paused | While paused, click the unit you want to select |
+| Skill | Press the skill key |
+| Retreat | Press the retreat key |
+| Switch Camera | While paused, move the mouse to a unit and click to center the camera on it |
+| Frame Advance 16ms | Use while paused; advances game time by 16ms |
+| Frame Advance 33ms | Use while paused; advances game time by 33ms |
+| Frame Advance 166ms | Use while paused; advances game time by 166ms |
+| One-Click Skill | Move the mouse to the unit you want to use a skill on, then press to select and activate the skill automatically |
+| One-Click Retreat | Move the mouse to the unit you want to retreat, then press to select and retreat automatically |
+| Pause Skill | While paused, hover the unit to skill, then press to select and activate it |
+| Pause Retreat | While paused, hover the unit to retreat, then press to select and retreat it |
+| In-Game Frame Rate | Choose the tier matching the game's actual frame rate (30 / 60 / 90 / 120 / 144 / 165 / 180 / 240+) so frame-advance delays stay accurate |
+| Enable Combat Hotkeys Only in Levels (experimental) | Detects the level screen and disables Combat hotkeys outside it to avoid accidental triggers |
+
+- The actual wait for each of the three "Frame Advance" hotkeys can be adjusted in **Other Settings → Custom**; the hotkey labels and status bar hints update accordingly
 
 ### Quick Actions
 
 | Feature | Description |
 |------|------|
-| Simulate Left Click | Simulate a left mouse click |
-| Abandon Operation | Abandon the current combat operation |
-| Skip Recruitment/Story | Click the skip button for recruitment animations or story scenes |
-| Back to Previous Menu | Return to the previous menu |
-| BASE Quick Collect | Click BASE collection buttons, such as Manufacturing or Trading Post products |
-| Collect Integrated Strategies Items | Click the “Collect” button in Integrated Strategies |
+| Simulate Left Click | Simulate pressing the left mouse button |
+| Base Quick Collect | Click the collect button at the bottom-left of the screen to collect base products |
+| Abandon Operation | Abandon the current battle |
+| Skip Recruit/Story | Quickly move the mouse and click the skip button at the top right |
+| Collect IS Items | Quickly move the mouse and click the "Collect" button in Integrated Strategies |
+| Back to Previous Menu | Simulate pressing ESC to return to the previous menu |
+| Use Back to Cease Operations | Press "Back to Previous Menu" to press the ESC key and the "Abandon Operation" key at the same time |
 
 ### Stronghold Protocol Operations
 
 | Feature | Description |
 |------|------|
-| View Enemies | View enemy details |
-| Dispatch Center | Open the Dispatch Center |
-| Freeze | Freeze a unit |
-| Refresh | Refresh the shop |
-| Upgrade | Upgrade the shop |
-| Sell/Destroy | Sell a unit or destroy equipment |
-| Ready | Mark the operation ready |
-| Retreat Unit | Retreat a unit |
-| One-click Retreat | Select and retreat the unit under the mouse cursor |
-| One-click Sell/Destroy | Select and sell/destroy the unit under the cursor |
-| One-click Purchase | Double-click to purchase the unit under the cursor |
-| Back to Previous Menu | Return to the previous menu |
+| Check Enemies | View enemy information |
+| Dispatch Center | Open the Dispatch Center (shop) |
+| Freeze | Freeze the Dispatch Center (shop) |
+| Refresh | Refresh the Dispatch Center (shop) |
+| Ready | Confirm ready |
+| Simulate Left Click | Simulate pressing the left mouse button |
+| Upgrade | Upgrade the Dispatch Center (shop) |
+| Sell/Destroy | Sell operators / destroy equipment |
+| Retreat Unit | Retreat the selected unit |
+| One-Click Retreat | Automatically retreat the unit at the mouse position after clicking |
+| One-Click Sell/Destroy | Automatically sell/destroy the operator or equipment at the mouse position after clicking |
+| One-Click Purchase | Simulate a double left click to buy the unit in the Dispatch Center shop |
+| Back to Previous Menu | Simulate pressing ESC to return to the previous menu |
 
-> **Note:** Stronghold Protocol is mutually exclusive with Combat and Quick Actions. Their hotkeys are disabled while the Stronghold Protocol page is active.
+> **Note:** The Stronghold Protocol plan is mutually exclusive with the Combat and Quick Actions plans: while the Stronghold Protocol page is active, Combat and Quick Actions hotkeys are disabled; while the Combat or Quick Actions page is active, Stronghold Protocol hotkeys are disabled
 
 ### Fully Customizable Hotkeys
 
-Supported default bindings:
+All hotkey functions can be rebound in the settings window; only common Combat functions come with default bindings:
 
-**Combat:**
-
-| Feature | Default | Feature | Default |
-|------|----------|------|----------|
-| Pause on Press | F | Frame Advance 33ms | R |
-| Pause on Release | Space | Frame Advance 166ms | T |
-| Toggle Speed | D | One-click Skill | E |
-| Select while Paused | W | One-click Retreat | Q |
-| Unit Skill | S | Paused Skill | Mouse Forward Button |
-| Unit Retreat | A | Paused Retreat | Mouse Back Button |
-| Switch Camera | None | Opening Auto-pause Toggle | None |
-| Frame Advance 16ms | None | | |
-
-**Quick Actions:**
+**Default Combat bindings:**
 
 | Feature | Default | Feature | Default |
 |------|----------|------|----------|
-| Simulate Left Click | Z | Abandon Operation | None |
-| Skip Recruitment/Story | None | BASE Quick Collect | None |
-| Back to Previous Menu | None | Collect Integrated Strategies Items | None |
+| Pause on Press | F | Frame Advance 16ms | None |
+| Pause on Release | Space | Frame Advance 33ms | R |
+| Toggle Speed | D | Frame Advance 166ms | T |
+| Select While Paused | W | One-Click Skill | E |
+| Skill | S | One-Click Retreat | Q |
+| Retreat | A | Pause Skill | Mouse Forward |
+| Switch Camera | None | Pause Retreat | Mouse Back |
 
-**Stronghold Protocol:**
+- Most keyboard keys are supported
+- Mouse buttons other than left click are supported, including the wheel and side buttons
+- Use `BACKSPACE/DELETE` to clear a binding
+- Conflicts are detected in real time and conflicting fields are marked red; resolve them before saving
+- The **Reset Keys** button at the bottom of the settings window restores all keys except custom keys to their defaults
 
-| Feature | Default | Feature | Default |
-|------|----------|------|----------|
-| View Enemies | W | Upgrade | G |
-| Dispatch Center | A | Sell/Destroy | X |
-| Freeze | S | Ready | C |
-| Refresh | D | Left Click | None |
-| Retreat Unit | Q | One-click Retreat | None |
-| One-click Sell/Destroy | None | One-click Purchase | None |
-| Back to Previous Menu | None | | |
+**Custom Keys:**
 
-- Most keyboard keys are supported.
-- Mouse buttons other than left click are supported, including the wheel and side buttons.
-- Use `BACKSPACE/DELETE` to clear a binding.
-- Conflicts are detected in real time and conflicting fields are marked red. Resolve conflicts before saving.
+The **Custom Keys** page lets you add up to 12 custom keys: set the key name, type (Global / Combat / Quick / Stronghold Protocol) and function, then click the game window to capture the coordinates where the operation should be performed. Click the gear icon at the end of a row to edit or delete it. The key type determines when it works:
+
+- Global keys: always work
+- Combat keys: only inside an operation stage
+- Quick keys: always work while the Stronghold Protocol plan is off
+- Stronghold Protocol keys: only while the Stronghold Protocol plan is on
+
+### Special Operations
+
+The **Special Operations** page groups opening-stage and game-volume features:
+
+| Feature | Description |
+|------|------|
+| Auto Pause at Start | Automatically pause when entering a stage; can be toggled at any time with the "Enable/disable auto-pause" hotkey |
+| Hold Auto Pause | Hold while a stage loads; the game auto-pauses on entry, whether or not Enable auto pause at start is checked |
+| Auto 2x Speed at Start | Automatically switch to 2x speed when entering a stage; can be toggled at any time with the "Enable/disable auto-2x speed" hotkey |
+| Increase Volume | Increase the game client volume in the Windows Volume Mixer |
+| Decrease Volume | Decrease the game client volume in the Windows Volume Mixer |
+| Mute | Toggle the game client mute state |
+
+> **Note:** The hotkeys on the Special Operations page are unbound by default and can be bound there; game volume hotkeys work on every function page
 
 ### Other Settings
 
 | Setting | Description |
 |------|------|
-| **Automatic Updates** | Automatically check for and download updates |
-| **Update Source** | Choose China Source or GitHub; China Source is the default and failed checks fall back to the other source |
-| **Language** | Switch the interface between Simplified Chinese, Traditional Chinese, Japanese, Korean, and English |
-| **Start Arknights with AFA** | Start the game with AFA; a game path is required |
-| **Start AFA with Arknights** | Start AFA automatically with the game; a game path is required. AFA reads and calibrates Windows process-creation auditing and the current-user scheduled task as needed |
-| **Exit with Game Process** | Exit AFA automatically when the game closes |
-| **Open Settings at Startup** | Show the settings window at startup |
-| **Exit when Window Closes** | Exit AFA when the settings window is closed with X or Alt+F4; otherwise hide it in the tray |
-| **Start with Stronghold Protocol** | Use Stronghold Protocol as the default startup scheme |
-| **Top Tab Management** | In Display, use eye icons to toggle tab visibility and drag to reorder tabs; Other Settings always remains visible. The order and visibility take effect together when saved or applied, and the top bar divides evenly among visible tabs |
-| **Click Delay** | Set the delay in milliseconds between selecting a unit and triggering an action |
-| **Enable/Disable Hotkey** | Set the shortcut for enabling or disabling all hotkeys |
-| **GitHub Token** | Increase API quota when GitHub reports a rate limit |
-| **Logs and Diagnostics** | Create a redacted log archive or open the log folder |
-| **Tray Menu** | Open settings, toggle hotkeys, restart, or exit from the tray icon |
+| **Language** | Switch the interface language between Auto (follow system), Simplified Chinese, Traditional Chinese, Japanese, Korean, and English (US) |
+| **Theme** | Switch the interface theme between follow system, light, and dark |
+| **Top Tab Management** | In Other Settings → Display, use the eye icons to toggle each tab's visibility and drag to reorder (at least one function tab must remain). Other Settings always remains, and the order and visibility take effect together when saved or applied; the top bar divides evenly among visible tabs |
+| **Exit AFA when the Game Process Closes (strongly recommended)** | Exit AFA automatically when all game processes close |
+| **Open Settings at Startup** | Open the settings window automatically after AFA starts |
+| **Exit AFA when Clicking the Window Close Button** | When checked, clicking the ✗ at the top right of the settings window exits AFA directly; otherwise the window is hidden to the tray (Alt+F4 always exits AFA) |
+| **Start with the Stronghold Protocol Plan** | Switch to the Stronghold Protocol plan directly after AFA starts |
+| **Start Arknights with AFA** | Start Arknights at the specified path when AFA starts (set the game path first) |
+| **Detect Game Path** | Detect all servers' install paths on this PC at once; if nothing is found, start the game first and detect again |
+| **Start AFA when Arknights Starts** | Start AFA automatically when Arknights from any server starts (requires an administrator scheduled task) |
+| **Multi-Server Support** | Supports CN, Bilibili, Traditional Chinese, Japanese, Korean, and International servers: reads and adapts to each server's in-game key bindings; the Launch & Exit page shows detected server paths and running clients read-only |
+| **Update Channel** | The stable channel is more stable but may have a few bugs; the beta channel has more new features and potentially more bugs |
+| **Update Source** | Mainland China users should choose Tencent Cloud; users elsewhere should use GitHub. Tencent Cloud is the default and failed checks fall back to the other source |
+| **Auto Check for Updates** | Check for updates automatically after AFA starts; you can also check manually or download manually on the Update page |
+| **GitHub Token** | Only fill it in and enable it when using the GitHub source and the API quota is exceeded; the token is encrypted with Windows DPAPI for the current user |
+| **Click Delay** | Delay from selecting to pressing 【Skill】【Retreat】 (ms); too short may break clicks |
+| **Enable/Disable Hotkey Shortcut** | Set the shortcut that quickly enables/disables all hotkeys (click the field to change, `BACKSPACE/DELETE` to clear) |
+| **Frame Skip Slots 1 / 2 / 3** | Actual wait (ms) of the three "Frame Advance" hotkeys |
+| **Allow Hover Operation when the Game Window is Inactive** | Hover the inactive game window to trigger hotkeys |
+| **Logs and Diagnostics** | AFA records logs automatically; on the Log page you can create a redacted log archive, open the log folder, or show the debug log console to view logs in real time |
+| **Tray Menu** | Right-click the tray icon to open settings, enable/disable hotkeys, restart AFA, or exit |
+| **About** | View the current version, changelog, GitHub repository, feedback & suggestions, QQ group, Bilibili homepage, and icon artist homepage |
 
 <br>
 
@@ -165,84 +191,90 @@ Supported default bindings:
 
 ### Arknights Process Only
 
-AFA hotkeys act only on the Arknights process (`Arknights.exe`) and do not affect other applications.
+AFA's hotkey functions act only on the Arknights process (`Arknights.exe`) and do not affect operations outside the game
 
 ### In-game Key Bindings
 
-AFA reads the game's key bindings and adapts automatically. If reading fails, restore these defaults in the game:
+AFA reads the game's key bindings and adapts automatically
 
-**Combat:** F for speed, E for skill, Q for retreat, V for abandon operation, Space for pause.
-
-**Stronghold Protocol:** W for View Enemies, A for Dispatch Center, S for Freeze, D for Refresh, C for Ready, G for Upgrade, X for Sell.
+If reading fails, AFA shows a warning and falls back to default keys. In that case, please **restore the game's default key settings** to ensure normal operation
 
 ### In-game Frame Rate
 
-The in-app Frame Rate options are **30 / 60 / 90 / 120 / 144 / 165 / 180 / 240+**. Choose the actual game frame rate so Frame Advance timing remains accurate.
+The "In-Game Frame Rate" option in AFA offers **30 / 60 / 90 / 120 / 144 / 165 / 180 / 240+**. Choose the tier matching the game's actual frame rate so frame-advance delay calculation stays accurate
 
-- At 120 Hz or above, VSync may be enabled and the 120+ option selected.
-- Below 120 Hz, VSync is not recommended; keep the setting equal to the actual game frame rate. If VSync is enabled, make sure the setting matches the display's refresh rate.
+- If your monitor refresh rate is **120 Hz or above**: VSync may be enabled, and the frame rate tier can be set to 120 or above
+- If your monitor refresh rate is **below 120 Hz**: VSync is not recommended; make sure the frame rate setting matches the game's actual frame rate. If VSync is enabled, make sure the setting matches the monitor refresh rate
 
 ### Security Notice
 
-AFA is built with AutoHotkey. Anti-cheat systems in many MMORPGs and competitive games are sensitive to AutoHotkey tools and may misidentify them as cheats, preventing the game from starting or even causing an account ban.
+AFA is built with AutoHotkey. Anti-cheat systems in most MMORPGs and competitive online games are very sensitive to programs built with AutoHotkey; they may misidentify AFA as a cheat program, preventing the game from starting or even getting the account banned.
 
-We strongly recommend enabling **Exit with Game Process** (enabled by default) so that forgetting to close this tool does not trigger anti-cheat systems in other games.
-
-When **Start AFA with Arknights** is enabled, Windows identifies `Arknights.exe` through process-creation events in the security log and uses a scheduled task with the current user's SID to start AFA. Disabling it removes the current user's scheduled task, but Windows' process-creation-success auditing setting remains enabled and may increase security log volume. Both automatic-start directions can be enabled together without recursive launches.
+**We strongly recommend enabling "Exit AFA when the Game Process Closes"** (enabled by default) so that forgetting to close this tool does not trigger anti-cheat systems in other games.
 
 ### If the Settings Window Was Closed
 
-If **Exit when Window Closes** is disabled, right-click the tray icon and select **Open Settings**. If it is enabled, restart AFA after closing the window.
+If "Exit AFA when Clicking the Window Close Button" is disabled, find the AFA icon in the taskbar notification area (including hidden icons) and right-click **Open Settings** to reopen the settings window. If it is enabled, clicking X exits the program, and you need to restart AFA
 
 <br>
 
 ## FAQ
 
-### Q: The program does not respond
+### Q: Nothing happens after starting the program?
 
-A: Run AFA as administrator if required, start the game, check the tray icon (including hidden icons), and confirm **Open Settings at Startup** is enabled if you expect the window to appear.
+A: Please check the following:
+1. Make sure the program is running with administrator privileges
+2. Make sure the game has started
+3. Check whether there is an AFA icon in the notification area at the bottom right (including hidden tray icons)
+4. Check whether "Open Settings at Startup" has been disabled in settings
 
-### Q: A hotkey does not work
+### Q: A hotkey does not work after binding?
 
-A: Restore the game's default bindings if AFA reported a read failure, apply or save the settings, resolve conflicts, and operate inside the game window.
+A: Please check:
+1. Whether AFA showed a "game key read failed" prompt (if so, restore the game's default keys)
+2. Whether you applied or saved the settings after changing them
+3. Whether the key conflicts with other software
+4. Whether you are operating inside the game window
 
-### Q: What is a GitHub Token?
+### Q: What is a GitHub Token? Do I need to configure it?
 
-A: It increases GitHub API quota and is only needed when a rate-limit message appears. It is encrypted with Windows DPAPI for the current user and is no longer stored as plaintext in the configuration file. On first launch of a new version, a plaintext token from an older version is migrated automatically to the encrypted format. Moving the configuration to another user or computer normally requires entering it again.
+A: A GitHub Token is used to raise the API request quota. It is only needed when an API quota-exceeded prompt appears; in general, no configuration is required.
+
+The GitHub Token is encrypted with Windows DPAPI for the current Windows user and is no longer written to the configuration file in plaintext. On the first launch of a new version, the plaintext token from an older version is migrated to the encrypted format automatically; if the configuration file is copied to another Windows user or computer, the token usually needs to be entered again.
 
 ### Q: How do I exit AFA completely?
 
-A: Choose **Exit** from the tray menu, enable **Exit when Window Closes**, or enable **Exit with Game Process**.
+A: You can right-click the tray icon and choose "Exit", or enable **Exit AFA when Clicking the Window Close Button** in the "Launch & Exit" settings and then click the X at the top right of the settings window to exit. If **Exit AFA when the Game Process Closes** is enabled, AFA also exits when the game exits.
 
-### Q: How do I collect logs for a report?
+### Q: How do I collect logs for reporting a problem?
 
-A: Open Logs, select **Create Log Archive**, and attach the ZIP to the issue. Logs are stored under `%AppData%\ArknightsFrameAssistant\PC\logs`; ordinary logs and critical-error context use separate rolling files with a combined limit of 20 MiB. Exported archives remove tokens, user paths, and other sensitive data.
+A: Open the "Log" page in settings, click **Generate Log Archive**, and provide the generated ZIP file with the issue or feedback. Logs are saved under `%AppData%\ArknightsFrameAssistant\PC\logs` by default
 
 <br>
 
 ## Contributing
 
-Issues and pull requests are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) first. User-visible changes must update all five README files and all five language resources.
+Issues and pull requests are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before contributing
 
 <br>
 
 ## Declaration
 
-- Licensed under the [GNU General Public License v3.0 only](https://spdx.org/licenses/GPL-3.0-only.html).
-- The README format and some GUI ideas were inspired by [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights); thanks to the project.
-- For learning and communication only; do not use commercially.
+- This program is open-sourced under the [GNU General Public License v3.0 only](https://spdx.org/licenses/GPL-3.0-only.html)
+- The README format and some GUI styles were borrowed from [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights); thanks to the shoulders of giants
+- This tool is for learning and communication only; do not use it for commercial purposes
 
 ## Acknowledgements
 
 ### Project Contributors
 
-Thanks to everyone who contributes code to this project.
+Thanks to everyone who contributed code to this project!
 
 [![Contributors](https://contrib.rocks/image?repo=CloudTracey/arknights-frame-assistant)](https://github.com/CloudTracey/arknights-frame-assistant/graphs/contributors)
 
 ### Icon Credit
 
-The icon was created by **[文件名错误EXE](https://www.mihuashi.com/profiles/8282001?role=painter)**. It is used with permission for this open-source project.
+This project's icon was carefully drawn by **[文件名错误EXE](https://www.mihuashi.com/profiles/8282001?role=painter)**; special thanks
 
-- Artist: https://www.mihuashi.com/profiles/8282001?role=painter
-- Copyright remains with the original creator.
+- 🎨 Artist homepage: https://www.mihuashi.com/profiles/8282001?role=painter
+- 📜 The icon copyright belongs to the original author, and this project has been authorized to use it (for this open-source project only). The icon is not open-sourced under the above GPL license; please do not misappropriate it.

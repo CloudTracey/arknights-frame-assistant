@@ -20,7 +20,7 @@
 
 ## 相关文档
 
-- [CONTRIBUTING.md](../../CONTRIBUTING.md) — 代码规范、分支/提交约定、PR 流程、发布流程、AI 编程约定。**代码规范与项目结构树以 CONTRIBUTING 为准**（其项目结构树已滞后于源码，模块清单以 [module_responsibilities.md](module_responsibilities.md) 为准）。
+- [CONTRIBUTING.md](../../CONTRIBUTING.md) — 代码规范、分支/提交约定、PR 流程、发布流程、AI 编程约定。**代码规范与项目目录树以 CONTRIBUTING 为准**；模块职责明细以 [module_responsibilities.md](module_responsibilities.md) 为准（增删模块时两处同步更新）。
 - [`docs/ahk_docs/`](../ahk_docs/) — AHK v2 官方文档离线版。开发时优先读它，而非依赖模型内置的 AHK 知识（可能过时或不完整）。
 - [`docs/win_docs/`](../win_docs/) — 项目所需的 Windows API 文档。
 - [`docs/i18n/glossary.md`](../i18n/glossary.md) — 游戏术语官方翻译对照，翻译前先查。
