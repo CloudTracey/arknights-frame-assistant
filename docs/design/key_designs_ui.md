@@ -12,7 +12,8 @@
 - **帧率行**标签按**实测宽度**重定宽（`Max(90, 实测宽)` 且 `+2px` 安全余量），右缘仍固定 135——en/ko 等长文案不换行。
 - **自动暂停开关 / 二倍速开关**（已迁至「特殊操作」页）：复选框 `x` `GuiXMargin`，行文本左对齐同列，按键 Edit 用 `x+20` 紧随文本右侧（随各语言文本长度自然右移，不再固定列）。
 - **关卡守卫开关**：上移占原「开局自动暂停」行位，左缘沿用该行旧列 `auxRowX`(404)，并用 `Min(auxRowX, 708 - 实测宽)` 钳制，防超长文案越出右缘；快捷操作页的「放弃行动」复选框同列同位（`auxRowY` 由 `GuiFrame` 的 y 推出）。
-- **特殊操作页**：单列 5 行，首行 `y48`，行距 33；两处「横线 + 文本」分区头与「其他设置」页同款（`x` `GuiXMargin` `w` `GuiWidth-60` `h1 BackgroundBorder Center Section` + `xs+40 y+-9 Center cMuted` 文本，靠 `_SetOverlayZ(txt, 0)` 让文本截断线身）；第二区横线在上一区末行下方 48px。
+- **特殊操作页**：单列三区共 8 行，首行 `y48`，行距 33；三处「横线 + 文本」分区头（开局暂停 / 开局二倍速 / 游戏音量控制）与「其他设置」页同款（`x` `GuiXMargin` `w` `GuiWidth-60` `h1 BackgroundBorder Center Section` + `xs+40 y+-9 Center cMuted` 文本，靠 `_SetOverlayZ(txt, 0)` 让文本截断线身）；下一区横线在上一区末行下方 48px。「游戏音量控制」区为三行单列快捷键输入框（提高游戏音量 / 降低游戏音量 / 静音，控制变量名 `vVolumeUp` / `vVolumeDown` / `vVolumeMute`），不设滑条或当前音量文本。
+- **帧率区与重置按键分离**：帧率分割线、「游戏内帧率」下拉框、两条垂直同步提示归入 `FrameRateControls`，只在常规作战 / 快捷操作 / 卫戍协议 / 自定义按键四个标签页显示；特殊操作页与其他设置页隐藏该组，但底部「重置按键」按钮（`NotOtherControls`）在特殊操作页保留。窗口高度与底部按钮位置仍由 `_BottomBaseY`（帧率提示语底部）决定，帧率区只是不显示、不移除。
 - **帧率提示语的锚点是「关卡守卫」复选框**（迁移后本行最后一个控件）：其底部决定所有页面的底部基准 `_BottomBaseY`，进而决定窗口高度与底部按钮位置。
 - 「游戏路径」行标签上限 `zhW+29`（中文基准宽 +29px），**不得越过 `x131` 分隔线**；各语言的标签/编辑框列位置一致。
 - 提示文本右缘固定在内容区右缘 `x690`，宽度不随语言变化（超宽裁剪，须按语言人工验证）。
@@ -61,7 +62,7 @@
 
 `Theme.Preview` 仅更新显示，保存成功与取消经 `Theme.Confirm` 同步；预览优先于已保存模式，按键重置及切页不结束预览。
 
-**主题最后落盘**：`SaveAllToIni()` 前把 `ThemeMode` 还原为已保存值，等 Settings.ini 与 `CustomHotkeys.json` 都写成功后才经 `_PersistSingleValue` 单独提交，避免自定义按键文件保存失败时提前提交主题。
+**主题随主提交落盘**：`ThemeMode` 与其余设置一起由 `SaveAllToIni()` 提交，不再单独延后；`CustomHotkeys.json` 写入失败时随 Settings.ini 一起回滚，避免主题先于其他设置生效。`Theme.Confirm` 只在整次保存/应用成功后调用。
 
 颜色变化**预览（未保存）时只重绘**，不重建窗口、不重建热键组；保存/应用仍走常规设置流程（`HotkeyService._HandleSettingsSavedOrApplied()` 对任何保存/应用/重置都无条件 `EnableByTab()` 重建热键，与主题是否变化无关）。
 
@@ -87,7 +88,7 @@ Edit 仅接管深色非客户区边框，保留原生光标、选区与滚动；
 
 ## 主题日志与验证
 
-Theme 生命周期与低频模式变化使用现有 Logger；绘制故障按操作去重并延后写入（`_WarnOnce` 入队 + 一次性定时器 flush），不逐帧或逐次鼠标移动记录。主题逻辑改动运行 `test/scripts/theme_test.ahk`（`Theme.Resolve`/`Normalize` 与 `Constants.NormalizeThemeMode` 纯逻辑 + 二者一致性断言，不建窗、不读注册表），再跑 `test/scripts/smoke_test.ahk`（全模块 include、零顶层副作用），通过不等同于 GUI 验收。
+Theme 生命周期与低频模式变化使用现有 Logger；绘制故障按操作去重并延后写入（`_WarnOnce` 入队 + 一次性定时器 flush），不逐帧或逐次鼠标移动记录。主题逻辑改动须验证 `Theme.Resolve`/`Normalize` 与 `Constants.NormalizeThemeMode` 的判定一致（纯逻辑，不建窗、不读注册表），通过不等同于 GUI 验收。
 
 `SafeWinGetClientPos(&ww,&wh)` 窗口不存在时返回 false（不抛 `TargetError`）；`SafePixelSearch`/`SafeImageSearch` 把 `PixelSearch`/`ImageSearch` 内部的 GDI `OSError`（搜索区域落在可见桌面外、副屏拔掉、窗口移出屏幕、锁屏/RDP 断开）按"未命中"处理并 **60 秒节流**记 Warn——失败时单次轮询会产生十余个搜索调用，逐次记 Warn 会刷屏、并反复把最近日志抄进 critical 文件。`ImageSearch` 在 AHK v2 无独立 Options 参数，容差/缩放前缀拼在 `ImageFile` 字符串内（如 `"*90 " path`），`ValueError`（图库加载失败）同样按未命中处理，资源缺失不应弹框打断监控。
 

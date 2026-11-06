@@ -16,7 +16,7 @@ This file provides guidance to AI coding agents (DeepSeek Harness / dsh, etc.) w
 - **不用 AHK 执行/编译 AFA**：默认不编译或启动 AFA；只有用户明确要求构建时才使用已验证的本地 AutoHotkey/Ahk2Exe 工具。GUI、提权、计划任务和真实游戏联动的验收由用户操作并反馈。
 - **验收分工**：运行时与 GUI 验收以手工测试为主，Python 静态门禁检查**不能**代替运行时验收。每次完成行为修改后，调用 `test-checklist` skill 生成测试清单并逐项引导用户验证；清单放 `test/` 目录，格式参考 `test/template/test_template.md`。
 - **改动前先跑静态门禁**（命令与适用场景见 [reference.md 工具表](docs/design/reference.md#静态检查工具)）：`layer_check.py`（跨模块引用/include 顺序）、`event_contract_check.py`（事件契约）、`i18n_check.py`（文案与语言资源）。
-- **不创建任何 AHK 脚本做任何测试** 所有需要测试确认的项一律请求用户进行，不要擅自创建或执行任何AHK脚本，除了 `test/scripts/smoke_test.ahk`
+- **不创建任何 AHK 脚本做任何测试** 所有需要测试确认的项一律请求用户进行，不要擅自创建或执行任何AHK脚本
 - **不使用 worktree 开发**；提前查看 `.gitignore` 确认哪些更改不需要 commit（`CONTEXT.md`、`docs/adr`、`docs/architecture`、`docs/plan` 是本地文件，勿当作共享文档编辑）。
 - **Git 操作全由用户自行进行**：用户没要求就不要 commit、不要 push、不创建 PR、不创建或改变 branch。用户要求提交时，对 diff 详细分类并分开提交，标题与描述通顺易懂。
 - **翻译前先从 `docs/i18n/glossary.md` 取游戏术语官方译法**，再动手翻译。

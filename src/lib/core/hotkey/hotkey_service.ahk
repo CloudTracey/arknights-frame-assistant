@@ -63,6 +63,8 @@ class HotkeyService {
                 profile.OnUp := true
             if (item.noActivate)
                 profile.NoActivate := true
+            if (item.HasOwnProp("holdRepeat") && item.holdRepeat)
+                profile.HoldRepeat := true
             this.ActionCallbacks[item.id] := profile
         }
     }
@@ -144,6 +146,13 @@ class HotkeyService {
         this.SetSwitchKey()
     }
 
+    ; 设置保存/应用失败后恢复被关闭的热键
+    static RestoreAfterSaveFailure() {
+        if (this.HotkeyState)
+            this.EnableByTab(this._ActiveTab)
+        this.SetSwitchKey()
+    }
+
     ; 当前激活的功能标签页
     static GetActiveTab() {
         return this._ActiveTab
@@ -189,7 +198,11 @@ class HotkeyService {
         "StrongHoldProtocolOneClickRetreat", HotkeyActions.ActionStrongHoldProtocolOneClickRetreat.Bind(HotkeyActions),
         "OneClickSell", HotkeyActions.ActionOneClickSell.Bind(HotkeyActions),
         "OneClickPurchase", HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions),
-        "StrongHoldProtocolBack", HotkeyActions.ActionBack.Bind(HotkeyActions)
+        "StrongHoldProtocolBack", HotkeyActions.ActionBack.Bind(HotkeyActions),
+        ; 游戏音量（独立分组：常规/快捷/卫戍协议页均启用）
+        "VolumeUp", HotkeyActions.ActionVolumeUp.Bind(HotkeyActions),
+        "VolumeDown", HotkeyActions.ActionVolumeDown.Bind(HotkeyActions),
+        "VolumeMute", HotkeyActions.ActionVolumeMute.Bind(HotkeyActions)
     )
 
     ; 热键回调映射表
@@ -203,9 +216,9 @@ class HotkeyService {
     static ActiveSwitchHotkey := ""
 
     ; 包装动作回调：失焦悬停时先激活游戏窗口
-    static _WrapAction(fn) {
+    static _WrapAction(fn, skipHoldGate := false) {
         Wrapped(ThisHotkey) {
-            if HoldGuard.ShouldGate(KeyForward.PureKeyName(ThisHotkey))
+            if !skipHoldGate && HoldGuard.ShouldGate(KeyForward.PureKeyName(ThisHotkey))
                 && HoldGuard.TryBegin(KeyForward.PureKeyName(ThisHotkey))
                 return
             if !GameTarget.Exists() {
@@ -235,9 +248,11 @@ class HotkeyService {
 
     ; 注册单个热键
     static _RegisterOne(hotkeyValue, profile, pattern) {
-        callback := this._WrapAction(profile.Fn)
+        pureKey := KeyForward.PureKeyName(hotkeyValue)
+        skipHoldGate := profile.HasOwnProp("HoldRepeat") && profile.HoldRepeat
+        callback := this._WrapAction(profile.Fn, skipHoldGate)
         if (profile.HasOwnProp("OnUp") && !InStr(hotkeyValue, "Wheel")) {
-            HoldGuard.MarkUngated(KeyForward.PureKeyName(hotkeyValue))
+            HoldGuard.MarkUngated(pureKey)
             reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
             Hotkey(reg, callback, "On")
             HotkeyService.ActiveHotkeys.Set(reg, reg)
@@ -341,9 +356,9 @@ class HotkeyService {
     ; 构建当前标签页的热键明细列表（日志用）
     static _BuildDetailForActiveTab(tabName) {
         if (tabName = "keyBind" || tabName = "quick")
-            return "战斗=" this._BuildDetailList(Constants.CombatHotkeys) " | 快捷=" this._BuildDetailList(Constants.QuickHotkeys)
+            return "战斗=" this._BuildDetailList(Constants.CombatHotkeys) " | 快捷=" this._BuildDetailList(Constants.QuickHotkeys) " | 音量=" this._BuildDetailList(Constants.VolumeHotkeys)
         else if (tabName = "strongHoldProtocol")
-            return "卫戍=" this._BuildDetailList(Constants.StrongHoldHotkeys)
+            return "卫戍=" this._BuildDetailList(Constants.StrongHoldHotkeys) " | 音量=" this._BuildDetailList(Constants.VolumeHotkeys)
         return ""
     }
 
@@ -356,10 +371,12 @@ class HotkeyService {
         if (tabName = "keyBind" || tabName = "quick") {
             this.EnableGroup(Constants.CombatHotkeys)
             this.EnableGroup(Constants.QuickHotkeys)
+            this.EnableGroup(Constants.VolumeHotkeys)
             this._EnableCustomGroup("combatQuick")
         }
         else if (tabName = "strongHoldProtocol") {
             this.EnableGroup(Constants.StrongHoldHotkeys)
+            this.EnableGroup(Constants.VolumeHotkeys)
             this._EnableCustomGroup("strongHoldProtocol")
         }
         this._EnableCustomGroup("all")

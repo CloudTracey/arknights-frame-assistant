@@ -46,7 +46,15 @@
 
 **写入一律原子替换**：`SaveToIni`/`SaveAllToIni`/`SaveHotkeysToIni`/`_WriteIniEntriesAtomic` 都先在**同目录临时副本**（`FileCopy` 会继承只读属性，故先 `FileSetAttrib("-R")`）中完成全部写入，再用 `_CommitIniTemp`（`ReplaceFileW` + `REPLACEFILE_WRITE_THROUGH`，目标不存在时退化为 `FileMove`）替换正式文件；失败路径的 `finally` 负责删除临时文件并复位 `IniFile`。原配置在提交前始终不变。
 
-`Read*FromIni` 的取值也过一遍 `_NormalizeHotkeyValue`（热键串键）；`Set*` 同样规范化后再写内存——因此内存工作副本与 INI 的取值形态一致，GUI 不会显示大写主键。工作副本入口统一规范化 `ThemeMode`（`LoadFromIni` 内），写盘值由 `_PersistSingleValue` 再规范化一次。
+异常退出可能留下 `Settings.ini.bak-<tick>-<rand>`、`Settings.ini.tmp-<tick>-<rand>` 与 `CustomHotkeys.json.tmp-<tick>-<rand>`；`SettingsService.Initialize()` 启动时调用 `Config.CleanupStaleFiles()` / `CustomHotkeyStore.CleanupStaleFiles()` 按该命名模式清理（`CustomHotkeys.json.bak` 是损坏文件备份，不清理）。
+
+**保存失败可回滚**：`SaveAllToIni()` 通过 `ReplaceFileW` 的备份参数原子保留提交前的 Settings.ini，`SettingsService` 在 `CustomHotkeys.json` 也写成功后才删除该备份（`Config.DiscardIniBackup`）；后者写入失败时用备份原子替换回去（`Config.RollbackIni`），因此两个文件要么一起更新、要么都保持原状。回滚本身失败时保留备份并记录路径，提示用户配置可能已被部分修改。
+
+计划任务不在文件事务内：保存前由 `SettingsService._SnapshotAutoStartState()` 读取已持久化的开关与路径，自启应用后任何失败都用 `_RestoreAutoStart()` 把任务恢复到该状态；恢复任务走 `EnsureTask` 而不走 `Apply`，因为待恢复的路径可能刚被用户确认清除或游戏已卸载，不能再做存在性校验。任务恢复失败时提示用户重启 AFA，启动校准会再次对齐。
+
+所有已配置的游戏路径（`GamePath` 与 `GamePath<Id>`）在写入 INI 前由 `SettingsService._NormalizeDraftGamePaths()` 规范化为绝对长路径（与「随游戏自动启动」是否开启无关）；任务订阅仍会内部规范化并去重。保存成功后 GUI 经 `_RefreshGamePathControls()` 从内存回读，不再有独立的路径规范化事件。保存失败时磁盘保持旧值，取消/重开时 GUI 回读旧值。
+
+`Read*FromIni` 的取值也过一遍 `_NormalizeHotkeyValue`（热键串键）；`Set*` 同样规范化后再写内存——因此内存工作副本与 INI 的取值形态一致，GUI 不会显示大写主键。工作副本入口统一规范化 `ThemeMode`（`LoadFromIni`/`SetImportant` 内），单键写盘由 `_PersistSingleValue` 再规范化一次。
 
 首次运行由 `_EnsureConfigFileExists()` 全量写入三组默认值（跳过 `GitHubToken`）；已存在的文件由 `_BackfillMissingCustomDefaults()` 只补缺失的 `[Custom]` 键——用哨兵值区分"键不存在"与"键存在但值为空"（`; __AFA_MISSING_KEY__`），避免把用户显式清空的配置重新写成默认值。
 

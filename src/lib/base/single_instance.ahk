@@ -21,4 +21,10 @@ class SingleInstance {
             this.Handle := 0
         }
     }
+
+    ; 重启
+    static Restart() {
+        this.Release()
+        Reload()
+    }
 }

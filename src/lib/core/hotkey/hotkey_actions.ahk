@@ -667,6 +667,66 @@ class HotkeyActions {
         HoldGuard.RegisterTail(pureKey, (*) => GameMonitor.EndPauseHold())
     }
 
+    ; -- 游戏音量 --
+    static _VolumeToolTipHide := ""
+
+    static ActionVolumeUp(ThisHotkey) {
+        this._ShowVolumeResult(VolumeController.Increase())
+    }
+
+    static ActionVolumeDown(ThisHotkey) {
+        this._ShowVolumeResult(VolumeController.Decrease())
+    }
+
+    static ActionVolumeMute(ThisHotkey) {
+        this._ShowVolumeResult(VolumeController.ToggleMute())
+    }
+
+    ; 会话结果
+    static _VolumeResultText(result) {
+        if (result.reason = "no_session")
+            return I18n.T("游戏音量：未找到音频会话")
+        if (result.reason = "failed")
+            return I18n.T("游戏音量：控制失败")
+        if (result.reason = "partial")
+            return I18n.T("游戏音量：部分设备失败")
+        if (result.muted)
+            return I18n.T("游戏音量：已静音")
+        return I18n.T("游戏音量：{1}%", result.volume)
+    }
+
+    ; 显示音量提示
+    static _ShowVolumeResult(result) {
+        Logger.Info("HotkeyActions", "音量操作：reason=" result.reason " volume=" result.volume " muted=" (result.muted ? "是" : "否") " 成功会话=" result.successCount "/" result.totalCount)
+        text := this._VolumeResultText(result)
+        oldDpiCtx := 0
+        prevTipCoord := ""
+        prevMouseCoord := ""
+        try {
+            try oldDpiCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -4, "ptr")
+            prevTipCoord := CoordMode("ToolTip", "Screen")
+            prevMouseCoord := CoordMode("Mouse", "Screen")
+            MouseGetPos(&mouseX, &mouseY)
+            CoordMode("Mouse", prevMouseCoord)
+            prevMouseCoord := ""
+            ToolTip(text, mouseX + 16, mouseY + 16, 2)
+        } finally {
+            if (StrLen(prevMouseCoord) > 0)
+                CoordMode("Mouse", prevMouseCoord)
+            if (StrLen(prevTipCoord) > 0)
+                CoordMode("ToolTip", prevTipCoord)
+            if (oldDpiCtx)
+                try DllCall("SetThreadDpiAwarenessContext", "ptr", oldDpiCtx, "ptr")
+        }
+        if (!IsObject(this._VolumeToolTipHide))
+            this._VolumeToolTipHide := HotkeyActions._HideVolumeToolTip.Bind(HotkeyActions)
+        SetTimer(this._VolumeToolTipHide, -1500)
+    }
+
+    static _HideVolumeToolTip() {
+        ToolTip("", , , 2)
+    }
+
     ; 模拟鼠标左键点击
     static ActionLButtonClick(ThisHotkey) {
         try oldCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -3, "ptr")
