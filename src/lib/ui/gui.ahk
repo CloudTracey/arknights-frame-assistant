@@ -67,7 +67,8 @@ class GuiManager {
         "Log", [this.LogControls, 6],
         "About", [this.AboutControls, 7]
     )
-    static NotOtherControls := [] ; 仅非其他设置相关控件
+    static NotOtherControls := [] ; 非其他设置页共享控件
+    static FrameRateControls := [] ; 帧率区控件
     static TxtKeybind := ""           ; "常规作战"标签文本
     static TxtQuick := ""             ; "快捷操作"标签文本
     static TxtStrongHoldProtocol := ""  ; "卫戍协议"标签文本
@@ -318,7 +319,7 @@ class GuiManager {
         this.StrongHoldConflictHints.Push(hintKeybind2)
 
         sepKeybind := Theme.Add(this.MainGui, "Text", "x" this.GuiXMargin " y+15 w" this.GuiWidth - 60 " h1 BackgroundBorder") ; 分割线
-        this.NotOtherControls.Push(sepKeybind)
+        this.FrameRateControls.Push(sepKeybind)
 
         ; 帧率行：下拉框对齐按键 Edit 列；标签按实测宽度重定宽，右缘固定 135
         txtFrame := Theme.Add(this.MainGui, "Text", "x0 y+20 Right", I18n.T("游戏内帧率"))
@@ -330,8 +331,8 @@ class GuiManager {
         StatusBarHints.Register(this.GuiFrame, "游戏内的帧率")
         frameText := Config.GetImportant("Frame")
         this.MainGui["Frame"].Value := this._FrameTextToIndex(frameText)
-        this.NotOtherControls.Push(txtFrame)
-        this.NotOtherControls.Push(this.GuiFrame)
+        this.FrameRateControls.Push(txtFrame)
+        this.FrameRateControls.Push(this.GuiFrame)
 
         this.GuiFrame.GetPos(, &auxRowY)
         auxRowY -= 2
@@ -356,11 +357,11 @@ class GuiManager {
         Theme.SetFont(this.MainGui, "s9 cAccent")
         hintFrame1 := Theme.Add(this.MainGui, "Text", "x0 y+15 w" this.GuiWidth " Center",
             I18n.T("若开启了游戏内的“垂直同步”，请确保上方“游戏内帧率”设置与你的屏幕刷新率保持一致"))
-        this.NotOtherControls.Push(hintFrame1)
+        this.FrameRateControls.Push(hintFrame1)
         hintFrame2 := Theme.Add(this.MainGui, "Text", "x0 y+8 w" this.GuiWidth " Center",
             I18n.T("若关闭了游戏的“垂直同步”，请确保上方“游戏内帧率”设置与游戏内保持一致"))
         Theme.SetFont(this.MainGui, "s9 cText")
-        this.NotOtherControls.Push(hintFrame2)
+        this.FrameRateControls.Push(hintFrame2)
 
         hintFrame2.GetPos(, &y, , &h)   ; 取底部提示语底部作为所有标签页的底部基准
         this._BottomBaseY := y + h
@@ -512,6 +513,43 @@ class GuiManager {
         StatusBarHints.Register(editSpecialOpsSpeedToggle, "按下后切换开局自动二倍速的启用/禁用")
         this.SpecialOpsControls.Push(txtSpecialOpsSpeedToggle)
         this.SpecialOpsControls.Push(editSpecialOpsSpeedToggle)
+
+        ; 游戏音量
+        specialOpsVolumeSepY := specialOpsSpeedRowY + 33 + 48
+        specialOpsVolumeRowY := specialOpsVolumeSepY + 24
+        sepSpecialOpsVolume := Theme.Add(this.MainGui, "Text", "x" this.GuiXMargin " y" specialOpsVolumeSepY " w" this.GuiWidth - 60 " h1 BackgroundBorder Center Section")
+        sepSpecialOpsVolumeTxt := Theme.Add(this.MainGui, "Text", "xs+40 y+-9 Center cMuted", I18n.T("  游戏音量控制  "))
+        this._SetOverlayZ(sepSpecialOpsVolumeTxt, 0)
+        this.SpecialOpsControls.Push(sepSpecialOpsVolume)
+        this.SpecialOpsControls.Push(sepSpecialOpsVolumeTxt)
+
+        volumeUpState := IsObject(HotkeySchema.GetItem("VolumeUp")) ? "" : " Disabled"
+        volumeDownState := IsObject(HotkeySchema.GetItem("VolumeDown")) ? "" : " Disabled"
+        volumeMuteState := IsObject(HotkeySchema.GetItem("VolumeMute")) ? "" : " Disabled"
+
+        txtVolumeUp := Theme.Add(this.MainGui, "Text", "x" this.GuiXMargin " y" specialOpsVolumeRowY,
+            I18n.T("提高游戏音量"))
+        editVolumeUp := Theme.Add(this.MainGui, "Edit", "x+20 yp-4 w140 Center -TabStop Uppercase vVolumeUp" volumeUpState, "")
+        StatusBarHints.Register(txtVolumeUp, "提高游戏客户端在 Windows 音量合成器中的音量")
+        StatusBarHints.Register(editVolumeUp, "提高游戏客户端在 Windows 音量合成器中的音量")
+        this.SpecialOpsControls.Push(txtVolumeUp)
+        this.SpecialOpsControls.Push(editVolumeUp)
+
+        txtVolumeDown := Theme.Add(this.MainGui, "Text", "x" this.GuiXMargin " y" (specialOpsVolumeRowY + 33),
+            I18n.T("降低游戏音量"))
+        editVolumeDown := Theme.Add(this.MainGui, "Edit", "x+20 yp-4 w140 Center -TabStop Uppercase vVolumeDown" volumeDownState, "")
+        StatusBarHints.Register(txtVolumeDown, "降低游戏客户端在 Windows 音量合成器中的音量")
+        StatusBarHints.Register(editVolumeDown, "降低游戏客户端在 Windows 音量合成器中的音量")
+        this.SpecialOpsControls.Push(txtVolumeDown)
+        this.SpecialOpsControls.Push(editVolumeDown)
+
+        txtVolumeMute := Theme.Add(this.MainGui, "Text", "x" this.GuiXMargin " y" (specialOpsVolumeRowY + 66),
+            I18n.T("静音"))
+        editVolumeMute := Theme.Add(this.MainGui, "Edit", "x+20 yp-4 w140 Center -TabStop Uppercase vVolumeMute" volumeMuteState, "")
+        StatusBarHints.Register(txtVolumeMute, "切换游戏客户端的静音状态")
+        StatusBarHints.Register(editVolumeMute, "切换游戏客户端的静音状态")
+        this.SpecialOpsControls.Push(txtVolumeMute)
+        this.SpecialOpsControls.Push(editVolumeMute)
 
         ; -- 其他设置 --
         ; 导航区域右侧分割线
@@ -1752,6 +1790,11 @@ class GuiManager {
                     try ctrl.Visible := false
                 }
             }
+            for ctrl in this.FrameRateControls {
+                if (IsObject(ctrl)) {
+                    try ctrl.Visible := false
+                }
+            }
             return
         }
         for ctrl in this.KeybindControls {
@@ -1779,6 +1822,11 @@ class GuiManager {
                 try row.Label.Visible := false
                 try row.Edit.Visible := false
                 try row.Gear.Visible := false
+            }
+        }
+        for ctrl in this.FrameRateControls {
+            if (IsObject(ctrl)) {
+                try ctrl.Visible := false
             }
         }
         for ctrl in this.SpecialOpsControls {
@@ -2319,8 +2367,9 @@ class GuiManager {
 
             ; 显示常规作战控件
             this._ShowControls(this.KeybindControls)
-            ; 显示仅非其他设置控件
+            ; 显示重置按键与帧率区控件
             this._ShowControls(this.NotOtherControls)
+            this._ShowControls(this.FrameRateControls)
         }
 
         ; 切换到快捷操作页
@@ -2328,6 +2377,7 @@ class GuiManager {
             this._UpdateTopTabBar("quick")
             this._ShowControls(this.QuickControls)
             this._ShowControls(this.NotOtherControls)
+            this._ShowControls(this.FrameRateControls)
         }
 
         ; 切换到卫戍协议页
@@ -2335,6 +2385,7 @@ class GuiManager {
             this._UpdateTopTabBar("strongHoldProtocol")
             this._ShowControls(this.StrongHoldProtocolControls)
             this._ShowControls(this.NotOtherControls)
+            this._ShowControls(this.FrameRateControls)
         }
 
         ; 切换到自定义按键页
@@ -2342,6 +2393,7 @@ class GuiManager {
             this._UpdateTopTabBar("customKeys")
             this._ShowControls(this.CustomKeyControls)
             this._ShowControls(this.NotOtherControls)
+            this._ShowControls(this.FrameRateControls)
         }
 
         ; 切换到特殊操作页
@@ -2496,6 +2548,7 @@ class GuiManager {
             this.AboutControls,
             this.LogControls,
             this.NotOtherControls,
+            this.FrameRateControls,
             this.StrongHoldConflictHints,
             this.TabItems,
             this.TabFontState,

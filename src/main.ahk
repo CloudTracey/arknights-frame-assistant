@@ -38,6 +38,7 @@
 #Include ./lib/core/launch/game_auto_start.ahk
 #Include ./lib/core/hotkey/timing_service.ahk
 #Include ./lib/core/hotkey/game_keys.ahk
+#Include ./lib/core/audio/volume_controller.ahk
 #Include ./lib/core/hotkey/hotkey_actions.ahk
 #Include ./lib/core/hotkey/custom_script.ahk
 #Include ./lib/core/monitor/level_detector.ahk
@@ -152,6 +153,7 @@ class App {
         KeyBinder.Start()
         HotkeyService.Init()
         TimingService.Init()
+        VolumeController.Init()
         SettingsService.Init()
         VersionChecker.Init()
         Updater.Init()
