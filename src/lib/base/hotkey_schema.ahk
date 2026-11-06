@@ -3,7 +3,7 @@
 
 class HotkeySchema {
     ; id/nameKey/group/defaultKey 必填；descKey 为状态栏悬停说明（中文原文，可含 {1} 占位符）；
-    ; guarded/onUp/noActivate 为热键行为元数据；数组顺序即 GUI 显示顺序。
+    ; guarded/onUp/noActivate 为热键行为元数据；holdRepeat 为可选的按住连续触发标记；数组顺序即 GUI 显示顺序。
     static Items := [
         ; ---- 常规作战 ----
         {id: "PressPause", nameKey: "按下时暂停", descKey: "按下时切换暂停", group: "combat", defaultKey: "f", guarded: true, onUp: false, noActivate: false},
@@ -43,7 +43,11 @@ class HotkeySchema {
         {id: "StrongHoldProtocolOneClickRetreat", nameKey: "一键撤退", descKey: "点击鼠标位置单位后自动撤退", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "OneClickSell", nameKey: "一键出售/销毁", descKey: "点击鼠标位置干员/装备后自动出售/销毁", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "OneClickPurchase", nameKey: "一键购买", descKey: "模拟双击左键，购买调度中心商店中的单位", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
-        {id: "StrongHoldProtocolBack", nameKey: "返回上级菜单", descKey: "模拟点击ESC键，返回上一级菜单", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false}
+        {id: "StrongHoldProtocolBack", nameKey: "返回上级菜单", descKey: "模拟点击ESC键，返回上一级菜单", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
+        ; ---- 游戏音量（不归入功能页分组：常规作战、快捷操作、卫戍协议页均启用） ----
+        {id: "VolumeUp", nameKey: "提高音量", descKey: "提高游戏客户端在 Windows 音量合成器中的音量", group: "volume", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},
+        {id: "VolumeDown", nameKey: "降低音量", descKey: "降低游戏客户端在 Windows 音量合成器中的音量", group: "volume", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},
+        {id: "VolumeMute", nameKey: "静音", descKey: "切换游戏客户端的静音状态", group: "volume", defaultKey: "", guarded: false, onUp: false, noActivate: true}
     ]
 
     ; id -> nameKey
