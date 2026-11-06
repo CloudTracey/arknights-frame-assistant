@@ -90,8 +90,14 @@ class VolumeController {
             }
 
             sessions := scan.sessions
-            if (sessions.Length = 0)
+            if (sessions.Length = 0) {
+                if (scan.errors > 0) {
+                    volume := (this._HasTarget ? this._TargetVolume : 0)
+                    muted := (this._HasTarget ? this._TargetMuted : false)
+                    return this._Result(false, "failed", volume, muted, 0, 0)
+                }
                 return this._NoSessionResult()
+            }
 
             hasLastTarget := this._HasTarget && !switched
             benchmark := this._SelectBenchmark(sessions, scan.defaultDeviceId, hasLastTarget)
@@ -138,11 +144,18 @@ class VolumeController {
                 this._Known := known
                 message := "目标音量=" targetVolume "% 静音=" (targetMuted ? "是" : "否")
                 message .= " 成功会话=" successCount "/" totalCount
+                if (scan.errors > 0)
+                    message .= " 扫描错误=" scan.errors
                 this._StartSync(message)
             } else {
                 this._Known := Map()
             }
 
+            if (scan.errors > 0) {
+                if (successCount > 0)
+                    return this._Result(true, "partial", targetVolume, targetMuted, successCount, totalCount)
+                return this._Result(false, "failed", targetVolume, targetMuted, 0, totalCount)
+            }
             if (successCount = totalCount)
                 return this._Result(true, "", targetVolume, targetMuted, successCount, totalCount)
             if (successCount > 0)
@@ -262,6 +275,10 @@ class VolumeController {
             }
 
             scan := this._Scan(pid)
+            if (scan.errors > 0) {
+                this._ThrottledWarn("poll_scan", "音频会话扫描不完整（errors=" scan.errors "），跳过本轮同步")
+                return
+            }
             sessions := scan.sessions
             if (sessions.Length = 0)
                 return
@@ -352,7 +369,7 @@ class VolumeController {
 
     ; 枚举活动播放设备上的目标进程音频会话
     static _Scan(pid) {
-        result := {sessions: [], defaultDeviceId: ""}
+        result := {sessions: [], defaultDeviceId: "", errors: 0}
         enumerator := ComObject(this.CLSID_MMDeviceEnumerator, this.IID_IMMDeviceEnumerator)
 
         try {
@@ -370,8 +387,10 @@ class VolumeController {
 
         collectionPtr := 0
         ComCall(3, enumerator, "Int", this.EDATAFLOW_RENDER, "UInt", this.DEVICE_STATE_ACTIVE, "Ptr*", &collectionPtr := 0)
-        if (!collectionPtr)
+        if (!collectionPtr) {
+            result.errors += 1
             return result
+        }
         collection := ComValue(13, collectionPtr)
         deviceCount := 0
         ComCall(3, collection, "UInt*", &deviceCount := 0)
@@ -382,21 +401,27 @@ class VolumeController {
             try {
                 devicePtr := 0
                 ComCall(4, collection, "UInt", deviceIndex, "Ptr*", &devicePtr := 0)
-                if (!devicePtr)
+                if (!devicePtr) {
+                    result.errors += 1
                     continue
+                }
                 device := ComValue(13, devicePtr)
                 deviceIdPtr := 0
                 ComCall(5, device, "Ptr*", &deviceIdPtr := 0)
                 deviceId := this._TakeCoTaskMemString(deviceIdPtr)
                 managerPtr := 0
                 ComCall(3, device, "Ptr", iidBuffer.Ptr, "UInt", this.CLSCTX_ALL, "Ptr", 0, "Ptr*", &managerPtr := 0)
-                if (!managerPtr)
+                if (!managerPtr) {
+                    result.errors += 1
                     continue
+                }
                 manager := ComValue(13, managerPtr)
                 sessionEnumPtr := 0
                 ComCall(5, manager, "Ptr*", &sessionEnumPtr := 0)
-                if (!sessionEnumPtr)
+                if (!sessionEnumPtr) {
+                    result.errors += 1
                     continue
+                }
                 sessionEnum := ComValue(13, sessionEnumPtr)
                 sessionCount := 0
                 ComCall(3, sessionEnum, "Int*", &sessionCount := 0)
@@ -407,10 +432,12 @@ class VolumeController {
                         if (IsObject(session))
                             result.sessions.Push(session)
                     } catch Error as e {
+                        result.errors += 1
                         this._ThrottledWarn("session", "读取音频会话失败：" e.Message)
                     }
                 }
             } catch Error as e {
+                result.errors += 1
                 this._ThrottledWarn("device", "枚举输出设备失败：" e.Message)
             }
         }
@@ -422,7 +449,7 @@ class VolumeController {
         sessionPtr := 0
         ComCall(4, sessionEnum, "Int", index, "Ptr*", &sessionPtr := 0)
         if (!sessionPtr)
-            return ""
+            throw Error("GetSession 返回空指针")
         session := ComValue(13, sessionPtr)
         control2 := ComObjQuery(session, this.IID_IAudioSessionControl2)
         sessionPid := 0
