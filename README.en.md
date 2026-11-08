@@ -177,7 +177,7 @@ The **Special Operations** page groups opening-stage and game-volume features:
 | **Update Source** | Mainland China users should choose Tencent Cloud; users elsewhere should use GitHub. Tencent Cloud is the default and failed checks fall back to the other source |
 | **Auto Check for Updates** | Check for updates automatically after AFA starts; you can also check manually or download manually on the Update page |
 | **GitHub Token** | Only fill it in and enable it when using the GitHub source and the API quota is exceeded; the token is encrypted with Windows DPAPI for the current user |
-| **Click Delay** | Delay from selecting to pressing 【Skill】【Retreat】 (ms); too short may break clicks |
+| **Click Delay** | Select-to-press delay (ms): 【Skill】【Retreat】, 【Sell/Destroy】 (Stronghold Protocol); too short breaks clicks |
 | **Enable/Disable Hotkey Shortcut** | Set the shortcut that quickly enables/disables all hotkeys (click the field to change, `BACKSPACE/DELETE` to clear) |
 | **Frame Skip Slots 1 / 2 / 3** | Actual wait (ms) of the three "Frame Advance" hotkeys |
 | **Allow Hover Operation when the Game Window is Inactive** | Hover the inactive game window to trigger hotkeys |
