@@ -27,12 +27,15 @@
 #Include ./lib/base/file_extractor.ahk
 #Include ./lib/base/timing.ahk
 #Include ./lib/base/window.ahk
+#Include ./lib/base/display_info.ahk
+#Include ./lib/base/unity_player_prefs.ahk
 #Include ./lib/base/key_format.ahk
 #Include ./lib/base/tray.ahk
 #Include ./lib/base/version_utils.ahk
 #Include ./lib/base/touch_injection.ahk
 #Include ./lib/base/custom_hotkey_store.ahk
 #Include ./lib/core/game/game_client_registry.ahk
+#Include ./lib/core/game/game_frame_rate.ahk
 #Include ./lib/core/diagnostics/log_exporter.ahk
 #Include ./lib/core/launch/app_context.ahk
 #Include ./lib/core/launch/game_auto_start.ahk
@@ -191,6 +194,9 @@ class App {
 
         StartupMark("游戏按键识别")
         GameKeys.Init()
+
+        StartupMark("游戏帧率识别")
+        GameFrameRate.Init()
 
         StartupMark("热键注册")
         HotkeyService.HotkeyOn()

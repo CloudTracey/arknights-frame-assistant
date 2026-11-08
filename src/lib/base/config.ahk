@@ -17,7 +17,7 @@ class Config {
         "AutoExit", "1",
         "AutoOpenSettings", "1",
         "ExitOnWindowClose", "0",
-        "Frame", "90",
+        "Frame", "auto",
         "Frame155", "",
         "AutoUpdate", "1",
         "LastDismissedVersion", "",
