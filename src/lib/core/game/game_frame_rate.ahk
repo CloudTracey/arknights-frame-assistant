@@ -158,7 +158,12 @@ class GameFrameRate {
             }
             if (hexStr = "")
                 continue
-            parsed := this._ParseCommonSetting(UnityPlayerPrefs.DecodeHexUtf8(hexStr))
+            try {
+                parsed := this._ParseCommonSetting(UnityPlayerPrefs.DecodeHexUtf8(hexStr))
+            } catch Error as e {
+                Logger.Warn("GameFrameRate", "解析 " name " 失败：" e.Message)
+                continue
+            }
             if (parsed.success)
                 return parsed
         }
@@ -170,10 +175,19 @@ class GameFrameRate {
         result := {success: false, strategy: -1, strategyFps: 0, enableVSync: 0, reason: ""}
         if RegExMatch(json, '"fpsStrategy"\s*:\s*(-?\d+)', &match)
             result.strategy := Integer(match[1])
-        if RegExMatch(json, '"enableVSync"\s*:\s*(-?\d+)', &match)
-            result.enableVSync := (Integer(match[1]) != 0) ? 1 : 0
-        else
+        if RegExMatch(json, '"enableVSync"\s*:\s*(-?\d+)', &match) {
+            vsyncValue := Integer(match[1])
+            if (vsyncValue != 0 && vsyncValue != 1) {
+                result.reason := "enableVSync 异常：" vsyncValue
+                return result
+            }
+            result.enableVSync := vsyncValue
+        } else if (InStr(json, '"enableVSync"')) {
+            result.reason := "enableVSync 格式异常"
+            return result
+        } else {
             result.enableVSync := 0  ; 旧版本无该字段，按未开启处理
+        }
 
         if (result.enableVSync = 0) {
             if (result.strategy = 0)

@@ -3,9 +3,11 @@
 ; 这里提供通用的 hex 解码与值名查找，供 GameKeys 与游戏帧率识别复用。
 
 class UnityPlayerPrefs {
-    ; REG_BINARY 的 hex 字符串 → UTF-8 文本；空值或非法长度返回 ""
+    ; REG_BINARY 的 hex 字符串 → UTF-8 文本；空值、非法长度或非 hex 内容返回 ""
     static DecodeHexUtf8(hexStr) {
         if (StrLen(hexStr) = 0 || Mod(StrLen(hexStr), 2) != 0)
+            return ""
+        if !RegExMatch(hexStr, "^[0-9A-Fa-f]+$")
             return ""
         bufSize := StrLen(hexStr) // 2
         buf := Buffer(bufSize)
