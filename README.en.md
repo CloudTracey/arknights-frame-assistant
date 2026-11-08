@@ -75,7 +75,7 @@ The following hotkey functions and related settings are available on the **Comba
 | One-Click Retreat | Move the mouse to the unit you want to retreat, then press to select and retreat automatically |
 | Pause Skill | While paused, hover the unit to skill, then press to select and activate it |
 | Pause Retreat | While paused, hover the unit to retreat, then press to select and retreat it |
-| In-Game Frame Rate | Choose the tier matching the game's actual frame rate (30 / 60 / 90 / 120 / 144 / 165 / 180 / 240+) so frame-advance delays stay accurate |
+| In-Game Frame Rate | Defaults to Auto (reads the in-game setting and monitor refresh rate); a tier can also be selected manually (30 / 60 / 90 / 120 / 144 / 165 / 180 / 240+) |
 | Enable Combat Hotkeys Only in Levels (experimental) | Detects the level screen and disables Combat hotkeys outside it to avoid accidental triggers |
 
 - The actual wait for each of the three "Frame Advance" hotkeys can be adjusted in **Other Settings → Custom**; the hotkey labels and status bar hints update accordingly
@@ -177,7 +177,7 @@ The **Special Operations** page groups opening-stage and game-volume features:
 | **Update Source** | Mainland China users should choose Tencent Cloud; users elsewhere should use GitHub. Tencent Cloud is the default and failed checks fall back to the other source |
 | **Auto Check for Updates** | Check for updates automatically after AFA starts; you can also check manually or download manually on the Update page |
 | **GitHub Token** | Only fill it in and enable it when using the GitHub source and the API quota is exceeded; the token is encrypted with Windows DPAPI for the current user |
-| **Click Delay** | Delay from selecting to pressing 【Skill】【Retreat】 (ms); too short may break clicks |
+| **Click Delay** | Select-to-press delay (ms): 【Skill】【Retreat】, 【Sell/Destroy】 (Stronghold Protocol); too short breaks clicks |
 | **Enable/Disable Hotkey Shortcut** | Set the shortcut that quickly enables/disables all hotkeys (click the field to change, `BACKSPACE/DELETE` to clear) |
 | **Frame Skip Slots 1 / 2 / 3** | Actual wait (ms) of the three "Frame Advance" hotkeys |
 | **Allow Hover Operation when the Game Window is Inactive** | Hover the inactive game window to trigger hotkeys |
@@ -201,10 +201,13 @@ If reading fails, AFA shows a warning and falls back to default keys. In that ca
 
 ### In-game Frame Rate
 
-The "In-Game Frame Rate" option in AFA offers **30 / 60 / 90 / 120 / 144 / 165 / 180 / 240+**. Choose the tier matching the game's actual frame rate so frame-advance delay calculation stays accurate
+"Auto" is selected by default; AFA reads the in-game frame rate automatically, so no manual selection is needed:
 
-- If your monitor refresh rate is **120 Hz or above**: VSync may be enabled, and the frame rate tier can be set to 120 or above
-- If your monitor refresh rate is **below 120 Hz**: VSync is not recommended; make sure the frame rate setting matches the game's actual frame rate. If VSync is enabled, make sure the setting matches the monitor refresh rate
+- VSync off in game: detects the in-game frame rate tier (30 / 60 / 120)
+- VSync on in game: uses the refresh rate of the monitor containing the game window
+- Detection failure: falls back to 60 FPS for frame-advance delay calculation
+
+You can also select a fixed tier manually (30 / 60 / 90 / 120 / 144 / 165 / 180 / 240+); the delay then follows the selected tier. If VSync is enabled, choose the tier that matches your monitor refresh rate
 
 ### Security Notice
 

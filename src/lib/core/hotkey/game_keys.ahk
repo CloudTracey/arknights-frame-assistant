@@ -376,38 +376,13 @@ class GameKeys {
             return result
         result.rootExists := true
 
-        targetValueName := ""
-        try {
-            Loop Reg, root, "V" {
-                if (InStr(A_LoopRegName, "KEYBOARD_SETTING_V") = 1) {
-                    targetValueName := A_LoopRegName
-                    break
-                }
-            }
-        } catch Error as loopErr {
-            Logger.Warn("GameKeys", "区服 " serverId " 注册表枚举异常：" loopErr.Message)
-            return result
-        }
-
-        if (targetValueName = "") {
-            knownKeys := ["KEYBOARD_SETTING_V2_h476498874", "KEYBOARD_SETTING_DISPLAY_h1323456836"]
-            for keyName in knownKeys {
-                try {
-                    testRead := RegRead(root, keyName)
-                    if (testRead != "") {
-                        targetValueName := keyName
-                        break
-                    }
-                } catch {
-                    continue
-                }
-            }
-        }
-
-        if (targetValueName = "") {
+        knownKeys := ["KEYBOARD_SETTING_V2_h476498874", "KEYBOARD_SETTING_DISPLAY_h1323456836"]
+        valueNames := UnityPlayerPrefs.FindValueNames(root, "KEYBOARD_SETTING_V", knownKeys)
+        if (valueNames.Length = 0) {
             Logger.Warn("GameKeys", "区服 " serverId " 未找到 KEYBOARD_SETTING_V* 键值")
             return result
         }
+        targetValueName := valueNames[1]
 
         try {
             hexStr := RegRead(root, targetValueName)
@@ -416,15 +391,7 @@ class GameKeys {
                 return result
             }
 
-            ; hex 字符串 → UTF-8 文本
-            bufSize := StrLen(hexStr) // 2
-            buf := Buffer(bufSize)
-            Loop bufSize {
-                byteHex := SubStr(hexStr, (A_Index - 1) * 2 + 1, 2)
-                byteVal := Integer("0x" byteHex)
-                NumPut("UChar", byteVal, buf, A_Index - 1)
-            }
-            jsonStr := StrGet(buf, bufSize, "UTF-8")
+            jsonStr := UnityPlayerPrefs.DecodeHexUtf8(hexStr)
             if (jsonStr = "") {
                 Logger.Warn("GameKeys", "区服 " serverId " hex→文本转换为空")
                 return result

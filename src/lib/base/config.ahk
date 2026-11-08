@@ -17,7 +17,7 @@ class Config {
         "AutoExit", "1",
         "AutoOpenSettings", "1",
         "ExitOnWindowClose", "0",
-        "Frame", "90",
+        "Frame", "auto",
         "Frame155", "",
         "AutoUpdate", "1",
         "LastDismissedVersion", "",
@@ -721,12 +721,18 @@ class Config {
 
             ; 保存重要设置
             for keyVar, value in this._ImportantSettings {
-                if (keyVar = "GitHubToken")
+                if (keyVar = "GitHubToken" || keyVar = "Frame" || keyVar = "Frame155")
                     continue
                 IniWrite(value, this.IniFile, "Main", keyVar)
             }
             if (tokenStorage.storedValue != "")
                 IniWrite(tokenStorage.storedValue, this.IniFile, "Main", this.GITHUB_TOKEN_PROTECTED_KEY)
+
+            ; Frame 双写：Frame155 存解析后的文本值（含 auto），Frame 存旧版索引
+            frameText := this.GetImportant("Frame")
+            frameIndex := Constants.FrameTextToOldIndex.Has(frameText) ? Constants.FrameTextToOldIndex[frameText] : "3"
+            IniWrite(frameText, this.IniFile, "Main", "Frame155")
+            IniWrite(frameIndex, this.IniFile, "Main", "Frame")
 
             ; 保存自定义设置
             for keyVar, value in this._CustomSettings {
