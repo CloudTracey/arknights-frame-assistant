@@ -831,7 +831,7 @@ class GuiManager {
         this.ClickDelay := Theme.Add(this.MainGui, "Edit", "x+15 y+-18 w120 h21 vClickDelay Number", Config.GetCustom(
             "ClickDelay"))
         this.ClickDelay.OnEvent("Change", (*) => this.TrackChange("ClickDelay"))
-        StatusBarHints.Register(this.ClickDelay, "从选中到按下【技能】【撤退】的间隔（毫秒），太短会点击失灵")
+        StatusBarHints.Register(this.ClickDelay, "从选中到按下【技能】【撤退】，卫戍协议【出售/销毁】的间隔（毫秒），太短会点击失灵")
         updownClickDelay := Theme.Add(this.MainGui, "UpDown", , Config.GetCustom("ClickDelay"))
         this.CustomControls.Push(txtClickDelay)
         this.CustomControls.Push(this.ClickDelay)

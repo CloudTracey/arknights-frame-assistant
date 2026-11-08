@@ -495,7 +495,7 @@ class LocaleEnUS {
         "自定义按键的绑定键：点击修改，BACKSPACE/DELETE 清除", "Custom key binding: click to rebind, BACKSPACE/DELETE to clear",
         "下午好！博士！需要慵懒的时候就要保持慵懒……", "Good afternoon, Doctor! Stay lazy when you need to...",
         "中午好！博士！", "Good noon, Doctor!",
-        "从选中到按下【技能】【撤退】的间隔（毫秒），太短会点击失灵", "Delay from selecting to pressing 【Skill】【Retreat】 (ms); too short may break clicks",
+        "从选中到按下【技能】【撤退】，卫戍协议【出售/销毁】的间隔（毫秒），太短会点击失灵", "Select-to-press delay (ms): 【Skill】【Retreat】, 【Sell/Destroy】 (Stronghold Protocol); too short breaks clicks",
         "使“返回上级菜单”按下ESC的同时按下“放弃行动”键", "Make `"Back`" press ESC and press the `"Abandon Mission`" key at the same time",
         "使用 GitHub Token，仅在使用 GitHub 源且 API 配额超限时填入并开启", "Use a GitHub Token: only fill it in and enable it when using the GitHub source and the API quota is exceeded",
         "使用满意的话欢迎上GitHub给AFA点个Star，非常感谢~", "If you like AFA, feel free to give it a Star on GitHub — thanks a lot~",
