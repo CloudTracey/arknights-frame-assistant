@@ -132,7 +132,7 @@ Theme 生命周期与低频模式变化使用现有 Logger；绘制故障按操�
 
 ## Frame155 双写机制
 
-帧率存储有两个 INI 键 — `Frame155` 存文本值（如 "auto"、"90"、"180"、"240+"），`Frame` 存旧版索引（1~7，180 映射为 6；`auto` 落旧索引 3 以兼容降级）。新版优先读取 Frame155，回退读 Frame 旧序号并转换。保存时双写两个键，`MigrateFrameRate()` 在启动时自动将旧序号迁移到 Frame155。新增手动档位时需同步更新 3 处：`Constants.FrameOptions`（下拉框手动档位）、`Constants.FrameTextToOldIndex`（文本→旧序号）、`Constants.FrameOldIndexToText`（旧序号→文本）。
+帧率存储有两个 INI 键 — `Frame155` 存文本值（如 "auto"、"90"、"180"、"240+"），`Frame` 存旧版索引（1~7，180 映射为 6；`auto` 落旧索引 3 仅保持键值合法，旧版优先读取 Frame155、无法识别 `auto`，回滚时按旧版默认档位运行）。新版优先读取 Frame155，回退读 Frame 旧序号并转换。保存时双写两个键，`MigrateFrameRate()` 在启动时自动将旧序号迁移到 Frame155。新增手动档位时需同步更新 3 处：`Constants.FrameOptions`（下拉框手动档位）、`Constants.FrameTextToOldIndex`（文本→旧序号）、`Constants.FrameOldIndexToText`（旧序号→文本）。
 
 ## GUI 控件统一管理
 

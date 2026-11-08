@@ -58,7 +58,7 @@
 
 首次运行由 `_EnsureConfigFileExists()` 全量写入三组默认值（跳过 `GitHubToken`）；已存在的文件由 `_BackfillMissingCustomDefaults()` 只补缺失的 `[Custom]` 键——用哨兵值区分"键不存在"与"键存在但值为空"（`; __AFA_MISSING_KEY__`），避免把用户显式清空的配置重新写成默认值。
 
-**帧率双写**：`Frame155`（文本值，可为 `auto`）与 `Frame`（旧版索引 1~7）由 `SetImportant`/`SaveToIni`/`_PersistSingleValue` 内部同步，调用方不要手动双写；读取顺序 Frame155 → 旧索引转换 → 默认值（`_ResolveFrame`，默认 `auto`）。该值现在只表示帧率模式：`auto` 使用自动适配，其余为手动档位；老用户已有的手动值不会被自动改写，可自行切到「自动适配」。
+**帧率双写**：`Frame155`（文本值，可为 `auto`）与 `Frame`（旧版索引 1~7）由 `SetImportant`/`SaveAllToIni`/`SaveToIni`/`_PersistSingleValue` 内部同步，调用方不要手动双写；完整保存路径统一以 `GetImportant("Frame")` 解析出文本值后再写两个键，避免把旧索引/文本写错键。读取顺序 Frame155 → 旧索引转换 → 默认值（`_ResolveFrame`，默认 `auto`）。该值现在只表示帧率模式：`auto` 使用自动适配，其余为手动档位；老用户已有的手动值不会被自动改写，可自行切到「自动适配」。
 
 `TrackChange()` 在检测控件变更时同步将新值写入 Config 内存（确保切换标签页后编辑不丢失）。`SetImportant("Frame", value)` 内部自动同步 `Frame155`，调用方无需手动双写。
 
