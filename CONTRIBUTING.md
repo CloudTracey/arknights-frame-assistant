@@ -44,6 +44,7 @@
 │   │   │   ├── config.ahk        # 配置管理（Config 类）
 │   │   │   ├── constants.ahk     # 全局常量
 │   │   │   ├── custom_hotkey_store.ahk # 自定义按键 JSON 存储（独立于 Settings.ini）
+│   │   │   ├── display_info.ahk  # 显示器刷新率查询
 │   │   │   ├── eventbus.ahk      # 事件总线（模块间解耦通信）
 │   │   │   ├── file_extractor.ahk # 嵌入资源的运行时提取
 │   │   │   ├── game_target.ahk   # 当前目标游戏窗口的唯一 owner
@@ -66,6 +67,7 @@
 │   │   │   ├── token_protector.ahk # GitHub Token DPAPI 加密保护
 │   │   │   ├── touch_injection.ahk # Touch Injection 模拟点击
 │   │   │   ├── tray.ahk          # 托盘提示封装
+│   │   │   ├── unity_player_prefs.ahk # Unity PlayerPrefs 注册表读取
 │   │   │   ├── version.ahk       # 内置版本号（唯一来源）
 │   │   │   ├── version_utils.ahk # 版本/JSON 纯工具
 │   │   │   └── window.ahk        # 窗口/屏幕工具
@@ -75,7 +77,8 @@
 │   │   │   ├── diagnostics/      # 诊断
 │   │   │   │   └── log_exporter.ahk # 诊断压缩包导出
 │   │   │   ├── game/             # 游戏客户端
-│   │   │   │   └── game_client_registry.ahk # 游戏客户端实例注册表
+│   │   │   │   ├── game_client_registry.ahk # 游戏客户端实例注册表
+│   │   │   │   └── game_frame_rate.ahk # 游戏帧率自动识别
 │   │   │   ├── hotkey/           # 热键域
 │   │   │   │   ├── custom_script.ahk # 自定义按键功能引擎
 │   │   │   │   ├── game_keys.ahk # 游戏按键识别与注入

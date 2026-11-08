@@ -4,7 +4,7 @@
 
 ## Constants 类
 
-常量定义。`Delay30`~`Delay240` 是各帧率对应的延迟毫秒值（取 `ceil(1000/fps)`，例外：`Delay144=8` 多 1ms 余量），`TimingService.GetCurrentDelay()` 依此计算。`FrameOptions` 定义下拉框选项数组，`FrameTextToOldIndex`/`FrameOldIndexToText` 用于 Frame155 双写转换。
+常量定义。`Delay30`~`Delay240` 是手动档位对应的延迟毫秒值（取 `ceil(1000/fps)`，例外：`Delay144=8` 多 1ms 余量）；`DelayForFrameText(frameText)` 是手动档位换算入口，`DelayForFrameRate(fps)` 是自动适配结果的换算入口：<120 取 `ceil(1000/fps)`，≥120 统一用 `Delay120`（给游戏掉帧留容错），`TimingService.GetCurrentDelay()` 依帧率模式选择。`FrameOptions` 是手动档位数组；`FrameAutoValue="auto"` 为自动适配配置值；`FrameTextToOldIndex`/`FrameOldIndexToText` 用于 Frame155 双写与旧版迁移（`auto` 落旧索引 3）。
 
 `ThemeModes` 与 `NormalizeThemeMode()` 是界面主题模式的**唯一合法值集合与规范化规则**（Config/Theme/GuiManager 共用，勿在别处重复定义或再写一份 switch）。
 
@@ -58,7 +58,7 @@
 
 首次运行由 `_EnsureConfigFileExists()` 全量写入三组默认值（跳过 `GitHubToken`）；已存在的文件由 `_BackfillMissingCustomDefaults()` 只补缺失的 `[Custom]` 键——用哨兵值区分"键不存在"与"键存在但值为空"（`; __AFA_MISSING_KEY__`），避免把用户显式清空的配置重新写成默认值。
 
-**帧率双写**：`Frame155`（文本值）与 `Frame`（旧版索引 1~7）由 `SetImportant`/`SaveToIni`/`_PersistSingleValue` 内部同步，调用方不要手动双写；读取顺序 Frame155 → 旧索引转换 → 默认值（`_ResolveFrame`）。
+**帧率双写**：`Frame155`（文本值，可为 `auto`）与 `Frame`（旧版索引 1~7）由 `SetImportant`/`SaveToIni`/`_PersistSingleValue` 内部同步，调用方不要手动双写；读取顺序 Frame155 → 旧索引转换 → 默认值（`_ResolveFrame`，默认 `auto`）。该值现在只表示帧率模式：`auto` 使用自动适配，其余为手动档位；老用户已有的手动值不会被自动改写，可自行切到「自动适配」。
 
 `TrackChange()` 在检测控件变更时同步将新值写入 Config 内存（确保切换标签页后编辑不丢失）。`SetImportant("Frame", value)` 内部自动同步 `Frame155`，调用方无需手动双写。
 
@@ -95,6 +95,17 @@
 - **按住开局暂停（Hold 路径）**：`HotkeyActions.ActionBeginPauseHold` 按下 → `GameMonitor.BeginPauseHold()`：置 `_ReadyForPause` 并起同一套状态机（不做黑屏/Loading 前置；`_HoldNoDeadline` 期间**不判超时**，以松手为界），松手经 `HoldGuard.RegisterTail` → `EndPauseHold()`。三条必须保持的语义：① 松手时若接管前常规路径**本就在等待**（`_HoldKeepNormalWait`），保留它继续等，否则立即 `_ResetPauseWait()` 取消；② 命中时 `forcedPause` 生效——忽略 ② 的开关、且**代理指挥也保持暂停**（常规路径此时会取消暂停）；③ 每拍用 `HoldGuard.IsHolding()` 兜底：按下与松开几乎同时到达时收尾回调来不及注册，靠按住周期状态取消，避免识别无限跑。绑定为滚轮时没有松开事件，改走"按一次触发 + 常规 8s 超时收尾"（`BeginPauseHold(false)`）。
 - **代理指挥识别**：命中倍速按钮后先按需暂停，再**后置**做代理识别（`TakeOver1/2/3.png` + `*90` 容差；右侧边缘命中 **且**"手"图标也命中才算代理）——后置是为了压低暂停延迟。判为代理则取消暂停（**按住触发时例外：保持暂停**）；自动二倍速在非代理时盲切一次倍速（进关默认 1 倍速），代理作战沿用游戏自动节奏不干预。
 - 所有像素/图像搜索走 `Safe*` 包装（窗口/桌面不可用时按未命中，不抛 `OSError`）。像素检测前临时 `SetThreadDpiAwarenessContext(-3)`，**必须在 `finally` 里还原**原上下文（该切换只为本段像素检测服务，不影响 GUI 主窗口的 DPI 基准）。
+
+## 游戏帧率自动识别（game_frame_rate.ahk）
+
+`GameFrameRate` 是「游戏内帧率」的唯一来源：启动时识别一次，之后由 `ForegroundClientChanged`/`GameClientsChanged` 事件与 10 秒轮询（与 GameKeys 一致）触发重算，结果变化才发布 `GameFrameRateChanged`。
+
+- **启用条件**：`Frame`/`Frame155` 为 `auto`（GUI「自动适配」）时，`TimingService` 才使用本模块的识别结果；手动档位时 `TimingService` 按所选档位用 `Constants.DelayForFrameText()` 换算，本模块仍会照常识别与记录日志（不改变手动延迟）。
+- **数据来源**：游戏 Unity PlayerPrefs 的 `common_setting_*`（REG_BINARY，hex→UTF-8 JSON）中的 `fpsStrategy`（0/1/2 → 30/60/120fps）与 `enableVSync`（1 开启）。已知全名 `common_setting_h2012961537` 优先，其后按前缀枚举其余候选并逐个校验字段（值名后缀可能随游戏版本变化）；只比较这两个字段（值里还有音量等无关字段，不能比较原始 hex）。
+- **垂直同步开启**（`enableVSync=1`）时忽略 `fpsStrategy`，按游戏窗口所在显示器的当前刷新率取实际帧率：`DisplayInfo.GetRefreshRate(hwnd)` 走 `MonitorFromWindow` → `GetMonitorInfo` → `EnumDisplaySettings`（`dmDisplayFrequency`），失败回退主屏 `GetDeviceCaps(VREFRESH)`；多显示器/虚拟显示器环境必须按窗口取，不能取主屏或 WMI。
+- **区服**：跟随当前客户端——前台客户端 → 运行中客户端（优先上次区服）→ `PreferredServer`/`LastActiveServer` → 已安装区服（按 `ServerProfile.Order` 找存在注册表根者）→ CN；切换客户端后重算。
+- **失败回退**：任何一次识别失败都发布 `ok=false`；「自动适配」模式下 `TimingService` 立即回退 60fps（`Delay60`），成功后自动恢复。日志只在结果变化时记录一次；**游戏未运行/未安装（拿不到窗口或注册表根）属预期状态**，用 `Info` 记录（不写入 critical 日志），只有 `common_setting` 值缺失、字段非法、刷新率读取失败等异常才用 `Warn`。
+- **GUI**：常规作战/快捷操作/卫戍协议/自定义按键页显示「游戏内帧率」下拉框，首项为「自动适配」（默认）并带两条模式提示；识别结果除日志外不在界面展示。
 
 ## 双源更新与自动降级
 

@@ -9,7 +9,7 @@
 关键数字与规则：
 
 - **列栅格**：绑定的 Edit 固定在 `colX+155`（左列 155 / 右列 `ColWidth`+155 = 515），标签右缘固定 `colX+135` 右对齐、宽出向左延伸。
-- **帧率行**标签按**实测宽度**重定宽（`Max(90, 实测宽)` 且 `+2px` 安全余量），右缘仍固定 135——en/ko 等长文案不换行。
+- **帧率行**标签按**实测宽度**重定宽（`Max(90, 实测宽)` 且 `+2px` 安全余量），右缘仍固定 135——en/ko 等长文案不换行。下拉框首项为本地化的「自动适配」（配置值 `auto`，默认），其后为 30 / 60 / 90 / 120 / 144 / 165 / 180 / 240+ 手动档位；索引 1 表示自动，`_FrameTextToIndex`/`_FrameIndexToText` 负责两者转换。
 - **自动暂停开关 / 二倍速开关**（已迁至「特殊操作」页）：复选框 `x` `GuiXMargin`，行文本左对齐同列，按键 Edit 用 `x+20` 紧随文本右侧（随各语言文本长度自然右移，不再固定列）。
 - **关卡守卫开关**：上移占原「开局自动暂停」行位，左缘沿用该行旧列 `auxRowX`(404)，并用 `Min(auxRowX, 708 - 实测宽)` 钳制，防超长文案越出右缘；快捷操作页的「放弃行动」复选框同列同位（`auxRowY` 由 `GuiFrame` 的 y 推出）。
 - **特殊操作页**：单列三区共 8 行，首行 `y48`，行距 33；三处「横线 + 文本」分区头（开局暂停 / 开局二倍速 / 游戏音量控制）与「其他设置」页同款（`x` `GuiXMargin` `w` `GuiWidth-60` `h1 BackgroundBorder Center Section` + `xs+40 y+-9 Center cMuted` 文本，靠 `_SetOverlayZ(txt, 0)` 让文本截断线身）；下一区横线在上一区末行下方 48px。「游戏音量控制」区为三行单列快捷键输入框（提高游戏音量 / 降低游戏音量 / 静音，控制变量名 `vVolumeUp` / `vVolumeDown` / `vVolumeMute`），不设滑条或当前音量文本。
@@ -132,7 +132,7 @@ Theme 生命周期与低频模式变化使用现有 Logger；绘制故障按操�
 
 ## Frame155 双写机制
 
-帧率存储有两个 INI 键 — `Frame155` 存文本值（如 "90"、"180"、"240+"），`Frame` 存旧版索引（1~7，180 映射为 6）。新版优先读取 Frame155，回退读 Frame 旧序号并转换。保存时双写两个键，`MigrateFrameRate()` 在启动时自动将旧序号迁移到 Frame155。新增帧率时需同步更新 3 处：`Constants.FrameOptions`（下拉框选项）、`Constants.FrameTextToOldIndex`（文本→旧序号）、`Constants.FrameOldIndexToText`（旧序号→文本）。
+帧率存储有两个 INI 键 — `Frame155` 存文本值（如 "auto"、"90"、"180"、"240+"），`Frame` 存旧版索引（1~7，180 映射为 6；`auto` 落旧索引 3 以兼容降级）。新版优先读取 Frame155，回退读 Frame 旧序号并转换。保存时双写两个键，`MigrateFrameRate()` 在启动时自动将旧序号迁移到 Frame155。新增手动档位时需同步更新 3 处：`Constants.FrameOptions`（下拉框手动档位）、`Constants.FrameTextToOldIndex`（文本→旧序号）、`Constants.FrameOldIndexToText`（旧序号→文本）。
 
 ## GUI 控件统一管理
 
