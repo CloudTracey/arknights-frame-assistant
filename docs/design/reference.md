@@ -65,6 +65,10 @@
 
 `GameClientsChanged`、`ForegroundClientChanged`、`CheckGamePathClick`、`GamePathDetected`。
 
+### 游戏帧率
+
+`GameFrameRateChanged`：游戏帧率自动识别结果（payload 含 `ok`/`fps`/`vsync`/`strategy`/`refreshRate`/`serverId`/`reason`；`ok=false` 时 `TimingService` 回退 60fps）。
+
 ## 配置文件与数据文件
 
 - **`Settings.ini`**：`%AppData%\ArknightsFrameAssistant\PC\Settings.ini`，三个 Section：`[Hotkeys]`、`[Main]`、`[Custom]`。GitHub Token 以 DPAPI 加密存于 `[Main] GitHubTokenProtected`（带 `dpapi:v1:` 前缀）。详见 [key_designs_base.md](key_designs_base.md#配置文件)。

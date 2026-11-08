@@ -326,7 +326,7 @@ class GuiManager {
         txtFrame.GetPos(&frameX, &frameY, &frameW)
         frameW := Max(90, frameW + 2)  ; +2px 安全余量
         txtFrame.Move(Max(0, 135 - frameW), frameY, frameW)
-        this.GuiFrame := Theme.Add(this.MainGui, "DropDownList", "x155 y+-18 w140 vFrame", Constants.FrameOptions)
+        this.GuiFrame := Theme.Add(this.MainGui, "DropDownList", "x155 y+-18 w140 vFrame", this._BuildFrameLabels())
         this.GuiFrame.OnEvent("Change", (*) => this.TrackChange("Frame"))
         StatusBarHints.Register(this.GuiFrame, "游戏内的帧率")
         frameText := Config.GetImportant("Frame")
@@ -356,10 +356,10 @@ class GuiManager {
         ; 帧数设置提示语
         Theme.SetFont(this.MainGui, "s9 cAccent")
         hintFrame1 := Theme.Add(this.MainGui, "Text", "x0 y+15 w" this.GuiWidth " Center",
-            I18n.T("若开启了游戏内的“垂直同步”，请确保上方“游戏内帧率”设置与你的屏幕刷新率保持一致"))
+            I18n.T("选择“自动适配”时，AFA 会自动读取游戏内帧率与屏幕刷新率"))
         this.FrameRateControls.Push(hintFrame1)
         hintFrame2 := Theme.Add(this.MainGui, "Text", "x0 y+8 w" this.GuiWidth " Center",
-            I18n.T("若关闭了游戏的“垂直同步”，请确保上方“游戏内帧率”设置与游戏内保持一致"))
+            I18n.T("手动选择档位时，请确保与游戏实际帧率一致；开启垂直同步时请按屏幕刷新率选择"))
         Theme.SetFont(this.MainGui, "s9 cText")
         this.FrameRateControls.Push(hintFrame2)
 
@@ -1721,7 +1721,7 @@ class GuiManager {
         }
         if (Config.AllImportant.Has(controlName)) {
             if (controlName = "Frame")
-                Config.SetImportant("Frame", Constants.FrameOptions[currentValue])
+                Config.SetImportant("Frame", this._FrameIndexToText(currentValue))
             else if (controlName = "ThemeMode") {
                 mode := this.ThemeModes[currentValue]
                 Config.SetImportant("ThemeMode", mode)
@@ -1869,13 +1869,30 @@ class GuiManager {
         return labels
     }
 
-    ; 帧率文本值→下拉框索引
+    ; 帧率下拉框标签：首项「自动适配」+ 手动档位
+    static _BuildFrameLabels() {
+        labels := [I18n.T("自动适配")]
+        for opt in Constants.FrameOptions
+            labels.Push(opt)
+        return labels
+    }
+
+    ; 帧率文本值→下拉框索引（1 = 自动适配）
     static _FrameTextToIndex(frameText) {
+        if (frameText = "" || frameText = Constants.FrameAutoValue)
+            return 1
         for i, opt in Constants.FrameOptions {
             if (opt = frameText)
-                return i
+                return i + 1
         }
-        return 3  ; 默认"90"
+        return 1
+    }
+
+    ; 下拉框索引→帧率文本值（1 = 自动适配）
+    static _FrameIndexToText(index) {
+        if (index <= 1)
+            return Constants.FrameAutoValue
+        return Constants.FrameOptions[index - 1]
     }
 
     ; 内部：显示指定控件组

@@ -26,12 +26,46 @@ class Constants {
     static Delay180 := 6      ; 180帧
     static Delay240 := 5      ; 240帧
 
-    ; 帧率选项（下拉框显示文本→下拉框索引，1-based）
+    ; 按游戏实际帧率换算单帧延迟；≥120 统一按 120 档，给游戏掉帧留容错
+    static DelayForFrameRate(fps) {
+        if (fps <= 0)
+            return this.Delay60
+        if (fps >= 120)
+            return this.Delay120
+        return Ceil(1000 / fps)
+    }
+
+    ; 帧率自动适配的配置值（Frame/Frame155 文本值）；其余值为手动档位
+    static FrameAutoValue := "auto"
+
+    ; 手动帧率档位（下拉框显示文本；下拉框首项为本类 FrameAutoValue，由 GUI 加本地化标签）
     static FrameOptions := ["30", "60", "90", "120", "144", "165", "180", "240+"]
-    ; 帧率文本→旧版序号（用于Frame双写兼容）
-    static FrameTextToOldIndex := Map("30","1", "60","2", "90","3", "120","4", "144","5", "165","6", "180","6", "240+","7")
+    ; 帧率文本→旧版序号（仅用于 Frame 键写入；旧版优先读 Frame155，无法识别 auto，回滚时按旧版默认档位运行）
+    static FrameTextToOldIndex := Map("auto","3", "30","1", "60","2", "90","3", "120","4", "144","5", "165","6", "180","6", "240+","7")
     ; 旧版序号→帧率文本（用于迁移和回退）
     static FrameOldIndexToText := Map("1","30", "2","60", "3","90", "4","120", "5","144", "6","165", "7","240+")
+
+    ; 手动档位文本→单帧延迟；未知档位返回 0
+    static DelayForFrameText(frameText) {
+        if (frameText = "30")
+            return this.Delay30
+        if (frameText = "60")
+            return this.Delay60
+        if (frameText = "90")
+            return this.Delay90
+        if (frameText = "120")
+            return this.Delay120
+        if (frameText = "144")
+            return this.Delay144
+        if (frameText = "165")
+            return this.Delay165
+        if (frameText = "180")
+            return this.Delay180
+        if (frameText = "240+")
+            return this.Delay240
+        return 0
+    }
+
 
     ; 按键名称映射
     static KeyNames := HotkeySchema.GetKeyNames()
