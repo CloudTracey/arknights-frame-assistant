@@ -845,6 +845,14 @@ class GuiManager {
         this.CustomControls.Push(txtSwitchHotkey)
         this.CustomControls.Push(this.SwitchHotkey)
 
+        planItem := HotkeySchema.GetItem("TogglePlan")
+        txtTogglePlan := Theme.Add(this.MainGui, "Text", "xs y+16 Right +0x200", I18n.T(planItem.nameKey))
+        editTogglePlan := Theme.Add(this.MainGui, "Edit", "x+10 yp-4 w140 Center -TabStop Uppercase vTogglePlan",
+            KeyFormat.VirtualNewkeyFormat(Config.GetHotkey("TogglePlan")))
+        StatusBarHints.Register(editTogglePlan, planItem.descKey)
+        this.CustomControls.Push(txtTogglePlan)
+        this.CustomControls.Push(editTogglePlan)
+
         ; 过帧档位1延迟
         txtFrameSkip1 := Theme.Add(this.MainGui, "Text", "xs y+16 Section", I18n.T("过帧档位1"))
         editFrameSkip1 := Theme.Add(this.MainGui, "Edit", "x+15 yp-2 w120 h21 vFrameSkip16msDelay Number", Config.GetCustom(
@@ -1316,6 +1324,16 @@ class GuiManager {
             else
                 ShowTrayTip(I18n.T("已退出卫戍协议方案"), "AFA", "Mute")
             SetTimer HideTrayTip, -3000
+        }
+        if (data.HasOwnProp("source") && data.source = "hotkey") {
+            targetTab := isStrongHold ? "strongHoldProtocol" : (this.IsTabVisible("keyBind") ? "keyBind" : "quick")
+            if this.IsTabVisible(targetTab) {
+                this.CurrentTab := targetTab
+                this.LastActiveTab := targetTab
+                this._UpdateTabUI(targetTab)
+            } else {
+                this._UpdateTopTabBar(this.CurrentTab)
+            }
         }
     }
 
@@ -2305,8 +2323,8 @@ class GuiManager {
 
     ; 更新顶部标签栏样式/勾叉/指示线（与页面控件刷新解耦）
     static _UpdateTopTabBar(tabName) {
-        showModeStatus := this.IsTabVisible("strongHoldProtocol")
-        isStrongHold := tabName = "strongHoldProtocol"
+        isStrongHold := this.IsOnStrongHoldProtocol
+        showModeStatus := this.IsTabVisible("strongHoldProtocol") || isStrongHold
         isOther := tabName = "other" || tabName = "customKeys" || tabName = "specialOps"
 
         ; 仅当颜色与记录不一致时才 SetFont
@@ -2327,7 +2345,7 @@ class GuiManager {
                 keybindText := I18n.T("常规作战")
                 quickText := I18n.T("快捷操作")
                 strongHoldText := I18n.T("卫戍协议")
-            } else if (this.LastActiveTab = "strongHoldProtocol") {
+            } else if isStrongHold {
                 keybindText := I18n.T("常规作战") " ✗"
                 quickText := I18n.T("快捷操作") " ✗"
                 strongHoldText := I18n.T("卫戍协议") " ✓"
@@ -2355,7 +2373,7 @@ class GuiManager {
         } else if (tabName = "quick") {
             this.TxtQuick.GetPos(&x)
             this.TabIndicator.Move(x, 23)
-        } else if isStrongHold {
+        } else if (tabName = "strongHoldProtocol") {
             this.TxtStrongHoldProtocol.GetPos(&x)
             this.TabIndicator.Move(x, 23)
         } else if (tabName = "customKeys") {
@@ -2487,7 +2505,9 @@ class GuiManager {
         if !this.IsTabVisible(tabName) {
             tabName := this._ResolveFallbackTab()
         }
-        if (tabName = this.CurrentTab)
+        if (tabName = this.CurrentTab
+            && !(tabName = "strongHoldProtocol" && !this.IsOnStrongHoldProtocol)
+            && !((tabName = "keyBind" || tabName = "quick") && this.IsOnStrongHoldProtocol))
             return
         this.CurrentTab := tabName
 

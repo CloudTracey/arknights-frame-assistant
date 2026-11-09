@@ -46,6 +46,7 @@ class HotkeySchema {
         {id: "AutoBeginPauseSwitch", nameKey: "开局自动暂停开关", descKey: "切换「开局自动暂停」的开关", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true},
         {id: "AutoBeginSpeedSwitch", nameKey: "开局自动二倍速开关", descKey: "切换「开局自动二倍速」的开关", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true},
         {id: "AutoBeginPauseHold", nameKey: "按住开局暂停", descKey: "在关卡加载时按住，进入关卡后会自动暂停（不受「启用开局自动暂停」勾选与否的影响）", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true},
+        {id: "TogglePlan", nameKey: "切换常规/卫戍方案", descKey: "在常规方案与卫戍协议方案之间切换", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true},
         {id: "VolumeUp", nameKey: "提高音量", descKey: "提高游戏客户端在 Windows 音量合成器中的音量", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},
         {id: "VolumeDown", nameKey: "降低音量", descKey: "降低游戏客户端在 Windows 音量合成器中的音量", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},
         {id: "VolumeMute", nameKey: "静音", descKey: "切换游戏客户端的静音状态", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true}
