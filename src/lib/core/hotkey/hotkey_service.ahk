@@ -44,8 +44,8 @@ class HotkeyService {
     static _ActiveTab := "keyBind"
     static _Group := "combatQuick"
     static _SwitchKey := ""
-    static _PlanToggleHeldKey := ""
-    static _PlanToggleReleaseTimer := ""
+    static PlanToggleHeldKey := ""
+    static PlanToggleReleaseTimer := ""
 
     static Init() {
         HotkeyService._BuildActionCallbacks()
@@ -136,12 +136,12 @@ class HotkeyService {
             return
         pureKey := KeyForward.PureKeyName(hotkeyName)
         if (pureKey != "" && !InStr(pureKey, "wheel")) {
-            if (this._PlanToggleHeldKey = pureKey)
+            if (this.PlanToggleHeldKey = pureKey)
                 return
-            this._PlanToggleHeldKey := pureKey
-            if (this._PlanToggleReleaseTimer = "")
-                this._PlanToggleReleaseTimer := this._ReleasePlanToggle.Bind(this)
-            SetTimer this._PlanToggleReleaseTimer, 50
+            this.PlanToggleHeldKey := pureKey
+            if (this.PlanToggleReleaseTimer = "")
+                this.PlanToggleReleaseTimer := this.ReleasePlanToggle.Bind(this)
+            SetTimer this.PlanToggleReleaseTimer, 50
         }
         this._ActiveTab := (this._Group = "strongHoldProtocol") ? "keyBind" : "strongHoldProtocol"
         this._Group := (this._ActiveTab = "strongHoldProtocol") ? "strongHoldProtocol" : "combatQuick"
@@ -149,10 +149,10 @@ class HotkeyService {
         EventBus.Publish("HotkeyGroupChanged", {group: this._Group, source: "hotkey"})
     }
 
-    static _ReleasePlanToggle() {
-        if (this._PlanToggleHeldKey = "" || !GetKeyState(this._PlanToggleHeldKey, "P")) {
-            this._PlanToggleHeldKey := ""
-            SetTimer this._PlanToggleReleaseTimer, 0
+    static ReleasePlanToggle() {
+        if (this.PlanToggleHeldKey = "" || !GetKeyState(this.PlanToggleHeldKey, "P")) {
+            this.PlanToggleHeldKey := ""
+            SetTimer this.PlanToggleReleaseTimer, 0
         }
     }
 
@@ -245,7 +245,7 @@ class HotkeyService {
     static ActiveSwitchHotkey := ""
 
     ; 包装动作回调：失焦悬停时先激活游戏窗口
-    static _WrapAction(fn, skipHoldGate := false) {
+    static _WrapAction(fn, skipHoldGate := false, noActivate := false) {
         Wrapped(ThisHotkey) {
             if !skipHoldGate && HoldGuard.ShouldGate(KeyForward.PureKeyName(ThisHotkey))
                 && HoldGuard.TryBegin(KeyForward.PureKeyName(ThisHotkey))
@@ -254,7 +254,7 @@ class HotkeyService {
                 Logger.Warn("Hotkey", "动作跳过：目标游戏窗口不存在（key=" KeyForward.PureKeyName(ThisHotkey) "）")
                 return
             }
-            if !GameTarget.IsActive() {
+            if !noActivate && !GameTarget.IsActive() {
                 GameTarget.Activate()
                 if !GameTarget.WaitActive(HotkeyService.ActivateTimeoutMs) {
                     Logger.Warn("Hotkey", "动作跳过：激活游戏窗口超时（key=" KeyForward.PureKeyName(ThisHotkey) "）")
@@ -272,14 +272,20 @@ class HotkeyService {
 
     ; 未拦截键的 Up 变体
     static _WrapUpHold(ThisHotkey) {
-        HoldGuard.EndHoldMs(KeyForward.PureKeyName(ThisHotkey))
+        pureKey := KeyForward.PureKeyName(ThisHotkey)
+        if (this.PlanToggleHeldKey = pureKey) {
+            this.PlanToggleHeldKey := ""
+            SetTimer this.PlanToggleReleaseTimer, 0
+        }
+        HoldGuard.EndHoldMs(pureKey)
     }
 
     ; 注册单个热键
     static _RegisterOne(hotkeyValue, profile, pattern) {
         pureKey := KeyForward.PureKeyName(hotkeyValue)
         skipHoldGate := profile.HasOwnProp("HoldRepeat") && profile.HoldRepeat
-        callback := this._WrapAction(profile.Fn, skipHoldGate)
+        noActivate := profile.HasOwnProp("NoActivate") && profile.NoActivate
+        callback := this._WrapAction(profile.Fn, skipHoldGate, noActivate)
         if (profile.HasOwnProp("OnUp") && !InStr(hotkeyValue, "Wheel")) {
             HoldGuard.MarkUngated(pureKey)
             reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"

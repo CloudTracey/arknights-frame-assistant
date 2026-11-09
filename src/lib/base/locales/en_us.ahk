@@ -572,7 +572,7 @@ class LocaleEnUS {
         "设置未保存，原配置已恢复。", "Settings were not saved and the previous configuration has been restored.",
         "设置未保存，但配置文件可能已被部分修改，请检查 Settings.ini 与 CustomHotkeys.json。", "Settings were not saved, but the config files may have been partially modified. Check Settings.ini and CustomHotkeys.json.",
         "随游戏自动启动的计划任务可能已改变，重启 AFA 会自动校准。", "The auto-start scheduled task may have changed. Restarting AFA will reconcile it automatically.",
-        "切换常规/卫戍方案", "Switch Normal/Stronghold Plan",
+        "切换常规/卫戍方案", "Switch Normal/Stronghold Protocol Plan",
         "在常规方案与卫戍协议方案之间切换", "Switch between the Normal and Stronghold Protocol plans",
     )
 }

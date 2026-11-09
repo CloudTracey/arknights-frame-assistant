@@ -2345,7 +2345,7 @@ class GuiManager {
                 keybindText := I18n.T("常规作战")
                 quickText := I18n.T("快捷操作")
                 strongHoldText := I18n.T("卫戍协议")
-            } else if (this.LastActiveTab = "strongHoldProtocol") {
+            } else if isStrongHold {
                 keybindText := I18n.T("常规作战") " ✗"
                 quickText := I18n.T("快捷操作") " ✗"
                 strongHoldText := I18n.T("卫戍协议") " ✓"
