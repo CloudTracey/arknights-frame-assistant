@@ -37,11 +37,11 @@
 - 鼠标键/滚轮（LButton/RButton/MButton/XButton1/2/Wheel*）返回 `IsMouseInClient()`（悬停在游戏窗口上才触发，修复窗口外任务栏/桌面点击被吞）。
 - 键盘键返回 `WinActive("ahk_exe Arknights.exe")` **或** `IsMouseInClient()`（#213：游戏失焦时鼠标悬停游戏窗口也能操作，动作层负责激活游戏；该失焦悬停路径受「自定义」页开关 `HotkeyService.GetHoverOperate()` 门控，保存/应用后生效，关闭后键盘键仅活动窗口触发，鼠标键/滚轮不受影响）。
 
-**动作包装**（#213，`_WrapAction` 于 `_RegisterOne` 注册时套用）：主热键与 OnUp 型动作执行前 `WinActivate` 游戏 + `WinWaitActive`（超时 500ms 则跳过动作，避免按键发往非游戏窗口），激活后不恢复原窗口（焦点留在游戏）；守卫补发 Up 变体（`ActionUpForward`）与 SwitchKey 切换键**不包装**。
+**动作包装**（#213，`_WrapAction` 于 `_RegisterOne` 注册时套用）：主热键与 OnUp 型动作执行前 `WinActivate` 游戏 + `WinWaitActive`（超时 `HotkeyService.ActivateTimeoutMs`=200ms 则跳过动作，避免按键发往非游戏窗口），激活后不恢复原窗口（焦点留在游戏）。`noActivate=true` 的动作**只执行、不切换焦点**（全局组的开局开关/按住开局暂停/游戏音量在失焦悬停时也会触发，但它们不需要游戏前台，抢焦点反而打断用户当前操作）；守卫补发 Up 变体（`ActionUpForward`）与 SwitchKey 切换键**不包装**。
 
 拦截正则通过 `GameKeys.GetInterceptPattern()` 动态生成——从注册表读取所有游戏按键 + `Escape|RButton|MButton`。AFA 热键绑定的按键若匹配拦截正则，不加 `~` 前缀（阻止原键传递到游戏），否则加 `~` 前缀（透传）。**down 与 Up 两个变体的 `~` 必须一致**（非拦截键注册 `~X Up`）：不带 `~` 的 Up 变体是「吞键型」，会让 AHK 把该键的 down 也一并吞掉（详见下节）；拦截键两侧都不带 `~`，由透传层补发。用户自定义游戏按键后，轮询检测到注册表变更自动重建热键，拦截列表随之更新。
 
-**热键分组**：四组热键：CombatHotkeys（常规作战）、QuickHotkeys（快捷操作）、StrongHoldHotkeys（卫戍协议）、VolumeHotkeys（游戏音量）。按标签页启用对应组（常规/快捷页启用 Combat+Quick，卫戍协议页启用 StrongHold）；VolumeHotkeys 是**跨功能页组**——常规/快捷分支与卫戍协议分支都 `EnableGroup(Constants.VolumeHotkeys)`，因此三个功能页下音量热键都生效。专项说明见[游戏音量热键](#游戏音量热键)。自定义按键按「按键类型」并入既有组（global 任何标签下注册、combat/quick 并入常规组、strongHold 并入卫戍组）；「自定义按键」与「特殊操作」标签页为管理型（切到这两页不切换热键组，`HotkeyService._HandleActiveTabChangeRequested` 对 `other`/`customKeys`/`specialOps` 直接返回，`GuiManager.LastActiveTab` 也不记录它们），因此切到管理页时音量热键保持上一功能页的启用状态。自定义按键**不进** `HotkeySchema.Items`（条数运行时可变），其类型 → 生效组 / 是否受守卫的映射只在 `HotkeySchema.CustomTypeProfiles` 定义。`ActionCallbacks` 数据化（`{Fn, Guarded}`）声明守卫标志，为守卫拦截键注册 Up 变体补发透传。
+**热键分组**：四组热键：CombatHotkeys（常规作战）、QuickHotkeys（快捷操作）、StrongHoldHotkeys（卫戍协议）、GlobalHotkeys（全局）。按标签页启用对应组（常规/快捷页启用 Global+Combat+Quick，卫戍协议页启用 Global+StrongHold）；GlobalHotkeys 是**跨功能页组**——`EnableByTab` 无条件 `EnableGroup(Constants.GlobalHotkeys)`，因此三个功能页下全局热键都生效。全局组当前含三个开局相关热键（`AutoBeginPauseSwitch`/`AutoBeginSpeedSwitch`/`AutoBeginPauseHold`，展示在「特殊操作」页）与三个游戏音量热键（`VolumeUp`/`VolumeDown`/`VolumeMute`），全部 `noActivate=true`；「启用/禁用热键」快捷键（SwitchHotkey）同属全局生效，但它存于 `[Custom]` 配置、由 `SetSwitchKey()` 单独注册且不进 `ActiveHotkeys`（热键关闭后仍须可用），因此不放进 Schema。专项说明见[游戏音量热键](#游戏音量热键)。自定义按键按「按键类型」并入既有组（global 类型在任一标签下都由 `_EnableCustomGroup("global")` 注册、combat/quick 并入常规组、strongHold 并入卫戍组）；「自定义按键」与「特殊操作」标签页为管理型（切到这两页不切换热键组，`HotkeyService._HandleActiveTabChangeRequested` 对 `other`/`customKeys`/`specialOps` 直接返回，`GuiManager.LastActiveTab` 也不记录它们），因此切到管理页时全局热键保持上一功能页的启用状态。自定义按键**不进** `HotkeySchema.Items`（条数运行时可变），其类型 → 生效组 / 是否受守卫的映射只在 `HotkeySchema.CustomTypeProfiles` 定义。`ActionCallbacks` 数据化（`{Fn, Guarded}`）声明守卫标志，为守卫拦截键注册 Up 变体补发透传。
 
 **保存生命周期**：`SettingsService` 保存/应用/重置前发布 `HotkeyOff`/`UnsetSwitchKey`（Legacy）；成功经 `SettingsSaved/Applied/Reset` 触发 `_HandleSettingsSavedOrApplied()`（`EnableByTab` + `SetSwitchKey`），失败则由 `_SaveOrApply`/`Reset()` 调 `HotkeyService.RestoreAfterSaveFailure()`，按 INI/JSON 的持久化值重建热键，避免保存失败后热键一直关闭。`HotkeyState` 为否（用户主动禁用）时只恢复 SwitchHotkey。
 
@@ -49,9 +49,9 @@
 
 （`hotkey_schema.ahk` + `constants.ahk` + `hotkey_actions.ahk` + `core/audio/volume_controller.ahk`）
 
-- **元数据**：`HotkeySchema.Items` 中的 `VolumeUp` / `VolumeDown` / `VolumeMute`（`nameKey` 提高音量 / 降低音量 / 静音；`descKey` 三条状态栏说明），`group="volume"`，默认 `defaultKey=""`，`guarded=false`、`onUp=false`、`noActivate=false`；`Constants.VolumeHotkeys := HotkeySchema.GetGroupMap("volume")`。
-- **生效范围**：常规作战、快捷操作、卫戍协议三个功能页都启用（`EnableByTab` 两个分支各启用一次）；特殊操作、自定义按键、其他设置为管理页，不切换热键组，音量热键保持上一功能页的启用状态。不做关卡守卫（关卡内外都可调音量）。
-- **冲突校验**：`HotkeyConflictValidator.FindAll()` 把 `Constants.VolumeHotkeys` **同时**并入常规组（Combat+Quick+Volume+自定义常规）与卫戍组（StrongHold+Volume+自定义卫戍）检查，因此与普通热键、SwitchHotkey、自定义按键的冲突都能报出；同对冲突跨组由 `seen` 去重。
+- **元数据**：`HotkeySchema.Items` 中的 `VolumeUp` / `VolumeDown` / `VolumeMute`（`nameKey` 提高音量 / 降低音量 / 静音；`descKey` 三条状态栏说明），`group="global"`，默认 `defaultKey=""`，`guarded=false`、`onUp=false`、`noActivate=true`；`Constants.GlobalHotkeys := HotkeySchema.GetGroupMap("global")`（与开局开关/按住开局暂停同组，见[热键注册与拦截](#热键注册与拦截)）。
+- **生效范围**：常规作战、快捷操作、卫戍协议三个功能页都启用（`EnableByTab` 无条件启用 `GlobalHotkeys`）；特殊操作、自定义按键、其他设置为管理页，不切换热键组，音量热键保持上一功能页的启用状态。不做关卡守卫（关卡内外都可调音量）。
+- **冲突校验**：`HotkeyConflictValidator.FindAll()` 把 `Constants.GlobalHotkeys` **同时**并入常规组（Combat+Quick+Global+自定义常规）与卫戍组（StrongHold+Global+自定义卫戍）检查，因此与普通热键、SwitchHotkey、自定义按键的冲突都能报出；同对冲突跨组由 `seen` 去重。
 - **按住连续**：提高/降低音量在 schema 中标记 `holdRepeat=true`；`_RegisterOne` 把该标记传给 `_WrapAction(fn, skipHoldGate)`，动作级跳过 HoldGuard 按住去重，由 AHK/系统按键重复连续触发。只影响该动作，不改全局键级的 `HoldGuard` 状态；静音仍保留 HoldGuard 一次按键一步；滚轮每档触发一次。不另设自定义重复时长。
 - **媒体键**：不特殊拦截。用户手动把热键绑成 `Volume_Up`/`Volume_Down`/`Volume_Mute` 时仍按现有透传规则（不匹配游戏拦截正则即加 `~`），可能同时改变游戏应用音量与系统主音量并出现系统 OSD——这是已接受的取舍，ToolTip 只反映游戏应用音量。
 - **动作与反馈**：`ActionVolumeUp`/`ActionVolumeDown`/`ActionVolumeMute` 调用 `VolumeController.Increase`/`Decrease`/`ToggleMute`，按返回结果映射原生 ToolTip：第 2 号槽位（第 1 号槽位留给 `custom_key_editor` 的坐标拾取提示）；显示前临时切 Per-Monitor v2 DPI 上下文并在 `finally` 恢复，避免多显示器缩放导致位置/尺寸漂移；鼠标位置 +16,+16、屏幕坐标、固定 1.5 秒不跟随；连续触发更新同一 ToolTip 并重置计时（隐藏回调缓存同一函数对象后 `SetTimer(..., -1500)`）。文案映射：`no_session` → 未找到音频会话、`failed` → 控制失败、`partial` → 部分设备失败（三者都不显示百分比/已静音）、`reason=""` 且静音 → 已静音、否则 `游戏音量：{1}%`；音量 0% 且未静音时显示 `游戏音量：0%`（0% 不等于静音）。外部修改取消同步由控制器只写 Info 日志，不弹 ToolTip。
@@ -149,7 +149,9 @@ AHK 优先级规则是"**新线程优先级低于当前线程才不能中断**"�
 
 ## 热键冲突实时检测
 
-`HotkeyConflictValidator.FindAll()` 在 CombatHotkeys+QuickHotkeys+VolumeHotkeys 组和 StrongHoldHotkeys+VolumeHotkeys 组内分别检测重复（两功能组之间不互检；音量组因跨两组生效而同时纳入两边，跨组同对冲突由 `seen` 去重）；自定义按键按「按键类型」并入两组（global 始终生效故并入两组，combat/quick 入常规组、strongHold 入卫戍组）。
+`HotkeyConflictValidator.FindAll()` 在 CombatHotkeys+QuickHotkeys+GlobalHotkeys 组和 StrongHoldHotkeys+GlobalHotkeys 组内分别检测重复（两功能组之间不互检；全局组因跨两组生效而同时纳入两边，跨组同对冲突由 `seen` 去重）；自定义按键按「按键类型」并入两组（global 始终生效故并入两组，combat/quick 入常规组、strongHold 入卫戍组）。
+
+启动流程在 `HotkeyService.HotkeyOn()` 之后对持久化配置再跑一次同一 `FindAll`（`main.ahk` 的「热键冲突检查」）：发现冲突写 WARN，并在 GUI 就绪后托盘提示「检测到热键冲突，请打开设置检查」。原因是 `EnableByTab` 对重复 `reg` 采用后注册覆盖先前注册（AHK `Hotkey()` 更新已存在的热键），旧配置里全局键与卫戍键同键时运行时只有一个动作生效；启动检查让这类覆盖不再无声，用户可在设置中看到标红并按提示解决。
 
 `GuiManager.RefreshHotkeyConflicts()` 用增量字体更新——仅对新进入冲突的控件使用主题语义色 `cError`、离开冲突的恢复 `cText`，避免全页闪烁。`UpdateSaveButtonState()` 据 `IsModified && !HasHotkeyConflicts` 决定按钮启用。`key_bind.ahk` 的 `NotifyBindingChanged` 发布 `HotkeyBindingsChanged` 触发刷新。切换标签页不丢弃修改，冲突状态跨标签页保持。
 
