@@ -4,6 +4,7 @@
 class HotkeySchema {
     ; id/nameKey/group/defaultKey 必填；descKey 为状态栏悬停说明（中文原文，可含 {1} 占位符）；
     ; guarded/onUp/noActivate 为热键行为元数据；holdRepeat 为可选的按住连续触发标记；数组顺序即 GUI 显示顺序。
+    ; group 的 combat/quick/strongHold 对应功能页，global 为所有功能页均启用的全局组。
     static Items := [
         ; ---- 常规作战 ----
         {id: "PressPause", nameKey: "按下时暂停", descKey: "按下时切换暂停", group: "combat", defaultKey: "f", guarded: true, onUp: false, noActivate: false},
@@ -20,9 +21,6 @@ class HotkeySchema {
         {id: "OneClickRetreat", nameKey: "一键撤退", descKey: "鼠标移动到想要撤退的单位上，按下后自动选中并撤退", group: "combat", defaultKey: "q", guarded: true, onUp: false, noActivate: false},
         {id: "PauseSkill", nameKey: "暂停技能", descKey: "暂停时，鼠标移动到想要开技能的单位上，按下后自动选中并开启技能", group: "combat", defaultKey: "XButton2", guarded: true, onUp: false, noActivate: false},
         {id: "PauseRetreat", nameKey: "暂停撤退", descKey: "暂停时，鼠标移动到想要撤退的单位上，按下后自动选中并撤退", group: "combat", defaultKey: "XButton1", guarded: true, onUp: false, noActivate: false},
-        {id: "AutoBeginPauseSwitch", nameKey: "开局自动暂停开关", descKey: "切换「开局自动暂停」的开关", group: "combat", defaultKey: "", guarded: false, onUp: false, noActivate: true},
-        {id: "AutoBeginSpeedSwitch", nameKey: "开局自动二倍速开关", descKey: "切换「开局自动二倍速」的开关", group: "combat", defaultKey: "", guarded: false, onUp: false, noActivate: true},
-        {id: "AutoBeginPauseHold", nameKey: "按住开局暂停", descKey: "在关卡加载时按住，进入关卡后会自动暂停（不受「启用开局自动暂停」勾选与否的影响）", group: "combat", defaultKey: "", guarded: false, onUp: false, noActivate: true},
         ; ---- 快捷操作 ----
         {id: "LButtonClick", nameKey: "模拟左键点击", descKey: "模拟按下鼠标左键", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "Harvest", nameKey: "基建快速收取", descKey: "点击屏幕左下角的基建收取按钮收取产物", group: "quick", defaultKey: "", guarded: false, onUp: false, noActivate: false},
@@ -44,11 +42,14 @@ class HotkeySchema {
         {id: "OneClickSell", nameKey: "一键出售/销毁", descKey: "点击鼠标位置干员/装备后自动出售/销毁", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "OneClickPurchase", nameKey: "一键购买", descKey: "模拟双击左键，购买调度中心商店中的单位", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "StrongHoldProtocolBack", nameKey: "返回上级菜单", descKey: "模拟点击ESC键，返回上一级菜单", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
-        {id: "TogglePlan", nameKey: "切换常规/卫戍方案", descKey: "在常规方案与卫戍协议方案之间切换", group: "mode", defaultKey: "", guarded: false, onUp: false, noActivate: true},
-        ; ---- 游戏音量（不归入功能页分组：常规作战、快捷操作、卫戍协议页均启用） ----
-        {id: "VolumeUp", nameKey: "提高音量", descKey: "提高游戏客户端在 Windows 音量合成器中的音量", group: "volume", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},
-        {id: "VolumeDown", nameKey: "降低音量", descKey: "降低游戏客户端在 Windows 音量合成器中的音量", group: "volume", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},
-        {id: "VolumeMute", nameKey: "静音", descKey: "切换游戏客户端的静音状态", group: "volume", defaultKey: "", guarded: false, onUp: false, noActivate: true}
+        ; ---- 全局（常规作战、快捷操作、卫戍协议三个功能页均启用，不受标签页切换影响） ----
+        {id: "AutoBeginPauseSwitch", nameKey: "开局自动暂停开关", descKey: "切换「开局自动暂停」的开关", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true},
+        {id: "AutoBeginSpeedSwitch", nameKey: "开局自动二倍速开关", descKey: "切换「开局自动二倍速」的开关", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true},
+        {id: "AutoBeginPauseHold", nameKey: "按住开局暂停", descKey: "在关卡加载时按住，进入关卡后会自动暂停（不受「启用开局自动暂停」勾选与否的影响）", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true},
+        {id: "TogglePlan", nameKey: "切换常规/卫戍方案", descKey: "在常规方案与卫戍协议方案之间切换", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true},
+        {id: "VolumeUp", nameKey: "提高音量", descKey: "提高游戏客户端在 Windows 音量合成器中的音量", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},
+        {id: "VolumeDown", nameKey: "降低音量", descKey: "降低游戏客户端在 Windows 音量合成器中的音量", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},
+        {id: "VolumeMute", nameKey: "静音", descKey: "切换游戏客户端的静音状态", group: "global", defaultKey: "", guarded: false, onUp: false, noActivate: true}
     ]
 
     ; id -> nameKey
@@ -90,7 +91,7 @@ class HotkeySchema {
 
     ; 自定义按键「类型」行为元数据（仅此一处定义）：生效组与是否受关卡守卫
     static CustomTypeProfiles := Map(
-        "global",     {Group: "all",                Guarded: false},
+        "global",     {Group: "global",             Guarded: false},
         "combat",     {Group: "combatQuick",        Guarded: true},
         "quick",      {Group: "combatQuick",        Guarded: false},
         "strongHold", {Group: "strongHoldProtocol", Guarded: false}

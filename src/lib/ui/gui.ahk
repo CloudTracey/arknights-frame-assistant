@@ -1224,7 +1224,7 @@ class GuiManager {
     static _GetSchemaItems(group) {
         result := []
         for item in HotkeySchema.Items {
-            if (item.group = group && item.id != "AutoBeginPauseSwitch" && item.id != "AutoBeginSpeedSwitch" && item.id != "AutoBeginPauseHold")
+            if (item.group = group)
                 result.Push(item)
         }
         return result

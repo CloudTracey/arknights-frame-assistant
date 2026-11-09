@@ -574,5 +574,6 @@ class LocaleEnUS {
         "随游戏自动启动的计划任务可能已改变，重启 AFA 会自动校准。", "The auto-start scheduled task may have changed. Restarting AFA will reconcile it automatically.",
         "切换常规/卫戍方案", "Switch Normal/Stronghold Protocol Plan",
         "在常规方案与卫戍协议方案之间切换", "Switch between the Normal and Stronghold Protocol plans",
+        "检测到热键冲突，请打开设置检查", "Hotkey conflicts detected. Open Settings to review.",
     )
 }
