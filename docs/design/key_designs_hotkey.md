@@ -151,6 +151,8 @@ AHK 优先级规则是"**新线程优先级低于当前线程才不能中断**"�
 
 `HotkeyConflictValidator.FindAll()` 在 CombatHotkeys+QuickHotkeys+GlobalHotkeys 组和 StrongHoldHotkeys+GlobalHotkeys 组内分别检测重复（两功能组之间不互检；全局组因跨两组生效而同时纳入两边，跨组同对冲突由 `seen` 去重）；自定义按键按「按键类型」并入两组（global 始终生效故并入两组，combat/quick 入常规组、strongHold 入卫戍组）。
 
+启动流程在 `HotkeyService.HotkeyOn()` 之后对持久化配置再跑一次同一 `FindAll`（`main.ahk` 的「热键冲突检查」）：发现冲突写 WARN，并在 GUI 就绪后托盘提示「检测到热键冲突，请打开设置检查」。原因是 `EnableByTab` 对重复 `reg` 采用后注册覆盖先前注册（AHK `Hotkey()` 更新已存在的热键），旧配置里全局键与卫戍键同键时运行时只有一个动作生效；启动检查让这类覆盖不再无声，用户可在设置中看到标红并按提示解决。
+
 `GuiManager.RefreshHotkeyConflicts()` 用增量字体更新——仅对新进入冲突的控件使用主题语义色 `cError`、离开冲突的恢复 `cText`，避免全页闪烁。`UpdateSaveButtonState()` 据 `IsModified && !HasHotkeyConflicts` 决定按钮启用。`key_bind.ahk` 的 `NotifyBindingChanged` 发布 `HotkeyBindingsChanged` 触发刷新。切换标签页不丢弃修改，冲突状态跨标签页保持。
 
 ## 热键频率阈值
