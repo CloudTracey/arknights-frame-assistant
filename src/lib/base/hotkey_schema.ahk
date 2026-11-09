@@ -44,6 +44,7 @@ class HotkeySchema {
         {id: "OneClickSell", nameKey: "一键出售/销毁", descKey: "点击鼠标位置干员/装备后自动出售/销毁", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "OneClickPurchase", nameKey: "一键购买", descKey: "模拟双击左键，购买调度中心商店中的单位", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
         {id: "StrongHoldProtocolBack", nameKey: "返回上级菜单", descKey: "模拟点击ESC键，返回上一级菜单", group: "strongHold", defaultKey: "", guarded: false, onUp: false, noActivate: false},
+        {id: "TogglePlan", nameKey: "切换常规/卫戍方案", descKey: "在常规方案与卫戍协议方案之间切换", group: "mode", defaultKey: "", guarded: false, onUp: false, noActivate: true},
         ; ---- 游戏音量（不归入功能页分组：常规作战、快捷操作、卫戍协议页均启用） ----
         {id: "VolumeUp", nameKey: "提高音量", descKey: "提高游戏客户端在 Windows 音量合成器中的音量", group: "volume", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},
         {id: "VolumeDown", nameKey: "降低音量", descKey: "降低游戏客户端在 Windows 音量合成器中的音量", group: "volume", defaultKey: "", guarded: false, onUp: false, noActivate: true, holdRepeat: true},

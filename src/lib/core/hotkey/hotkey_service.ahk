@@ -44,6 +44,8 @@ class HotkeyService {
     static _ActiveTab := "keyBind"
     static _Group := "combatQuick"
     static _SwitchKey := ""
+    static _PlanToggleHeldKey := ""
+    static _PlanToggleReleaseTimer := ""
 
     static Init() {
         HotkeyService._BuildActionCallbacks()
@@ -79,6 +81,7 @@ class HotkeyService {
         EventBus.Subscribe("ForegroundClientChanged", (data) => this._HandleForegroundClientChanged(data))
         EventBus.Subscribe("ActiveTabChangeRequested", (data) => this._HandleActiveTabChangeRequested(data))
         EventBus.Subscribe("HotkeyToggleRequested", (*) => this.SwitchHotkey())
+        EventBus.Subscribe("PlanToggleRequested", (data) => this.TogglePlan(data.key))
         EventBus.Subscribe("InLevelChanged", (data) => this._HandleInLevelChanged(data))
         EventBus.Subscribe("SettingsChanged", (data) => this._HandleSettingsChanged(data))
         EventBus.Subscribe("SettingsSaved", (*) => this._HandleSettingsSavedOrApplied())
@@ -126,6 +129,31 @@ class HotkeyService {
         if (this.HotkeyState)
             this.EnableByTab(this._ActiveTab)
         EventBus.Publish("HotkeyGroupChanged", {group: this._Group})
+    }
+
+    static TogglePlan(hotkeyName) {
+        if !this.HotkeyState
+            return
+        pureKey := KeyForward.PureKeyName(hotkeyName)
+        if (pureKey != "" && !InStr(pureKey, "wheel")) {
+            if (this._PlanToggleHeldKey = pureKey)
+                return
+            this._PlanToggleHeldKey := pureKey
+            if (this._PlanToggleReleaseTimer = "")
+                this._PlanToggleReleaseTimer := this._ReleasePlanToggle.Bind(this)
+            SetTimer this._PlanToggleReleaseTimer, 50
+        }
+        this._ActiveTab := (this._Group = "strongHoldProtocol") ? "keyBind" : "strongHoldProtocol"
+        this._Group := (this._ActiveTab = "strongHoldProtocol") ? "strongHoldProtocol" : "combatQuick"
+        this.EnableByTab(this._ActiveTab)
+        EventBus.Publish("HotkeyGroupChanged", {group: this._Group, source: "hotkey"})
+    }
+
+    static _ReleasePlanToggle() {
+        if (this._PlanToggleHeldKey = "" || !GetKeyState(this._PlanToggleHeldKey, "P")) {
+            this._PlanToggleHeldKey := ""
+            SetTimer this._PlanToggleReleaseTimer, 0
+        }
     }
 
     ; 处理设置变更
@@ -199,6 +227,7 @@ class HotkeyService {
         "OneClickSell", HotkeyActions.ActionOneClickSell.Bind(HotkeyActions),
         "OneClickPurchase", HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions),
         "StrongHoldProtocolBack", HotkeyActions.ActionBack.Bind(HotkeyActions),
+        "TogglePlan", HotkeyActions.ActionTogglePlan.Bind(HotkeyActions),
         ; 游戏音量（独立分组：常规/快捷/卫戍协议页均启用）
         "VolumeUp", HotkeyActions.ActionVolumeUp.Bind(HotkeyActions),
         "VolumeDown", HotkeyActions.ActionVolumeDown.Bind(HotkeyActions),
@@ -356,9 +385,9 @@ class HotkeyService {
     ; 构建当前标签页的热键明细列表（日志用）
     static _BuildDetailForActiveTab(tabName) {
         if (tabName = "keyBind" || tabName = "quick")
-            return "战斗=" this._BuildDetailList(Constants.CombatHotkeys) " | 快捷=" this._BuildDetailList(Constants.QuickHotkeys) " | 音量=" this._BuildDetailList(Constants.VolumeHotkeys)
+            return "战斗=" this._BuildDetailList(Constants.CombatHotkeys) " | 快捷=" this._BuildDetailList(Constants.QuickHotkeys) " | 方案=" this._BuildDetailList(Constants.ModeHotkeys) " | 音量=" this._BuildDetailList(Constants.VolumeHotkeys)
         else if (tabName = "strongHoldProtocol")
-            return "卫戍=" this._BuildDetailList(Constants.StrongHoldHotkeys) " | 音量=" this._BuildDetailList(Constants.VolumeHotkeys)
+            return "卫戍=" this._BuildDetailList(Constants.StrongHoldHotkeys) " | 方案=" this._BuildDetailList(Constants.ModeHotkeys) " | 音量=" this._BuildDetailList(Constants.VolumeHotkeys)
         return ""
     }
 
@@ -371,11 +400,13 @@ class HotkeyService {
         if (tabName = "keyBind" || tabName = "quick") {
             this.EnableGroup(Constants.CombatHotkeys)
             this.EnableGroup(Constants.QuickHotkeys)
+            this.EnableGroup(Constants.ModeHotkeys)
             this.EnableGroup(Constants.VolumeHotkeys)
             this._EnableCustomGroup("combatQuick")
         }
         else if (tabName = "strongHoldProtocol") {
             this.EnableGroup(Constants.StrongHoldHotkeys)
+            this.EnableGroup(Constants.ModeHotkeys)
             this.EnableGroup(Constants.VolumeHotkeys)
             this._EnableCustomGroup("strongHoldProtocol")
         }
