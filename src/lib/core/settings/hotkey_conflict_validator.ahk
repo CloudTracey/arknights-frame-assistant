@@ -31,16 +31,16 @@ class HotkeyConflictValidator {
         byControl := Map()
         seen := Map()  ; 同对冲突在两组各命中一次时去重
 
-        ; 音量组在常规/快捷/卫戍三个功能页都启用，故同时并入两组检查
+        ; 全局组在常规/快捷/卫戍三个功能页都启用，故同时并入两组检查
         this._FindGroupConflicts(
-            [Constants.CombatHotkeys, Constants.QuickHotkeys, Constants.VolumeHotkeys, customCombatQuick],
+            [Constants.CombatHotkeys, Constants.QuickHotkeys, Constants.GlobalHotkeys, customCombatQuick],
             bindings,
             conflicts,
             byControl,
             seen
         )
         this._FindGroupConflicts(
-            [Constants.StrongHoldHotkeys, Constants.VolumeHotkeys, customStrongHold],
+            [Constants.StrongHoldHotkeys, Constants.GlobalHotkeys, customStrongHold],
             bindings,
             conflicts,
             byControl,
