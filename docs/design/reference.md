@@ -23,6 +23,7 @@
 |------|------|
 | `HotkeyOff` | 热键总关闭（`Legacy`）。**没有** `HotkeyOn` 事件——开启是 `HotkeyService.HotkeyOn()` 方法调用，勿当事件找 |
 | `HotkeyToggleRequested` | 请求切换热键开关 |
+| `PlanToggleRequested` | 请求在常规方案与卫戍协议方案之间切换 |
 | `HotkeyStateChanged` | 热键状态事实 |
 | `HotkeyGroupChanged` | 热键组切换事实 |
 | `SwitchHotkey` | 切换键触发 |
