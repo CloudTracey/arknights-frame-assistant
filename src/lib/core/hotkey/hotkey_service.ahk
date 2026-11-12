@@ -44,6 +44,8 @@ class HotkeyService {
     static _ActiveTab := "keyBind"
     static _Group := "combatQuick"
     static _SwitchKey := ""
+    static PlanToggleHeldKey := ""
+    static PlanToggleReleaseTimer := ""
 
     static Init() {
         HotkeyService._BuildActionCallbacks()
@@ -79,6 +81,7 @@ class HotkeyService {
         EventBus.Subscribe("ForegroundClientChanged", (data) => this._HandleForegroundClientChanged(data))
         EventBus.Subscribe("ActiveTabChangeRequested", (data) => this._HandleActiveTabChangeRequested(data))
         EventBus.Subscribe("HotkeyToggleRequested", (*) => this.SwitchHotkey())
+        EventBus.Subscribe("PlanToggleRequested", (data) => this.TogglePlan(data.key))
         EventBus.Subscribe("InLevelChanged", (data) => this._HandleInLevelChanged(data))
         EventBus.Subscribe("SettingsChanged", (data) => this._HandleSettingsChanged(data))
         EventBus.Subscribe("SettingsSaved", (*) => this._HandleSettingsSavedOrApplied())
@@ -126,6 +129,31 @@ class HotkeyService {
         if (this.HotkeyState)
             this.EnableByTab(this._ActiveTab)
         EventBus.Publish("HotkeyGroupChanged", {group: this._Group})
+    }
+
+    static TogglePlan(hotkeyName) {
+        if !this.HotkeyState
+            return
+        pureKey := KeyForward.PureKeyName(hotkeyName)
+        if (pureKey != "" && !InStr(pureKey, "wheel")) {
+            if (this.PlanToggleHeldKey = pureKey)
+                return
+            this.PlanToggleHeldKey := pureKey
+            if (this.PlanToggleReleaseTimer = "")
+                this.PlanToggleReleaseTimer := this.ReleasePlanToggle.Bind(this)
+            SetTimer this.PlanToggleReleaseTimer, 50
+        }
+        this._ActiveTab := (this._Group = "strongHoldProtocol") ? "keyBind" : "strongHoldProtocol"
+        this._Group := (this._ActiveTab = "strongHoldProtocol") ? "strongHoldProtocol" : "combatQuick"
+        this.EnableByTab(this._ActiveTab)
+        EventBus.Publish("HotkeyGroupChanged", {group: this._Group, source: "hotkey"})
+    }
+
+    static ReleasePlanToggle() {
+        if (this.PlanToggleHeldKey = "" || !GetKeyState(this.PlanToggleHeldKey, "P")) {
+            this.PlanToggleHeldKey := ""
+            SetTimer this.PlanToggleReleaseTimer, 0
+        }
     }
 
     ; 处理设置变更
@@ -199,6 +227,7 @@ class HotkeyService {
         "OneClickSell", HotkeyActions.ActionOneClickSell.Bind(HotkeyActions),
         "OneClickPurchase", HotkeyActions.ActionOneClickPurchase.Bind(HotkeyActions),
         "StrongHoldProtocolBack", HotkeyActions.ActionBack.Bind(HotkeyActions),
+        "TogglePlan", HotkeyActions.ActionTogglePlan.Bind(HotkeyActions),
         ; 游戏音量（独立分组：常规/快捷/卫戍协议页均启用）
         "VolumeUp", HotkeyActions.ActionVolumeUp.Bind(HotkeyActions),
         "VolumeDown", HotkeyActions.ActionVolumeDown.Bind(HotkeyActions),
@@ -215,8 +244,8 @@ class HotkeyService {
 
     static ActiveSwitchHotkey := ""
 
-    ; 包装动作回调：失焦悬停时先激活游戏窗口
-    static _WrapAction(fn, skipHoldGate := false) {
+    ; 包装动作回调：非 noActivate 动作在失焦悬停时先激活游戏窗口（noActivate 动作只执行、不切换焦点）
+    static _WrapAction(fn, skipHoldGate := false, noActivate := false) {
         Wrapped(ThisHotkey) {
             if !skipHoldGate && HoldGuard.ShouldGate(KeyForward.PureKeyName(ThisHotkey))
                 && HoldGuard.TryBegin(KeyForward.PureKeyName(ThisHotkey))
@@ -225,7 +254,7 @@ class HotkeyService {
                 Logger.Warn("Hotkey", "动作跳过：目标游戏窗口不存在（key=" KeyForward.PureKeyName(ThisHotkey) "）")
                 return
             }
-            if !GameTarget.IsActive() {
+            if !noActivate && !GameTarget.IsActive() {
                 GameTarget.Activate()
                 if !GameTarget.WaitActive(HotkeyService.ActivateTimeoutMs) {
                     Logger.Warn("Hotkey", "动作跳过：激活游戏窗口超时（key=" KeyForward.PureKeyName(ThisHotkey) "）")
@@ -243,14 +272,19 @@ class HotkeyService {
 
     ; 未拦截键的 Up 变体
     static _WrapUpHold(ThisHotkey) {
-        HoldGuard.EndHoldMs(KeyForward.PureKeyName(ThisHotkey))
+        pureKey := KeyForward.PureKeyName(ThisHotkey)
+        if (this.PlanToggleHeldKey = pureKey) {
+            this.PlanToggleHeldKey := ""
+            SetTimer this.PlanToggleReleaseTimer, 0
+        }
+        HoldGuard.EndHoldMs(pureKey)
     }
 
     ; 注册单个热键
     static _RegisterOne(hotkeyValue, profile, pattern) {
         pureKey := KeyForward.PureKeyName(hotkeyValue)
         skipHoldGate := profile.HasOwnProp("HoldRepeat") && profile.HoldRepeat
-        callback := this._WrapAction(profile.Fn, skipHoldGate)
+        callback := this._WrapAction(profile.Fn, skipHoldGate, profile.HasOwnProp("NoActivate"))
         if (profile.HasOwnProp("OnUp") && !InStr(hotkeyValue, "Wheel")) {
             HoldGuard.MarkUngated(pureKey)
             reg := (hotkeyValue ~= pattern) ? hotkeyValue " Up" : "~" hotkeyValue " Up"
@@ -293,7 +327,7 @@ class HotkeyService {
         ; 自定义按键：默认常规作战组 + 全局类型
         this._BuildCustomProfiles()
         this._EnableCustomGroup("combatQuick")
-        this._EnableCustomGroup("all")
+        this._EnableCustomGroup("global")
         Logger.Info("Hotkey", "热键已启用，数量=" this.ActiveHotkeys.Count ", 明细: " this._BuildDetailList(Constants.KeyNames))
     }
 
@@ -356,30 +390,29 @@ class HotkeyService {
     ; 构建当前标签页的热键明细列表（日志用）
     static _BuildDetailForActiveTab(tabName) {
         if (tabName = "keyBind" || tabName = "quick")
-            return "战斗=" this._BuildDetailList(Constants.CombatHotkeys) " | 快捷=" this._BuildDetailList(Constants.QuickHotkeys) " | 音量=" this._BuildDetailList(Constants.VolumeHotkeys)
+            return "战斗=" this._BuildDetailList(Constants.CombatHotkeys) " | 快捷=" this._BuildDetailList(Constants.QuickHotkeys) " | 全局=" this._BuildDetailList(Constants.GlobalHotkeys)
         else if (tabName = "strongHoldProtocol")
-            return "卫戍=" this._BuildDetailList(Constants.StrongHoldHotkeys) " | 音量=" this._BuildDetailList(Constants.VolumeHotkeys)
+            return "卫戍=" this._BuildDetailList(Constants.StrongHoldHotkeys) " | 全局=" this._BuildDetailList(Constants.GlobalHotkeys)
         return ""
     }
 
-    ; 根据标签页启用对应热键组
+    ; 根据标签页启用对应热键组（全局组不随标签页切换）
     static EnableByTab(tabName) {
         this.HotkeyOff(true)
         this._BuildCustomProfiles()
         if (tabName = "customKeys")
             tabName := this._ActiveTab
+        this.EnableGroup(Constants.GlobalHotkeys)
         if (tabName = "keyBind" || tabName = "quick") {
             this.EnableGroup(Constants.CombatHotkeys)
             this.EnableGroup(Constants.QuickHotkeys)
-            this.EnableGroup(Constants.VolumeHotkeys)
             this._EnableCustomGroup("combatQuick")
         }
         else if (tabName = "strongHoldProtocol") {
             this.EnableGroup(Constants.StrongHoldHotkeys)
-            this.EnableGroup(Constants.VolumeHotkeys)
             this._EnableCustomGroup("strongHoldProtocol")
         }
-        this._EnableCustomGroup("all")
+        this._EnableCustomGroup("global")
         Logger.Info("Hotkey", "热键已重建，数量=" this.ActiveHotkeys.Count ", 标签页=" tabName
             ", 明细: " this._BuildDetailForActiveTab(tabName) ", 自定义: " this._BuildCustomDetailList())
     }
@@ -409,7 +442,7 @@ class HotkeyService {
         HotIf(HotkeyContext)
         pattern := GameKeys.GetInterceptPattern()
         for id, info in this.CustomProfiles {
-            if info.group = group || info.group = "all" {
+            if info.group = group {
                 try this._RegisterOne(info.key, info.profile, pattern)
                 catch Error as e
                     Logger.Error("Hotkey", "注册自定义热键失败：key=" id ", value=" info.key ", error=" e.Message)

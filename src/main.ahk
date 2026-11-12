@@ -201,6 +201,15 @@ class App {
         StartupMark("热键注册")
         HotkeyService.HotkeyOn()
 
+        StartupMark("热键冲突检查")
+        startupHotkeyConflicts := HotkeyConflictValidator.FindAll(
+            Config.AllHotkeys,
+            Config.AllCustom,
+            Config.ReadCustomHotkeys()
+        )
+        if startupHotkeyConflicts.HasConflicts
+            Logger.Warn("Hotkey", "启动时检测到 " startupHotkeyConflicts.Items.Length " 处热键冲突：同一按键绑定了多个动作，运行时只有一个动作生效；请在设置中检查")
+
         StartupMark("GUI 初始化")
         EventBus.Publish("ChangelogShowRequested")
 
@@ -210,6 +219,9 @@ class App {
 
         if (IsSet(pendingAutoStartWarning))
             ShowTrayTip(pendingAutoStartWarning, I18n.T("随游戏自动启动校准失败"), 2)
+
+        if startupHotkeyConflicts.HasConflicts
+            ShowTrayTip(I18n.T("检测到热键冲突，请打开设置检查"), "AFA", 2)
 
         tokenStorageWarning := Config.GetTokenStorageWarning()
         if (tokenStorageWarning != "")

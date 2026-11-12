@@ -667,6 +667,10 @@ class HotkeyActions {
         HoldGuard.RegisterTail(pureKey, (*) => GameMonitor.EndPauseHold())
     }
 
+    static ActionTogglePlan(ThisHotkey) {
+        EventBus.Publish("PlanToggleRequested", {key: ThisHotkey})
+    }
+
     ; -- 游戏音量 --
     static _VolumeToolTipHide := ""
 

@@ -74,7 +74,7 @@ class Constants {
     static CombatHotkeys := HotkeySchema.GetGroupMap("combat")
     static QuickHotkeys := HotkeySchema.GetGroupMap("quick")
     static StrongHoldHotkeys := HotkeySchema.GetGroupMap("strongHold")
-    static VolumeHotkeys := HotkeySchema.GetGroupMap("volume")
+    static GlobalHotkeys := HotkeySchema.GetGroupMap("global")
 
     ; 重要设置名称映射
     static ImportantNames := Map(
