@@ -26,7 +26,7 @@
 
 - **必须 `Redraw()`**：AHK 是延迟重绘，可见标签数变化后不加会在旧宽度上绘制，出现错位/缺字残影。
 - **指示线的位置与宽度只在 `_UpdateTopTabBar` 中按等分布局（`GuiWidth / 可见标签数`）无条件重设并重绘**，标签本身由 `LayoutTopTabs` 用同一套数学定位。**不要用标签控件 `GetPos()` 取指示线坐标**：窗口在 DPI 缩放不同的显示器间移动时，`GetPos` 与 `Move` 的缩放基准可能不一致，`GetPos` 的返回值会被 `Move` 再缩放一次，表现为指示线右移且比标签宽（系统 DPI 150% + 显示器 175% 时恰好放大 7/6）。
-- 位置/尺寸相同就不要 `Move`；可见性相同就不要赋值；`SetFont` 只在颜色与 `TabFontState` 记录不一致时执行——这些都是为了压掉闪烁。`TabFontState` 必须是**空 Map 起步**，保证首次 `_SetTabFontOnce` 总会 `SetFont`（键缺失视为无记录）。
+- 位置/尺寸相同就不要 `Move`；可见性相同就不要赋值；标签文字先算后比、不同才赋值；`SetFont` 只在颜色与 `TabFontState` 记录不一致时执行——这些都是为了压掉闪烁。`TabFontState` 必须是**空 Map 起步**，保证首次 `_SetTabFontOnce` 总会 `SetFont`（键缺失视为无记录）。
 - 眼睛图标码点与"闭眼字形不可用"见 [Segoe MDL2 Assets 图标码点](#segoe-mdl2-assets-图标码点)。
 - `RegisterTabManagerMouseHandlers` **须同时监听 `WM_LBUTTONDOWN`(0x0201) 与 `WM_LBUTTONDBLCLK`(0x0203)**：窗口类带 `CS_DBLCLKS` 时双击的第二次按下发 0x0203，只听 0x0201 会漏掉该次点击。
 - 行内偏移：拖动手柄 `+9`、标签 `+40`、眼睛图标 `+201`；行的 Z 序为 背景 < 高亮 < 文字与命中控件（只调 Z 序，不动 HWND/位置/尺寸，拖动与眼睛点击依赖它们）。
@@ -153,6 +153,7 @@ Theme 生命周期与低频模式变化使用现有 Logger；绘制故障按操�
 - **选中态**（文字颜色 `cAccent`、指示线位置）只看 `tabName = "<id>"`，与方案模式无关。
 - **方案状态**（✓/✗ 后缀）只看 `IsStrongHoldPlanActive`——它是 `HotkeyService._Group` 在 GUI 侧的镜像（"当前热键组是否为卫戍协议方案"），**不是**"当前是否在卫戍协议页"。管理页（`other`/`customKeys`/`specialOps`）切页不切组，因此镜像保持上一功能页的值，✓/✗ 也随该值显示，无需为管理页单列分支。
 - 方案激活时卫戍协议恒标 ✓、常规/快捷恒标 ✗；方案未激活时，只有卫戍协议标签可见才给后缀（常规/快捷 ✓、卫戍协议 ✗），否则三者都不加后缀。
+- `ApplyTabSettings` 因目标功能页被隐藏而回退到可见页时，先同步 `IsStrongHoldPlanActive` 再发布 `ActiveTabChangeRequested`——热键组回调对比镜像后认为"无变化"，避免同一次回退重复弹方案提示。
 - `SwitchTab()` 有一个"同页仍要刷新"的守卫：某个功能页被隐藏时（如隐藏卫戍协议页后按方案切换热键），当前页可能仍停在另一功能页而热键组已切换；此时重复点击当前功能页也必须继续发布 `ActiveTabChangeRequested`，让热键组按页面重新收敛。
 
 ## Segoe MDL2 Assets 图标码点

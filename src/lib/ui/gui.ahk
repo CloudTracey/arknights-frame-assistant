@@ -30,7 +30,7 @@ class GuiManager {
     static _OverlayZWarned := false  ; 双缓冲叠层调整失败仅告警一次
     static _InitialValues := Map()  ; 初始值快照，用于脏值对比
     static HintUnsaved := ""       ; 提示文字
-    static IsStrongHoldPlanActive := false  ; 镜像 HotkeyService._Group：热键组当前是否为卫戍协议方案，与顶部标签选中页无关
+    static IsStrongHoldPlanActive := false  ; 镜像 HotkeyService._Group：热键组当前是否为卫戍协议方案
     static DefaultTab := ""
 
     ; 窗口尺寸常量
@@ -2133,7 +2133,6 @@ class GuiManager {
             fallbackTab := this._ResolveFallbackTab()
             if (fallbackTab != "") {
                 this.LastActiveTab := fallbackTab
-                ; 先同步镜像再发布，避免热键组回调把同一变化再弹一次方案提示
                 this.IsStrongHoldPlanActive := fallbackTab = "strongHoldProtocol"
                 EventBus.Publish("ActiveTabChangeRequested", {tabName: fallbackTab})
             }
@@ -2319,7 +2318,6 @@ class GuiManager {
     }
 
     ; 更新顶部标签栏样式/勾叉/指示线（与页面控件刷新解耦）
-    ; 选中态（颜色/指示线）只跟 tabName；✓/✗ 只跟方案模式镜像，两者不可混用
     static _UpdateTopTabBar(tabName) {
         isStrongHoldTab := tabName = "strongHoldProtocol"
         isPlanActive := this.IsStrongHoldPlanActive
@@ -2333,7 +2331,6 @@ class GuiManager {
         this._SetTabFontOnce("customKeys", tabName = "customKeys" ? "cAccent" : "cText")
         this._SetTabFontOnce("specialOps", tabName = "specialOps" ? "cAccent" : "cText")
 
-        ; 目标文本：管理页不切组，方案状态沿用上一功能页；先算后比再赋值，避免闪烁
         if isPlanActive {
             keybindText := I18n.T("常规作战") " ✗"
             quickText := I18n.T("快捷操作") " ✗"
@@ -2350,9 +2347,7 @@ class GuiManager {
         if (this.TxtStrongHoldProtocol.Text != strongHoldText)
             this.TxtStrongHoldProtocol.Text := strongHoldText
 
-        ; 移动指示线到当前选中的标签：位置与宽度按顶部标签的等分布局计算。
-        ; 不能用标签控件 GetPos 取坐标——窗口在 DPI 缩放不同的显示器间移动时，
-        ; GetPos 与 Move 的缩放基准可能不一致，会让指示线偏移并变长。
+        ; 移动指示线到当前选中的标签
         visibleTabs := []
         for tabItem in this.GetTabsInAppliedOrder() {
             if this.IsTabVisible(tabItem.Id)
@@ -2483,8 +2478,6 @@ class GuiManager {
         if !this.IsTabVisible(tabName) {
             tabName := this._ResolveFallbackTab()
         }
-        ; 某个功能页被隐藏时（如隐藏卫戍协议页后按方案切换热键），当前页可能仍停在另一功能页而热键组已切换；
-        ; 此时重复点击当前功能页也要继续发布请求，让热键组按页面重新收敛
         modeDrifted := (tabName = "strongHoldProtocol" && !this.IsStrongHoldPlanActive)
             || ((tabName = "keyBind" || tabName = "quick") && this.IsStrongHoldPlanActive)
         if (tabName = this.CurrentTab && !modeDrifted)
@@ -2539,8 +2532,6 @@ class GuiManager {
         }
         oldGui := this.MainGui
         this.MainGui := ""
-        ; 旧主窗口即将销毁：重建期间到达的监控事件（前后台客户端变化）可能先于 Init 重建控件，
-        ; 先清空这些单控件引用让刷新函数跳过写入；Init 创建控件时会按当前数据重新生成文本
         this.ServerPathsText := ""
         this.RunningClientsText := ""
         Theme.Destroy(oldGui)
