@@ -29,6 +29,7 @@ class GuiManager {
     static _PrevConflictedControls := Map()  ; 上次冲突控件集合，用于增量字体更新
     static _OverlayZWarned := false  ; 双缓冲叠层调整失败仅告警一次
     static _InitialValues := Map()  ; 初始值快照，用于脏值对比
+    static _HoverOperateWarned := false  ; 本次运行是否已确认过失焦悬停热键风险
     static HintUnsaved := ""       ; 提示文字
     static IsStrongHoldPlanActive := false  ; 镜像 HotkeyService._Group：热键组当前是否为卫戍协议方案
     static DefaultTab := ""
@@ -882,8 +883,8 @@ class GuiManager {
 
         ; 失焦悬停操作热键开关
         checkboxHoverOperate := Theme.Add(this.MainGui, "Checkbox", "xs y+14 w" Max(290, Metrics.TextWidth(I18n.T("游戏窗口未激活时允许鼠标悬停在窗口上触发热键")) + 24) " h24 vHoverOperate", I18n.T("游戏窗口未激活时允许鼠标悬停在窗口上触发热键"))
-        checkboxHoverOperate.OnEvent("Click", (*) => this.TrackChange("HoverOperate"))
-        StatusBarHints.Register(checkboxHoverOperate, "游戏窗口未激活时，鼠标悬停在窗口上也能触发热键")
+        checkboxHoverOperate.OnEvent("Click", (*) => this._OnHoverOperateClick(checkboxHoverOperate))
+        StatusBarHints.Register(checkboxHoverOperate, "游戏窗口未激活时，鼠标悬停在窗口上也能触发键盘热键（可能导致切出游戏窗口后仍然误触发热键）")
         this.MainGui["HoverOperate"].Value := Config.GetCustom("HoverOperate")
         this.CustomControls.Push(checkboxHoverOperate)
 
@@ -1724,6 +1725,21 @@ class GuiManager {
         }
         ; 自定义按键
         this._InitialCustomHotkeys := this._CloneCustomHotkeys(Config.AllCustomHotkeys)
+    }
+
+    ; 勾选失焦悬停热键前确认风险
+    static _OnHoverOperateClick(ctrl) {
+        if (ctrl.Value && !this._HoverOperateWarned) {
+            ctrl.Value := 0
+            result := MessageBox.Confirm(
+                I18n.T("此功能可能导致切出游戏窗口后，在鼠标未移出游戏窗口时误触发键盘热键并激活游戏窗口，是否开启？"),
+                I18n.T("开启失焦悬停热键"))
+            if (result != "Yes")
+                return
+            this._HoverOperateWarned := true
+            ctrl.Value := 1
+        }
+        this.TrackChange("HoverOperate")
     }
 
     ; 跟踪控件变更——与初始快照对比，决定按钮启用/禁用
