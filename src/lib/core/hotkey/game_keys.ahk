@@ -15,14 +15,14 @@ class GameKeys {
         for serverId in ServerProfile.Ids() {
             result := this._ReadServer(serverId)
             if (result.success) {
-                this._ServerBindings[serverId] := this._MergeDefaults(result.bindings)
+                this._StoreBindings(serverId, this._MergeDefaults(result.bindings))
                 this._ServerLastHex[serverId] := result.hex
                 this._ServerReadSuccess[serverId] := true
                 this._LogBindings(serverId)
             } else {
                 this._ServerReadSuccess[serverId] := false
                 if (result.rootExists) {
-                    this._ServerBindings[serverId] := this._MergeDefaults(Map())
+                    this._StoreBindings(serverId, this._MergeDefaults(Map()))
                     this._ShowWarning(serverId)
                 }
             }
@@ -48,6 +48,7 @@ class GameKeys {
 
     ; ── 注入按下状态标记 ──
     static InjectedPressKeys := Map()
+    static _UnboundWarned := Map()   ; gameFunc → true（本会话已提示过未绑定）
 
     ; 内部：规范键名（与 KeyForward.PureKeyName 同语义）
     static _NormalizeKey(key) {
@@ -80,10 +81,15 @@ class GameKeys {
     ; 发送按键按下
     static SendDown(gameFunc) {
         key := this.Get(gameFunc)
-        if (key != "") {
-            this.MarkInjectedPress(key)
-            Send "{Blind}{" key " Down}"
+        if (key = "") {
+            if (!this._UnboundWarned.Has(gameFunc)) {
+                this._UnboundWarned[gameFunc] := true
+                Logger.Warn("GameKeys", "功能 " gameFunc " 在游戏内未绑定按键，跳过注入")
+            }
+            return
         }
+        this.MarkInjectedPress(key)
+        Send "{Blind}{" key " Down}"
     }
 
     ; 发送按键释放（先清注入标记再发送）
@@ -122,7 +128,7 @@ class GameKeys {
         }
 
         if (!addedAny) {
-            bindings := this._MergeDefaults(Map())
+            bindings := this._MergeDefaults(Map()).bindings
             for _, key in bindings {
                 if (key != "" && !seen.Has(key)) {
                     keys .= this._EscapeRegex(key) . "|"
@@ -138,6 +144,7 @@ class GameKeys {
     ; ── 内部状态 ──
     static _Bindings := Map()        ; 当前前台/首选服的映射
     static _ServerBindings := Map()  ; serverId → gameFunc → AHK 键名
+    static _ServerDefaulted := Map() ; serverId → gameFunc → true（游戏内无该条目，取默认值）
     static _ServerLastHex := Map()   ; serverId → 上次原始 hex
     static _ServerReadSuccess := Map() ; serverId → bool
     static _ServerWarned := Map()    ; serverId → bool（每会话只提示一次）
@@ -172,7 +179,13 @@ class GameKeys {
     static _GetBindingsForServer(serverId) {
         if (this._ServerBindings.Has(serverId))
             return this._ServerBindings[serverId]
-        return this._MergeDefaults(Map())
+        return this._MergeDefaults(Map()).bindings
+    }
+
+    ; 写入某区服的合并结果（bindings 与 defaulted 必须同步更新）
+    static _StoreBindings(serverId, merged) {
+        this._ServerBindings[serverId] := merged.bindings
+        this._ServerDefaulted[serverId] := merged.defaulted
     }
 
     ; 前台客户端变化时更新 LastActiveServer（仅内存）
@@ -408,30 +421,40 @@ class GameKeys {
         }
     }
 
-    ; 合并默认值
+    ; 合并默认值：游戏内无该条目的功能取默认键；显式清空的条目（keyId 为空）保持未绑定
+    ; 返回 {bindings, defaulted}，defaulted 记录本次由默认值填充的功能名
     static _MergeDefaults(bindings) {
         result := Map()
+        defaulted := Map()
         for funcName, key in bindings
             result[funcName] := key
         for funcName, key in this._Defaults {
-            if !result.Has(funcName)
+            if !result.Has(funcName) {
                 result[funcName] := key
+                defaulted[funcName] := true
+            }
         }
-        return result
+        return {bindings: result, defaulted: defaulted}
     }
 
     ; ── 从 JSON 字符串解析按键映射 ──
+    ; keyId 为空表示游戏内该功能未绑定按键：保留空值，不回退默认键
     static _ParseJson(jsonStr) {
         result := Map()
         pos := 1
-        while (pos := RegExMatch(jsonStr, '"(\w+)":\{"keyId":"([^"]+)"\}', &match, pos)) {
+        while (pos := RegExMatch(jsonStr, '"(\w+)":\{"keyId":"([^"]*)"\}', &match, pos)) {
             funcName := match[1]
             keyId := match[2]
-            ahkKey := this._ConvertKeyId(keyId)
-            if (ahkKey != "") {
-                result[funcName] := ahkKey
+            if (keyId = "") {
+                result[funcName] := ""
             } else {
-                Logger.Warn("GameKeys", "未知 keyId：" keyId "（功能：" funcName "），使用默认值")
+                ahkKey := this._ConvertKeyId(keyId)
+                if (ahkKey != "") {
+                    result[funcName] := ahkKey
+                } else {
+                    Logger.Warn("GameKeys", "未知 keyId：" keyId "（功能：" funcName "），按未绑定处理")
+                    result[funcName] := ""
+                }
             }
             pos += match.Len[0]
         }
@@ -497,6 +520,8 @@ class GameKeys {
                         this._ServerReadSuccess[serverId] := false
                         if (this._ServerBindings.Has(serverId))
                             this._ServerBindings.Delete(serverId)
+                        if (this._ServerDefaulted.Has(serverId))
+                            this._ServerDefaulted.Delete(serverId)
                         if (this._ServerLastHex.Has(serverId))
                             this._ServerLastHex.Delete(serverId)
                         changed := true
@@ -508,7 +533,7 @@ class GameKeys {
                 if (result.success) {
                     if (!this._ServerReadSuccess.Has(serverId) || !this._ServerReadSuccess[serverId]) {
                         this._ServerReadSuccess[serverId] := true
-                        this._ServerBindings[serverId] := this._MergeDefaults(result.bindings)
+                        this._StoreBindings(serverId, this._MergeDefaults(result.bindings))
                         this._ServerLastHex[serverId] := result.hex
                         changed := true
                         this._LogBindings(serverId)
@@ -519,14 +544,14 @@ class GameKeys {
                     if (this._ServerLastHex.Has(serverId) && this._ServerLastHex[serverId] = result.hex)
                         continue
 
-                    this._ServerBindings[serverId] := this._MergeDefaults(result.bindings)
+                    this._StoreBindings(serverId, this._MergeDefaults(result.bindings))
                     this._ServerLastHex[serverId] := result.hex
                     changed := true
                     this._LogBindings(serverId)
                 } else {
                     if (this._ServerReadSuccess.Has(serverId) && this._ServerReadSuccess[serverId]) {
                         this._ServerReadSuccess[serverId] := false
-                        this._ServerBindings[serverId] := this._MergeDefaults(Map())
+                        this._StoreBindings(serverId, this._MergeDefaults(Map()))
                         changed := true
                         this._ShowWarning(serverId)
                     }
@@ -546,10 +571,21 @@ class GameKeys {
     ; ── 输出完整按键映射 ──
     static _LogBindings(serverId) {
         bindings := this._GetBindingsForServer(serverId)
+        defaulted := this._ServerDefaulted.Has(serverId) ? this._ServerDefaulted[serverId] : Map()
         mapText := ""
-        for funcName, key in bindings
-            mapText .= (mapText = "" ? "" : " | ") funcName "=" key
+        unbound := ""
+        for funcName, key in bindings {
+            if (key = "") {
+                mapText .= (mapText = "" ? "" : " | ") funcName "=(未绑定)"
+                unbound .= (unbound = "" ? "" : "、") funcName
+                continue
+            }
+            suffix := defaulted.Has(funcName) ? "(默认)" : ""
+            mapText .= (mapText = "" ? "" : " | ") funcName "=" key suffix
+        }
         Logger.Info("GameKeys", "区服 " serverId " 完整按键映射：" mapText)
+        if (unbound != "")
+            Logger.Warn("GameKeys", "区服 " serverId " 以下功能游戏内未绑定按键，AFA 不会为其注入按键：" unbound)
     }
 
     ; ── 读取失败警告（每服每会话只提示一次）──
