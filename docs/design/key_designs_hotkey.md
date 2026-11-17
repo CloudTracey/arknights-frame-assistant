@@ -15,7 +15,7 @@
 - **传统切服（XelLauncher 关闭硬链接）**：两个渠道共用同一物理安装目录，切服只就地覆盖渠道差异文件、目录名不变（仍是 `Arknights Game`），此时按"安装位置"识别只能得到 CN。`_DetectDeployedChannel` 用**两侧互斥的权威特征文件**回答"当前部署的是哪个渠道"：官服 `hgsdk.dll`；B服 `PCGameSDK.dll` + `BLPlatform64` 目录（**不用**两服共有的 `U8SDK.dll`/`U8CoreUI.dll`/`u8_channel.dll`/`config.ini`）。两侧同时命中（目录被改坏）时不猜测，返回 `""` 交回目录特征判定；该探测**只在目录特征判定为 CN 时**执行，不参与其他区服判定。
 - **TC（繁中服，serverId=`TC`）的运营方为 Gryphline，company/product = `Gryphline\Arknights_TC`**（取自游戏本体 `Arknights_Data\app.info`，实测对应 Unity persistentDataPath `AppData\LocalLow\Gryphline\Arknights_TC`）。
   - `Company` **必须**保持 app.info 的拼写 `Gryphline`、不可沿用启动器的全大写——实测本机 `HKCU\Software` 下 `Gryphline`（游戏：`Arknights_TC`/`sdk_data`）与 `GRYPHLINK`（启动器：`Launcher`）两个键**并存**，且注册表查找**精确拼写优先**：`…\GRYPHLINK\Arknights_TC` 读不到、`…\Gryphline\Arknights_TC` 可读，拼错等价于把 TC 判成未安装。
-  - TC 客户端未改键前只写 `KEYBOARD_SETTING_DISPLAY_*`、没有 `KEYBOARD_SETTING_V2_*`；`GameKeys` 的已知键回退会读到 DISPLAY 并解析出 0 条映射 → 用默认按键且不弹「读取失败」警告，**属预期**。
+  - TC 客户端未改键前只写 `KEYBOARD_SETTING_DISPLAY_*`、没有 `KEYBOARD_SETTING_V2_*`；`GameKeys` 的已知键回退会读到 DISPLAY 并解析出 0 条映射 → 用默认按键且不弹「读取失败」警告，**属预期**（映射行里这些功能会标 `(默认)`）。
   - 安装布局为 `…\GRYPHLINK\games\Arknights_TC\`。
 
 ### 扫描范围限制（所有区服共有）
@@ -124,6 +124,12 @@
 负责游戏按键的动态识别。核心流程：`Init()` 首次读取注册表并启动 10s 定时器 → `_OnPoll()` 定时比对 hex，有变更则重新解析 JSON → 更新 `_Bindings` → 调用 `HotkeyService.EnableByTab()` 重建热键。每 10 秒轮询注册表检测变更，自动重建热键。
 
 数据来源：从 `HKCU\Software\HyperGryph\Arknights` 读取 `KEYBOARD_SETTING_V2_h*`（REG_BINARY→hex→JSON），将 Unity KeyId 映射为 AHK 键名（区服差异见[多区服与热路径预算](#多区服与热路径预算)）。**六层 fallback 防御**（精确→小写→numX→alphaX→char*→单字符），读取失败回退默认值并弹警告。
+
+**条目缺失 ≠ 未绑定**：JSON 里 `"keyId":""` 表示游戏内该功能**未绑定任何按键**（游戏在按键冲突确认后会清空原功能的绑定，序列化就是空串），必须保留为空值；只有**条目整个缺失**（旧版客户端/繁服没有该功能）才用 `_Defaults` 补齐。**不能把空 keyId 当缺失去补默认键**：默认键可能已被用户分配给另一个功能，补回去会让 AFA 的注入落到别人的功能上（v2.3.2「出售变刷新」即此因）。无法识别的 keyId 同样按未绑定处理（宁可不动，也不猜一个键发出去）。
+
+`_MergeDefaults()` 返回 `{bindings, defaulted}`，`defaulted` 记录由默认值填充的功能名；`_LogBindings()` 逐项标注 `(默认)` / `(未绑定)`，未绑定项另起一条 Warn（动作层 `SendDown` 遇到未绑定再 Warn 一次，每会话每功能只报一次）。游戏按键设置**不允许同键**：绑定冲突时游戏会清空原功能的绑定（即上面的空 keyId），因此映射表里不会出现两个功能同键，AFA 不需要做同键检测。
+
+**未绑定提示**：`SendDown` 发现目标功能未绑定时，除日志外还在鼠标位置 +16,+16 弹 3 秒 ToolTip（3 号槽位：1 号给自定义按键的坐标拾取、2 号给游戏音量），显示后不跟随鼠标移动，重复触发会重新计时 3 秒；`_ShowUnboundTip()` 与音量提示同样临时切 Per-Monitor v2 DPI 上下文并恢复。文案 `游戏内未绑定【{1}】按键，请在游戏设置中绑定`，`{1}` 取 `_DisplayNames`（gameFunc → 既有热键名文案键，新增功能需同步登记，否则回退显示 function 名）。
 
 `SendDown`/`SendUp`/`Tap(gameFunc)` 三个方法封装了查表+Send 逻辑，接受注册表中的 function 名（如 `"releaseSkill"`），内部转换为用户实际绑定的 AHK 键名，供 `core/hotkey/hotkey_actions.ahk` 调用。`GetInterceptPattern()` 动态生成热键拦截正则。
 
