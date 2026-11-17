@@ -35,7 +35,7 @@
 用 `HotIf(HotkeyContext)` 回调（`core/hotkey/hotkey_service.ahk` 顶部）限制热键作用域：
 
 - 鼠标键/滚轮（LButton/RButton/MButton/XButton1/2/Wheel*）返回 `IsMouseInClient()`（悬停在游戏窗口上才触发，修复窗口外任务栏/桌面点击被吞）。
-- 键盘键返回 `WinActive("ahk_exe Arknights.exe")` **或** `IsMouseInClient()`（#213：游戏失焦时鼠标悬停游戏窗口也能操作，动作层负责激活游戏；该失焦悬停路径受「自定义」页开关 `HotkeyService.GetHoverOperate()` 门控，保存/应用后生效，关闭后键盘键仅活动窗口触发，鼠标键/滚轮不受影响）。
+- 键盘键返回 `WinActive("ahk_exe Arknights.exe")` **或** `IsMouseInClient()`（#213：游戏失焦时鼠标悬停游戏窗口也能操作，动作层负责激活游戏；该失焦悬停路径受「自定义」页开关 `HotkeyService.GetHoverOperate()` 门控，保存/应用后生效，关闭后键盘键仅活动窗口触发，鼠标键/滚轮不受影响）。启动时 `Config.MigrateHoverOperate()` 执行一次性重置：旧版默认开启用户的 `[Custom] HoverOperate` 写回 0，并在 `[OneShot]` 写 `HoverOperateReset=1`；标记存在后不再重置，用户可在「自定义」页重新勾选，勾选时先弹一次风险确认（每次运行仅一次）。
 
 **动作包装**（#213，`_WrapAction` 于 `_RegisterOne` 注册时套用）：主热键与 OnUp 型动作执行前 `WinActivate` 游戏 + `WinWaitActive`（超时 `HotkeyService.ActivateTimeoutMs`=200ms 则跳过动作，避免按键发往非游戏窗口），激活后不恢复原窗口（焦点留在游戏）。`noActivate=true` 的动作**只执行、不切换焦点**（全局组的开局开关/按住开局暂停/方案切换/游戏音量在失焦悬停时也会触发，但它们不需要游戏前台，抢焦点反而打断用户当前操作）；守卫补发 Up 变体（`ActionUpForward`）与 SwitchKey 切换键**不包装**。
 
