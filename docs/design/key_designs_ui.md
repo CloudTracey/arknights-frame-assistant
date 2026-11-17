@@ -144,7 +144,14 @@ Theme 生命周期与低频模式变化使用现有 Logger；绘制故障按操�
 
 `TabOrder`/`HiddenTabs` 两个 Important 配置项存顺序与隐藏列表，通过两个 **Hidden Edit 表单变量**（`vTabOrder`/`vHiddenTabs`）与 `MainGui["TabOrder"]` 交互——必须放布局链之外（如 `sepCustom` 前），否则破坏自定义页左列 `y+10` 相对定位。
 
-`AppliedTabSettings` 存已应用快照，`IsTabVisible()` 优先读快照、`tabItem.Visible` 是工作态（统计当前可见性直接遍历 `tabItem.Visible`）。眼睛图标统一 `U+E890`（蓝=显示/灰=隐藏），禁止隐藏最后一个功能标签时弹窗。`LastActiveTab` 只记录功能标签页（排除 `other`、`customKeys` 与 `specialOps`；`_UpdateTopTabBar` 的 `isOther` 分支据此决定「其他设置」页上的 ✓/✗ 标记）。
+`AppliedTabSettings` 存已应用快照，`IsTabVisible()` 优先读快照、`tabItem.Visible` 是工作态（统计当前可见性直接遍历 `tabItem.Visible`）。眼睛图标统一 `U+E890`（蓝=显示/灰=隐藏），禁止隐藏最后一个功能标签时弹窗。`LastActiveTab` 只记录功能标签页（排除 `other`、`customKeys` 与 `specialOps`），仅在目标页被隐藏时用于回退，不再参与顶部标签的颜色与勾叉计算。
+
+**顶部标签栏有两个独立信息来源，混用会直接产生显示 bug**（v2.3.2 曾把方案模式当成选中态，导致从卫戍协议页切到管理页后其标签一直保持蓝色）：
+
+- **选中态**（文字颜色 `cAccent`、指示线位置）只看 `tabName = "<id>"`，与方案模式无关。
+- **方案状态**（✓/✗ 后缀）只看 `IsStrongHoldPlanActive`——它是 `HotkeyService._Group` 在 GUI 侧的镜像（"当前热键组是否为卫戍协议方案"），**不是**"当前是否在卫戍协议页"。管理页（`other`/`customKeys`/`specialOps`）切页不切组，因此镜像保持上一功能页的值，✓/✗ 也随该值显示，无需为管理页单列分支。
+- 方案激活时卫戍协议恒标 ✓、常规/快捷恒标 ✗；方案未激活时，只有卫戍协议标签可见才给后缀（常规/快捷 ✓、卫戍协议 ✗），否则三者都不加后缀。
+- `SwitchTab()` 有一个"同页仍要刷新"的守卫：某个功能页被隐藏时（如隐藏卫戍协议页后按方案切换热键），当前页可能仍停在另一功能页而热键组已切换；此时重复点击当前功能页也必须继续发布 `ActiveTabChangeRequested`，让热键组按页面重新收敛。
 
 ## Segoe MDL2 Assets 图标码点
 

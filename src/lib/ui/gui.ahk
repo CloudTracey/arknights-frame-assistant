@@ -30,7 +30,7 @@ class GuiManager {
     static _OverlayZWarned := false  ; 双缓冲叠层调整失败仅告警一次
     static _InitialValues := Map()  ; 初始值快照，用于脏值对比
     static HintUnsaved := ""       ; 提示文字
-    static IsOnStrongHoldProtocol := false
+    static IsStrongHoldPlanActive := false  ; 镜像 HotkeyService._Group：热键组当前是否为卫戍协议方案，与顶部标签选中页无关
     static DefaultTab := ""
 
     ; 窗口尺寸常量
@@ -94,7 +94,7 @@ class GuiManager {
     static _EventsSubscribed := false
     static StrongHoldConflictHints := [] ; 非卫戍协议页面上的模式切换提示
     static CurrentTab := ""    ; 当前显示的标签页
-    static LastActiveTab := "keyBind"  ; 最后选中的功能性标签页（排除"其他设置"）
+    static LastActiveTab := "keyBind"  ; 最后选中的功能标签页（排除 other/customKeys/specialOps 管理页）
     static FrameSkipLabels := Map()     ; 过帧标签控件（用于动态更新文本）
     static FrameSkipDelayKeys := ["FrameSkip16msDelay", "FrameSkip33msDelay", "FrameSkip166msDelay"]
     ; 自定义按键页
@@ -1311,22 +1311,22 @@ class GuiManager {
 
     ; 处理热键组变化（卫戍协议/常规作战切换提示）
     static _OnHotkeyGroupChanged(data) {
-        isStrongHold := data.group = "strongHoldProtocol"
-        if (this.IsOnStrongHoldProtocol != isStrongHold) {
-            this.IsOnStrongHoldProtocol := isStrongHold
+        isPlanActive := data.group = "strongHoldProtocol"
+        if (this.IsStrongHoldPlanActive != isPlanActive) {
+            this.IsStrongHoldPlanActive := isPlanActive
             ; 热键禁用时不弹提示
             if (!HotkeyService.HotkeyState)
                 return
             HideTrayTip()
             SetTimer HideTrayTip, 0
-            if (isStrongHold)
+            if (isPlanActive)
                 ShowTrayTip(I18n.T("已启用卫戍协议方案"), "AFA", "Mute")
             else
                 ShowTrayTip(I18n.T("已退出卫戍协议方案"), "AFA", "Mute")
             SetTimer HideTrayTip, -3000
         }
         if (data.HasOwnProp("source") && data.source = "hotkey") {
-            targetTab := isStrongHold ? "strongHoldProtocol" : (this.IsTabVisible("keyBind") ? "keyBind" : "quick")
+            targetTab := isPlanActive ? "strongHoldProtocol" : (this.IsTabVisible("keyBind") ? "keyBind" : "quick")
             if this.IsTabVisible(targetTab) {
                 this.CurrentTab := targetTab
                 this.LastActiveTab := targetTab
@@ -2137,7 +2137,8 @@ class GuiManager {
             fallbackTab := this._ResolveFallbackTab()
             if (fallbackTab != "") {
                 this.LastActiveTab := fallbackTab
-                this.IsOnStrongHoldProtocol := fallbackTab = "strongHoldProtocol"
+                ; 先同步镜像再发布，避免热键组回调把同一变化再弹一次方案提示
+                this.IsStrongHoldPlanActive := fallbackTab = "strongHoldProtocol"
                 EventBus.Publish("ActiveTabChangeRequested", {tabName: fallbackTab})
             }
         }
@@ -2322,38 +2323,25 @@ class GuiManager {
     }
 
     ; 更新顶部标签栏样式/勾叉/指示线（与页面控件刷新解耦）
+    ; 选中态（颜色/指示线）只跟 tabName；✓/✗ 只跟方案模式镜像，两者不可混用
     static _UpdateTopTabBar(tabName) {
-        isStrongHold := this.IsOnStrongHoldProtocol
-        showModeStatus := this.IsTabVisible("strongHoldProtocol") || isStrongHold
-        isOther := tabName = "other" || tabName = "customKeys" || tabName = "specialOps"
+        isStrongHoldTab := tabName = "strongHoldProtocol"
+        isPlanActive := this.IsStrongHoldPlanActive
+        showModeStatus := this.IsTabVisible("strongHoldProtocol") || isPlanActive
 
         ; 仅当颜色与记录不一致时才 SetFont
         this._SetTabFontOnce("keyBind", tabName = "keyBind" ? "cAccent" : "cText")
         this._SetTabFontOnce("quick", tabName = "quick" ? "cAccent" : "cText")
-        this._SetTabFontOnce("strongHoldProtocol", isStrongHold ? "cAccent" : "cText")
+        this._SetTabFontOnce("strongHoldProtocol", isStrongHoldTab ? "cAccent" : "cText")
         this._SetTabFontOnce("other", tabName = "other" ? "cAccent" : "cText")
         this._SetTabFontOnce("customKeys", tabName = "customKeys" ? "cAccent" : "cText")
         this._SetTabFontOnce("specialOps", tabName = "specialOps" ? "cAccent" : "cText")
 
-        ; 目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页；先算后比再赋值，避免闪烁
-        if isStrongHold {
+        ; 目标文本：管理页不切组，方案状态沿用上一功能页；先算后比再赋值，避免闪烁
+        if isPlanActive {
             keybindText := I18n.T("常规作战") " ✗"
             quickText := I18n.T("快捷操作") " ✗"
             strongHoldText := I18n.T("卫戍协议") " ✓"
-        } else if isOther {
-            if !showModeStatus {
-                keybindText := I18n.T("常规作战")
-                quickText := I18n.T("快捷操作")
-                strongHoldText := I18n.T("卫戍协议")
-            } else if isStrongHold {
-                keybindText := I18n.T("常规作战") " ✗"
-                quickText := I18n.T("快捷操作") " ✗"
-                strongHoldText := I18n.T("卫戍协议") " ✓"
-            } else {
-                keybindText := I18n.T("常规作战") " ✓"
-                quickText := I18n.T("快捷操作") " ✓"
-                strongHoldText := I18n.T("卫戍协议") " ✗"
-            }
         } else {
             keybindText := showModeStatus ? I18n.T("常规作战") " ✓" : I18n.T("常规作战")
             quickText := showModeStatus ? I18n.T("快捷操作") " ✓" : I18n.T("快捷操作")
@@ -2501,13 +2489,14 @@ class GuiManager {
 
     ; 切换标签页
     static SwitchTab(tabName) {
-        isInitialSwitch := this.CurrentTab = ""
         if !this.IsTabVisible(tabName) {
             tabName := this._ResolveFallbackTab()
         }
-        if (tabName = this.CurrentTab
-            && !(tabName = "strongHoldProtocol" && !this.IsOnStrongHoldProtocol)
-            && !((tabName = "keyBind" || tabName = "quick") && this.IsOnStrongHoldProtocol))
+        ; 某个功能页被隐藏时（如隐藏卫戍协议页后按方案切换热键），当前页可能仍停在另一功能页而热键组已切换；
+        ; 此时重复点击当前功能页也要继续发布请求，让热键组按页面重新收敛
+        modeDrifted := (tabName = "strongHoldProtocol" && !this.IsStrongHoldPlanActive)
+            || ((tabName = "keyBind" || tabName = "quick") && this.IsStrongHoldPlanActive)
+        if (tabName = this.CurrentTab && !modeDrifted)
             return
         this.CurrentTab := tabName
 
