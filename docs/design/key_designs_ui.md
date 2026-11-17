@@ -40,6 +40,8 @@
 
 **语言切换会重建窗口**（`_OnSettingsSaved`/`_OnSettingsApplied` 的 `_LanguageChanged` 分支），该分支必须在 `Rebuild()` 之后同样执行 `SetIsModifiedFalse()` + `CaptureInitialSnapshot()`——否则保存成功后脏标志残留，重开窗口会误报"修改尚未保存或应用"并点亮保存/应用按钮。
 
+**重建期间到达的监控事件不得写旧控件**：`Rebuild()` 在销毁旧主窗口**之前**必须把 `ServerPathsText`/`RunningClientsText` 等单控件引用置空。`GameMonitor` 的 `ForegroundClientChanged`/`GameClientsChanged` 可能在 `Init()` 完成前插进来，此时字段仍指向已销毁的控件，写入会抛 `The control is destroyed.`（日志表现为 `[EventBus] 事件回调异常`）。置空后刷新函数按空值跳过；新建控件本就会按当前数据重新生成文本，不会丢内容。
+
 **`SettingsChanged` 下发的单键变更必须同步快照**：该事件一律由 `SettingsService.UpdatePersistedValue` 发布（写 INI → 更新内存 → 发事件），即"值已持久化"。若只写回控件而不把 `_InitialValues[key]` 前移到新值，快照会停在窗口打开时的旧值——用户随后**第一次**手动改回旧值恰好与快照相等，`TrackChange` 判为"未修改"，保存/应用不亮（第二次点击才被识别）。修法：`_OnSettingsChanged` = `_ApplySettingsChanged`（写回控件）+ `_SyncInitialValue(key)`（快照对齐）。典型触发者：快捷键切换 `AutoBeginPause`/`AutoBeginSpeed`、自动识别游戏路径写 `GamePath`。
 
 ## GUI 脏值对比

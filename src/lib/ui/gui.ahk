@@ -2539,6 +2539,10 @@ class GuiManager {
         }
         oldGui := this.MainGui
         this.MainGui := ""
+        ; 旧主窗口即将销毁：重建期间到达的监控事件（前后台客户端变化）可能先于 Init 重建控件，
+        ; 先清空这些单控件引用让刷新函数跳过写入；Init 创建控件时会按当前数据重新生成文本
+        this.ServerPathsText := ""
+        this.RunningClientsText := ""
         Theme.Destroy(oldGui)
         StatusBarHints.Reset()   ; 状态栏随主窗口重建：清空悬停表/轮播状态/控件引用（OnMessage 保留）
         this._ClearControlArrays()
