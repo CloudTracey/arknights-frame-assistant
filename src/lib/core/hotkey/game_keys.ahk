@@ -86,6 +86,7 @@ class GameKeys {
                 this._UnboundWarned[gameFunc] := true
                 Logger.Warn("GameKeys", "功能 " gameFunc " 在游戏内未绑定按键，跳过注入")
             }
+            this._ShowUnboundTip(gameFunc)
             return
         }
         this.MarkInjectedPress(key)
@@ -106,6 +107,41 @@ class GameKeys {
         this.SendDown(gameFunc)
         USleep(delay)
         this.SendUp(gameFunc)
+    }
+
+    ; ── 未绑定按键提示（3 号 ToolTip 槽位：1 号拾取坐标、2 号游戏音量）──
+    static _UnboundTipHide := ""
+
+    ; 显示位置取按下时的鼠标位置，显示后不再跟随；3 秒未再触发即自动消失
+    static _ShowUnboundTip(gameFunc) {
+        label := this._DisplayNames.Has(gameFunc) ? this._DisplayNames[gameFunc] : gameFunc
+        text := I18n.T("游戏内未绑定【{1}】按键，请在游戏设置中绑定", I18n.T(label))
+        oldDpiCtx := 0
+        prevTipCoord := ""
+        prevMouseCoord := ""
+        try {
+            try oldDpiCtx := DllCall("SetThreadDpiAwarenessContext", "ptr", -4, "ptr")
+            prevTipCoord := CoordMode("ToolTip", "Screen")
+            prevMouseCoord := CoordMode("Mouse", "Screen")
+            MouseGetPos(&mouseX, &mouseY)
+            CoordMode("Mouse", prevMouseCoord)
+            prevMouseCoord := ""
+            ToolTip(text, mouseX + 16, mouseY + 16, 3)
+        } finally {
+            if (StrLen(prevMouseCoord) > 0)
+                CoordMode("Mouse", prevMouseCoord)
+            if (StrLen(prevTipCoord) > 0)
+                CoordMode("ToolTip", prevTipCoord)
+            if (oldDpiCtx)
+                try DllCall("SetThreadDpiAwarenessContext", "ptr", oldDpiCtx, "ptr")
+        }
+        if (!IsObject(this._UnboundTipHide))
+            this._UnboundTipHide := GameKeys._HideUnboundTip.Bind(GameKeys)
+        SetTimer(this._UnboundTipHide, -3000)
+    }
+
+    static _HideUnboundTip() {
+        ToolTip("", , , 3)
     }
 
     ; 返回热键拦截正则（已安装区服的实际绑定 ∪ 各服缺失功能组默认值）
@@ -151,6 +187,7 @@ class GameKeys {
     static _PendingWarningServers := []
     static _WarningScheduled := false
     static _Defaults := Map()        ; 硬编码默认映射
+    static _DisplayNames := Map()    ; gameFunc → 未绑定提示用的文案键
     static _UnityKeyMap := Map()     ; Unity keyId → AHK 键名
     static _HasInitialized := false
 
@@ -374,6 +411,21 @@ class GameKeys {
             "autochessReady", "c",
             "autochessSale", "x",
             "autochessViewEnemy", "w"
+        )
+        ; 未绑定提示里的功能名（文案键，复用既有热键名）
+        this._DisplayNames := Map(
+            "changeSpeed", "切换倍速",
+            "releaseSkill", "技能",
+            "retreatChar", "撤退",
+            "pauseBattle", "暂停",
+            "battleLeftPopup", "放弃行动",
+            "autochessRefresh", "刷新",
+            "autochessFreeze", "冻结",
+            "autochessLevelUp", "升级",
+            "autochessShop", "调度中心",
+            "autochessReady", "准备就绪",
+            "autochessSale", "出售/销毁",
+            "autochessViewEnemy", "查看敌人"
         )
     }
 

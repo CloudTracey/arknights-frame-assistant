@@ -129,6 +129,8 @@
 
 `_MergeDefaults()` 返回 `{bindings, defaulted}`，`defaulted` 记录由默认值填充的功能名；`_LogBindings()` 逐项标注 `(默认)` / `(未绑定)`，未绑定项另起一条 Warn（动作层 `SendDown` 遇到未绑定再 Warn 一次，每会话每功能只报一次）。游戏按键设置**不允许同键**：绑定冲突时游戏会清空原功能的绑定（即上面的空 keyId），因此映射表里不会出现两个功能同键，AFA 不需要做同键检测。
 
+**未绑定提示**：`SendDown` 发现目标功能未绑定时，除日志外还在鼠标位置 +16,+16 弹 3 秒 ToolTip（3 号槽位：1 号给自定义按键的坐标拾取、2 号给游戏音量），显示后不跟随鼠标移动，重复触发会重新计时 3 秒；`_ShowUnboundTip()` 与音量提示同样临时切 Per-Monitor v2 DPI 上下文并恢复。文案 `游戏内未绑定【{1}】按键，请在游戏设置中绑定`，`{1}` 取 `_DisplayNames`（gameFunc → 既有热键名文案键，新增功能需同步登记，否则回退显示 function 名）。
+
 `SendDown`/`SendUp`/`Tap(gameFunc)` 三个方法封装了查表+Send 逻辑，接受注册表中的 function 名（如 `"releaseSkill"`），内部转换为用户实际绑定的 AHK 键名，供 `core/hotkey/hotkey_actions.ahk` 调用。`GetInterceptPattern()` 动态生成热键拦截正则。
 
 游戏内绑定的鼠标键（自定义名 `mouseLeft/Right/Middle/Forward/Back` → `LButton/RButton/MButton/XButton2/XButton1`，标准 Unity `Mouse0-4`）同样映射进 `_Bindings` 参与拦截正则。注册表键名前缀匹配 `KEYBOARD_SETTING_V` 应对游戏版本更新。ESC 和 LButton 不经过 GameKeys（不可重新绑定的系统级按键）。
