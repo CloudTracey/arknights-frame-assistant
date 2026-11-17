@@ -25,7 +25,7 @@
 ## 标签页管理器的重绘与命中规则
 
 - **必须 `Redraw()`**：AHK 是延迟重绘，可见标签数变化后不加会在旧宽度上绘制，出现错位/缺字残影。
-- **指示线无条件重设宽度并重绘**——按"宽度未变则跳过"会在标签数变化时留下零宽指示线。
+- **指示线的位置与宽度只在 `_UpdateTopTabBar` 中按等分布局（`GuiWidth / 可见标签数`）无条件重设并重绘**，标签本身由 `LayoutTopTabs` 用同一套数学定位。**不要用标签控件 `GetPos()` 取指示线坐标**：窗口在 DPI 缩放不同的显示器间移动时，`GetPos` 与 `Move` 的缩放基准可能不一致，`GetPos` 的返回值会被 `Move` 再缩放一次，表现为指示线右移且比标签宽（系统 DPI 150% + 显示器 175% 时恰好放大 7/6）。
 - 位置/尺寸相同就不要 `Move`；可见性相同就不要赋值；`SetFont` 只在颜色与 `TabFontState` 记录不一致时执行——这些都是为了压掉闪烁。`TabFontState` 必须是**空 Map 起步**，保证首次 `_SetTabFontOnce` 总会 `SetFont`（键缺失视为无记录）。
 - 眼睛图标码点与"闭眼字形不可用"见 [Segoe MDL2 Assets 图标码点](#segoe-mdl2-assets-图标码点)。
 - `RegisterTabManagerMouseHandlers` **须同时监听 `WM_LBUTTONDOWN`(0x0201) 与 `WM_LBUTTONDBLCLK`(0x0203)**：窗口类带 `CS_DBLCLKS` 时双击的第二次按下发 0x0203，只听 0x0201 会漏掉该次点击。

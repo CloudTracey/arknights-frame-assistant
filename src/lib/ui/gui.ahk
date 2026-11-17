@@ -2100,10 +2100,6 @@ class GuiManager {
         }
 
         try this.MainGui["DefaultStrongHoldProtocol"].Enabled := this.IsTabVisible("strongHoldProtocol")
-        this.TabIndicator.GetPos(&indicatorX, &indicatorY, &indicatorW, &indicatorH)
-        ; 指示线无条件重设宽度并重绘（否则标签数变化时留下零宽指示线）
-        this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
-        this.TabIndicator.Redraw()
     }
 
     ; 解析回退标签
@@ -2354,25 +2350,20 @@ class GuiManager {
         if (this.TxtStrongHoldProtocol.Text != strongHoldText)
             this.TxtStrongHoldProtocol.Text := strongHoldText
 
-        ; 移动指示线到当前选中的标签
-        if (tabName = "keyBind") {
-            this.TxtKeybind.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else if (tabName = "quick") {
-            this.TxtQuick.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else if (tabName = "strongHoldProtocol") {
-            this.TxtStrongHoldProtocol.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else if (tabName = "customKeys") {
-            this.TxtCustomKeys.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else if (tabName = "specialOps") {
-            this.TxtSpecialOps.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else {
-            this.TxtOther.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
+        ; 移动指示线到当前选中的标签：位置与宽度按顶部标签的等分布局计算。
+        ; 不能用标签控件 GetPos 取坐标——窗口在 DPI 缩放不同的显示器间移动时，
+        ; GetPos 与 Move 的缩放基准可能不一致，会让指示线偏移并变长。
+        visibleTabs := []
+        for tabItem in this.GetTabsInAppliedOrder() {
+            if this.IsTabVisible(tabItem.Id)
+                visibleTabs.Push(tabItem.Id)
+        }
+        for index, id in visibleTabs {
+            if (id != tabName)
+                continue
+            tabWidth := this.GuiWidth / visibleTabs.Length
+            this.TabIndicator.Move(tabWidth * (index - 1), 23, tabWidth, 2)
+            break
         }
         this._SetOverlayZ(this.TabIndicator, 0)
         this.TabIndicator.Redraw()
