@@ -25,8 +25,8 @@
 ## 标签页管理器的重绘与命中规则
 
 - **必须 `Redraw()`**：AHK 是延迟重绘，可见标签数变化后不加会在旧宽度上绘制，出现错位/缺字残影。
-- **指示线无条件重设宽度并重绘**——按"宽度未变则跳过"会在标签数变化时留下零宽指示线。
-- 位置/尺寸相同就不要 `Move`；可见性相同就不要赋值；`SetFont` 只在颜色与 `TabFontState` 记录不一致时执行——这些都是为了压掉闪烁。`TabFontState` 必须是**空 Map 起步**，保证首次 `_SetTabFontOnce` 总会 `SetFont`（键缺失视为无记录）。
+- **指示线的位置与宽度只在 `_UpdateTopTabBar` 中按等分布局（`GuiWidth / 可见标签数`）无条件重设并重绘**，标签本身由 `LayoutTopTabs` 用同一套数学定位。**不要用标签控件 `GetPos()` 取指示线坐标**：窗口在 DPI 缩放不同的显示器间移动时，`GetPos` 与 `Move` 的缩放基准可能不一致，`GetPos` 的返回值会被 `Move` 再缩放一次，表现为指示线右移且比标签宽（系统 DPI 150% + 显示器 175% 时恰好放大 7/6）。
+- 位置/尺寸相同就不要 `Move`；可见性相同就不要赋值；标签文字先算后比、不同才赋值；`SetFont` 只在颜色与 `TabFontState` 记录不一致时执行——这些都是为了压掉闪烁。`TabFontState` 必须是**空 Map 起步**，保证首次 `_SetTabFontOnce` 总会 `SetFont`（键缺失视为无记录）。
 - 眼睛图标码点与"闭眼字形不可用"见 [Segoe MDL2 Assets 图标码点](#segoe-mdl2-assets-图标码点)。
 - `RegisterTabManagerMouseHandlers` **须同时监听 `WM_LBUTTONDOWN`(0x0201) 与 `WM_LBUTTONDBLCLK`(0x0203)**：窗口类带 `CS_DBLCLKS` 时双击的第二次按下发 0x0203，只听 0x0201 会漏掉该次点击。
 - 行内偏移：拖动手柄 `+9`、标签 `+40`、眼睛图标 `+201`；行的 Z 序为 背景 < 高亮 < 文字与命中控件（只调 Z 序，不动 HWND/位置/尺寸，拖动与眼睛点击依赖它们）。
@@ -39,6 +39,8 @@
 `GuiManager` 维护 `_InitialValues` 快照和 `IsModified` 标志。`CaptureInitialSnapshot()` 在设置加载/保存/应用后保存所有控件当前值，`TrackChange(key)` 在控件变更时将当前值与快照对比，同时将新值同步写入 Config 内存（热键控件和 SwitchHotkey 已由 `KeyBinder.EndChange` 提前写入，`TrackChange` 负责其余控件）。
 
 **语言切换会重建窗口**（`_OnSettingsSaved`/`_OnSettingsApplied` 的 `_LanguageChanged` 分支），该分支必须在 `Rebuild()` 之后同样执行 `SetIsModifiedFalse()` + `CaptureInitialSnapshot()`——否则保存成功后脏标志残留，重开窗口会误报"修改尚未保存或应用"并点亮保存/应用按钮。
+
+**重建期间到达的监控事件不得写旧控件**：`Rebuild()` 在销毁旧主窗口**之前**必须把 `ServerPathsText`/`RunningClientsText` 等单控件引用置空。`GameMonitor` 的 `ForegroundClientChanged`/`GameClientsChanged` 可能在 `Init()` 完成前插进来，此时字段仍指向已销毁的控件，写入会抛 `The control is destroyed.`（日志表现为 `[EventBus] 事件回调异常`）。置空后刷新函数按空值跳过；新建控件本就会按当前数据重新生成文本，不会丢内容。
 
 **`SettingsChanged` 下发的单键变更必须同步快照**：该事件一律由 `SettingsService.UpdatePersistedValue` 发布（写 INI → 更新内存 → 发事件），即"值已持久化"。若只写回控件而不把 `_InitialValues[key]` 前移到新值，快照会停在窗口打开时的旧值——用户随后**第一次**手动改回旧值恰好与快照相等，`TrackChange` 判为"未修改"，保存/应用不亮（第二次点击才被识别）。修法：`_OnSettingsChanged` = `_ApplySettingsChanged`（写回控件）+ `_SyncInitialValue(key)`（快照对齐）。典型触发者：快捷键切换 `AutoBeginPause`/`AutoBeginSpeed`、自动识别游戏路径写 `GamePath`。
 
@@ -126,6 +128,8 @@ Theme 生命周期与低频模式变化使用现有 Logger；绘制故障按操�
 
 左侧 Text 导航项（`NavItems`）+ 右侧各分类项内容叠加，经 `_SwitchOtherCategory` 切换 Visible。`OtherCategories` Map（分类名→[控件组, 导航索引]）统一管理，新增分类只需加一行。导航切换有 `force` 参数（标签页切换强制显示、导航点击不传以守卫重复点击）。关于页是纯展示页，保存/应用按钮仍按全局脏状态与冲突状态决定。
 
+「自定义」页的失焦悬停热键复选框在勾选时先弹一次风险确认（`_OnHoverOperateClick`，每次运行仅一次；选“否”回退为未勾选且不产生未保存修改），状态栏说明同步标注该开关只影响键盘热键。
+
 ## 更新源下拉框
 
 "更新"分类中新增"更新源"下拉框（国内源/GitHub，默认国内源）。切换时 `_OnUpdateSourceChange()` 联动 Token 复选框与输入框两者的 `Enabled` 状态——选国内源时两者灰掉，选 GitHub 时恢复；提示文字保持启用（不随源置灰）。
@@ -144,7 +148,15 @@ Theme 生命周期与低频模式变化使用现有 Logger；绘制故障按操�
 
 `TabOrder`/`HiddenTabs` 两个 Important 配置项存顺序与隐藏列表，通过两个 **Hidden Edit 表单变量**（`vTabOrder`/`vHiddenTabs`）与 `MainGui["TabOrder"]` 交互——必须放布局链之外（如 `sepCustom` 前），否则破坏自定义页左列 `y+10` 相对定位。
 
-`AppliedTabSettings` 存已应用快照，`IsTabVisible()` 优先读快照、`tabItem.Visible` 是工作态（统计当前可见性直接遍历 `tabItem.Visible`）。眼睛图标统一 `U+E890`（蓝=显示/灰=隐藏），禁止隐藏最后一个功能标签时弹窗。`LastActiveTab` 只记录功能标签页（排除 `other`、`customKeys` 与 `specialOps`；`_UpdateTopTabBar` 的 `isOther` 分支据此决定「其他设置」页上的 ✓/✗ 标记）。
+`AppliedTabSettings` 存已应用快照，`IsTabVisible()` 优先读快照、`tabItem.Visible` 是工作态（统计当前可见性直接遍历 `tabItem.Visible`）。眼睛图标统一 `U+E890`（蓝=显示/灰=隐藏），禁止隐藏最后一个功能标签时弹窗。`LastActiveTab` 只记录功能标签页（排除 `other`、`customKeys` 与 `specialOps`），仅在目标页被隐藏时用于回退，不再参与顶部标签的颜色与勾叉计算。
+
+**顶部标签栏有两个独立信息来源，混用会直接产生显示 bug**（v2.3.2 曾把方案模式当成选中态，导致从卫戍协议页切到管理页后其标签一直保持蓝色）：
+
+- **选中态**（文字颜色 `cAccent`、指示线位置）只看 `tabName = "<id>"`，与方案模式无关。
+- **方案状态**（✓/✗ 后缀）只看 `IsStrongHoldPlanActive`——它是 `HotkeyService._Group` 在 GUI 侧的镜像（"当前热键组是否为卫戍协议方案"），**不是**"当前是否在卫戍协议页"。管理页（`other`/`customKeys`/`specialOps`）切页不切组，因此镜像保持上一功能页的值，✓/✗ 也随该值显示，无需为管理页单列分支。
+- 方案激活时卫戍协议恒标 ✓、常规/快捷恒标 ✗；方案未激活时，只有卫戍协议标签可见才给后缀（常规/快捷 ✓、卫戍协议 ✗），否则三者都不加后缀。
+- `ApplyTabSettings` 因目标功能页被隐藏而回退到可见页时，先同步 `IsStrongHoldPlanActive` 再发布 `ActiveTabChangeRequested`——热键组回调对比镜像后认为"无变化"，避免同一次回退重复弹方案提示。
+- `SwitchTab()` 有一个"同页仍要刷新"的守卫：某个功能页被隐藏时（如隐藏卫戍协议页后按方案切换热键），当前页可能仍停在另一功能页而热键组已切换；此时重复点击当前功能页也必须继续发布 `ActiveTabChangeRequested`，让热键组按页面重新收敛。
 
 ## Segoe MDL2 Assets 图标码点
 

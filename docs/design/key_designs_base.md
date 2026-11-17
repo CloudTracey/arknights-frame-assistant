@@ -58,6 +58,8 @@
 
 首次运行由 `_EnsureConfigFileExists()` 全量写入三组默认值（跳过 `GitHubToken`）；已存在的文件由 `_BackfillMissingCustomDefaults()` 只补缺失的 `[Custom]` 键——用哨兵值区分"键不存在"与"键存在但值为空"（`; __AFA_MISSING_KEY__`），避免把用户显式清空的配置重新写成默认值。
 
+一次性迁移 `Config.MigrateHoverOperate()` 在 `LoadFromIni()` 之后执行：旧版默认开启的失焦悬停热键会在升级后的首次启动写回 `[Custom] HoverOperate=0`，并在 `[OneShot]` 写 `HoverOperateReset=1`，两者经 `_WriteIniEntriesAtomic()` 原子替换。标记存在后不再重置；全新安装首启也写标记；写入失败时不写标记，下次启动自动重试，本次保持原值并告警。
+
 **帧率双写**：`Frame155`（文本值，可为 `auto`）与 `Frame`（旧版索引 1~7）由 `SetImportant`/`SaveAllToIni`/`SaveToIni`/`_PersistSingleValue` 内部同步，调用方不要手动双写；完整保存路径统一以 `GetImportant("Frame")` 解析出文本值后再写两个键，避免把旧索引/文本写错键。读取顺序 Frame155 → 旧索引转换 → 默认值（`_ResolveFrame`，默认 `auto`）。该值现在只表示帧率模式：`auto` 使用自动适配，其余为手动档位；老用户已有的手动值不会被自动改写，可自行切到「自动适配」。
 
 `TrackChange()` 在检测控件变更时同步将新值写入 Config 内存（确保切换标签页后编辑不丢失）。`SetImportant("Frame", value)` 内部自动同步 `Frame155`，调用方无需手动双写。
@@ -119,7 +121,7 @@
 
 ## 配置文件
 
-INI 格式，三个 Section：`[Hotkeys]`、`[Main]`、`[Custom]`。`GitHubToken` 使用 Windows DPAPI（`token_protector.ahk` 的 `TokenProtector` 类）按当前 Windows 用户加密，加密值存于 `[Main]` 的 `GitHubTokenProtected` 键（带 `dpapi:v1:` 前缀），读取经 `_ReadGitHubToken()` 解密。旧版明文 `GitHubToken` 键在启动时自动迁移为加密格式并删除明文（迁移失败会保留原配置并提示恢复写入权限）。
+INI 格式，四个 Section：`[Hotkeys]`、`[Main]`、`[Custom]`、`[OneShot]`。`[OneShot]` 只存一次性动作标记（每个动作一个键，值为 `1`），不属于用户设置，保存流程不得删除该 section。`GitHubToken` 使用 Windows DPAPI（`token_protector.ahk` 的 `TokenProtector` 类）按当前 Windows 用户加密，加密值存于 `[Main]` 的 `GitHubTokenProtected` 键（带 `dpapi:v1:` 前缀），读取经 `_ReadGitHubToken()` 解密。旧版明文 `GitHubToken` 键在启动时自动迁移为加密格式并删除明文（迁移失败会保留原配置并提示恢复写入权限）。
 
 **迁移与解密失败的两条硬约束**：① 迁移必须"先 `IniWrite` 加密值 → 回读校验一致 → 再 `IniDelete` 明文"，中途失败不得丢数据；② `TokenStorageStatus = "decrypt_failed"` 时**禁止用空值覆盖**仍可能可恢复的原加密配置——`SaveToIni`/`SaveAllToIni`/`PrepareGitHubTokenForStorage` 三处都有该守卫，缺一处就会让用户一保存就永久失去 Token。状态取值 `ok`/`migration_failed`/`cleanup_failed`/`decrypt_failed`，提示文案由 `GetTokenStorageWarning()` 给出。
 

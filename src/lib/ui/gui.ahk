@@ -29,8 +29,9 @@ class GuiManager {
     static _PrevConflictedControls := Map()  ; 上次冲突控件集合，用于增量字体更新
     static _OverlayZWarned := false  ; 双缓冲叠层调整失败仅告警一次
     static _InitialValues := Map()  ; 初始值快照，用于脏值对比
+    static _HoverOperateWarned := false  ; 本次运行是否已确认过失焦悬停热键风险
     static HintUnsaved := ""       ; 提示文字
-    static IsOnStrongHoldProtocol := false
+    static IsStrongHoldPlanActive := false  ; 镜像 HotkeyService._Group：热键组当前是否为卫戍协议方案
     static DefaultTab := ""
 
     ; 窗口尺寸常量
@@ -94,7 +95,7 @@ class GuiManager {
     static _EventsSubscribed := false
     static StrongHoldConflictHints := [] ; 非卫戍协议页面上的模式切换提示
     static CurrentTab := ""    ; 当前显示的标签页
-    static LastActiveTab := "keyBind"  ; 最后选中的功能性标签页（排除"其他设置"）
+    static LastActiveTab := "keyBind"  ; 最后选中的功能标签页（排除 other/customKeys/specialOps 管理页）
     static FrameSkipLabels := Map()     ; 过帧标签控件（用于动态更新文本）
     static FrameSkipDelayKeys := ["FrameSkip16msDelay", "FrameSkip33msDelay", "FrameSkip166msDelay"]
     ; 自定义按键页
@@ -882,8 +883,8 @@ class GuiManager {
 
         ; 失焦悬停操作热键开关
         checkboxHoverOperate := Theme.Add(this.MainGui, "Checkbox", "xs y+14 w" Max(290, Metrics.TextWidth(I18n.T("游戏窗口未激活时允许鼠标悬停在窗口上触发热键")) + 24) " h24 vHoverOperate", I18n.T("游戏窗口未激活时允许鼠标悬停在窗口上触发热键"))
-        checkboxHoverOperate.OnEvent("Click", (*) => this.TrackChange("HoverOperate"))
-        StatusBarHints.Register(checkboxHoverOperate, "游戏窗口未激活时，鼠标悬停在窗口上也能触发热键")
+        checkboxHoverOperate.OnEvent("Click", (*) => this._OnHoverOperateClick(checkboxHoverOperate))
+        StatusBarHints.Register(checkboxHoverOperate, "游戏窗口未激活时，鼠标悬停在窗口上也能触发键盘热键（可能导致切出游戏窗口后仍然误触发热键）")
         this.MainGui["HoverOperate"].Value := Config.GetCustom("HoverOperate")
         this.CustomControls.Push(checkboxHoverOperate)
 
@@ -1311,22 +1312,22 @@ class GuiManager {
 
     ; 处理热键组变化（卫戍协议/常规作战切换提示）
     static _OnHotkeyGroupChanged(data) {
-        isStrongHold := data.group = "strongHoldProtocol"
-        if (this.IsOnStrongHoldProtocol != isStrongHold) {
-            this.IsOnStrongHoldProtocol := isStrongHold
+        isPlanActive := data.group = "strongHoldProtocol"
+        if (this.IsStrongHoldPlanActive != isPlanActive) {
+            this.IsStrongHoldPlanActive := isPlanActive
             ; 热键禁用时不弹提示
             if (!HotkeyService.HotkeyState)
                 return
             HideTrayTip()
             SetTimer HideTrayTip, 0
-            if (isStrongHold)
+            if (isPlanActive)
                 ShowTrayTip(I18n.T("已启用卫戍协议方案"), "AFA", "Mute")
             else
                 ShowTrayTip(I18n.T("已退出卫戍协议方案"), "AFA", "Mute")
             SetTimer HideTrayTip, -3000
         }
         if (data.HasOwnProp("source") && data.source = "hotkey") {
-            targetTab := isStrongHold ? "strongHoldProtocol" : (this.IsTabVisible("keyBind") ? "keyBind" : "quick")
+            targetTab := isPlanActive ? "strongHoldProtocol" : (this.IsTabVisible("keyBind") ? "keyBind" : "quick")
             if this.IsTabVisible(targetTab) {
                 this.CurrentTab := targetTab
                 this.LastActiveTab := targetTab
@@ -1726,6 +1727,21 @@ class GuiManager {
         this._InitialCustomHotkeys := this._CloneCustomHotkeys(Config.AllCustomHotkeys)
     }
 
+    ; 勾选失焦悬停热键前确认风险
+    static _OnHoverOperateClick(ctrl) {
+        if (ctrl.Value && !this._HoverOperateWarned) {
+            ctrl.Value := 0
+            result := MessageBox.Confirm(
+                I18n.T("此功能可能导致切出游戏窗口后，在鼠标未移出游戏窗口时误触发键盘热键并激活游戏窗口，是否开启？"),
+                I18n.T("开启失焦悬停热键"))
+            if (result != "Yes")
+                return
+            this._HoverOperateWarned := true
+            ctrl.Value := 1
+        }
+        this.TrackChange("HoverOperate")
+    }
+
     ; 跟踪控件变更——与初始快照对比，决定按钮启用/禁用
     static TrackChange(controlName) {
         if RegExMatch(controlName, "^CustomHotkey\d+Key$") {
@@ -2100,10 +2116,6 @@ class GuiManager {
         }
 
         try this.MainGui["DefaultStrongHoldProtocol"].Enabled := this.IsTabVisible("strongHoldProtocol")
-        this.TabIndicator.GetPos(&indicatorX, &indicatorY, &indicatorW, &indicatorH)
-        ; 指示线无条件重设宽度并重绘（否则标签数变化时留下零宽指示线）
-        this.TabIndicator.Move(indicatorX, 23, tabWidth, 2)
-        this.TabIndicator.Redraw()
     }
 
     ; 解析回退标签
@@ -2137,7 +2149,7 @@ class GuiManager {
             fallbackTab := this._ResolveFallbackTab()
             if (fallbackTab != "") {
                 this.LastActiveTab := fallbackTab
-                this.IsOnStrongHoldProtocol := fallbackTab = "strongHoldProtocol"
+                this.IsStrongHoldPlanActive := fallbackTab = "strongHoldProtocol"
                 EventBus.Publish("ActiveTabChangeRequested", {tabName: fallbackTab})
             }
         }
@@ -2323,37 +2335,22 @@ class GuiManager {
 
     ; 更新顶部标签栏样式/勾叉/指示线（与页面控件刷新解耦）
     static _UpdateTopTabBar(tabName) {
-        isStrongHold := this.IsOnStrongHoldProtocol
-        showModeStatus := this.IsTabVisible("strongHoldProtocol") || isStrongHold
-        isOther := tabName = "other" || tabName = "customKeys" || tabName = "specialOps"
+        isStrongHoldTab := tabName = "strongHoldProtocol"
+        isPlanActive := this.IsStrongHoldPlanActive
+        showModeStatus := this.IsTabVisible("strongHoldProtocol") || isPlanActive
 
         ; 仅当颜色与记录不一致时才 SetFont
         this._SetTabFontOnce("keyBind", tabName = "keyBind" ? "cAccent" : "cText")
         this._SetTabFontOnce("quick", tabName = "quick" ? "cAccent" : "cText")
-        this._SetTabFontOnce("strongHoldProtocol", isStrongHold ? "cAccent" : "cText")
+        this._SetTabFontOnce("strongHoldProtocol", isStrongHoldTab ? "cAccent" : "cText")
         this._SetTabFontOnce("other", tabName = "other" ? "cAccent" : "cText")
         this._SetTabFontOnce("customKeys", tabName = "customKeys" ? "cAccent" : "cText")
         this._SetTabFontOnce("specialOps", tabName = "specialOps" ? "cAccent" : "cText")
 
-        ; 目标文本：卫戍协议页固定显示；功能页随卫戍协议可见性；"其他设置"页额外随上次活动功能页；先算后比再赋值，避免闪烁
-        if isStrongHold {
+        if isPlanActive {
             keybindText := I18n.T("常规作战") " ✗"
             quickText := I18n.T("快捷操作") " ✗"
             strongHoldText := I18n.T("卫戍协议") " ✓"
-        } else if isOther {
-            if !showModeStatus {
-                keybindText := I18n.T("常规作战")
-                quickText := I18n.T("快捷操作")
-                strongHoldText := I18n.T("卫戍协议")
-            } else if isStrongHold {
-                keybindText := I18n.T("常规作战") " ✗"
-                quickText := I18n.T("快捷操作") " ✗"
-                strongHoldText := I18n.T("卫戍协议") " ✓"
-            } else {
-                keybindText := I18n.T("常规作战") " ✓"
-                quickText := I18n.T("快捷操作") " ✓"
-                strongHoldText := I18n.T("卫戍协议") " ✗"
-            }
         } else {
             keybindText := showModeStatus ? I18n.T("常规作战") " ✓" : I18n.T("常规作战")
             quickText := showModeStatus ? I18n.T("快捷操作") " ✓" : I18n.T("快捷操作")
@@ -2367,24 +2364,17 @@ class GuiManager {
             this.TxtStrongHoldProtocol.Text := strongHoldText
 
         ; 移动指示线到当前选中的标签
-        if (tabName = "keyBind") {
-            this.TxtKeybind.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else if (tabName = "quick") {
-            this.TxtQuick.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else if (tabName = "strongHoldProtocol") {
-            this.TxtStrongHoldProtocol.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else if (tabName = "customKeys") {
-            this.TxtCustomKeys.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else if (tabName = "specialOps") {
-            this.TxtSpecialOps.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
-        } else {
-            this.TxtOther.GetPos(&x)
-            this.TabIndicator.Move(x, 23)
+        visibleTabs := []
+        for tabItem in this.GetTabsInAppliedOrder() {
+            if this.IsTabVisible(tabItem.Id)
+                visibleTabs.Push(tabItem.Id)
+        }
+        for index, id in visibleTabs {
+            if (id != tabName)
+                continue
+            tabWidth := this.GuiWidth / visibleTabs.Length
+            this.TabIndicator.Move(tabWidth * (index - 1), 23, tabWidth, 2)
+            break
         }
         this._SetOverlayZ(this.TabIndicator, 0)
         this.TabIndicator.Redraw()
@@ -2501,13 +2491,12 @@ class GuiManager {
 
     ; 切换标签页
     static SwitchTab(tabName) {
-        isInitialSwitch := this.CurrentTab = ""
         if !this.IsTabVisible(tabName) {
             tabName := this._ResolveFallbackTab()
         }
-        if (tabName = this.CurrentTab
-            && !(tabName = "strongHoldProtocol" && !this.IsOnStrongHoldProtocol)
-            && !((tabName = "keyBind" || tabName = "quick") && this.IsOnStrongHoldProtocol))
+        modeDrifted := (tabName = "strongHoldProtocol" && !this.IsStrongHoldPlanActive)
+            || ((tabName = "keyBind" || tabName = "quick") && this.IsStrongHoldPlanActive)
+        if (tabName = this.CurrentTab && !modeDrifted)
             return
         this.CurrentTab := tabName
 
@@ -2559,6 +2548,8 @@ class GuiManager {
         }
         oldGui := this.MainGui
         this.MainGui := ""
+        this.ServerPathsText := ""
+        this.RunningClientsText := ""
         Theme.Destroy(oldGui)
         StatusBarHints.Reset()   ; 状态栏随主窗口重建：清空悬停表/轮播状态/控件引用（OnMessage 保留）
         this._ClearControlArrays()

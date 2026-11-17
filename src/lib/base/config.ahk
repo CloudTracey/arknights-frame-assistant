@@ -568,6 +568,31 @@ class Config {
         }
     }
 
+    ; 迁移：一次性关闭失焦悬停热键
+    static MigrateHoverOperate() {
+        if this.IniFile = ""
+            this.InitPath()
+        if !FileExist(this.IniFile)
+            return true
+
+        if (IniRead(this.IniFile, "OneShot", "HoverOperateReset", "") = "1")
+            return true
+
+        previous := IniRead(this.IniFile, "Custom", "HoverOperate", this._DefaultCustom["HoverOperate"])
+        entries := []
+        entries.Push({Section: "Custom", Key: "HoverOperate", Value: "0"})
+        entries.Push({Section: "OneShot", Key: "HoverOperateReset", Value: "1"})
+        try {
+            this._WriteIniEntriesAtomic(this.IniFile, entries)
+        } catch Error as e {
+            Logger.Warn("Config", "一次性关闭失焦悬停热键失败，下次启动重试：" e.Message)
+            return false
+        }
+        this._CustomSettings["HoverOperate"] := "0"
+        Logger.Info("Config", "已一次性关闭失焦悬停热键（原值 " previous "）")
+        return true
+    }
+
     ; 校验区服键路径与识别结果是否一致，不一致时迁移到正确键
     static _ReconcileMisidentifiedPath(serverId) {
         key := "GamePath" serverId

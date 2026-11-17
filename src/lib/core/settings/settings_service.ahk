@@ -19,6 +19,7 @@ class SettingsService {
         Config.MigrateGitHubToken()
         Config.MigrateHotkeyCase()
         Config.LoadFromIni()
+        Config.MigrateHoverOperate()
         if (IniRead(Config.IniFile, "Main", "ThemeMode", "__AFA_MISSING_KEY__") = "__AFA_MISSING_KEY__") {
             themeBackfill := Config._PersistSingleValue("ThemeMode", "auto")
             if !themeBackfill.success

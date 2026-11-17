@@ -72,7 +72,7 @@
 
 ## 配置文件与数据文件
 
-- **`Settings.ini`**：`%AppData%\ArknightsFrameAssistant\PC\Settings.ini`，三个 Section：`[Hotkeys]`、`[Main]`、`[Custom]`。GitHub Token 以 DPAPI 加密存于 `[Main] GitHubTokenProtected`（带 `dpapi:v1:` 前缀）。详见 [key_designs_base.md](key_designs_base.md#配置文件)。
+- **`Settings.ini`**：`%AppData%\ArknightsFrameAssistant\PC\Settings.ini`，四个 Section：`[Hotkeys]`、`[Main]`、`[Custom]`、`[OneShot]`（一次性动作标记，不属于用户设置，保存流程不得删除）。GitHub Token 以 DPAPI 加密存于 `[Main] GitHubTokenProtected`（带 `dpapi:v1:` 前缀）。详见 [key_designs_base.md](key_designs_base.md#配置文件)。
 - **`CustomHotkeys.json`**：自定义按键独立存储，与 `Settings.ini` 隔离，唯一 owner 是 `base/custom_hotkey_store.ahk`。
 - **`changelog.json`**：`%AppData%\ArknightsFrameAssistant\PC\changelog.json`，存放从 GitHub Releases API 拉取的发布内容，由 `ReleaseRepository._SaveChangelogCache()` 写入、`ChangelogChecker` 读取。
 - **日志与资源**：`…\PC\logs\`（`afa-*.log` / `critical-*.log`）、`…\PC\resources\`（`FileExtractor` 提取的嵌入资源）。
