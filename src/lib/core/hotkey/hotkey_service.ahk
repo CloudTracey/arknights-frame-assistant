@@ -30,7 +30,7 @@ class HotkeyService {
 
     static ActivateTimeoutMs := 200
 
-    static _HoverOperate := true
+    static _HoverOperate := false
 
     static SetHoverOperate(value) {
         this._HoverOperate := value
